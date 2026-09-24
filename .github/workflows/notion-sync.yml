@@ -24,13 +24,23 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm docs:validate
+      - name: Check connector configuration
+        id: connector
+        env:
+          NOTION_SYNC_WEBHOOK_URL: ${{ secrets.NOTION_SYNC_WEBHOOK_URL }}
+        run: |
+          if [ -n "$NOTION_SYNC_WEBHOOK_URL" ]; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish sync request
-        if: ${{ secrets.NOTION_SYNC_WEBHOOK_URL != '' }}
+        if: ${{ steps.connector.outputs.enabled == 'true' }}
         env:
           NOTION_SYNC_WEBHOOK_URL: ${{ secrets.NOTION_SYNC_WEBHOOK_URL }}
           NOTION_SYNC_WEBHOOK_TOKEN: ${{ secrets.NOTION_SYNC_WEBHOOK_TOKEN }}
           SOURCE_COMMIT: ${{ github.sha }}
         run: node scripts/notion-sync-request.mjs
       - name: Explain connector setup
-        if: ${{ secrets.NOTION_SYNC_WEBHOOK_URL == '' }}
+        if: ${{ steps.connector.outputs.enabled != 'true' }}
         run: echo 'Manifest validated. Configure NOTION_SYNC_WEBHOOK_URL and NOTION_SYNC_WEBHOOK_TOKEN to enable the stateful Notion connector.'
