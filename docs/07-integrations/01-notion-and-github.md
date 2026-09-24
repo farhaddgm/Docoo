@@ -66,7 +66,9 @@ Notion read-only واقعی ممکن است از نظر permission قابل‌ت
 
 ## ۷. وضعیت فعلی
 
-اتصال Notion با حساب `farhad.dgm@gmail.com` و Workspace `Farhad’s Space` تأیید شد. صفحهٔ ریشه، ۹ بخش، ۳۶ صفحهٔ سند و دیتابیس `Docoo Document Index` ساخته شده‌اند. نگاشت پایدار `doc_id -> notion_page_id` و نتیجهٔ اعتبارسنجی در `docs/_meta/notion-state.json` نگهداری می‌شود.
+اتصال Notion با حساب `farhad.dgm@gmail.com` و Workspace `Farhad’s Space` تأیید شد. آخرین بررسی مستقیم index نشان می‌دهد هر ۴۱ `doc_id` فعلی در `Docoo Document Index` وجود دارد. با این حال، state ثبت‌شده در مخزن هنوز ۳۶ سند را می‌شمارد و checksum محتوای workspace با Notion برای ۱۵ سند متفاوت است؛ بنابراین وجود ردیف index به معنی همگام‌بودن محتوای صفحه نیست. state را دستی جلو نمی‌بریم تا گزارش sync ساختگی نشود.
+
+گردش موجود پس از push تغییرات `docs/**` به `main` اجرا می‌شود؛ فقط manifest را validate می‌کند و در صورت پیکربندی `NOTION_SYNC_WEBHOOK_URL` درخواست sync می‌فرستد. در branch کاری فعلی sync اجرا نشده است. پس از دسترسی GitHub، تغییرات باید از مسیر PR/merge منتشر و سپس نتیجهٔ webhook و state تولیدشده بازبینی شود.
 
 ## ۸. GitHub
 

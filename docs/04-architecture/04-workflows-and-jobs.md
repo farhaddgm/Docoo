@@ -1,8 +1,8 @@
 ---
 doc_id: DOCOO-WORKFLOWS-JOBS
 title: طراحی گردش‌کارهای بادوام و کارهای پس‌زمینه
-status: proposed
-version: 1.0.0
+status: approved-baseline
+version: 1.0.1
 owner: Platform Architecture
 last_updated: 2026-09-24
 notion_sync: true

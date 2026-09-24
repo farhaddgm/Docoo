@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+
+minimumReleaseAge: 10080
+
+allowBuilds:
+  '@scarf/scarf': false
+  argon2: true
+  esbuild: true
+  protobufjs: true
+  sharp: true

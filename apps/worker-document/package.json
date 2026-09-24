@@ -1,0 +1,21 @@
+{
+  "name": "@docoo/worker-document",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch --env-file=../../.env src/main.ts",
+    "start": "node dist/main.js",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests"
+  },
+  "dependencies": {
+    "@docoo/worker-runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4.23.13"
+  }
+}

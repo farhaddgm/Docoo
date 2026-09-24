@@ -64,19 +64,24 @@ notion_sync: true
 26. [مشاهده‌پذیری و SRE](06-delivery/03-observability-and-sre.md) — لاگ، متریک، trace، SLO و هشدار.
 27. [نقشهٔ راه توسعه](06-delivery/04-roadmap.md) — فازها، خروجی‌ها، دروازه‌ها و تعریف Done.
 28. [پذیرش و ردیابی](06-delivery/05-acceptance-and-traceability.md) — اتصال نیازمندی به آزمون و سند.
+29. [backlog اجرایی](06-delivery/06-implementation-backlog.md) — Issueهای خرد، milestoneها و traceability.
+30. [راهنمای مالک محصول](06-delivery/07-owner-action-guide.md) — اقدامات سادهٔ approve، دسترسی، UX، تست و release.
+31. [checklist آمادگی](06-delivery/08-readiness-checklist.md) — وضعیت واقعی gate شروع توسعه.
 
 ### ۷. یکپارچه‌سازی‌ها
 
-29. [همگام‌سازی Notion و GitHub](07-integrations/01-notion-and-github.md) — مخزن خصوصی، انتشار یک‌طرفه و کنترل تعارض.
-30. [قرارداد آداپترهای بیرونی](07-integrations/02-external-adapters.md) — AI، وب، ذخیره‌سازی، OCR و export.
+32. [همگام‌سازی Notion و GitHub](07-integrations/01-notion-and-github.md) — مخزن خصوصی، انتشار یک‌طرفه و کنترل تعارض.
+33. [قرارداد آداپترهای بیرونی](07-integrations/02-external-adapters.md) — AI، وب، ذخیره‌سازی، OCR و export.
 
 ### ۸. تصمیم‌های معماری
 
-31. [ADR-0001: modular monolith](adr/0001-modular-monolith.md)
-32. [ADR-0002: اجرای بادوام گردش‌کار](adr/0002-durable-workflows.md)
-33. [ADR-0003: مرز tenant و حوزهٔ موضوعی](adr/0003-tenant-and-topic-boundary.md)
-34. [ADR-0004: تنظیمات نسخه‌بندی‌شده](adr/0004-versioned-configuration.md)
-35. [ADR-0005: ممیزی دو‌سطحی دانش](adr/0005-two-level-knowledge-audit.md)
+34. [ADR-0001: modular monolith](adr/0001-modular-monolith.md)
+35. [ADR-0002: اجرای بادوام گردش‌کار](adr/0002-durable-workflows.md)
+36. [ADR-0003: مرز tenant و حوزهٔ موضوعی](adr/0003-tenant-and-topic-boundary.md)
+37. [ADR-0004: تنظیمات نسخه‌بندی‌شده](adr/0004-versioned-configuration.md)
+38. [ADR-0005: ممیزی دو‌سطحی دانش](adr/0005-two-level-knowledge-audit.md)
+39. [ADR-0006: پلتفرم و toolchain](adr/0006-application-platform-and-toolchain.md)
+40. [ADR-0007: نشست و امنیت احراز هویت](adr/0007-authentication-and-session-security.md)
 
 ## وضعیت اسناد
 

@@ -1,8 +1,8 @@
 ---
 doc_id: DOCOO-NONFUNCTIONAL-REQUIREMENTS
 title: نیازمندی‌های غیرکارکردی Docoo
-status: proposed
-version: 1.0.0
+status: approved-baseline
+version: 1.0.1
 owner: Architecture & SRE
 last_updated: 2026-09-24
 notion_sync: true
@@ -86,13 +86,13 @@ notion_sync: true
 
 ## ۱۰. اهداف عملیاتی اولیه
 
-| شاخص | هدف پایه | توضیح |
-|---|---:|---|
-| Availability | 99.5% | control plane |
-| RPO | 15 min | PostgreSQL PITR |
-| RTO | 4 h | single-region baseline |
-| Agent concurrency | 25 | قابل‌تنظیم و scale-out |
-| Provider retries | 10 | بدون fallback خودکار |
-| Max input file | 100 MB | قابل‌تنظیم |
-| Audit delivery | < 5 s | پس از transaction |
-| Export success | >= 99% | corpus آزمون معتبر |
+| شاخص              | هدف پایه | توضیح                  |
+| ----------------- | -------: | ---------------------- |
+| Availability      |    99.5% | control plane          |
+| RPO               |   15 min | PostgreSQL PITR        |
+| RTO               |      4 h | single-region baseline |
+| Agent concurrency |       25 | قابل‌تنظیم و scale-out |
+| Provider retries  |       10 | بدون fallback خودکار   |
+| Max input file    |   100 MB | قابل‌تنظیم             |
+| Audit delivery    |    < 5 s | پس از transaction      |
+| Export success    |   >= 99% | corpus آزمون معتبر     |

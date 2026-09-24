@@ -1,0 +1,46 @@
+name: Notion documentation sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.6.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm docs:validate
+      - name: Check connector configuration
+        id: connector
+        env:
+          NOTION_SYNC_WEBHOOK_URL: ${{ secrets.NOTION_SYNC_WEBHOOK_URL }}
+        run: |
+          if [ -n "$NOTION_SYNC_WEBHOOK_URL" ]; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish sync request
+        if: ${{ steps.connector.outputs.enabled == 'true' }}
+        env:
+          NOTION_SYNC_WEBHOOK_URL: ${{ secrets.NOTION_SYNC_WEBHOOK_URL }}
+          NOTION_SYNC_WEBHOOK_TOKEN: ${{ secrets.NOTION_SYNC_WEBHOOK_TOKEN }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: node scripts/notion-sync-request.mjs
+      - name: Explain connector setup
+        if: ${{ steps.connector.outputs.enabled != 'true' }}
+        run: echo 'Manifest validated. Configure NOTION_SYNC_WEBHOOK_URL and NOTION_SYNC_WEBHOOK_TOKEN to enable the stateful Notion connector.'

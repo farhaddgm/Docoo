@@ -1,8 +1,8 @@
 ---
 doc_id: DOCOO-DOMAIN-MODEL
 title: مدل دامنه Docoo
-status: proposed
-version: 1.0.0
+status: approved-baseline
+version: 1.0.1
 owner: Domain Architecture
 last_updated: 2026-09-24
 notion_sync: true

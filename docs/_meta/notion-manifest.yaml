@@ -1,9 +1,9 @@
 version: 1
 source_of_truth: github
 direction: repository_to_notion
-root_page_title: "Docoo — Product & Engineering"
-target_workspace_account: "farhad.dgm@gmail.com"
-repository: "https://github.com/farhaddgm/Docoo"
+root_page_title: 'Docoo — Product & Engineering'
+target_workspace_account: 'farhad.dgm@gmail.com'
+repository: 'https://github.com/farhaddgm/Docoo'
 documents:
   - path: docs/README.md
     doc_id: DOCOO-DOC-INDEX
@@ -92,6 +92,15 @@ documents:
   - path: docs/06-delivery/05-acceptance-and-traceability.md
     doc_id: DOCOO-ACCEPTANCE-TRACEABILITY
     section: 06 Delivery & Operations
+  - path: docs/06-delivery/06-implementation-backlog.md
+    doc_id: DOCOO-IMPLEMENTATION-BACKLOG
+    section: 06 Delivery & Operations
+  - path: docs/06-delivery/07-owner-action-guide.md
+    doc_id: DOCOO-OWNER-ACTION-GUIDE
+    section: 06 Delivery & Operations
+  - path: docs/06-delivery/08-readiness-checklist.md
+    doc_id: DOCOO-READINESS-CHECKLIST
+    section: 06 Delivery & Operations
   - path: docs/07-integrations/01-notion-and-github.md
     doc_id: DOCOO-NOTION-GITHUB
     section: 07 Integrations
@@ -112,4 +121,10 @@ documents:
     section: ADRs
   - path: docs/adr/0005-two-level-knowledge-audit.md
     doc_id: DOCOO-ADR-0005
+    section: ADRs
+  - path: docs/adr/0006-application-platform-and-toolchain.md
+    doc_id: DOCOO-ADR-0006
+    section: ADRs
+  - path: docs/adr/0007-authentication-and-session-security.md
+    doc_id: DOCOO-ADR-0007
     section: ADRs

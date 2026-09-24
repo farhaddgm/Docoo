@@ -1,8 +1,8 @@
 ---
 doc_id: DOCOO-DATA-DICTIONARY
 title: فرهنگ داده هسته Docoo
-status: proposed
-version: 1.0.0
+status: approved-baseline
+version: 1.0.1
 owner: Data Architecture
 last_updated: 2026-09-24
 notion_sync: true
@@ -12,48 +12,48 @@ notion_sync: true
 
 ## قرارداد عمومی همهٔ جدول‌های tenant-scoped
 
-| فیلد | نوع | قاعده |
-|---|---|---|
-| `id` | uuid | UUIDv7، تغییرناپذیر |
-| `workspace_id` | uuid | اجباری، کلید RLS |
-| `created_at` | timestamptz | UTC، server-generated |
-| `created_by` | uuid | user/service principal |
-| `updated_at` | timestamptz | برای logical head |
-| `version` | bigint | optimistic concurrency |
-| `deleted_at` | timestamptz nullable | soft delete |
+| فیلد           | نوع                  | قاعده                  |
+| -------------- | -------------------- | ---------------------- |
+| `id`           | uuid                 | UUIDv7، تغییرناپذیر    |
+| `workspace_id` | uuid                 | اجباری، کلید RLS       |
+| `created_at`   | timestamptz          | UTC، server-generated  |
+| `created_by`   | uuid                 | user/service principal |
+| `updated_at`   | timestamptz          | برای logical head      |
+| `version`      | bigint               | optimistic concurrency |
+| `deleted_at`   | timestamptz nullable | soft delete            |
 
 ## workspace
 
-| فیلد | نوع | توضیح |
-|---|---|---|
-| `name` | text | نام فنی workspace |
-| `default_locale` | enum | `fa`, `en` |
-| `retention_policy_id` | uuid | policy فعال |
-| `status` | enum | active, suspended, archived |
+| فیلد                  | نوع  | توضیح                       |
+| --------------------- | ---- | --------------------------- |
+| `name`                | text | نام فنی workspace           |
+| `default_locale`      | enum | `fa`, `en`                  |
+| `retention_policy_id` | uuid | policy فعال                 |
+| `status`              | enum | active, suspended, archived |
 
 ## topic_domain
 
-| فیلد | نوع | توضیح |
-|---|---|---|
-| `code` | citext | یکتا، قابل‌ویرایش |
-| `title` | citext | یکتا در workspace |
-| `description_head_id` | uuid | نسخهٔ شرح فعال |
-| `default_language` | enum | زبان محتوای ترجیحی |
-| `status` | enum | active, archived, deleted |
+| فیلد                  | نوع    | توضیح                     |
+| --------------------- | ------ | ------------------------- |
+| `code`                | citext | یکتا، قابل‌ویرایش         |
+| `title`               | citext | یکتا در workspace         |
+| `description_head_id` | uuid   | نسخهٔ شرح فعال            |
+| `default_language`    | enum   | زبان محتوای ترجیحی        |
+| `status`              | enum   | active, archived, deleted |
 
 ## project
 
-| فیلد | نوع | توضیح |
-|---|---|---|
-| `code` | citext | یکتا در workspace |
-| `title` | text | عنوان مدیرپسند |
-| `status` | enum | state machine رسمی |
-| `initial_problem` | text | ورودی اصلی، immutable versioned |
-| `approved_problem_version_id` | uuid nullable | تعریف نهایی |
-| `output_language` | enum | fa یا en |
-| `current_stage` | enum | analysis..evaluation |
-| `workflow_id` | uuid | workflow فعال |
-| `purge_at` | timestamptz nullable | حذف دائمی برنامه‌ریزی‌شده |
+| فیلد                          | نوع                  | توضیح                           |
+| ----------------------------- | -------------------- | ------------------------------- |
+| `code`                        | citext               | یکتا در workspace               |
+| `title`                       | text                 | عنوان مدیرپسند                  |
+| `status`                      | enum                 | state machine رسمی              |
+| `initial_problem`             | text                 | ورودی اصلی، immutable versioned |
+| `approved_problem_version_id` | uuid nullable        | تعریف نهایی                     |
+| `output_language`             | enum                 | fa یا en                        |
+| `current_stage`               | enum                 | analysis..evaluation            |
+| `workflow_id`                 | uuid                 | workflow فعال                   |
+| `purge_at`                    | timestamptz nullable | حذف دائمی برنامه‌ریزی‌شده       |
 
 ## project_topic
 
@@ -109,18 +109,18 @@ notion_sync: true
 
 ### knowledge_version
 
-| فیلد | توضیح |
-|---|---|
-| `source_type` | admin, clue_research, autonomous_research |
-| `title` | عنوان انسانی |
-| `language` | BCP-47 محدودشده |
-| `content_ref` | object/text structured content |
-| `content_hash` | تشخیص تغییر |
-| `provenance_json` | creator, source, collected_at, method |
-| `confidentiality` | restricted پیش‌فرض |
-| `audit_status` | وضعیت Brain |
-| `valid_from/until` | اعتبار زمانی |
-| `supersedes_id` | lineage |
+| فیلد               | توضیح                                     |
+| ------------------ | ----------------------------------------- |
+| `source_type`      | admin, clue_research, autonomous_research |
+| `title`            | عنوان انسانی                              |
+| `language`         | BCP-47 محدودشده                           |
+| `content_ref`      | object/text structured content            |
+| `content_hash`     | تشخیص تغییر                               |
+| `provenance_json`  | creator, source, collected_at, method     |
+| `confidentiality`  | restricted پیش‌فرض                        |
+| `audit_status`     | وضعیت Brain                               |
+| `valid_from/until` | اعتبار زمانی                              |
+| `supersedes_id`    | lineage                                   |
 
 ### knowledge_scope
 

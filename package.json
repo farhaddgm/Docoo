@@ -1,0 +1,44 @@
+{
+  "name": "docoo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Docoo product and engineering monorepo",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=12 <13"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "env:setup": "node scripts/setup-local-env.mjs",
+    "docs:validate": "node scripts/validate-notion-manifest.mjs",
+    "admin:create": "pnpm --filter @docoo/api admin:create",
+    "db:generate": "pnpm --filter @docoo/database db:generate",
+    "db:migrate": "pnpm --filter @docoo/database db:migrate",
+    "db:test:rls": "pnpm --filter @docoo/database test:rls",
+    "stack:up": "docker compose up -d postgres redis object-store temporal temporal-ui",
+    "stack:observability": "docker compose --profile observability up -d",
+    "stack:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.10.12",
+    "eslint": "10.10.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.4.0",
+    "prettier": "3.9.7",
+    "turbo": "2.10.13",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0",
+    "vitest": "5.0.1"
+  }
+}

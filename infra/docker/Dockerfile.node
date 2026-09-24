@@ -1,0 +1,25 @@
+FROM node:24-bookworm-slim AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+WORKDIR /workspace
+RUN corepack enable
+
+FROM base AS dependencies
+COPY . .
+RUN pnpm install --frozen-lockfile
+
+FROM dependencies AS builder
+ARG PACKAGE
+RUN pnpm --filter "${PACKAGE}..." build
+
+FROM node:24-bookworm-slim AS runner
+ENV NODE_ENV=production
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+WORKDIR /workspace
+RUN corepack enable
+COPY --from=builder /workspace /workspace
+ARG PACKAGE
+ENV DOCOO_PACKAGE=$PACKAGE
+USER node
+CMD ["sh", "-c", "pnpm --filter \"$DOCOO_PACKAGE\" start"]
