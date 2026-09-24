@@ -1,8 +1,8 @@
 ---
 doc_id: DOCOO-AI-PROVIDERS
 title: ارکستراسیون ارائه‌دهندگان و مدل‌های AI
-status: proposed
-version: 1.0.0
+status: approved-baseline
+version: 1.0.1
 owner: AI Platform
 last_updated: 2026-09-24
 notion_sync: true
@@ -89,17 +89,17 @@ Provider call اتمیک است. تغییر ادمین call جاری را mutate
 فقط خطای transient/rate-limit/timeout قابل retry است. schedule تلاش‌های بعدی:
 
 | retry | delay |
-|---:|---:|
-| 1 | 5s |
-| 2 | 5s |
-| 3 | 5s |
-| 4 | 10s |
-| 5 | 15s |
-| 6 | 20s |
-| 7 | 25s |
-| 8 | 30s |
-| 9 | 35s |
-| 10 | 40s |
+| ----: | ----: |
+|     1 |    5s |
+|     2 |    5s |
+|     3 |    5s |
+|     4 |   10s |
+|     5 |   15s |
+|     6 |   20s |
+|     7 |   25s |
+|     8 |   30s |
+|     9 |   35s |
+|    10 |   40s |
 
 اگر provider `Retry-After` بزرگ‌تری ارائه دهد، مقدار بزرگ‌تر با سقف policy استفاده می‌شود. پس از تلاش دهم، workflow paused و human task ساخته می‌شود. fallback خودکار خاموش است.
 

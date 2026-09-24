@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.1-pg18
+        env:
+          POSTGRES_DB: docoo_ci
+          POSTGRES_USER: docoo_admin
+          POSTGRES_PASSWORD: docoo-ci-admin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U docoo_admin -d docoo_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.6.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm docs:validate
+      - run: pnpm db:migrate
+        env:
+          DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+      - run: pnpm db:test:rls
+        env:
+          DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+      - run: pnpm --filter @docoo/api test:topics:integration
+        env:
+          DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/coverage/
+            **/test-results/
+          if-no-files-found: ignore

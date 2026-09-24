@@ -23,7 +23,7 @@ notion_sync: true
 - Workflow: Temporal self-hosted برای durable execution، signal و retry.
 - Database: PostgreSQL با RLS و pgvector.
 - Cache/rate limit: Redis؛ منبع حقیقت نیست.
-- Object storage: S3-compatible؛ MinIO در توسعه.
+- Object storage: S3-compatible؛ SeaweedFS در محیط توسعه.
 - Document rendering: service worker با DOCX/PPTX libraries و Chromium/HTML-to-PDF؛ LibreOffice فقط مسیر fallback کنترل‌شده.
 - Extraction: Apache Tika یا parserهای sandbox، OCR و transcription adapter.
 - Observability: OpenTelemetry، Prometheus-compatible metrics، log backend و trace backend.
@@ -110,7 +110,7 @@ Commandهای سریع در API validate و transaction می‌شوند و workf
 
 ### توسعه
 
-Docker Compose: web، api، workerها، postgres، temporal، redis، minio و telemetry حداقلی.
+Docker Compose: web، api، workerها، postgres، temporal، redis، S3-compatible object store و telemetry حداقلی.
 
 ### production تک‌سرور
 

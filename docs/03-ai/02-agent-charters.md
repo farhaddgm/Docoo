@@ -1,8 +1,8 @@
 ---
 doc_id: DOCOO-AGENT-CHARTERS
 title: اصول و شرح وظایف پیش‌فرض ایجنت‌ها
-status: proposed
-version: 1.0.0
+status: approved-baseline
+version: 1.0.1
 owner: AI Product
 last_updated: 2026-09-24
 notion_sync: true

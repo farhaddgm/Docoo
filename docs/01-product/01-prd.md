@@ -1,8 +1,8 @@
 ---
 doc_id: DOCOO-PRD
 title: سند جامع نیازمندی محصول Docoo
-status: proposed
-version: 1.0.0
+status: approved-baseline
+version: 1.0.1
 owner: Product
 last_updated: 2026-09-24
 notion_sync: true

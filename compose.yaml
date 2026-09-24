@@ -1,0 +1,156 @@
+name: docoo
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.1-pg18
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-docoo}
+      POSTGRES_USER: ${POSTGRES_USER:-docoo_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docoo-local-change-me}
+      POSTGRES_RUNTIME_USER: ${POSTGRES_RUNTIME_USER:-docoo_runtime}
+      POSTGRES_RUNTIME_PASSWORD: ${POSTGRES_RUNTIME_PASSWORD:-docoo-runtime-local-change-me}
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data-pg18:/var/lib/postgresql
+      - ./infra/postgres/001-create-runtime-role.sh:/docker-entrypoint-initdb.d/001-create-runtime-role.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  object-store:
+    image: chrislusf/seaweedfs:latest
+    command: ['mini', '-dir=/data']
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-docoo-local}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-docoo-local-change-me}
+      S3_BUCKET: ${S3_BUCKET:-docoo-local}
+    ports:
+      - '127.0.0.1:${S3_API_PORT:-8333}:8333'
+      - '127.0.0.1:${S3_CONSOLE_PORT:-8888}:8888'
+    volumes:
+      - object-store-data:/data
+    healthcheck:
+      test: ['CMD', 'nc', '-z', 'localhost', '8333']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  temporal:
+    image: temporalio/temporal:latest
+    command:
+      ['server', 'start-dev', '--ip', '0.0.0.0', '--db-filename', '/home/temporal/temporal.db']
+    ports:
+      - '127.0.0.1:${TEMPORAL_PORT:-7233}:7233'
+    volumes:
+      - temporal-data:/home/temporal
+    healthcheck:
+      test: ['CMD', 'nc', '-z', 'localhost', '7233']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: ${WEB_ORIGIN:-http://localhost:3000}
+    ports:
+      - '127.0.0.1:${TEMPORAL_UI_PORT:-8080}:8080'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:8080/']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    profiles: [observability]
+    command: ['--config=/etc/otelcol-contrib/config.yaml']
+    volumes:
+      - ./infra/otel/collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - '127.0.0.1:${OTEL_GRPC_PORT:-4317}:4317'
+      - '127.0.0.1:${OTEL_HTTP_PORT:-4318}:4318'
+      - '127.0.0.1:${OTEL_PROMETHEUS_PORT:-9464}:9464'
+    depends_on:
+      - tempo
+
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: [observability]
+    command: ['--config.file=/etc/prometheus/prometheus.yml', '--storage.tsdb.path=/prometheus']
+    ports:
+      - '127.0.0.1:${PROMETHEUS_PORT:-9090}:9090'
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      - otel-collector
+
+  tempo:
+    image: grafana/tempo:latest
+    profiles: [observability]
+    command: ['-config.file=/etc/tempo/config.yaml']
+    ports:
+      - '127.0.0.1:${TEMPO_HTTP_PORT:-3200}:3200'
+    volumes:
+      - ./infra/tempo/tempo.yaml:/etc/tempo/config.yaml:ro
+      - tempo-data:/var/tempo
+
+  loki:
+    image: grafana/loki:latest
+    profiles: [observability]
+    command: ['-config.file=/etc/loki/config.yaml']
+    ports:
+      - '127.0.0.1:${LOKI_PORT:-3100}:3100'
+    volumes:
+      - ./infra/loki/loki.yaml:/etc/loki/config.yaml:ro
+      - loki-data:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: [observability]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-docoo-local-change-me}
+    ports:
+      - '127.0.0.1:${GRAFANA_PORT:-3001}:3000'
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+
+volumes:
+  postgres-data-pg18:
+  redis-data:
+  object-store-data:
+  temporal-data:
+  prometheus-data:
+  tempo-data:
+  loki-data:
+  grafana-data:

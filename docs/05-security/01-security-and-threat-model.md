@@ -1,8 +1,8 @@
 ---
 doc_id: DOCOO-SECURITY-THREAT-MODEL
 title: معماری امنیت، حریم خصوصی و مدل تهدید
-status: proposed
-version: 1.0.0
+status: approved-baseline
+version: 1.0.1
 owner: Security
 last_updated: 2026-09-24
 notion_sync: true

@@ -1,0 +1,23 @@
+name: Bug
+description: A reproducible defect.
+title: '[bug] '
+labels: ['type:bug']
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true

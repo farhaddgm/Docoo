@@ -50,9 +50,9 @@ configure، test، health، model refresh، rotate و disable؛ هیچ value ث�
 {
   "eventId": "uuid",
   "workspaceId": "uuid",
-  "actor": {"type":"user|service|agent", "id":"uuid"},
+  "actor": { "type": "user|service|agent", "id": "uuid" },
   "action": "knowledge.audit.override",
-  "target": {"type":"knowledge_version", "id":"uuid", "version":"7"},
+  "target": { "type": "knowledge_version", "id": "uuid", "version": "7" },
   "occurredAt": "RFC3339",
   "correlationId": "uuid",
   "reason": "...",

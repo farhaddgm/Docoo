@@ -1,8 +1,8 @@
 ---
 doc_id: DOCOO-ACCEPTANCE-TRACEABILITY
 title: طرح پذیرش و ردیابی نیازمندی‌ها
-status: proposed
-version: 1.0.0
+status: approved-baseline
+version: 1.0.1
 owner: Product Quality
 last_updated: 2026-09-24
 notion_sync: true
@@ -30,21 +30,21 @@ notion_sync: true
 
 ## ۲. ماتریس سطح بالا
 
-| قابلیت | نیازمندی‌ها | نوع آزمون | مدرک پذیرش |
-|---|---|---|---|
-| Auth | FR-AUTH-* | E2E/Security | report + audit |
-| Topic/Project | FR-TOP-*, FR-PRJ-* | E2E/Integration | scenario log |
-| Config | FR-CFG-* | Unit/E2E | resolution snapshot |
-| Workflow | FR-WF-*, FR-ANL-* | Replay/E2E | Temporal history |
-| Ingestion | FR-ING-* | Fixture/Security | extraction manifest |
-| Knowledge | FR-KNO-*, FR-RES-* | Eval/E2E | lineage report |
-| Solutions | FR-SOL-* | Unit/E2E | scorecard |
-| Documents | FR-DOC-* | Golden/E2E | artifacts/checksum |
-| Evaluation | FR-EVA-* | Eval/E2E | finding loop |
-| Brain | FR-BRN-* | Eval/Report | performance report |
-| Providers | FR-AI-* | Contract/Chaos | adapter report |
-| Audit | FR-AUD-* | Integration/Security | gap check |
-| NFR | NFR-* | Load/Security/DR | signed test report |
+| قابلیت        | نیازمندی‌ها        | نوع آزمون            | مدرک پذیرش          |
+| ------------- | ------------------ | -------------------- | ------------------- |
+| Auth          | FR-AUTH-*          | E2E/Security         | report + audit      |
+| Topic/Project | FR-TOP-_, FR-PRJ-_ | E2E/Integration      | scenario log        |
+| Config        | FR-CFG-*           | Unit/E2E             | resolution snapshot |
+| Workflow      | FR-WF-_, FR-ANL-_  | Replay/E2E           | Temporal history    |
+| Ingestion     | FR-ING-*           | Fixture/Security     | extraction manifest |
+| Knowledge     | FR-KNO-_, FR-RES-_ | Eval/E2E             | lineage report      |
+| Solutions     | FR-SOL-*           | Unit/E2E             | scorecard           |
+| Documents     | FR-DOC-*           | Golden/E2E           | artifacts/checksum  |
+| Evaluation    | FR-EVA-*           | Eval/E2E             | finding loop        |
+| Brain         | FR-BRN-*           | Eval/Report          | performance report  |
+| Providers     | FR-AI-*            | Contract/Chaos       | adapter report      |
+| Audit         | FR-AUD-*           | Integration/Security | gap check           |
+| NFR           | NFR-*              | Load/Security/DR     | signed test report  |
 
 ## ۳. معیار رد release
 
