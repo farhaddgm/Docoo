@@ -28,7 +28,7 @@ notion_sync: true
 | lint/typecheck/test/build        | READY                  | `pnpm verify` و `pnpm docs:validate` در container موقت Node 24/pnpm 12 سبز شدند                                                                                                        |
 | GitHub Issues/Milestones         | READY                  | [GitHub Issueها](https://github.com/farhaddgm/Docoo/issues): ۷ milestone، ۹ label و ۳۱ Issue برای همهٔ تسک‌های فاز ۰/۱ و epicهای بعدی با dependency و acceptance ثبت شدند              |
 | provider/OCR/search credentials  | BLOCKED تا integration | `.env.example`                                                                                                                                                                         |
-| branch protection/CodeQL         | BLOCKED تا تصمیم مالک  | CodeQL در مخزن خصوصی با API پاسخ 403 «not enabled» می‌دهد؛ `pnpm audit` و Trivy در CI فعال‌اند، اما فعال‌سازی Code Security و حفاظت شاخه نیازمند طرح/تنظیمات مناسب GitHub است          |
+| CodeQL و حفاظت شاخه              | DEFERRED               | مالک موقتاً پذیرفت توسعه متوقف نشود؛ CodeQL در مخزن خصوصی تا فراهم‌شدن Code Security اجرا نمی‌شود؛ `pnpm audit` و Trivy فعال‌اند؛ بازبینی امنیتی کامل بعداً انجام می‌شود               |
 
 ## gate شروع توسعه
 

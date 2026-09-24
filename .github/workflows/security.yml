@@ -35,6 +35,8 @@ jobs:
       - run: pnpm audit --audit-level=high
 
   codeql:
+    # Temporarily skip CodeQL on private repos without Code Security; the owner approved the exception.
+    if: ${{ !github.event.repository.private || vars.CODEQL_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
