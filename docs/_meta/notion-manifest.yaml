@@ -1,0 +1,115 @@
+version: 1
+source_of_truth: github
+direction: repository_to_notion
+root_page_title: "Docoo — Product & Engineering"
+target_workspace_account: "farhad.dgm@gmail.com"
+repository: "https://github.com/farhaddgm/Docoo"
+documents:
+  - path: docs/README.md
+    doc_id: DOCOO-DOC-INDEX
+    section: Root
+  - path: docs/00-foundation/01-discovery-decisions.md
+    doc_id: DOCOO-FOUNDATION-DISCOVERY
+    section: 00 Foundation
+  - path: docs/00-foundation/02-product-vision.md
+    doc_id: DOCOO-FOUNDATION-VISION
+    section: 00 Foundation
+  - path: docs/00-foundation/03-scope-and-principles.md
+    doc_id: DOCOO-FOUNDATION-SCOPE
+    section: 00 Foundation
+  - path: docs/01-product/01-prd.md
+    doc_id: DOCOO-PRD
+    section: 01 Product
+  - path: docs/01-product/02-functional-requirements.md
+    doc_id: DOCOO-FUNCTIONAL-REQUIREMENTS
+    section: 01 Product
+  - path: docs/01-product/03-non-functional-requirements.md
+    doc_id: DOCOO-NONFUNCTIONAL-REQUIREMENTS
+    section: 01 Product
+  - path: docs/01-product/04-roles-and-permissions.md
+    doc_id: DOCOO-ROLES-PERMISSIONS
+    section: 01 Product
+  - path: docs/01-product/05-backoffice-ux.md
+    doc_id: DOCOO-BACKOFFICE-UX
+    section: 01 Product
+  - path: docs/02-domain/01-domain-model.md
+    doc_id: DOCOO-DOMAIN-MODEL
+    section: 02 Domain
+  - path: docs/02-domain/02-state-machines.md
+    doc_id: DOCOO-STATE-MACHINES
+    section: 02 Domain
+  - path: docs/02-domain/03-data-dictionary.md
+    doc_id: DOCOO-DATA-DICTIONARY
+    section: 02 Domain
+  - path: docs/03-ai/01-agent-system.md
+    doc_id: DOCOO-AGENT-SYSTEM
+    section: 03 AI & Knowledge
+  - path: docs/03-ai/02-agent-charters.md
+    doc_id: DOCOO-AGENT-CHARTERS
+    section: 03 AI & Knowledge
+  - path: docs/03-ai/03-knowledge-and-brain.md
+    doc_id: DOCOO-KNOWLEDGE-BRAIN
+    section: 03 AI & Knowledge
+  - path: docs/03-ai/04-provider-orchestration.md
+    doc_id: DOCOO-AI-PROVIDERS
+    section: 03 AI & Knowledge
+  - path: docs/03-ai/05-evaluation-and-quality.md
+    doc_id: DOCOO-AI-EVALUATION
+    section: 03 AI & Knowledge
+  - path: docs/04-architecture/01-system-architecture.md
+    doc_id: DOCOO-SYSTEM-ARCHITECTURE
+    section: 04 Architecture
+  - path: docs/04-architecture/02-data-architecture.md
+    doc_id: DOCOO-DATA-ARCHITECTURE
+    section: 04 Architecture
+  - path: docs/04-architecture/03-api-contracts.md
+    doc_id: DOCOO-API-CONTRACTS
+    section: 04 Architecture
+  - path: docs/04-architecture/04-workflows-and-jobs.md
+    doc_id: DOCOO-WORKFLOWS-JOBS
+    section: 04 Architecture
+  - path: docs/04-architecture/05-document-pipeline.md
+    doc_id: DOCOO-DOCUMENT-PIPELINE
+    section: 04 Architecture
+  - path: docs/05-security/01-security-and-threat-model.md
+    doc_id: DOCOO-SECURITY-THREAT-MODEL
+    section: 05 Security
+  - path: docs/05-security/02-audit-and-compliance.md
+    doc_id: DOCOO-AUDIT-COMPLIANCE
+    section: 05 Security
+  - path: docs/06-delivery/01-testing-strategy.md
+    doc_id: DOCOO-TESTING-STRATEGY
+    section: 06 Delivery & Operations
+  - path: docs/06-delivery/02-deployment-and-operations.md
+    doc_id: DOCOO-DEPLOYMENT-OPERATIONS
+    section: 06 Delivery & Operations
+  - path: docs/06-delivery/03-observability-and-sre.md
+    doc_id: DOCOO-OBSERVABILITY-SRE
+    section: 06 Delivery & Operations
+  - path: docs/06-delivery/04-roadmap.md
+    doc_id: DOCOO-ROADMAP
+    section: 06 Delivery & Operations
+  - path: docs/06-delivery/05-acceptance-and-traceability.md
+    doc_id: DOCOO-ACCEPTANCE-TRACEABILITY
+    section: 06 Delivery & Operations
+  - path: docs/07-integrations/01-notion-and-github.md
+    doc_id: DOCOO-NOTION-GITHUB
+    section: 07 Integrations
+  - path: docs/07-integrations/02-external-adapters.md
+    doc_id: DOCOO-EXTERNAL-ADAPTERS
+    section: 07 Integrations
+  - path: docs/adr/0001-modular-monolith.md
+    doc_id: DOCOO-ADR-0001
+    section: ADRs
+  - path: docs/adr/0002-durable-workflows.md
+    doc_id: DOCOO-ADR-0002
+    section: ADRs
+  - path: docs/adr/0003-tenant-and-topic-boundary.md
+    doc_id: DOCOO-ADR-0003
+    section: ADRs
+  - path: docs/adr/0004-versioned-configuration.md
+    doc_id: DOCOO-ADR-0004
+    section: ADRs
+  - path: docs/adr/0005-two-level-knowledge-audit.md
+    doc_id: DOCOO-ADR-0005
+    section: ADRs
