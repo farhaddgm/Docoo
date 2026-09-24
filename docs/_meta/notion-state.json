@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "46c1b426e0ae7349294d39717d6fafc9e167334f"
+    "source_commit": "29883f4b59c1139473cd97f525c8c5d46b1479ed"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-09-24T08:19:32.623Z",
-    "created": 36,
-    "updated": 0,
-    "unchanged": 0,
+    "synced_at": "2026-09-24T08:27:08.290Z",
+    "created": 0,
+    "updated": 2,
+    "unchanged": 34,
     "failed": 0,
     "validation": {
       "manifest_documents": 36,
@@ -421,10 +421,10 @@
     "DOCOO-NOTION-GITHUB": {
       "path": "docs/07-integrations/01-notion-and-github.md",
       "section": "07 Integrations",
-      "version": "1.0.0",
-      "status": "proposed",
+      "version": "1.1.0",
+      "status": "active",
       "owner": "Documentation Engineering",
-      "checksum_sha256": "e9f1258f73d1509ad97e82fbbf93044dfb8bed920dfe117b7ab2759d5974667c",
+      "checksum_sha256": "46474a8ce652438cfd9b57d921947434cb13caf635f654dc630b12de2a98f669",
       "notion_page_id": "3e55a24a-6668-81ae-a408-db7f826eb923",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881aea408db7f826eb923?pvs=204",
       "index_row_page_id": "3e55a24a-6668-818b-a288-fe1927e51691",
@@ -505,10 +505,10 @@
     "DOCOO-DOC-INDEX": {
       "path": "docs/README.md",
       "section": "Root",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "active",
       "owner": "Product & Architecture",
-      "checksum_sha256": "e33d5c069129c69a673018c0fc32035cf7aec7087cddb85d73ef82645defabe3",
+      "checksum_sha256": "65952a8c4a580e650af2d7c8aa81aad45f36284a00031f2556db84b21c876128",
       "notion_page_id": "3e55a24a-6668-814f-a8af-c79e5a2e44ee",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668814fa8afc79e5a2e44ee?pvs=204",
       "index_row_page_id": "3e55a24a-6668-818e-b8a6-e77117562585",
