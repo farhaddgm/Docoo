@@ -2,7 +2,7 @@
 doc_id: DOCOO-DOC-INDEX
 title: فهرست مرجع مستندات Docoo
 status: active
-version: 0.1.0
+version: 0.1.1
 owner: Product & Architecture
 last_updated: 2026-09-24
 notion_sync: true
@@ -85,6 +85,7 @@ notion_sync: true
 - `draft`: پیش‌نویس و غیرقابل‌استناد برای ساخت.
 - `proposed`: آمادهٔ بازبینی ادمین.
 - `approved-baseline`: خط مبنای تأییدشده برای شروع توسعه.
+- `accepted`: تصمیم معماری پذیرفته‌شده و لازم‌الاجرا.
 - `active`: سند عملیاتی که مرتب به‌روزرسانی می‌شود.
 - `superseded`: با سند یا نسخهٔ جدید جایگزین شده است.
 - `archived`: صرفاً برای تاریخچه نگهداری می‌شود.

@@ -1,8 +1,8 @@
 ---
 doc_id: DOCOO-NOTION-GITHUB
 title: راهبرد GitHub و همگام‌سازی Notion
-status: proposed
-version: 1.0.0
+status: active
+version: 1.1.0
 owner: Documentation Engineering
 last_updated: 2026-09-24
 notion_sync: true
@@ -66,7 +66,7 @@ Notion read-only واقعی ممکن است از نظر permission قابل‌ت
 
 ## ۷. وضعیت فعلی
 
-اتصال Notion در محیط فعلی هنوز نصب/متصل نیست؛ در نتیجه ساخت صفحه و sync انجام‌نشده و نباید موفق اعلام شود. پس از اتصال، ابزار باید identity حساب و Workspace را تأیید و سپس صفحهٔ ریشه را بسازد. اگر connector/API اجازهٔ ایجاد صفحه در root ندهد، یک parent page در UI با همان حساب ایجاد و به اتصال share می‌شود؛ این تنها اقدام دستی لازم است.
+اتصال Notion با حساب `farhad.dgm@gmail.com` و Workspace `Farhad’s Space` تأیید شد. صفحهٔ ریشه، ۹ بخش، ۳۶ صفحهٔ سند و دیتابیس `Docoo Document Index` ساخته شده‌اند. نگاشت پایدار `doc_id -> notion_page_id` و نتیجهٔ اعتبارسنجی در `docs/_meta/notion-state.json` نگهداری می‌شود.
 
 ## ۸. GitHub
 
@@ -80,16 +80,13 @@ Repository باید private، branch اصلی `main` و تنظیمات زیر د
 - environments staging/production با approvals؛
 - CODEOWNERS برای docs/security/infra در زمان اضافه‌شدن تیم.
 
-## ۹. bootstrap مخزن
+## ۹. وضعیت bootstrap مخزن
 
-چون پوشهٔ فعلی Git معتبر ندارد، مراحل bootstrap:
-
-1. initialize repository؛
-2. commit خط مبنای مستندات؛
-3. تأیید remote به URL مقصد؛
-4. بررسی authentication و اینکه repo private است؛
-5. push `main`؛
-6. ثبت commit SHA در sync manifest؛
-7. sync Notion.
+- Git محلی معتبر و branch اصلی `main` است.
+- هویت مقصد `farhaddgm` و خصوصی‌بودن `farhaddgm/Docoo` تأیید شد.
+- commit اولیهٔ placeholder در GitHub بدون force-push و با حفظ تاریخچه ادغام شد.
+- خط مبنای مستندات و state همگام‌سازی به `main` push شدند.
+- Dependabot vulnerability alerts و automated security fixes فعال‌اند.
+- branch protection و secret scanning برای private repository در پلن فعلی GitHub در دسترس نیستند و پس از ارتقای پلن باید فعال شوند.
 
 هیچ push یا ساخت repo بدون احراز هویت حساب مقصد و بررسی عدم overwrite محتوای موجود انجام نمی‌شود.
