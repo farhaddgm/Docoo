@@ -9,7 +9,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - Direct repository → Notion documentation sync (`scripts/notion/`): Markdown to Notion blocks, doc_id-based page matching, checksum idempotency, document index updates and state committed back to `main`.
 - `pnpm docs:test` and `pnpm docs:sync:plan`; both run in CI.
 - SessionStart hook for Claude Code cloud sessions: Node 24, pnpm 12, Docker daemon and dependencies.
-- Release workflow that publishes a GitHub Release for each `vX.Y.Z` tag from this changelog.
+- Release workflow that publishes a GitHub Release from this changelog, on a pushed `vX.Y.Z` tag or a manual run on `main` that creates the tag from `package.json`.
 
 ### Changed
 
