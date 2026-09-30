@@ -42,6 +42,8 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm docs:validate
+      - run: pnpm docs:test
+      - run: pnpm docs:sync:plan
       - run: pnpm db:migrate
         env:
           DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci

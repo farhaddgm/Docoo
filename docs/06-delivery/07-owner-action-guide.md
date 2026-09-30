@@ -56,7 +56,7 @@ notion_sync: true
 
 ## قدم ۷ — Notion و GitHub
 
-GitHub منبع حقیقت است و Notion نمایش/پیگیری است. بعد از هر merge، sync معتبر باید document ID، version، commit SHA، checksum و زمان sync را ثبت و محتوای صفحه را با فایل مخزن تطبیق دهد. workflow فعلی فقط manifest را اعتبارسنجی می‌کند و تا زمان پیکربندی connector/webhook، انتشار خودکار انجام نمی‌دهد؛ «سبز شدن» آن نشانهٔ sync نیست. تا آماده‌شدن connector، همگام‌سازی دستیِ کنترل‌شده فقط از نسخهٔ merge‌شدهٔ `main` و با راستی‌آزمایی checksum مجاز است. در Notion محتوا را مستقل از مخزن ویرایش نکنید؛ اگر تغییری لازم است در GitHub Issue/PR ثبت شود.
+GitHub منبع حقیقت است و Notion نمایش/پیگیری است. بعد از هر merge، sync معتبر باید document ID، version، commit SHA، checksum و زمان sync را ثبت و محتوای صفحه را با فایل مخزن تطبیق دهد. workflow `Notion documentation sync` این کار را مستقیم با Notion API انجام می‌دهد و state را در `main` commit می‌کند. کار لازم از سمت مالک: ساخت internal integration در Notion، share کردن صفحهٔ ریشهٔ Docoo و `Docoo Document Index` با آن، ذخیرهٔ token به‌عنوان secret مخزن با نام `NOTION_TOKEN` و یک‌بار اجرای دستی workflow با گزینهٔ `force`. تا وقتی secret تنظیم نشده، workflow فقط plan را نشان می‌دهد و «سبز شدن» آن نشانهٔ sync نیست. در Notion محتوا را مستقل از مخزن ویرایش نکنید؛ اگر تغییری لازم است در GitHub Issue/PR ثبت شود.
 
 ## چه چیزهایی از شما لازم نیست
 

@@ -2,9 +2,9 @@
 doc_id: DOCOO-NOTION-GITHUB
 title: راهبرد GitHub و همگام‌سازی Notion
 status: active
-version: 1.1.0
+version: 1.2.0
 owner: Documentation Engineering
-last_updated: 2026-09-24
+last_updated: 2026-09-30
 notion_sync: true
 ---
 
@@ -68,7 +68,14 @@ Notion read-only واقعی ممکن است از نظر permission قابل‌ت
 
 اتصال Notion با حساب `farhad.dgm@gmail.com` و Workspace `Farhad’s Space` تأیید شد. آخرین بررسی مستقیم index نشان می‌دهد هر ۴۱ `doc_id` فعلی در `Docoo Document Index` وجود دارد. با این حال، state ثبت‌شده در مخزن هنوز ۳۶ سند را می‌شمارد و checksum محتوای workspace با Notion برای ۱۵ سند متفاوت است؛ بنابراین وجود ردیف index به معنی همگام‌بودن محتوای صفحه نیست. state را دستی جلو نمی‌بریم تا گزارش sync ساختگی نشود.
 
-گردش موجود پس از push تغییرات `docs/**` به `main` اجرا می‌شود؛ فقط manifest را validate می‌کند و در صورت پیکربندی `NOTION_SYNC_WEBHOOK_URL` درخواست sync می‌فرستد. در branch کاری فعلی sync اجرا نشده است. پس از دسترسی GitHub، تغییرات باید از مسیر PR/merge منتشر و سپس نتیجهٔ webhook و state تولیدشده بازبینی شود.
+موتور sync در `scripts/notion/` پیاده‌سازی شده و مستقیم با Notion API (نسخهٔ `2025-09-03`) کار می‌کند؛ webhook خارجی دیگر لازم نیست:
+
+- `pnpm docs:sync:plan` بدون token و بدون شبکه برنامهٔ create/update/unchanged را بر اساس checksum و state نشان می‌دهد و در CI روی هر PR اجرا می‌شود.
+- workflow `Notion documentation sync` پس از push به `main` (تغییر `docs/**` یا `scripts/notion/**`) یا اجرای دستی، با secret `NOTION_TOKEN` صفحه‌ها را به‌روز می‌کند، ردیف index را با Version، Status، Commit SHA و Last Synced می‌نویسد و `docs/_meta/notion-state.json` را با SHA واقعی در `main` commit می‌کند. اجرای دستی با گزینهٔ `force` همهٔ صفحه‌ها را بازنویسی می‌کند.
+- محتوای صفحه جایگزین می‌شود ولی صفحه‌ها و databaseهای فرزند حفظ می‌شوند. سندی که در state نیست ابتدا با عنوان در بخش خودش و با `Doc ID` در index جست‌وجو می‌شود تا ردیف یا صفحهٔ تکراری ساخته نشود.
+- بدون `NOTION_TOKEN` workflow فقط validate و plan را اجرا و هشدار پیکربندی ثبت می‌کند.
+
+راه‌اندازی یک‌باره: در Notion یک internal integration با دسترسی read/update/insert content بسازید، صفحهٔ `Docoo — Product & Engineering` و `Docoo Document Index` را با آن share کنید و token را در GitHub به‌عنوان secret مخزن با نام `NOTION_TOKEN` ذخیره کنید؛ سپس workflow را یک‌بار با `force` اجرا کنید.
 
 ## ۸. GitHub
 
