@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "85249fe79962879e1c3bf894173b8b7bead717a7"
+    "source_commit": "5b7421afcdb0ef55478c0508d5c00dd42de3d66a"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-01T16:57:17.061Z",
+    "synced_at": "2026-10-01T17:05:19.860Z",
     "created": 0,
-    "updated": 1,
-    "unchanged": 40,
+    "updated": 2,
+    "unchanged": 39,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -470,16 +470,16 @@
     "DOCOO-NOTION-GITHUB": {
       "path": "docs/07-integrations/01-notion-and-github.md",
       "section": "07 Integrations",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "status": "active",
       "owner": "Documentation Engineering",
-      "checksum_sha256": "13d7cff547842ea9901b82cd55c44b161a78472e686087345ac9cd708bd4f9ad",
+      "checksum_sha256": "a6e205d1cd630802034309e3fb3554176290beab938f6c8145332c8b26883549",
       "notion_page_id": "3e55a24a-6668-81ae-a408-db7f826eb923",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881aea408db7f826eb923?pvs=204",
       "index_row_page_id": "3e55a24a-6668-818b-a288-fe1927e51691",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a6668818ba288fe1927e51691",
-      "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
-      "synced_at": "2026-10-01T16:08:48.251Z"
+      "synced_commit": "5b7421afcdb0ef55478c0508d5c00dd42de3d66a",
+      "synced_at": "2026-10-01T17:05:19.860Z"
     },
     "DOCOO-EXTERNAL-ADAPTERS": {
       "path": "docs/07-integrations/02-external-adapters.md",
@@ -613,13 +613,13 @@
       "version": "1.0.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "5b33843b135beca74f6abaf85084b70bf67de84ea0507d089da5698655006bd6",
+      "checksum_sha256": "58c3b5d5c65170c9ac1fd30bdb19270714666f591becace243f85c206febcd75",
       "notion_page_id": "3e55a24a-6668-815d-b2f0-d451feffe55e",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668815db2f0d451feffe55e",
       "index_row_page_id": "3e55a24a-6668-81d3-9a8e-d3b801cb1eb3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881d39a8ed3b801cb1eb3",
-      "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
-      "synced_at": "2026-10-01T16:08:48.251Z"
+      "synced_commit": "5b7421afcdb0ef55478c0508d5c00dd42de3d66a",
+      "synced_at": "2026-10-01T17:05:19.860Z"
     },
     "DOCOO-ADR-0006": {
       "path": "docs/adr/0006-application-platform-and-toolchain.md",
