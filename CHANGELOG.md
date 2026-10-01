@@ -10,6 +10,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - Notion sync: progress is logged per document and `notion-state.json` is saved after each one, so an interrupted run resumes instead of starting over.
 - Notion sync workflow time limit raised from 45 to 120 minutes for the first full publish.
 
+### Documentation
+
+- All 41 manifest documents published to Notion on 2026-10-01; README, readiness checklist and the Notion integration guide record the live state.
+
 ## [0.2.0] — 2026-09-30
 
 ### Added
