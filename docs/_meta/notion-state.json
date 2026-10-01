@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946"
+    "source_commit": "85249fe79962879e1c3bf894173b8b7bead717a7"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,17 +62,12 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-01T16:08:48.251Z",
-    "created": 5,
-    "updated": 35,
-    "unchanged": 0,
-    "failed": 1,
-    "failures": [
-      {
-        "docId": "DOCOO-SYSTEM-ARCHITECTURE",
-        "reason": "The operation was aborted due to timeout"
-      }
-    ],
+    "synced_at": "2026-10-01T16:57:17.061Z",
+    "created": 0,
+    "updated": 1,
+    "unchanged": 40,
+    "failed": 0,
+    "failures": [],
     "validation": {
       "manifest_documents": 41,
       "state_documents": 41,
@@ -310,11 +305,13 @@
       "version": "1.0.0",
       "status": "proposed",
       "owner": "Software Architecture",
-      "checksum_sha256": "3c3654800dd9cee714d9286fc1cc0a215df0706e6dbe36c8a9df1f1ee9a14d12",
+      "checksum_sha256": "84d11429eb80b384a77f7ee32965769151b9c58a3695518ab3d8e92b5707a242",
       "notion_page_id": "3e55a24a-6668-8122-bf43-c8ba4911c10c",
       "notion_page_url": "https://app.notion.com/p/3e55a24a66688122bf43c8ba4911c10c?pvs=204",
       "index_row_page_id": "3e55a24a-6668-812c-9de0-e8cc7a2e6670",
-      "index_row_page_url": "https://app.notion.com/p/3e55a24a6668812c9de0e8cc7a2e6670?pvs=204"
+      "index_row_page_url": "https://app.notion.com/p/3e55a24a6668812c9de0e8cc7a2e6670",
+      "synced_commit": "85249fe79962879e1c3bf894173b8b7bead717a7",
+      "synced_at": "2026-10-01T16:57:17.061Z"
     },
     "DOCOO-DATA-ARCHITECTURE": {
       "path": "docs/04-architecture/02-data-architecture.md",
