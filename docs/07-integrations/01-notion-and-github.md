@@ -2,9 +2,9 @@
 doc_id: DOCOO-NOTION-GITHUB
 title: راهبرد GitHub و همگام‌سازی Notion
 status: active
-version: 1.2.0
+version: 1.3.0
 owner: Documentation Engineering
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 notion_sync: true
 ---
 
@@ -76,6 +76,8 @@ Notion read-only واقعی ممکن است از نظر permission قابل‌ت
 - بدون `NOTION_TOKEN` workflow فقط validate و plan را اجرا و هشدار پیکربندی ثبت می‌کند.
 
 راه‌اندازی یک‌باره: در Notion یک internal integration با دسترسی read/update/insert content بسازید، صفحهٔ `Docoo — Product & Engineering` و `Docoo Document Index` را با آن share کنید و token را در GitHub به‌عنوان secret مخزن با نام `NOTION_TOKEN` ذخیره کنید؛ سپس workflow را یک‌بار با `force` اجرا کنید.
+
+این راه‌اندازی در ۲۰۲۶-۱۰-۰۱ انجام شد: اجرای `force` هر ۴۱ سند را منتشر کرد (۵ صفحهٔ جدید، ۳۶ به‌روزرسانی؛ یک سند که به timeout خورد در اجرای بعدی تکمیل شد) و `notion-state.json` با SHA واقعی در `main` ثبت شد.
 
 ## ۸. GitHub
 
