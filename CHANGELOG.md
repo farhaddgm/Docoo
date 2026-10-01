@@ -2,6 +2,14 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.2.1] — 2026-10-01
+
+### Fixed
+
+- Notion sync: requests time out after 30 seconds; network errors are retried for reads and deletes, and a failed write marks only that document as failed.
+- Notion sync: progress is logged per document and `notion-state.json` is saved after each one, so an interrupted run resumes instead of starting over.
+- Notion sync workflow time limit raised from 45 to 120 minutes for the first full publish.
+
 ## [0.2.0] — 2026-09-30
 
 ### Added
@@ -32,5 +40,6 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - Monorepo foundation: NestJS API, Next.js bilingual web shell, workers, Compose stack, CI and security workflows.
 - Super Admin authentication, workspace authorization, topic list/create and PostgreSQL RLS.
 
+[0.2.1]: https://github.com/farhaddgm/Docoo/releases/tag/v0.2.1
 [0.2.0]: https://github.com/farhaddgm/Docoo/releases/tag/v0.2.0
 [0.1.0]: https://github.com/farhaddgm/Docoo/commit/e7cebc9dd478c86ed31d0e83d495965621b31bf9

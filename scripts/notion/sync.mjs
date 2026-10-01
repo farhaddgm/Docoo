@@ -190,6 +190,8 @@ export async function syncDocs({
       ]),
   );
 
+  log(`Publishing ${pending.length} of ${docs.length} documents to Notion…`);
+
   // Phase 1: make sure every document has a page so cross-document links resolve.
   for (const doc of pending.filter((d) => d.action === 'create')) {
     try {
@@ -213,9 +215,12 @@ export async function syncDocs({
   }
 
   const syncedAt = now().toISOString();
-  for (const doc of pending) {
+  const saveState = () => fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
+  for (const [index, doc] of pending.entries()) {
+    const progress = `[${index + 1}/${pending.length}] ${doc.docId}`;
     if (doc.error) {
       report.failed.push({ docId: doc.docId, reason: doc.error.message });
+      log(`${progress}: failed — ${doc.error.message}`);
       continue;
     }
     const pageId = doc.pageId ?? doc.previous.notion_page_id;
@@ -302,8 +307,12 @@ export async function syncDocs({
         synced_at: syncedAt,
       };
       report[doc.action === 'create' ? 'created' : 'updated'].push(doc.docId);
+      // Persist after every document so an interrupted run resumes where it stopped.
+      await saveState();
+      log(`${progress}: ${doc.action === 'create' ? 'created' : 'updated'}`);
     } catch (error) {
       report.failed.push({ docId: doc.docId, reason: error.message });
+      log(`${progress}: failed — ${error.message}`);
     }
   }
 
@@ -322,7 +331,7 @@ export async function syncDocs({
       orphaned_state_documents: Object.keys(state.documents).filter((id) => !manifestIds.has(id)),
     },
   };
-  await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
+  await saveState();
   log(formatReport(report, false));
   return { report, state };
 }
