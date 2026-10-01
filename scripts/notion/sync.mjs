@@ -190,6 +190,8 @@ export async function syncDocs({
       ]),
   );
 
+  log(`Publishing ${pending.length} of ${docs.length} documents to Notion…`);
+
   // Phase 1: make sure every document has a page so cross-document links resolve.
   for (const doc of pending.filter((d) => d.action === 'create')) {
     try {
