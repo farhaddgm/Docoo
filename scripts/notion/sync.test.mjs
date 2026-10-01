@@ -274,3 +274,22 @@ test('client retries rate-limited requests', async () => {
   assert.deepEqual(await client.request('GET', '/x'), { ok: true });
   assert.equal(attempts, 2);
 });
+
+test('client retries network errors only for idempotent requests', async () => {
+  let calls = 0;
+  const client = createNotionClient({
+    token: 't',
+    minIntervalMs: 0,
+    fetchImpl: async () => {
+      calls += 1;
+      if (calls === 1) throw new TypeError('fetch failed');
+      return new Response('{"ok":true}', { status: 200 });
+    },
+  });
+  assert.deepEqual(await client.request('GET', '/x'), { ok: true });
+  assert.equal(calls, 2);
+
+  calls = 0;
+  await assert.rejects(client.request('POST', '/pages', {}), /fetch failed/);
+  assert.equal(calls, 1);
+});

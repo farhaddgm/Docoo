@@ -17,6 +17,7 @@ export function createNotionClient({
   baseUrl = 'https://api.notion.com/v1',
   minIntervalMs = 350,
   maxRetries = 5,
+  requestTimeoutMs = 30000,
   fetchImpl = fetch,
 }) {
   if (!token) throw new Error('NOTION_TOKEN is required to publish to Notion.');
@@ -28,15 +29,25 @@ export function createNotionClient({
       if (wait > 0) await sleep(wait);
       nextSlot = Date.now() + minIntervalMs;
 
-      const response = await fetchImpl(`${baseUrl}${path}`, {
-        method,
-        headers: {
-          authorization: `Bearer ${token}`,
-          'notion-version': NOTION_VERSION,
-          'content-type': 'application/json',
-        },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
+      let response;
+      try {
+        response = await fetchImpl(`${baseUrl}${path}`, {
+          method,
+          signal: AbortSignal.timeout(requestTimeoutMs),
+          headers: {
+            authorization: `Bearer ${token}`,
+            'notion-version': NOTION_VERSION,
+            'content-type': 'application/json',
+          },
+          body: body === undefined ? undefined : JSON.stringify(body),
+        });
+      } catch (error) {
+        // Only idempotent requests are retried after a network error or timeout;
+        // a failed write marks the document failed and the next run rewrites it.
+        if (!['GET', 'DELETE'].includes(method) || attempt >= maxRetries) throw error;
+        await sleep(1000 * 2 ** attempt);
+        continue;
+      }
       const payload = await response.json().catch(() => ({}));
       if (response.ok) return payload;
 
