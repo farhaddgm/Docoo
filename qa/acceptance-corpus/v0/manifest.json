@@ -1,0 +1,108 @@
+{
+  "corpus": "docoo-acceptance",
+  "version": "v0",
+  "description": "Synthetic, non-sensitive fixtures with ground truth for ingestion acceptance.",
+  "generator": "qa/acceptance-corpus/generate.py",
+  "items": [
+    {
+      "id": "scan-fa-001",
+      "file": "scanned-fa-brief.pdf",
+      "kind": "pdf",
+      "language": "fa",
+      "expected": {
+        "pages": 1,
+        "textLayer": false,
+        "transcript": "scanned-fa-brief.expected.txt",
+        "mustContain": [
+          "کاهش بیست درصدی",
+          "شش ماه",
+          "رضایت مشتری"
+        ],
+        "minCharacterAccuracy": 0.85,
+        "pipeline": [
+          "quarantine",
+          "scan",
+          "ocr",
+          "lineage"
+        ]
+      },
+      "sha256": {
+        "scanned-fa-brief.pdf": "e8c4bbb0f5144015e6591749491c1003a153dfd8d95cc1982c53b33f6c0d74f0",
+        "scanned-fa-brief.expected.txt": "5915211576b408d2a4de8600b548a3a7607a021d43790eb0e355f6e04ceb3162"
+      }
+    },
+    {
+      "id": "scan-en-001",
+      "file": "scanned-en-memo.pdf",
+      "kind": "pdf",
+      "language": "en",
+      "expected": {
+        "pages": 2,
+        "textLayer": false,
+        "transcript": "scanned-en-memo.expected.txt",
+        "mustContain": [
+          "three to nine days",
+          "under four days",
+          "March"
+        ],
+        "minCharacterAccuracy": 0.95,
+        "pipeline": [
+          "quarantine",
+          "scan",
+          "ocr",
+          "lineage"
+        ]
+      },
+      "sha256": {
+        "scanned-en-memo.pdf": "2805d25fd4a666d7336075153b6c6f87daa5c35e72be050a58d3a204b4e2eaba",
+        "scanned-en-memo.expected.txt": "6f709751557f7a80e7dc7993f6ec98f0198ca02c5a7adac2a0f578c50d659c4b"
+      }
+    },
+    {
+      "id": "audio-fa-001",
+      "file": "audio-fa-interview.wav",
+      "kind": "audio",
+      "language": "fa",
+      "expected": {
+        "sampleRate": 22050,
+        "channels": 1,
+        "durationSeconds": 5.99,
+        "transcript": "audio-fa-interview.expected.txt",
+        "minWordAccuracy": 0.7,
+        "pipeline": [
+          "quarantine",
+          "scan",
+          "transcription",
+          "lineage"
+        ]
+      },
+      "sha256": {
+        "audio-fa-interview.wav": "20d3f48196c46ad5cca8bbea2e21b84ce9b04b487e7664b4fbd7ba50f8512c93",
+        "audio-fa-interview.expected.txt": "84f321fd82fe97ba4e4b2a4077937ee111c8f3c8e3393a2edd31b5189115ec6e"
+      }
+    },
+    {
+      "id": "audio-en-001",
+      "file": "audio-en-note.wav",
+      "kind": "audio",
+      "language": "en",
+      "expected": {
+        "sampleRate": 22050,
+        "channels": 1,
+        "durationSeconds": 5.17,
+        "transcript": "audio-en-note.expected.txt",
+        "minWordAccuracy": 0.85,
+        "pipeline": [
+          "quarantine",
+          "scan",
+          "transcription",
+          "lineage"
+        ]
+      },
+      "sha256": {
+        "audio-en-note.wav": "df9c2977104171a3e5e09fca3ef7fd43cd17526cd145dacbe5e4bb4fa127cfc8",
+        "audio-en-note.expected.txt": "3e8d2275b3170b391f42f2ef046673960647290bbe1d0b48769916a0244f1530"
+      }
+    }
+  ]
+}
