@@ -6,6 +6,8 @@ minimumReleaseAge: 10080
 
 allowBuilds:
   '@scarf/scarf': false
+  # Optional binary check only; the platform binary ships as an optional dependency.
+  '@swc/core': false
   argon2: true
   esbuild: true
   protobufjs: true

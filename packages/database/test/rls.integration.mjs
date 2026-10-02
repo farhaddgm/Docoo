@@ -45,7 +45,29 @@ const ids = {
   snapshotA: randomUUID(),
   snapshotB: randomUUID(),
   authEvent: randomUUID(),
+  itemA: randomUUID(),
+  itemB: randomUUID(),
+  knowledgeVersionA: randomUUID(),
+  knowledgeVersionB: randomUUID(),
+  claimA: randomUUID(),
+  reviewA: randomUUID(),
 };
+
+const knowledgeTables = [
+  'source_assets',
+  'source_versions',
+  'source_segments',
+  'knowledge_items',
+  'knowledge_scopes',
+  'knowledge_versions',
+  'claims',
+  'citations',
+  'audit_reviews',
+  'audit_overrides',
+  'knowledge_conflicts',
+  'knowledge_chunks',
+  'retrieval_snapshots',
+];
 
 async function withContext(workspaceId, actorId, action) {
   await runtime.query('BEGIN');
@@ -431,8 +453,102 @@ try {
     },
   );
 
+  // Knowledge and ingestion tables (ING-*, KNO-*).
+  const knowledgePolicies = await admin.query(
+    `SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class
+      WHERE relnamespace = 'public'::regnamespace AND relname = ANY($1::text[])`,
+    [knowledgeTables],
+  );
+  assert.equal(
+    knowledgePolicies.rowCount,
+    knowledgeTables.length,
+    'Every knowledge table must exist.',
+  );
+  for (const policy of knowledgePolicies.rows) {
+    assert.equal(policy.relrowsecurity, true, `${policy.relname}: RLS is disabled`);
+    assert.equal(policy.relforcerowsecurity, true, `${policy.relname}: FORCE RLS is disabled`);
+  }
+  await admin.query(
+    `INSERT INTO knowledge_items (id, workspace_id, title, source_type) VALUES
+       ($1, $2, 'A', 'admin_provided'), ($3, $4, 'B', 'admin_provided')`,
+    [ids.itemA, ids.workspaceA, ids.itemB, ids.workspaceB],
+  );
+  await admin.query(
+    `INSERT INTO knowledge_versions (id, workspace_id, item_id, version_no, content, content_sha256, language, provenance)
+     VALUES ($1, $2, $3, 1, 'a', 'x', 'fa', '{}'), ($4, $5, $6, 1, 'b', 'y', 'fa', '{}')`,
+    [
+      ids.knowledgeVersionA,
+      ids.workspaceA,
+      ids.itemA,
+      ids.knowledgeVersionB,
+      ids.workspaceB,
+      ids.itemB,
+    ],
+  );
+  await admin.query(
+    `INSERT INTO claims (id, workspace_id, knowledge_version_id, ordinal, text, normalized_text, kind, locator)
+     VALUES ($1, $2, $3, 1, 'a', 'a', 'numeric', '{}')`,
+    [ids.claimA, ids.workspaceA, ids.knowledgeVersionA],
+  );
+  await admin.query(
+    `INSERT INTO audit_reviews (id, workspace_id, knowledge_version_id, rubric_version, auditor, scores, overall, decision,
+                                reasons, claim_results, critical_flags)
+     VALUES ($1, $2, $3, 'v1', 'test', '{}', 80, 'approved', '[]', '[]', '{}')`,
+    [ids.reviewA, ids.workspaceA, ids.knowledgeVersionA],
+  );
+  const visibleItems = await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query('SELECT id::text AS id FROM knowledge_items ORDER BY id'),
+  );
+  assert.deepEqual(
+    visibleItems.rows.map((row) => row.id),
+    [ids.itemA],
+  );
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    `INSERT INTO knowledge_items (workspace_id, title, source_type) VALUES ($1, 'x', 'admin_provided')`,
+    [ids.workspaceB],
+  );
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'UPDATE claims SET text = $1 WHERE id = $2',
+    ['changed', ids.claimA],
+  );
+  await expectSqlState(
+    '23503',
+    ids.workspaceA,
+    ids.actorA,
+    `INSERT INTO claims (workspace_id, knowledge_version_id, ordinal, text, normalized_text, kind, locator)
+     VALUES ($1, $2, 9, 'x', 'x', 'numeric', '{}')`,
+    [ids.workspaceA, ids.knowledgeVersionB],
+  );
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    `INSERT INTO audit_overrides (workspace_id, review_id, knowledge_version_id, decision, reason, created_by)
+     VALUES ($1, $2, $3, 'approve', 'A long enough spoofed override reason', $4)`,
+    [ids.workspaceA, ids.reviewA, ids.knowledgeVersionA, ids.actorB],
+  );
+  for (const sql of [
+    ['UPDATE claims SET text = $1 WHERE id = $2', ['x', ids.claimA]],
+    ['UPDATE audit_reviews SET overall = 1 WHERE id = $1', [ids.reviewA]],
+    [
+      'UPDATE knowledge_versions SET content = $1 WHERE id = $2',
+      ['changed', ids.knowledgeVersionA],
+    ],
+  ]) {
+    await assert.rejects(admin.query(sql[0], sql[1]), (error) => {
+      assert.equal(error.code, 'P0001', sql[0]);
+      return true;
+    });
+  }
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge and ingestion tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {

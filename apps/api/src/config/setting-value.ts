@@ -1,10 +1,13 @@
 /** Subset of JSON Schema used by setting definitions (validated server-side). */
 export interface SettingValueSchema {
-  readonly type: 'boolean' | 'integer' | 'number' | 'string';
+  readonly type: 'boolean' | 'integer' | 'number' | 'string' | 'array';
   readonly minimum?: number;
   readonly maximum?: number;
   readonly enum?: readonly string[];
   readonly maxLength?: number;
+  readonly pattern?: string;
+  readonly items?: SettingValueSchema;
+  readonly maxItems?: number;
 }
 
 export function validateSettingValue(schema: SettingValueSchema, value: unknown): string | null {
@@ -30,6 +33,21 @@ export function validateSettingValue(schema: SettingValueSchema, value: unknown)
       }
       if (schema.maxLength !== undefined && value.length > schema.maxLength) {
         return `Must be at most ${schema.maxLength} characters.`;
+      }
+      if (schema.pattern !== undefined && !new RegExp(schema.pattern, 'u').test(value)) {
+        return 'Has an invalid format.';
+      }
+      return null;
+    }
+    case 'array': {
+      if (!Array.isArray(value)) return 'Expected a list.';
+      if (schema.maxItems !== undefined && value.length > schema.maxItems) {
+        return `Must have at most ${schema.maxItems} items.`;
+      }
+      if (!schema.items) return null;
+      for (const [index, item] of value.entries()) {
+        const problem = validateSettingValue(schema.items, item);
+        if (problem) return `Item ${index + 1}: ${problem}`;
       }
       return null;
     }

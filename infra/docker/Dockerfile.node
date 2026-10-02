@@ -18,6 +18,13 @@ ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 WORKDIR /workspace
 RUN corepack enable
+# Native tools a service needs at runtime. The ingestion worker is built with
+# SYSTEM_PACKAGES="tesseract-ocr tesseract-ocr-eng tesseract-ocr-fas poppler-utils".
+ARG SYSTEM_PACKAGES=""
+RUN if [ -n "$SYSTEM_PACKAGES" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends $SYSTEM_PACKAGES && \
+      rm -rf /var/lib/apt/lists/*; \
+    fi
 COPY --from=builder /workspace /workspace
 ARG PACKAGE
 ENV DOCOO_PACKAGE=$PACKAGE

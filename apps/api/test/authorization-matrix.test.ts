@@ -16,7 +16,9 @@ import {
 } from '../src/auth/auth.authorization.js';
 import type { AuthService } from '../src/auth/auth.service.js';
 import { ConfigController } from '../src/config/config.controller.js';
+import { KnowledgeController } from '../src/knowledge/knowledge.controller.js';
 import { ProjectsController } from '../src/projects/projects.controller.js';
+import { SourcesController } from '../src/sources/sources.controller.js';
 import { TopicsController } from '../src/topics/topics.controller.js';
 import { WorkspaceController } from '../src/workspaces/workspace.controller.js';
 
@@ -61,6 +63,30 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/audit-events': 'audit.read',
   'POST workspaces/:workspaceId/audit-events/export': 'audit.export',
   'POST workspaces/:workspaceId/retention/purge': 'retention.purge',
+  'GET workspaces/:workspaceId/sources': 'knowledge.read',
+  'POST workspaces/:workspaceId/sources/uploads': 'knowledge.create',
+  'POST workspaces/:workspaceId/sources/text': 'knowledge.create',
+  'POST workspaces/:workspaceId/sources/url': 'knowledge.create',
+  'GET workspaces/:workspaceId/sources/:sourceId': 'knowledge.read',
+  'POST workspaces/:workspaceId/sources/:sourceId/versions': 'knowledge.update',
+  'POST workspaces/:workspaceId/sources/:sourceId/versions/:versionId/finalize': 'knowledge.create',
+  'POST workspaces/:workspaceId/sources/:sourceId/versions/:versionId/retry': 'knowledge.update',
+  'GET workspaces/:workspaceId/sources/:sourceId/versions/:versionId/segments': 'knowledge.read',
+  'GET workspaces/:workspaceId/knowledge': 'knowledge.read',
+  'POST workspaces/:workspaceId/knowledge': 'knowledge.create',
+  'POST workspaces/:workspaceId/knowledge/from-source': 'knowledge.create',
+  'POST workspaces/:workspaceId/knowledge/retrieve': 'knowledge.read',
+  'GET workspaces/:workspaceId/knowledge/:knowledgeId': 'knowledge.read',
+  'DELETE workspaces/:workspaceId/knowledge/:knowledgeId': 'knowledge.delete',
+  'GET workspaces/:workspaceId/knowledge/:knowledgeId/versions': 'knowledge.read',
+  'GET workspaces/:workspaceId/knowledge/:knowledgeId/versions/:versionId': 'knowledge.read',
+  'POST workspaces/:workspaceId/knowledge/:knowledgeId/versions': 'knowledge.update',
+  'POST workspaces/:workspaceId/knowledge/:knowledgeId/submit-audit': 'knowledge.audit',
+  'GET workspaces/:workspaceId/audit-reviews': 'knowledge.read',
+  'POST workspaces/:workspaceId/audit-reviews/:reviewId/override': 'knowledge.override',
+  'GET workspaces/:workspaceId/knowledge-conflicts': 'knowledge.read',
+  'POST workspaces/:workspaceId/knowledge-conflicts/:conflictId/resolve': 'knowledge.audit',
+  'GET workspaces/:workspaceId/retrieval-snapshots/:snapshotId': 'knowledge.read',
 };
 
 const controllers = [
@@ -69,6 +95,8 @@ const controllers = [
   ProjectsController,
   ConfigController,
   AuditController,
+  SourcesController,
+  KnowledgeController,
 ];
 
 function routeTable(): Record<string, string | undefined> {

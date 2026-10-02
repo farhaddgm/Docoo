@@ -134,3 +134,6 @@ documents:
   - path: docs/adr/0007-authentication-and-session-security.md
     doc_id: DOCOO-ADR-0007
     section: ADRs
+  - path: docs/adr/0008-ingestion-and-knowledge-runtime.md
+    doc_id: DOCOO-ADR-0008
+    section: ADRs
