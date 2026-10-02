@@ -67,6 +67,19 @@ const knowledgeTables = [
   'knowledge_conflicts',
   'knowledge_chunks',
   'retrieval_snapshots',
+  'provider_connections',
+  'provider_secrets',
+  'model_catalog_snapshots',
+  'model_prices',
+  'model_invocations',
+  'workflow_runs',
+  'stage_runs',
+  'stage_attempts',
+  'stage_outputs',
+  'stage_reviews',
+  'gate_decisions',
+  'human_tasks',
+  'command_receipts',
 ];
 
 async function withContext(workspaceId, actorId, action) {
@@ -547,8 +560,42 @@ try {
     });
   }
 
+  // Orchestration tables (AI-*, WF-*).
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    `INSERT INTO provider_connections (workspace_id, provider, name) VALUES ($1, 'fake', 'cross tenant')`,
+    [ids.workspaceB],
+  );
+  const connection = await admin.query(
+    `INSERT INTO provider_connections (workspace_id, provider, name) VALUES ($1, 'openai', 'rls') RETURNING id`,
+    [ids.workspaceA],
+  );
+  await admin.query(
+    `INSERT INTO provider_secrets (workspace_id, connection_id, secret_version, ciphertext, iv, tag, wrapped_key, wrap_iv, wrap_tag, key_id, fingerprint)
+     VALUES ($1, $2, 1, 'c', 'i', 't', 'w', 'wi', 'wt', 'k', 'f')`,
+    [ids.workspaceA, connection.rows[0].id],
+  );
+  const foreignSecrets = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM provider_secrets'),
+  );
+  assert.equal(
+    foreignSecrets.rows[0].count,
+    0,
+    'Secrets must not be visible to another workspace.',
+  );
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'UPDATE provider_secrets SET ciphertext = $1',
+    ['x'],
+  );
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM model_invocations');
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge and ingestion tables, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion and orchestration tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {

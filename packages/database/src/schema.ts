@@ -722,3 +722,401 @@ export const retrievalSnapshots = pgTable(
   },
   (table) => [index('retrieval_snapshots_workspace_idx').on(table.workspaceId, table.createdAt)],
 );
+
+// Phase 3: provider orchestration (AI-*) and project workflows (WF-*).
+
+export const providerKind = pgEnum('provider_kind', ['openai', 'gemini', 'anthropic', 'fake']);
+export const providerStatus = pgEnum('provider_status', [
+  'unconfigured',
+  'configured',
+  'checking',
+  'healthy',
+  'invalid',
+  'degraded',
+  'unavailable',
+]);
+export const invocationStatus = pgEnum('invocation_status', [
+  'succeeded',
+  'transient_failed',
+  'permanent_failed',
+]);
+export const workflowStatus = pgEnum('workflow_status', [
+  'starting',
+  'running',
+  'paused',
+  'waiting_for_human',
+  'completed',
+  'cancelled',
+  'failed',
+]);
+export const stageKind = pgEnum('stage_kind', [
+  'analysis',
+  'research',
+  'ideation',
+  'documentation',
+  'evaluation',
+]);
+export const stageStatus = pgEnum('stage_status', [
+  'pending',
+  'ready',
+  'running',
+  'waiting_for_human',
+  'retrying',
+  'completed',
+  'rejected',
+  'failed',
+  'cancelled',
+]);
+export const attemptStatus = pgEnum('attempt_status', [
+  'created',
+  'dispatched',
+  'executing',
+  'succeeded',
+  'incomplete',
+  'transient_failed',
+  'scheduled_retry',
+  'permanent_failed',
+]);
+export const reviewAction = pgEnum('review_action', ['approve', 'reject', 'edit', 'comment']);
+export const gateStatus = pgEnum('gate_status', [
+  'not_required',
+  'pending',
+  'approved',
+  'rejected',
+  'overridden',
+  'expired',
+]);
+export const humanTaskStatus = pgEnum('human_task_status', ['pending', 'resolved', 'cancelled']);
+
+export const providerConnections = pgTable(
+  'provider_connections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    provider: providerKind('provider').notNull(),
+    name: text('name').notNull(),
+    baseUrl: text('base_url'),
+    status: providerStatus('status').notNull().default('unconfigured'),
+    lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+    lastLatencyMs: integer('last_latency_ms'),
+    lastError: text('last_error'),
+    currentSecretVersion: integer('current_secret_version').notNull().default(0),
+    storeContent: boolean('store_content').notNull().default(false),
+    version: integer('version').notNull().default(1),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    disabledAt: timestamp('disabled_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('provider_connections_name_uq').on(table.workspaceId, sql`lower(${table.name})`),
+  ],
+);
+
+export const providerSecrets = pgTable(
+  'provider_secrets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    connectionId: uuid('connection_id')
+      .notNull()
+      .references(() => providerConnections.id, { onDelete: 'cascade' }),
+    secretVersion: integer('secret_version').notNull(),
+    ciphertext: text('ciphertext').notNull(),
+    iv: text('iv').notNull(),
+    tag: text('tag').notNull(),
+    wrappedKey: text('wrapped_key').notNull(),
+    wrapIv: text('wrap_iv').notNull(),
+    wrapTag: text('wrap_tag').notNull(),
+    keyId: text('key_id').notNull(),
+    fingerprint: text('fingerprint').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('provider_secrets_version_uq').on(table.connectionId, table.secretVersion),
+  ],
+);
+
+export const modelCatalogSnapshots = pgTable(
+  'model_catalog_snapshots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    connectionId: uuid('connection_id')
+      .notNull()
+      .references(() => providerConnections.id, { onDelete: 'cascade' }),
+    models: jsonb('models').notNull(),
+    modelCount: integer('model_count').notNull(),
+    hash: text('hash').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('model_catalog_snapshots_connection_idx').on(table.connectionId, table.createdAt),
+  ],
+);
+
+export const modelPrices = pgTable(
+  'model_prices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    provider: providerKind('provider').notNull(),
+    model: text('model').notNull(),
+    inputPerMillion: real('input_per_million').notNull(),
+    outputPerMillion: real('output_per_million').notNull(),
+    cachedInputPerMillion: real('cached_input_per_million'),
+    reasoningPerMillion: real('reasoning_per_million'),
+    effectiveFrom: timestamp('effective_from', { withTimezone: true }).notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('model_prices_lookup_idx').on(
+      table.workspaceId,
+      table.provider,
+      table.model,
+      table.effectiveFrom,
+    ),
+  ],
+);
+
+export const workflowRuns = pgTable(
+  'workflow_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    runNo: integer('run_no').notNull(),
+    temporalWorkflowId: text('temporal_workflow_id').notNull(),
+    status: workflowStatus('status').notNull().default('starting'),
+    currentStage: stageKind('current_stage'),
+    configSnapshotId: uuid('config_snapshot_id'),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    version: integer('version').notNull().default(1),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('workflow_runs_project_run_uq').on(table.projectId, table.runNo),
+    uniqueIndex('workflow_runs_temporal_uq').on(table.temporalWorkflowId),
+  ],
+);
+
+export const stageRuns = pgTable(
+  'stage_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => workflowRuns.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    stage: stageKind('stage').notNull(),
+    sequence: integer('sequence').notNull(),
+    status: stageStatus('status').notNull().default('pending'),
+    gateMode: text('gate_mode').notNull().default('manual'),
+    attemptLimit: integer('attempt_limit').notNull().default(10),
+    attemptsUsed: integer('attempts_used').notNull().default(0),
+    latestOutputId: uuid('latest_output_id'),
+    passedByDecision: boolean('passed_by_decision').notNull().default(false),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    version: integer('version').notNull().default(1),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('stage_runs_run_stage_uq').on(table.runId, table.stage),
+    index('stage_runs_project_idx').on(table.workspaceId, table.projectId),
+  ],
+);
+
+export const stageAttempts = pgTable(
+  'stage_attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    stageRunId: uuid('stage_run_id')
+      .notNull()
+      .references(() => stageRuns.id, { onDelete: 'cascade' }),
+    attemptNo: integer('attempt_no').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    status: attemptStatus('status').notNull().default('created'),
+    retryOf: uuid('retry_of'),
+    providerRetries: integer('provider_retries').notNull().default(0),
+    outputId: uuid('output_id'),
+    feedback: text('feedback'),
+    errorCode: text('error_code'),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('stage_attempts_number_uq').on(table.stageRunId, table.attemptNo),
+    uniqueIndex('stage_attempts_idempotency_uq').on(table.idempotencyKey),
+  ],
+);
+
+export const stageOutputs = pgTable(
+  'stage_outputs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    stageRunId: uuid('stage_run_id')
+      .notNull()
+      .references(() => stageRuns.id, { onDelete: 'cascade' }),
+    attemptId: uuid('attempt_id').references(() => stageAttempts.id, { onDelete: 'set null' }),
+    versionNo: integer('version_no').notNull(),
+    content: jsonb('content').notNull(),
+    contentSha256: text('content_sha256').notNull(),
+    origin: text('origin').notNull(),
+    editedFromId: uuid('edited_from_id'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('stage_outputs_version_uq').on(table.stageRunId, table.versionNo)],
+);
+
+export const stageReviews = pgTable(
+  'stage_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    stageRunId: uuid('stage_run_id')
+      .notNull()
+      .references(() => stageRuns.id, { onDelete: 'cascade' }),
+    outputId: uuid('output_id')
+      .notNull()
+      .references(() => stageOutputs.id, { onDelete: 'cascade' }),
+    action: reviewAction('action').notNull(),
+    comment: text('comment'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('stage_reviews_stage_idx').on(table.stageRunId, table.createdAt)],
+);
+
+export const gateDecisions = pgTable(
+  'gate_decisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    stageRunId: uuid('stage_run_id')
+      .notNull()
+      .references(() => stageRuns.id, { onDelete: 'cascade' }),
+    outputId: uuid('output_id')
+      .notNull()
+      .references(() => stageOutputs.id, { onDelete: 'cascade' }),
+    mode: text('mode').notNull(),
+    status: gateStatus('status').notNull().default('pending'),
+    reason: text('reason'),
+    decidedBy: uuid('decided_by').references(() => users.id, { onDelete: 'set null' }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('gate_decisions_stage_idx').on(table.stageRunId, table.status)],
+);
+
+export const humanTasks = pgTable(
+  'human_tasks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    stageRunId: uuid('stage_run_id').references(() => stageRuns.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    status: humanTaskStatus('status').notNull().default('pending'),
+    title: text('title').notNull(),
+    payload: jsonb('payload').notNull(),
+    resolution: jsonb('resolution'),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('human_tasks_workspace_status_idx').on(table.workspaceId, table.status, table.createdAt),
+  ],
+);
+
+export const modelInvocations = pgTable(
+  'model_invocations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    connectionId: uuid('connection_id').references(() => providerConnections.id, {
+      onDelete: 'set null',
+    }),
+    projectId: uuid('project_id'),
+    stageRunId: uuid('stage_run_id'),
+    attemptId: uuid('attempt_id'),
+    provider: providerKind('provider').notNull(),
+    model: text('model').notNull(),
+    purpose: text('purpose').notNull(),
+    status: invocationStatus('status').notNull(),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    reasoningTokens: integer('reasoning_tokens'),
+    cachedInputTokens: integer('cached_input_tokens'),
+    latencyMs: integer('latency_ms'),
+    finishReason: text('finish_reason'),
+    rawFinishReason: text('raw_finish_reason'),
+    costUsd: real('cost_usd'),
+    priceId: uuid('price_id'),
+    providerRequestId: text('provider_request_id'),
+    errorCode: text('error_code'),
+    retryNo: integer('retry_no').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('model_invocations_project_idx').on(table.workspaceId, table.projectId, table.createdAt),
+    index('model_invocations_connection_idx').on(table.connectionId, table.createdAt),
+  ],
+);
+
+export const commandReceipts = pgTable(
+  'command_receipts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    idempotencyKey: text('idempotency_key').notNull(),
+    command: text('command').notNull(),
+    requestHash: text('request_hash').notNull(),
+    response: jsonb('response').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('command_receipts_key_uq').on(table.workspaceId, table.idempotencyKey)],
+);

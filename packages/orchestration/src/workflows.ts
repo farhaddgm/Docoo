@@ -1,0 +1,188 @@
+import {
+  condition,
+  defineQuery,
+  defineSignal,
+  proxyActivities,
+  setHandler,
+  sleep,
+} from '@temporalio/workflow';
+
+import type { OrchestrationActivities, RunRef } from './activities.js';
+import { STAGES, type Stage } from './stages.js';
+
+export interface GateSignal {
+  readonly stageRunId: string;
+  readonly decision: 'approved' | 'rejected';
+}
+
+export interface AttemptDecisionSignal {
+  readonly stageRunId: string;
+  readonly decision: 'extend' | 'pass';
+}
+
+export const pauseSignal = defineSignal('pause');
+export const resumeSignal = defineSignal('resume');
+export const cancelSignal = defineSignal<[{ reason: string | null }]>('cancel');
+export const gateSignal = defineSignal<[GateSignal]>('gate');
+export const attemptDecisionSignal = defineSignal<[AttemptDecisionSignal]>('attemptDecision');
+export const stateQuery = defineQuery<{
+  stage: Stage | null;
+  paused: boolean;
+  waiting: string | null;
+  attemptNo: number;
+}>('state');
+
+const activities = proxyActivities<OrchestrationActivities>({
+  startToCloseTimeout: '10 minutes',
+  // Activities are idempotent; infrastructure failures retry here, provider failures follow
+  // the approved schedule inside the workflow.
+  retry: {
+    initialInterval: '2 seconds',
+    backoffCoefficient: 2,
+    maximumInterval: '1 minute',
+    maximumAttempts: 20,
+  },
+});
+
+/**
+ * ProjectWorkflow (WF-001..006): analysis → research → ideation → documentation →
+ * evaluation. State lives in Temporal history and the database, so a worker restart
+ * resumes at the last safe boundary. Pause stops before the next attempt; cancel keeps
+ * outputs and stops downstream use.
+ */
+export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed' | 'cancelled' }> {
+  let paused = false;
+  let cancelled: { reason: string | null } | null = null;
+  let gate: GateSignal | null = null;
+  let decision: AttemptDecisionSignal | null = null;
+  let currentStage: Stage | null = null;
+  let waiting: string | null = null;
+  let currentAttempt = 0;
+
+  setHandler(pauseSignal, () => {
+    paused = true;
+  });
+  setHandler(resumeSignal, () => {
+    paused = false;
+  });
+  setHandler(cancelSignal, (input) => {
+    cancelled = input;
+  });
+  setHandler(gateSignal, (input) => {
+    gate = input;
+  });
+  setHandler(attemptDecisionSignal, (input) => {
+    decision = input;
+  });
+  setHandler(stateQuery, () => ({
+    stage: currentStage,
+    paused,
+    waiting,
+    attemptNo: currentAttempt,
+  }));
+
+  const cancel = async (): Promise<{ status: 'cancelled' }> => {
+    await activities.cancelRun({
+      ...ref,
+      reason: cancelled?.reason ?? null,
+    });
+    return { status: 'cancelled' };
+  };
+
+  /** Waits while paused; returns false when the run was cancelled meanwhile. */
+  const whileActive = async (): Promise<boolean> => {
+    if (paused) {
+      waiting = 'resume';
+      await activities.setRunStatus({ ...ref, status: 'paused' });
+      await condition(() => !paused || cancelled !== null);
+      waiting = null;
+      if (cancelled) return false;
+      await activities.setRunStatus({ ...ref, status: 'running' });
+    }
+    return cancelled === null;
+  };
+
+  const started = await activities.startRun(ref);
+  if (started.paused) paused = true;
+
+  for (const stage of STAGES) {
+    currentStage = stage;
+    const stageStart = await activities.startStage({ ...ref, stage });
+    if (stageStart.status === 'completed') continue;
+    const stageRef = { ...ref, stageRunId: stageStart.stageRunId };
+    let attemptLimit = stageStart.attemptLimit;
+    let attemptNo = Math.max(1, stageStart.attemptsUsed);
+    let resumeIntoGate = stageStart.pendingGate;
+
+    for (;;) {
+      if (!resumeIntoGate) {
+        if (!(await whileActive())) return cancel();
+        currentAttempt = attemptNo;
+        let retryNo = 0;
+        let outputReady = false;
+        while (!outputReady) {
+          const result = await activities.runAttempt({ ...stageRef, attemptNo, retryNo });
+          if (result.status === 'succeeded') {
+            outputReady = true;
+          } else if (result.status === 'retry') {
+            retryNo += 1;
+            await sleep(result.delaySeconds * 1000);
+            if (!(await whileActive())) return cancel();
+          } else {
+            // Retries exhausted, permanent error, missing configuration or cost ceiling:
+            // pause the project and wait for the administrator. Fallback stays off.
+            await activities.blockRun({
+              ...ref,
+              stageRunId: stageStart.stageRunId,
+              code: result.code,
+              reason: result.reason,
+            });
+            paused = true;
+            if (!(await whileActive())) return cancel();
+            retryNo = 0;
+          }
+        }
+        const opened = await activities.openGate(stageRef);
+        if (opened.mode === 'automatic') {
+          await activities.completeStage({ ...stageRef, passedByDecision: false });
+          break;
+        }
+      }
+      resumeIntoGate = false;
+      // A decision that arrived while the gate was being opened is kept, not dropped.
+      waiting = 'gate';
+      await condition(
+        () => (gate !== null && gate.stageRunId === stageStart.stageRunId) || cancelled !== null,
+      );
+      waiting = null;
+      if (cancelled) return cancel();
+      const gateDecision = gate as GateSignal | null;
+      gate = null;
+      if (gateDecision?.decision === 'approved') {
+        await activities.completeStage({ ...stageRef, passedByDecision: false });
+        break;
+      }
+      if (attemptNo >= attemptLimit) {
+        await activities.requestAttemptDecision({ ...stageRef, attemptsUsed: attemptNo });
+        waiting = 'attempt_decision';
+        await condition(
+          () =>
+            (decision !== null && decision.stageRunId === stageStart.stageRunId) ||
+            cancelled !== null,
+        );
+        waiting = null;
+        if (cancelled) return cancel();
+        const limitDecision = decision as AttemptDecisionSignal | null;
+        decision = null;
+        if (limitDecision?.decision === 'pass') {
+          await activities.completeStage({ ...stageRef, passedByDecision: true });
+          break;
+        }
+        attemptLimit = await activities.extendAttemptLimit(stageRef);
+      }
+      attemptNo += 1;
+    }
+  }
+  await activities.completeRun(ref);
+  return { status: 'completed' };
+}

@@ -23,6 +23,8 @@
     "@docoo/ingestion": "workspace:*",
     "@docoo/knowledge": "workspace:*",
     "@docoo/observability": "workspace:*",
+    "@docoo/orchestration": "workspace:*",
+    "@docoo/providers": "workspace:*",
     "@fastify/cookie": "11.1.2",
     "@fastify/helmet": "13.1.1",
     "@fastify/rate-limit": "11.2.0",
@@ -44,6 +46,7 @@
   },
   "devDependencies": {
     "@nestjs/testing": "12.0.3",
+    "@temporalio/worker": "1.24.0",
     "@types/pg": "8.15.6",
     "fflate": "0.7.5",
     "tsx": "4.23.13"

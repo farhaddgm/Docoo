@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 
 import { ConfigModule } from '../config/config.module.js';
+import { WorkflowModule } from '../workflow/workflow.module.js';
 import { ProjectsController } from './projects.controller.js';
 import { ProjectsService } from './projects.service.js';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, WorkflowModule],
   controllers: [ProjectsController],
   providers: [ProjectsService],
 })

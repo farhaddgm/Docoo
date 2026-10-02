@@ -23,7 +23,27 @@ import {
   type StepResult,
 } from '@docoo/ingestion';
 
+import {
+  AGENT_TASK_QUEUE,
+  createOrchestrationActivities,
+  ProviderRuntime,
+  type RunRef,
+} from '@docoo/orchestration';
+import { createAdapter, FakeAdapter, type FakeScript } from '@docoo/providers';
+import {
+  Client as TemporalClient,
+  Connection as TemporalConnection,
+  WorkflowExecutionAlreadyStartedError,
+} from '@temporalio/client';
+import { NativeConnection, Worker } from '@temporalio/worker';
+import { fileURLToPath } from 'node:url';
+
 import { AppModule } from '../../src/app.module.js';
+import {
+  WORKFLOW_ENGINE,
+  type WorkflowEngine,
+  type WorkflowSignal,
+} from '../../src/workflow/workflow.engine.js';
 import {
   PASSWORD_RESET_DELIVERY,
   type PasswordResetDelivery,
@@ -92,12 +112,110 @@ export class InlineIngestion {
   }
 }
 
+/** Records engine calls when a test does not run real workflows. */
+export class RecordingEngine implements WorkflowEngine {
+  readonly calls: {
+    kind: 'start' | 'signal';
+    workflowId: string;
+    signal?: WorkflowSignal;
+    payload?: unknown;
+  }[] = [];
+  start(workflowId: string): Promise<void> {
+    this.calls.push({ kind: 'start', workflowId });
+    return Promise.resolve();
+  }
+  signal(workflowId: string, signal: WorkflowSignal, payload?: unknown): Promise<void> {
+    this.calls.push({ kind: 'signal', workflowId, signal, payload });
+    return Promise.resolve();
+  }
+}
+
+export const temporalAddress = process.env['TEMPORAL_ADDRESS'];
+
+/**
+ * Real Temporal for workflow tests: an in-process worker on a private task queue with the
+ * production workflow and activities, and a provider runtime whose fake adapter tests can script.
+ */
+export class TemporalTestRuntime implements WorkflowEngine {
+  readonly taskQueue = `${AGENT_TASK_QUEUE}-test-${randomBytes(4).toString('hex')}`;
+  fakeScript: FakeScript = () => null;
+  readonly fake = new FakeAdapter((request, call) => this.fakeScript(request, call));
+  private worker: Worker | null = null;
+  private running: Promise<void> | null = null;
+  private native: NativeConnection | null = null;
+  private connection: TemporalConnection | null = null;
+  client!: TemporalClient;
+
+  constructor(private readonly pool: Pool) {}
+
+  async connect(): Promise<void> {
+    this.connection = await TemporalConnection.connect({ address: temporalAddress! });
+    this.client = new TemporalClient({ connection: this.connection });
+    await this.startWorker();
+  }
+
+  async startWorker(): Promise<void> {
+    this.native = await NativeConnection.connect({ address: temporalAddress! });
+    const runtime = new ProviderRuntime(this.pool, null, (kind, options) =>
+      kind === 'fake' ? this.fake : createAdapter(kind, options),
+    );
+    this.worker = await Worker.create({
+      connection: this.native,
+      taskQueue: this.taskQueue,
+      workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
+      activities: createOrchestrationActivities(this.pool, runtime, { delayScale: 0.002 }),
+    });
+    this.running = this.worker.run();
+  }
+
+  /** Simulates a worker crash/restart: workflow state must survive (WF-004). */
+  async stopWorker(): Promise<void> {
+    this.worker?.shutdown();
+    await this.running?.catch(() => undefined);
+    await this.native?.close();
+    this.worker = null;
+  }
+
+  readonly started: string[] = [];
+
+  async start(workflowId: string, ref: RunRef): Promise<void> {
+    this.started.push(workflowId);
+    try {
+      await this.client.workflow.start('projectWorkflow', {
+        taskQueue: this.taskQueue,
+        workflowId,
+        args: [ref],
+      });
+    } catch (error) {
+      if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
+    }
+  }
+
+  async signal(workflowId: string, signal: WorkflowSignal, payload?: unknown): Promise<void> {
+    await this.client.workflow
+      .getHandle(workflowId)
+      .signal(signal, ...(payload === undefined ? [] : [payload]));
+  }
+
+  async close(): Promise<void> {
+    for (const workflowId of this.started) {
+      await this.client.workflow
+        .getHandle(workflowId)
+        .terminate('test finished')
+        .catch(() => undefined);
+    }
+    await this.stopWorker();
+    await this.connection?.close();
+  }
+}
+
 export interface Harness {
   readonly app: NestFastifyApplication;
   readonly admin: Client;
   readonly delivery: CapturingResetDelivery;
   readonly objects: MemoryObjectStore;
   readonly ingestion: InlineIngestion;
+  readonly engine: RecordingEngine | TemporalTestRuntime;
   readonly ids: {
     readonly userA: string;
     readonly userB: string;
@@ -124,7 +242,10 @@ export interface Harness {
  * Boots the API against the disposable `docoo_ci` database with a fresh non-superuser
  * runtime role (RLS enforced) and two isolated workspaces A and B.
  */
-export async function createHarness(name: string): Promise<Harness> {
+export async function createHarness(
+  name: string,
+  options: { workflow?: boolean } = {},
+): Promise<Harness> {
   const parsed = new URL(adminUrl!);
   if (!['postgres:', 'postgresql:'].includes(parsed.protocol) || parsed.pathname !== '/docoo_ci') {
     throw new Error('Integration tests require a disposable PostgreSQL database named docoo_ci.');
@@ -192,10 +313,19 @@ export async function createHarness(name: string): Promise<Harness> {
   process.env['NODE_ENV'] = 'test';
   process.env['SESSION_PEPPER'] = testPepper;
   process.env['WEB_ORIGIN'] = webOrigin;
+  process.env['SECRET_MASTER_KEY'] ??= randomBytes(32).toString('base64');
 
   const delivery = new CapturingResetDelivery();
   const objects = new MemoryObjectStore();
   const ingestion = new InlineIngestion(runtimePool, objects);
+  let engine: RecordingEngine | TemporalTestRuntime;
+  if (options.workflow) {
+    const temporal = new TemporalTestRuntime(runtimePool);
+    await temporal.connect();
+    engine = temporal;
+  } else {
+    engine = new RecordingEngine();
+  }
   const module = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(DATABASE_POOL)
     .useValue(runtimePool)
@@ -205,6 +335,8 @@ export async function createHarness(name: string): Promise<Harness> {
     .useValue(objects)
     .overrideProvider(INGESTION_DISPATCHER)
     .useValue(ingestion)
+    .overrideProvider(WORKFLOW_ENGINE)
+    .useValue(engine)
     .compile();
   const app = module.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
     logger: false,
@@ -259,12 +391,14 @@ export async function createHarness(name: string): Promise<Harness> {
     delivery,
     objects,
     ingestion,
+    engine,
     ids,
     emails,
     suffix,
     login,
     request,
     async close() {
+      if (engine instanceof TemporalTestRuntime) await engine.close();
       await app.close();
       await runtimePool.end().catch(() => undefined);
       await admin.query(`drop owned by ${roleName}`).catch(() => undefined);

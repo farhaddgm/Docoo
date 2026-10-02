@@ -9,13 +9,18 @@
     "start": "node dist/main.js",
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --passWithNoTests --exclude 'dist/**'",
     "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "dependencies": {
-    "@docoo/worker-runtime": "workspace:*"
+    "@docoo/observability": "workspace:*",
+    "@docoo/orchestration": "workspace:*",
+    "@docoo/providers": "workspace:*",
+    "@temporalio/worker": "1.24.0",
+    "pg": "8.23.0"
   },
   "devDependencies": {
+    "@types/pg": "8.15.6",
     "tsx": "4.23.13"
   }
 }

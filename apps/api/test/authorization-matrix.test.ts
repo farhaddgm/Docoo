@@ -18,8 +18,10 @@ import type { AuthService } from '../src/auth/auth.service.js';
 import { ConfigController } from '../src/config/config.controller.js';
 import { KnowledgeController } from '../src/knowledge/knowledge.controller.js';
 import { ProjectsController } from '../src/projects/projects.controller.js';
+import { ProvidersController } from '../src/providers/providers.controller.js';
 import { SourcesController } from '../src/sources/sources.controller.js';
 import { TopicsController } from '../src/topics/topics.controller.js';
+import { WorkflowController } from '../src/workflow/workflow.controller.js';
 import { WorkspaceController } from '../src/workspaces/workspace.controller.js';
 
 /**
@@ -87,6 +89,37 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/knowledge-conflicts': 'knowledge.read',
   'POST workspaces/:workspaceId/knowledge-conflicts/:conflictId/resolve': 'knowledge.audit',
   'GET workspaces/:workspaceId/retrieval-snapshots/:snapshotId': 'knowledge.read',
+  'GET workspaces/:workspaceId/provider-connections': 'provider.read',
+  'POST workspaces/:workspaceId/provider-connections': 'provider.configure',
+  'GET workspaces/:workspaceId/provider-connections/:connectionId': 'provider.read',
+  'PATCH workspaces/:workspaceId/provider-connections/:connectionId': 'provider.configure',
+  'POST workspaces/:workspaceId/provider-connections/:connectionId/rotate-secret':
+    'provider.rotate_secret',
+  'POST workspaces/:workspaceId/provider-connections/:connectionId/disable': 'provider.configure',
+  'POST workspaces/:workspaceId/provider-connections/:connectionId/health-check': 'provider.test',
+  'POST workspaces/:workspaceId/provider-connections/:connectionId/models/refresh':
+    'provider.configure',
+  'GET workspaces/:workspaceId/provider-connections/:connectionId/models': 'provider.read',
+  'GET workspaces/:workspaceId/model-prices': 'provider.read',
+  'POST workspaces/:workspaceId/model-prices': 'provider.configure',
+  'GET workspaces/:workspaceId/model-invocations': 'provider.read',
+  'GET workspaces/:workspaceId/projects/:projectId/usage': 'project.read',
+  'GET workspaces/:workspaceId/projects/:projectId/workflow': 'project.read',
+  'POST workspaces/:workspaceId/projects/:projectId/workflow/start': 'project.run',
+  'POST workspaces/:workspaceId/projects/:projectId/workflow/sync': 'project.run',
+  'POST workspaces/:workspaceId/projects/:projectId/workflow/cancel': 'workflow.cancel',
+  'GET workspaces/:workspaceId/projects/:projectId/stages/:stageRunId': 'project.read',
+  'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/outputs/:outputId/approve':
+    'workflow.approve',
+  'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/outputs/:outputId/reject':
+    'workflow.reject',
+  'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/outputs/:outputId/comment':
+    'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/outputs/:outputId/edit':
+    'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/attempt-decision':
+    'workflow.override',
+  'GET workspaces/:workspaceId/human-tasks': 'workspace.read',
 };
 
 const controllers = [
@@ -97,6 +130,8 @@ const controllers = [
   AuditController,
   SourcesController,
   KnowledgeController,
+  ProvidersController,
+  WorkflowController,
 ];
 
 function routeTable(): Record<string, string | undefined> {
