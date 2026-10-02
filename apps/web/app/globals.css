@@ -9,6 +9,16 @@
   --color-border: #d7dfda;
   --color-ok-bg: #e5f6eb;
   --color-ok-ink: #0b5f32;
+  --color-danger-bg: #fff0ef;
+  --color-danger-ink: #8c1f18;
+  --color-focus: #1f7a50;
+  --color-nav-current: #e8f0eb;
+  --focus-ring: 3px solid var(--color-focus);
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.75rem;
+  --line-height: 1.7;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -39,6 +49,7 @@ body {
   min-height: 100%;
   background: var(--color-bg);
   color: var(--color-ink);
+  line-height: var(--line-height);
 }
 
 a {
@@ -47,9 +58,42 @@ a {
 
 a:focus-visible,
 button:focus-visible,
-input:focus-visible {
-  outline: 3px solid #58a980;
+input:focus-visible,
+[tabindex='-1']:focus-visible {
+  outline: var(--focus-ring);
   outline-offset: 3px;
+}
+
+/* Programmatic focus targets (headings, main, alerts) must not look like controls. */
+h1[tabindex='-1']:focus:not(:focus-visible),
+main[tabindex='-1']:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.skip-link {
+  position: absolute;
+  inset-inline-start: var(--space-4);
+  top: var(--space-4);
+  z-index: 10;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-strong);
+  color: #fff;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.muted {
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.form-footer {
+  margin: var(--space-4) 0 0;
+  font-size: var(--font-size-sm);
 }
 
 .shell {
@@ -87,7 +131,7 @@ input:focus-visible {
 
 .nav-item[aria-current='page'] {
   color: var(--color-primary-strong);
-  background: #e8f0eb;
+  background: var(--color-nav-current);
   font-weight: 700;
 }
 
@@ -230,8 +274,13 @@ button:disabled {
 }
 
 .error {
-  background: #fff0ef;
-  color: #8c1f18;
+  background: var(--color-danger-bg);
+  color: var(--color-danger-ink);
+}
+
+.ok {
+  background: var(--color-ok-bg);
+  color: var(--color-ok-ink);
 }
 
 .session-bar {

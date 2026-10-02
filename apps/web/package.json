@@ -6,10 +6,11 @@
     "build": "next build",
     "dev": "next dev --turbopack",
     "start": "next start",
-    "lint": "eslint app next.config.ts --max-warnings=0",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "test:coverage": "vitest run --coverage --passWithNoTests"
+    "lint": "eslint app e2e/main-path.spec.ts next.config.ts playwright.config.ts --max-warnings=0",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test": "vitest run --exclude 'e2e/**' --exclude '.next/**'",
+    "test:coverage": "vitest run --coverage --exclude 'e2e/**' --exclude '.next/**'"
   },
   "dependencies": {
     "next": "16.3.6",
@@ -17,7 +18,12 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@node-rs/argon2": "2.0.2",
+    "@playwright/test": "1.63.0",
+    "@types/pg": "8.15.6",
     "@types/react": "19.3.0",
-    "@types/react-dom": "19.3.0"
+    "@types/react-dom": "19.3.0",
+    "pg": "8.23.0"
   }
 }
