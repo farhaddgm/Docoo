@@ -10,12 +10,26 @@ import { Test } from '@nestjs/testing';
 import type { InjectOptions, LightMyRequestResponse } from 'fastify';
 import { Client, Pool } from 'pg';
 
+import {
+  ClamdScanner,
+  extractInSandbox,
+  MemoryObjectStore,
+  PgIngestionStore,
+  runPipeline,
+  TesseractOcr,
+  UnconfiguredTranscriber,
+  type IngestionInput,
+  type MalwareScanner,
+  type StepResult,
+} from '@docoo/ingestion';
+
 import { AppModule } from '../../src/app.module.js';
 import {
   PASSWORD_RESET_DELIVERY,
   type PasswordResetDelivery,
   type PasswordResetMessage,
 } from '../../src/auth/auth.reset-delivery.js';
+import { INGESTION_DISPATCHER, OBJECT_STORE } from '../../src/sources/ingestion.providers.js';
 import { DATABASE_POOL } from '../../src/tokens.js';
 
 export const adminUrl = process.env['DATABASE_TEST_ADMIN_URL'];
@@ -37,10 +51,53 @@ export class CapturingResetDelivery implements PasswordResetDelivery {
   }
 }
 
+/** Detects the EICAR test string; the real clamd adapter is used when CLAMD_HOST is set. */
+export const eicarScanner: MalwareScanner = {
+  scan: (bytes) =>
+    Promise.resolve(
+      Buffer.from(bytes).includes('EICAR-STANDARD-ANTIVIRUS-TEST-FILE')
+        ? { status: 'infected', engine: 'test', signature: 'Eicar-Test-Signature', detail: null }
+        : { status: 'clean', engine: 'test', signature: null, detail: null },
+    ),
+};
+
+/** Runs the ingestion workflow steps in-process, in the same order the Temporal worker does. */
+export class InlineIngestion {
+  readonly runs: { input: IngestionInput; result: StepResult }[] = [];
+  scanner: MalwareScanner = process.env['CLAMD_HOST']
+    ? new ClamdScanner(process.env['CLAMD_HOST'], Number(process.env['CLAMD_PORT'] ?? 3310))
+    : eicarScanner;
+  available = true;
+
+  constructor(
+    private readonly pool: Pool,
+    readonly objects: MemoryObjectStore,
+  ) {}
+
+  async start(input: IngestionInput): Promise<void> {
+    if (!this.available) {
+      const { IngestionUnavailableError } =
+        await import('../../src/sources/ingestion.providers.js');
+      throw new IngestionUnavailableError('temporal_unreachable');
+    }
+    const result = await runPipeline(input, {
+      store: new PgIngestionStore(this.pool),
+      objects: this.objects,
+      scanner: this.scanner,
+      extract: (bytes, mime) => extractInSandbox(bytes, mime),
+      ocr: new TesseractOcr(),
+      transcriber: new UnconfiguredTranscriber(),
+    });
+    this.runs.push({ input, result });
+  }
+}
+
 export interface Harness {
   readonly app: NestFastifyApplication;
   readonly admin: Client;
   readonly delivery: CapturingResetDelivery;
+  readonly objects: MemoryObjectStore;
+  readonly ingestion: InlineIngestion;
   readonly ids: {
     readonly userA: string;
     readonly userB: string;
@@ -137,11 +194,17 @@ export async function createHarness(name: string): Promise<Harness> {
   process.env['WEB_ORIGIN'] = webOrigin;
 
   const delivery = new CapturingResetDelivery();
+  const objects = new MemoryObjectStore();
+  const ingestion = new InlineIngestion(runtimePool, objects);
   const module = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(DATABASE_POOL)
     .useValue(runtimePool)
     .overrideProvider(PASSWORD_RESET_DELIVERY)
     .useValue(delivery)
+    .overrideProvider(OBJECT_STORE)
+    .useValue(objects)
+    .overrideProvider(INGESTION_DISPATCHER)
+    .useValue(ingestion)
     .compile();
   const app = module.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
     logger: false,
@@ -194,6 +257,8 @@ export async function createHarness(name: string): Promise<Harness> {
     app,
     admin,
     delivery,
+    objects,
+    ingestion,
     ids,
     emails,
     suffix,

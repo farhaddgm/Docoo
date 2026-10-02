@@ -9,13 +9,21 @@
     "start": "node dist/main.js",
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --passWithNoTests --exclude 'dist/**' --exclude 'src/**/*.integration.test.ts'",
+    "test:integration": "vitest run --exclude 'dist/**' integration",
     "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "dependencies": {
-    "@docoo/worker-runtime": "workspace:*"
+    "@docoo/ingestion": "workspace:*",
+    "@docoo/observability": "workspace:*",
+    "@temporalio/activity": "1.24.0",
+    "@temporalio/worker": "1.24.0",
+    "@temporalio/workflow": "1.24.0",
+    "pg": "8.23.0"
   },
   "devDependencies": {
+    "@temporalio/client": "1.24.0",
+    "@types/pg": "8.15.6",
     "tsx": "4.23.13"
   }
 }

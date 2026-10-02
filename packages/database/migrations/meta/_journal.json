@@ -50,6 +50,20 @@
       "when": 1790959440235,
       "tag": "0006_control_plane_security",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790966210950,
+      "tag": "0007_knowledge_ingestion",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790966211966,
+      "tag": "0008_knowledge_ingestion_security",
+      "breakpoints": true
     }
   ]
 }

@@ -36,10 +36,26 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install OCR tools (Tesseract fas/eng, poppler)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-fas poppler-utils
+      - name: Start ingestion services (S3, clamd with the EICAR test signature, Temporal)
+        run: |
+          docker run -d --name object-store -p 8333:8333 \
+            -e AWS_ACCESS_KEY_ID=docoo-ci -e AWS_SECRET_ACCESS_KEY=docoo-ci-secret \
+            chrislusf/seaweedfs:latest mini -dir=/data
+          docker run -d --name clamd -p 3310:3310 --entrypoint clamd \
+            -v "$GITHUB_WORKSPACE/infra/clamav/test-signatures:/var/lib/clamav:ro" \
+            clamav/clamav:1.4 --foreground=yes
+          docker run -d --name temporal -p 7233:7233 temporalio/temporal:latest \
+            server start-dev --ip 0.0.0.0
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+        env:
+          REQUIRE_OCR: '1'
       - run: pnpm build
       - run: pnpm docs:validate
       - run: pnpm qa:corpus
@@ -51,9 +67,31 @@ jobs:
       - run: pnpm db:test:rls
         env:
           DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+      - name: Wait for ingestion services
+        run: |
+          for i in $(seq 1 60); do
+            if printf 'zPING\0' | nc -w 2 localhost 3310 | grep -q PONG && nc -z localhost 7233 && nc -z localhost 8333; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs clamd; docker logs temporal; docker logs object-store
+          exit 1
       - run: pnpm --filter @docoo/api test:integration
         env:
           DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+          CLAMD_HOST: localhost
+      - run: pnpm --filter @docoo/worker-ingestion test:integration
+        env:
+          DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+          CLAMD_HOST: localhost
+          TEMPORAL_ADDRESS: localhost:7233
+          S3_ENDPOINT: http://localhost:8333
+          S3_REGION: us-east-1
+          S3_BUCKET: docoo-ci
+          S3_ACCESS_KEY_ID: docoo-ci
+          S3_SECRET_ACCESS_KEY: docoo-ci-secret
+          S3_FORCE_PATH_STYLE: 'true'
       - name: Prepare end-to-end data
         env:
           DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci

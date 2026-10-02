@@ -5,7 +5,9 @@ import { ConfigModule } from './config/config.module.js';
 import { CoreModule } from './core.module.js';
 import { HealthController } from './health.controller.js';
 import { HealthService } from './health.service.js';
+import { KnowledgeModule } from './knowledge/knowledge.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
+import { SourcesModule } from './sources/sources.module.js';
 import { TopicsModule } from './topics/topics.module.js';
 import { WorkspaceModule } from './workspaces/workspace.module.js';
 
@@ -18,6 +20,8 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
     ConfigModule,
     ProjectsModule,
     AuditModule,
+    SourcesModule,
+    KnowledgeModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],

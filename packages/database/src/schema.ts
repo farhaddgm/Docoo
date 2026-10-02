@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -7,6 +8,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -346,4 +348,377 @@ export const configSnapshots = pgTable(
       table.hash,
     ),
   ],
+);
+
+// Phase 2: sources, ingestion, knowledge, Brain audit and retrieval (ING-*, KNO-*).
+
+export const sourceKind = pgEnum('source_kind', ['file', 'url', 'text']);
+export const sourceStatus = pgEnum('source_status', [
+  'uploaded',
+  'quarantined',
+  'scanning',
+  'accepted',
+  'extracting',
+  'indexed',
+  'rejected',
+  'failed',
+  'partial',
+]);
+export const knowledgeSourceType = pgEnum('knowledge_source_type', [
+  'admin_provided',
+  'clue_guided',
+  'autonomous_research',
+]);
+export const confidentiality = pgEnum('confidentiality', [
+  'internal',
+  'confidential',
+  'restricted',
+]);
+export const knowledgeStatus = pgEnum('knowledge_status', [
+  'draft',
+  'pending',
+  'in_review',
+  'approved',
+  'rejected',
+  'needs_revision',
+  'expired',
+  'superseded',
+]);
+export const auditDecision = pgEnum('audit_decision', ['approved', 'needs_revision', 'rejected']);
+export const overrideDecision = pgEnum('override_decision', ['approve', 'reject']);
+export const conflictStatus = pgEnum('conflict_status', ['open', 'resolved']);
+export const conflictSeverity = pgEnum('conflict_severity', ['low', 'medium', 'high']);
+
+export const sourceAssets = pgTable(
+  'source_assets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    kind: sourceKind('kind').notNull(),
+    title: text('title').notNull(),
+    scopeType: configScope('scope_type').notNull(),
+    scopeId: uuid('scope_id').notNull(),
+    currentVersionId: uuid('current_version_id'),
+    version: integer('version').notNull().default(1),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    index('source_assets_workspace_idx').on(table.workspaceId, table.updatedAt),
+    index('source_assets_scope_idx').on(table.workspaceId, table.scopeType, table.scopeId),
+  ],
+);
+
+export const sourceVersions = pgTable(
+  'source_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    assetId: uuid('asset_id')
+      .notNull()
+      .references(() => sourceAssets.id, { onDelete: 'cascade' }),
+    versionNo: integer('version_no').notNull(),
+    status: sourceStatus('status').notNull().default('uploaded'),
+    objectKey: text('object_key'),
+    filename: text('filename'),
+    declaredMime: text('declared_mime'),
+    sniffedMime: text('sniffed_mime'),
+    declaredSize: bigint('declared_size', { mode: 'number' }),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }),
+    declaredSha256: text('declared_sha256'),
+    sha256: text('sha256'),
+    originUrl: text('origin_url'),
+    scan: jsonb('scan'),
+    extraction: jsonb('extraction'),
+    failureCode: text('failure_code'),
+    supersedesVersionId: uuid('supersedes_version_id'),
+    uploadExpiresAt: timestamp('upload_expires_at', { withTimezone: true }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('source_versions_asset_version_uq').on(table.assetId, table.versionNo),
+    index('source_versions_workspace_status_idx').on(table.workspaceId, table.status),
+    index('source_versions_sha_idx').on(table.workspaceId, table.sha256),
+  ],
+);
+
+export const sourceSegments = pgTable(
+  'source_segments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    sourceVersionId: uuid('source_version_id')
+      .notNull()
+      .references(() => sourceVersions.id, { onDelete: 'cascade' }),
+    ordinal: integer('ordinal').notNull(),
+    locator: jsonb('locator').notNull(),
+    text: text('text').notNull(),
+    confidence: real('confidence'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('source_segments_version_ordinal_uq').on(table.sourceVersionId, table.ordinal),
+    index('source_segments_workspace_idx').on(table.workspaceId),
+  ],
+);
+
+export const knowledgeItems = pgTable(
+  'knowledge_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    title: text('title').notNull(),
+    sourceType: knowledgeSourceType('source_type').notNull(),
+    confidentiality: confidentiality('confidentiality').notNull().default('internal'),
+    language: locale('language').notNull().default('fa'),
+    currentVersionId: uuid('current_version_id'),
+    version: integer('version').notNull().default(1),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [index('knowledge_items_workspace_idx').on(table.workspaceId, table.updatedAt)],
+);
+
+export const knowledgeScopes = pgTable(
+  'knowledge_scopes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => knowledgeItems.id, { onDelete: 'cascade' }),
+    scopeType: configScope('scope_type').notNull(),
+    scopeId: uuid('scope_id').notNull(),
+    role: text('role'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('knowledge_scopes_uq').on(
+      table.itemId,
+      table.scopeType,
+      table.scopeId,
+      sql`coalesce(${table.role}, '')`,
+    ),
+    index('knowledge_scopes_lookup_idx').on(table.workspaceId, table.scopeType, table.scopeId),
+  ],
+);
+
+export const knowledgeVersions = pgTable(
+  'knowledge_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => knowledgeItems.id, { onDelete: 'cascade' }),
+    versionNo: integer('version_no').notNull(),
+    status: knowledgeStatus('status').notNull().default('draft'),
+    content: text('content').notNull(),
+    contentSha256: text('content_sha256').notNull(),
+    language: locale('language').notNull(),
+    sourceVersionId: uuid('source_version_id').references(() => sourceVersions.id, {
+      onDelete: 'set null',
+    }),
+    provenance: jsonb('provenance').notNull(),
+    validFrom: timestamp('valid_from', { withTimezone: true }),
+    validUntil: timestamp('valid_until', { withTimezone: true }),
+    staleReason: text('stale_reason'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('knowledge_versions_item_version_uq').on(table.itemId, table.versionNo),
+    index('knowledge_versions_workspace_status_idx').on(table.workspaceId, table.status),
+    index('knowledge_versions_source_idx').on(table.sourceVersionId),
+  ],
+);
+
+export const claims = pgTable(
+  'claims',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    knowledgeVersionId: uuid('knowledge_version_id')
+      .notNull()
+      .references(() => knowledgeVersions.id, { onDelete: 'cascade' }),
+    ordinal: integer('ordinal').notNull(),
+    text: text('text').notNull(),
+    normalizedText: text('normalized_text').notNull(),
+    kind: text('kind').notNull(),
+    locator: jsonb('locator').notNull(),
+    sourceSegmentId: uuid('source_segment_id').references(() => sourceSegments.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('claims_version_ordinal_uq').on(table.knowledgeVersionId, table.ordinal),
+    index('claims_workspace_idx').on(table.workspaceId),
+  ],
+);
+
+export const citations = pgTable(
+  'citations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    claimId: uuid('claim_id')
+      .notNull()
+      .references(() => claims.id, { onDelete: 'cascade' }),
+    sourceRef: text('source_ref'),
+    title: text('title'),
+    publisher: text('publisher'),
+    author: text('author'),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    accessedAt: timestamp('accessed_at', { withTimezone: true }),
+    locator: text('locator'),
+    quoteDigest: text('quote_digest'),
+    complete: boolean('complete').notNull(),
+    missingFields: text('missing_fields').array().notNull(),
+    verificationStatus: text('verification_status').notNull().default('unverified'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('citations_claim_idx').on(table.claimId),
+    index('citations_workspace_idx').on(table.workspaceId),
+  ],
+);
+
+export const auditReviews = pgTable(
+  'audit_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    knowledgeVersionId: uuid('knowledge_version_id')
+      .notNull()
+      .references(() => knowledgeVersions.id, { onDelete: 'cascade' }),
+    rubricVersion: text('rubric_version').notNull(),
+    auditor: text('auditor').notNull(),
+    scores: jsonb('scores').notNull(),
+    overall: real('overall').notNull(),
+    decision: auditDecision('decision').notNull(),
+    reasons: jsonb('reasons').notNull(),
+    claimResults: jsonb('claim_results').notNull(),
+    criticalFlags: text('critical_flags').array().notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('audit_reviews_version_idx').on(table.knowledgeVersionId, table.createdAt),
+    index('audit_reviews_workspace_idx').on(table.workspaceId, table.createdAt),
+  ],
+);
+
+export const auditOverrides = pgTable(
+  'audit_overrides',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    reviewId: uuid('review_id')
+      .notNull()
+      .references(() => auditReviews.id, { onDelete: 'cascade' }),
+    knowledgeVersionId: uuid('knowledge_version_id')
+      .notNull()
+      .references(() => knowledgeVersions.id, { onDelete: 'cascade' }),
+    decision: overrideDecision('decision').notNull(),
+    reason: text('reason').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('audit_overrides_version_idx').on(table.knowledgeVersionId, table.createdAt)],
+);
+
+export const knowledgeConflicts = pgTable(
+  'knowledge_conflicts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    claimAId: uuid('claim_a_id')
+      .notNull()
+      .references(() => claims.id, { onDelete: 'cascade' }),
+    claimBId: uuid('claim_b_id')
+      .notNull()
+      .references(() => claims.id, { onDelete: 'cascade' }),
+    conflictType: text('conflict_type').notNull(),
+    severity: conflictSeverity('severity').notNull(),
+    analysis: text('analysis').notNull(),
+    status: conflictStatus('status').notNull().default('open'),
+    resolution: text('resolution'),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('knowledge_conflicts_pair_uq').on(table.claimAId, table.claimBId),
+    index('knowledge_conflicts_workspace_status_idx').on(table.workspaceId, table.status),
+  ],
+);
+
+export const knowledgeChunks = pgTable(
+  'knowledge_chunks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    knowledgeVersionId: uuid('knowledge_version_id')
+      .notNull()
+      .references(() => knowledgeVersions.id, { onDelete: 'cascade' }),
+    ordinal: integer('ordinal').notNull(),
+    text: text('text').notNull(),
+    searchText: text('search_text').notNull(),
+    embeddingModel: text('embedding_model').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('knowledge_chunks_version_ordinal_uq').on(table.knowledgeVersionId, table.ordinal),
+    index('knowledge_chunks_workspace_idx').on(table.workspaceId),
+  ],
+);
+
+export const retrievalSnapshots = pgTable(
+  'retrieval_snapshots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id'),
+    topicId: uuid('topic_id'),
+    role: text('role'),
+    query: text('query').notNull(),
+    filters: jsonb('filters').notNull(),
+    results: jsonb('results').notNull(),
+    embeddingModel: text('embedding_model').notNull(),
+    hash: text('hash').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('retrieval_snapshots_workspace_idx').on(table.workspaceId, table.createdAt)],
 );

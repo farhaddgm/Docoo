@@ -84,6 +84,7 @@ notion_sync: true
 40. [ADR-0005: ممیزی دو‌سطحی دانش](adr/0005-two-level-knowledge-audit.md)
 41. [ADR-0006: پلتفرم و toolchain](adr/0006-application-platform-and-toolchain.md)
 42. [ADR-0007: نشست و امنیت احراز هویت](adr/0007-authentication-and-session-security.md)
+43. [ADR-0008: اجرای ingestion و حاکمیت دانش](adr/0008-ingestion-and-knowledge-runtime.md)
 
 ## وضعیت اسناد
 

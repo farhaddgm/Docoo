@@ -2,7 +2,7 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.1.0
+version: 1.2.0
 owner: API Architecture
 last_updated: 2026-10-02
 notion_sync: true
@@ -106,16 +106,29 @@ notion_sync: true
 
 Answer submission batch atomic و idempotent است.
 
-## ۸. دانش
+## ۸. منابع و دانش (پیاده‌شده در 0.4.0)
 
-- `GET/POST /knowledge`
-- `GET /knowledge/{id}/versions/{versionId}`
-- `POST /knowledge/{id}/versions`
-- `POST /knowledge/{id}:submit-audit`
-- `GET /audit-reviews`
-- `POST /audit-reviews/{id}:override`
-- `GET /knowledge-conflicts`
-- `POST /knowledge-conflicts/{id}:resolve`
+### منابع (ING-*)
+
+- `POST /sources/uploads` — اعلام فایل (`filename`, `mime`, `size`, `sha256`, `scope`)؛ پاسخ `201` با URL امضاشدهٔ `PUT` مستقیم به quarantine (اعتبار ۱۵ دقیقه). حجم بیش از `ingestion.max_file_mb` پاسخ `413 SOURCE_TOO_LARGE` و نوع پشتیبانی‌نشده `415 SOURCE_UNSUPPORTED_TYPE` است.
+- `POST /sources/{id}/versions/{versionId}/finalize` — تأیید رسیدن فایل با همان حجم و شروع workflow `ingest-{versionId}`؛ پاسخ `202`. پیش از آپلود `409 SOURCE_UPLOAD_INCOMPLETE`.
+- `POST /sources/text` و `POST /sources/url` — متن یا URL وارد همان خط لوله می‌شوند؛ URL پیش از ثبت با سیاست `ingestion.url_policy`/`ingestion.url_allowlist` و SSRF guard بررسی و رد آن `400 SOURCE_URL_REJECTED` و رویداد امنیتی است.
+- `POST /sources/{id}/versions` — نسخهٔ جدید فایل با `If-Match`؛ lineage با `supersedesVersionId` حفظ و دانش وابسته به نسخهٔ قبلی پس از finalize، `stale` می‌شود.
+- `POST /sources/{id}/versions/{versionId}/retry`، `GET /sources`، `GET /sources/{id}`، `GET /sources/{id}/versions/{versionId}/segments` (هر segment، locator صفحه/اسلاید/سلول/خط/بازهٔ زمانی دارد).
+- اگر workflow engine در دسترس نباشد فایل در quarantine می‌ماند و پاسخ `503 SOURCE_INGESTION_UNAVAILABLE` است.
+
+وضعیت نسخه: `uploaded → quarantined → scanning → accepted → extracting → indexed | partial`؛ رد در quarantine با `rejected` و `failureCode` (`malware_detected`, `mime_mismatch`, `extension_mismatch`, `unsupported_type`, `checksum_mismatch`, `size_mismatch`, `archive_*`, `url_*`). در نبود حکم «clean» از اسکنر، نسخه `quarantined` با `scan_unavailable` می‌ماند (fail closed).
+
+### دانش (KNO-*)
+
+- `GET/POST /knowledge` — item با `sourceType`، `confidentiality`، `scopes` (workspace/topic/project و نقش اختیاری)، `provenance`، اعتبار زمانی و claim/citation.
+- `POST /knowledge/from-source` — دانش کاندید از منبع indexed با claimهای پیشنهادی و locator دقیق (`ING-008`)؛ منبع `partial` فقط با `acceptPartial`.
+- `GET /knowledge/{id}`، `GET /knowledge/{id}/versions`، `GET /knowledge/{id}/versions/{versionId}`، `DELETE /knowledge/{id}`.
+- `POST /knowledge/{id}/versions` — محتوای جدید با `If-Match`؛ نسخهٔ جدید `pending` و نسخهٔ قبلی `superseded` و ممیزی قبلی stale می‌شود.
+- `POST /knowledge/{id}/submit-audit` — ممیزی Brain با rubric `brain-rubric-v1` (شش معیار وزن‌دار) و ثبت score، reason، نسخهٔ rubric و نتیجهٔ claimها.
+- `GET /audit-reviews` و `POST /audit-reviews/{id}/override` — override با دلیل حداقل ۲۰ نویسهٔ معنادار، انقضای اختیاری، نشان `humanOverride` و رویداد audit با شدت `critical`.
+- `GET /knowledge-conflicts` و `POST /knowledge-conflicts/{id}/resolve`.
+- `POST /knowledge/retrieve` — بازیابی ترکیبی lexical (FTS) و vector (`hash-ngram-v1`، pgvector) فقط روی دانش approved، جاری، معتبر و داخل scope/نقش؛ هر نتیجه `conflictWarnings` دارد و کل پاسخ در `retrieval_snapshots` با hash ثابت pin می‌شود. `GET /retrieval-snapshots/{id}` همان نتیجه را برمی‌گرداند.
 
 ## ۹. راه‌حل و ارزیابی
 
