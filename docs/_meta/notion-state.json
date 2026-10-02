@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b"
+    "source_commit": "81b2b0845e05778fa746b73ffc60727fcd7f474d"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,15 +62,15 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-02T17:40:42.204Z",
-    "created": 2,
-    "updated": 5,
-    "unchanged": 36,
+    "synced_at": "2026-10-02T19:23:03.365Z",
+    "created": 1,
+    "updated": 4,
+    "unchanged": 39,
     "failed": 0,
     "failures": [],
     "validation": {
-      "manifest_documents": 43,
-      "state_documents": 43,
+      "manifest_documents": 44,
+      "state_documents": 44,
       "orphaned_state_documents": []
     }
   },
@@ -330,16 +330,16 @@
     "DOCOO-API-CONTRACTS": {
       "path": "docs/04-architecture/03-api-contracts.md",
       "section": "04 Architecture",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "proposed",
       "owner": "API Architecture",
-      "checksum_sha256": "aed0e6723c839f7da015ce2331b4cc416f3053970fe11fa7dffd59c5b90be8f0",
+      "checksum_sha256": "5a9998d6bdada9f47f76e01b2cfdcaf635e39e656eb789f41ed7a37dd200c6b7",
       "notion_page_id": "3e55a24a-6668-812d-9f69-cd7fceb4fea8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812d9f69cd7fceb4fea8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a8-8910-fed8b8b362d3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a88910fed8b8b362d3",
-      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
-      "synced_at": "2026-10-02T17:40:42.204Z"
+      "synced_commit": "81b2b0845e05778fa746b73ffc60727fcd7f474d",
+      "synced_at": "2026-10-02T19:23:03.365Z"
     },
     "DOCOO-WORKFLOWS-JOBS": {
       "path": "docs/04-architecture/04-workflows-and-jobs.md",
@@ -571,13 +571,13 @@
       "version": "0.2.0",
       "status": "active",
       "owner": "Product & Architecture",
-      "checksum_sha256": "0316f03d5c0ab578a31340cd38024b56ae1ba290530e2829d5fa7af5772a05db",
+      "checksum_sha256": "7b0d219b24721398bb23da2ebac5e3462715688c1942f3d1b749c1ab8090a720",
       "notion_page_id": "3e55a24a-6668-814f-a8af-c79e5a2e44ee",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668814fa8afc79e5a2e44ee?pvs=204",
       "index_row_page_id": "3e55a24a-6668-818e-b8a6-e77117562585",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a6668818eb8a6e77117562585",
-      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
-      "synced_at": "2026-10-02T17:40:42.204Z"
+      "synced_commit": "81b2b0845e05778fa746b73ffc60727fcd7f474d",
+      "synced_at": "2026-10-02T19:23:03.365Z"
     },
     "DOCOO-IMPLEMENTATION-BACKLOG": {
       "path": "docs/06-delivery/06-implementation-backlog.md",
@@ -613,13 +613,13 @@
       "version": "1.1.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "43add32c781a4997a7ecc63d115eb33b386bb8f180d432af4ac0a2aa243d8b0b",
+      "checksum_sha256": "ae57a442cadddf017e9ab6e159b1db4034c3c6f629d1890b92fb368d3c34d3d5",
       "notion_page_id": "3e55a24a-6668-815d-b2f0-d451feffe55e",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668815db2f0d451feffe55e",
       "index_row_page_id": "3e55a24a-6668-81d3-9a8e-d3b801cb1eb3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881d39a8ed3b801cb1eb3",
-      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
-      "synced_at": "2026-10-02T17:40:42.204Z"
+      "synced_commit": "81b2b0845e05778fa746b73ffc60727fcd7f474d",
+      "synced_at": "2026-10-02T19:23:03.365Z"
     },
     "DOCOO-ADR-0006": {
       "path": "docs/adr/0006-application-platform-and-toolchain.md",
@@ -652,16 +652,16 @@
     "DOCOO-AUTHORIZATION-MATRIX": {
       "path": "docs/05-security/03-authorization-matrix.md",
       "section": "05 Security",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "active",
       "owner": "Security & Engineering",
-      "checksum_sha256": "eeca0f0b9cb0477b6860d8040bd0b1e435c03dd755769f0a4ac35480ab5ebe74",
+      "checksum_sha256": "146676b6e5d4e9f74c65430e074c68216e3c9415f999cce5738c234f67cec1c5",
       "notion_page_id": "3ed5a24a-6668-8161-89cf-feb622f23b1a",
       "notion_page_url": "https://app.notion.com/p/3ed5a24a6668816189cffeb622f23b1a",
       "index_row_page_id": "3ed5a24a-6668-8125-b8de-ff89f4514ef2",
       "index_row_page_url": "https://app.notion.com/p/3ed5a24a66688125b8deff89f4514ef2",
-      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
-      "synced_at": "2026-10-02T17:40:42.204Z"
+      "synced_commit": "81b2b0845e05778fa746b73ffc60727fcd7f474d",
+      "synced_at": "2026-10-02T19:23:03.365Z"
     },
     "DOCOO-EPIC-BREAKDOWN": {
       "path": "docs/06-delivery/09-epic-breakdown.md",
@@ -676,6 +676,20 @@
       "index_row_page_url": "https://app.notion.com/p/3ed5a24a666881e9b455ebd734626c7e",
       "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
       "synced_at": "2026-10-02T17:40:42.204Z"
+    },
+    "DOCOO-ADR-0008": {
+      "path": "docs/adr/0008-ingestion-and-knowledge-runtime.md",
+      "section": "ADRs",
+      "version": "1.0.0",
+      "status": "accepted",
+      "owner": "Engineering & AI Governance",
+      "checksum_sha256": "90929e2f568ce7c5d250c7fbec29dfb5715bc737805fee3968d13d018edbec25",
+      "notion_page_id": "3ed5a24a-6668-8180-bf59-cce12b30774e",
+      "notion_page_url": "https://app.notion.com/p/3ed5a24a66688180bf59cce12b30774e",
+      "index_row_page_id": "3ed5a24a-6668-8142-a89c-dda7f68e6b69",
+      "index_row_page_url": "https://app.notion.com/p/3ed5a24a66688142a89cdda7f68e6b69",
+      "synced_commit": "81b2b0845e05778fa746b73ffc60727fcd7f474d",
+      "synced_at": "2026-10-02T19:23:03.365Z"
     }
   }
 }
