@@ -2,6 +2,22 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.4.0] — 2026-10-02
+
+Phase 2 (ingestion and knowledge) complete, except speech-to-text acceptance, which needs a provider key.
+
+### Added
+
+- Sources (ING-001..008): presigned direct upload into quarantine with the size limit from settings and a SHA-256 check; real MIME sniffing that must agree with the declared type and extension; archive-bomb limits; ClamAV `clamd` scan that fails closed; pasted text and URL intake with allowlist policy and SSRF guards; new versions with lineage that mark dependent knowledge stale; claim candidates with their exact location.
+- Ingestion worker (`apps/worker-ingestion`): Temporal workflow `ingest-<versionId>` with idempotent scan and extract activities; parsing in a permission-restricted Node sandbox without network; PDF, DOCX, PPTX, XLSX, CSV, TXT, MD and JSON extractors with page, slide, cell and line locators; Tesseract OCR (fa/eng) for scanned pages and images; an OpenAI-compatible speech-to-text adapter.
+- Knowledge (KNO-001..007): items with source type, provenance, scopes, confidentiality and versions; Brain audit with the six-criteria rubric v1 behind the `KnowledgeAuditor` contract; overrides that need a reason and raise a critical audit event; conflict detection with warnings on every retrieval; citation completeness; hybrid full-text and pgvector retrieval with append-only, repeatable snapshots.
+- Settings `ingestion.max_file_mb`, `ingestion.url_policy` and `ingestion.url_allowlist`; the `malware-scanner` service in `compose.yaml`; ADR-0008.
+- CI starts SeaweedFS, `clamd` (EICAR test signature) and Temporal, installs Tesseract, and runs 52 API integration tests, the extended RLS gate and an end-to-end worker test.
+
+### Known limitation
+
+- ING-005 (#53): audio is stored as `partial` until `TRANSCRIPTION_API_KEY` is set; the word-accuracy acceptance on `audio-fa-001` and `audio-en-001` needs that key.
+
 ## [0.3.0] — 2026-10-02
 
 Phase 1 (control plane) complete; phase 0 closed with evidence.
@@ -63,6 +79,7 @@ Phase 1 (control plane) complete; phase 0 closed with evidence.
 - Monorepo foundation: NestJS API, Next.js bilingual web shell, workers, Compose stack, CI and security workflows.
 - Super Admin authentication, workspace authorization, topic list/create and PostgreSQL RLS.
 
+[0.4.0]: https://github.com/farhaddgm/Docoo/releases/tag/v0.4.0
 [0.3.0]: https://github.com/farhaddgm/Docoo/releases/tag/v0.3.0
 [0.2.1]: https://github.com/farhaddgm/Docoo/releases/tag/v0.2.1
 [0.2.0]: https://github.com/farhaddgm/Docoo/releases/tag/v0.2.0
