@@ -36,6 +36,20 @@
       "when": 1790265594119,
       "tag": "0004_friendly_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790959425904,
+      "tag": "0005_control_plane",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790959440235,
+      "tag": "0006_control_plane_security",
+      "breakpoints": true
     }
   ]
 }

@@ -38,6 +38,12 @@ const ids = {
   projectB: randomUUID(),
   auditA: randomUUID(),
   auditB: randomUUID(),
+  versionA: randomUUID(),
+  versionB: randomUUID(),
+  assignmentA: randomUUID(),
+  assignmentB: randomUUID(),
+  snapshotA: randomUUID(),
+  snapshotB: randomUUID(),
   authEvent: randomUUID(),
 };
 
@@ -94,9 +100,21 @@ try {
      WHERE relnamespace = 'public'::regnamespace
        AND relname = ANY($1::text[])
   `,
-    [['workspaces', 'memberships', 'topics', 'projects', 'project_topics', 'audit_events']],
+    [
+      [
+        'workspaces',
+        'memberships',
+        'topics',
+        'projects',
+        'project_topics',
+        'audit_events',
+        'topic_versions',
+        'config_assignments',
+        'config_snapshots',
+      ],
+    ],
   );
-  assert.equal(policies.rowCount, 6, 'Every tenant table must exist after migration.');
+  assert.equal(policies.rowCount, 9, 'Every tenant table must exist after migration.');
   for (const policy of policies.rows) {
     assert.equal(policy.relrowsecurity, true, `${policy.relname}: RLS is disabled`);
     assert.equal(policy.relforcerowsecurity, true, `${policy.relname}: FORCE RLS is disabled`);
@@ -207,6 +225,22 @@ try {
       ],
     );
     await admin.query(
+      `INSERT INTO topic_versions (id, workspace_id, topic_id, version, code, title, description, language)
+       VALUES ($1, $2, $3, 1, 'a', 'Topic A', '', 'fa'), ($4, $5, $6, 1, 'b', 'Topic B', '', 'fa')`,
+      [ids.versionA, ids.workspaceA, ids.topicA, ids.versionB, ids.workspaceB, ids.topicB],
+    );
+    await admin.query(
+      `INSERT INTO config_assignments (id, workspace_id, setting_key, scope_type, scope_id, sequence, value, reason)
+       VALUES ($1, $2, 'research.max_sources', 'workspace', $2, 1, '10', 'test'),
+              ($3, $4, 'research.max_sources', 'workspace', $4, 1, '20', 'test')`,
+      [ids.assignmentA, ids.workspaceA, ids.assignmentB, ids.workspaceB],
+    );
+    await admin.query(
+      `INSERT INTO config_snapshots (id, workspace_id, subject_type, subject_id, resolved, source_map, hash)
+       VALUES ($1, $2, 'project', $3, '{}', '{}', 'a'), ($4, $5, 'project', $6, '{}', '{}', 'b')`,
+      [ids.snapshotA, ids.workspaceA, ids.projectA, ids.snapshotB, ids.workspaceB, ids.projectB],
+    );
+    await admin.query(
       'INSERT INTO auth_events (id, actor_id, action, identifier_digest, correlation_id) VALUES ($1, $2, $3, $4, $5)',
       [ids.authEvent, ids.actorA, 'login.succeeded', 'test-only', randomUUID()],
     );
@@ -223,6 +257,9 @@ try {
     ['projects', 'id', ids.projectA, ids.projectB],
     ['project_topics', 'project_id', ids.projectA, ids.projectB],
     ['audit_events', 'id', ids.auditA, ids.auditB],
+    ['topic_versions', 'id', ids.versionA, ids.versionB],
+    ['config_assignments', 'id', ids.assignmentA, ids.assignmentB],
+    ['config_snapshots', 'id', ids.snapshotA, ids.snapshotB],
   ];
   for (const [table, idColumn, expectedA, expectedB] of tenantTables) {
     const withoutContext = await withContext(null, null, () =>
@@ -298,6 +335,60 @@ try {
     [ids.workspaceA, ids.actorB, 'test.invalid', 'topic', randomUUID()],
   );
 
+  // Control-plane history tables: tenant-bound inserts, no in-place changes.
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    `INSERT INTO config_assignments (workspace_id, setting_key, scope_type, scope_id, sequence, value, reason)
+     VALUES ($1, 'research.max_sources', 'workspace', $1, 2, '5', 'cross tenant')`,
+    [ids.workspaceB],
+  );
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    `INSERT INTO config_assignments (workspace_id, setting_key, scope_type, scope_id, sequence, value, reason, created_by)
+     VALUES ($1, 'research.max_sources', 'workspace', $1, 2, '5', 'spoofed actor', $2)`,
+    [ids.workspaceA, ids.actorB],
+  );
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'UPDATE config_assignments SET value = $1 WHERE id = $2',
+    ['99', ids.assignmentA],
+  );
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'DELETE FROM topic_versions WHERE id = $1',
+    [ids.versionA],
+  );
+  await expectSqlState(
+    '23503',
+    ids.workspaceA,
+    ids.actorA,
+    `INSERT INTO topic_versions (workspace_id, topic_id, version, code, title, description, language)
+     VALUES ($1, $2, 2, 'x', 'x', '', 'fa')`,
+    [ids.workspaceA, ids.topicB],
+  );
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    `INSERT INTO setting_definitions (key, value_schema, default_value, allowed_scopes, description_fa, description_en)
+     VALUES ('evil.setting', '{"type":"boolean"}', 'true', '{workspace}', 'x', 'x')`,
+  );
+  await assert.rejects(
+    admin.query('UPDATE config_snapshots SET hash = $1 WHERE id = $2', ['x', ids.snapshotA]),
+    (error) => {
+      assert.equal(error.code, 'P0001');
+      return true;
+    },
+  );
+
   const actorAWorkspaces = await withContext(null, ids.actorA, () =>
     runtime.query('SELECT id::text AS id FROM app.auth_user_workspaces()'),
   );
@@ -341,7 +432,7 @@ try {
   );
 
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {
