@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { parseEnvironment, type Environment } from '@docoo/config';
 import { Pool } from 'pg';
 
+import { WorkspaceDatabase } from './common/workspace-database.js';
 import { API_CONFIG, DATABASE_POOL } from './tokens.js';
 
 @Global()
@@ -22,7 +23,8 @@ import { API_CONFIG, DATABASE_POOL } from './tokens.js';
           statement_timeout: 15_000,
         }),
     },
+    WorkspaceDatabase,
   ],
-  exports: [API_CONFIG, DATABASE_POOL],
+  exports: [API_CONFIG, DATABASE_POOL, WorkspaceDatabase],
 })
 export class CoreModule {}

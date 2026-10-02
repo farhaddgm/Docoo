@@ -78,8 +78,26 @@ declare module 'fastify' {
   }
 }
 
-const permissionMetadataKey = Symbol('docoo.workspace_permission');
-const superAdminPermissions: ReadonlySet<string> = new Set(WORKSPACE_PERMISSIONS);
+export type MembershipRole = AuthWorkspace['role'];
+
+/**
+ * Role → permission matrix (FR-AUTH-005). Version 1 only has Super Admin, who holds
+ * every workspace permission; future roles are added here without touching routes.
+ * See docs/05-security/03-authorization-matrix.md.
+ */
+export const ROLE_PERMISSIONS: Readonly<Record<MembershipRole, ReadonlySet<WorkspacePermission>>> =
+  {
+    super_admin: new Set(WORKSPACE_PERMISSIONS),
+  };
+
+export function roleHasPermission(role: string, permission: WorkspacePermission): boolean {
+  return Object.hasOwn(ROLE_PERMISSIONS, role)
+    ? ROLE_PERMISSIONS[role as MembershipRole].has(permission)
+    : false;
+}
+
+export const permissionMetadataKey = Symbol('docoo.workspace_permission');
+const knownPermissions: ReadonlySet<string> = new Set(WORKSPACE_PERMISSIONS);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** Routes using this decorator must declare a :workspaceId path parameter. */
@@ -102,7 +120,7 @@ export class WorkspacePermissionGuard implements CanActivate {
       permissionMetadataKey,
       [context.getHandler(), context.getClass()],
     );
-    if (!permission || !superAdminPermissions.has(permission)) {
+    if (!permission || !knownPermissions.has(permission)) {
       throw new ForbiddenException({
         status: 403,
         title: 'Forbidden',
@@ -157,7 +175,7 @@ export class WorkspacePermissionGuard implements CanActivate {
         detail: 'The workspace was not found.',
       });
     }
-    if (workspace.role !== 'super_admin') {
+    if (!roleHasPermission(workspace.role, permission)) {
       throw new ForbiddenException({
         status: 403,
         title: 'Forbidden',

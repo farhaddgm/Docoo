@@ -1,0 +1,153 @@
+import 'reflect-metadata';
+
+import { ForbiddenException, RequestMethod, type ExecutionContext } from '@nestjs/common';
+import { GUARDS_METADATA, METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants.js';
+import { Reflector } from '@nestjs/core';
+import type { FastifyReply, FastifyRequest } from 'fastify';
+import { describe, expect, it, vi } from 'vitest';
+
+import { AuditController } from '../src/audit/audit.controller.js';
+import {
+  permissionMetadataKey,
+  ROLE_PERMISSIONS,
+  roleHasPermission,
+  WORKSPACE_PERMISSIONS,
+  WorkspacePermissionGuard,
+} from '../src/auth/auth.authorization.js';
+import type { AuthService } from '../src/auth/auth.service.js';
+import { ConfigController } from '../src/config/config.controller.js';
+import { ProjectsController } from '../src/projects/projects.controller.js';
+import { TopicsController } from '../src/topics/topics.controller.js';
+import { WorkspaceController } from '../src/workspaces/workspace.controller.js';
+
+/**
+ * The authorization matrix of docs/05-security/03-authorization-matrix.md. Every
+ * workspace route must appear here with exactly this permission.
+ */
+const expectedMatrix: Record<string, string> = {
+  'GET workspaces/:workspaceId': 'workspace.read',
+  'GET workspaces/:workspaceId/topics': 'topic.read',
+  'POST workspaces/:workspaceId/topics': 'topic.create',
+  'GET workspaces/:workspaceId/topics/:topicId': 'topic.read',
+  'PATCH workspaces/:workspaceId/topics/:topicId': 'topic.update',
+  'GET workspaces/:workspaceId/topics/:topicId/versions': 'topic.read',
+  'GET workspaces/:workspaceId/topics/:topicId/dependencies': 'topic.read',
+  'POST workspaces/:workspaceId/topics/:topicId/archive': 'topic.archive',
+  'POST workspaces/:workspaceId/topics/:topicId/restore': 'topic.restore',
+  'DELETE workspaces/:workspaceId/topics/:topicId': 'topic.delete',
+  'GET workspaces/:workspaceId/projects': 'project.read',
+  'POST workspaces/:workspaceId/projects': 'project.create',
+  'GET workspaces/:workspaceId/projects/:projectId': 'project.read',
+  'PATCH workspaces/:workspaceId/projects/:projectId': 'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/activate': 'project.run',
+  'POST workspaces/:workspaceId/projects/:projectId/pause': 'project.pause',
+  'POST workspaces/:workspaceId/projects/:projectId/resume': 'project.resume',
+  'POST workspaces/:workspaceId/projects/:projectId/complete': 'project.run',
+  'POST workspaces/:workspaceId/projects/:projectId/reopen': 'project.run',
+  'POST workspaces/:workspaceId/projects/:projectId/archive': 'project.archive',
+  'POST workspaces/:workspaceId/projects/:projectId/unarchive': 'project.archive',
+  'POST workspaces/:workspaceId/projects/:projectId/restore': 'project.restore',
+  'DELETE workspaces/:workspaceId/projects/:projectId': 'project.delete',
+  'POST workspaces/:workspaceId/projects/:projectId/clone': 'project.create',
+  'GET workspaces/:workspaceId/projects/:projectId/timeline': 'project.read',
+  'GET workspaces/:workspaceId/projects/:projectId/effective-config': 'project.read',
+  'GET workspaces/:workspaceId/projects/:projectId/config-snapshots': 'project.read',
+  'GET workspaces/:workspaceId/settings/definitions': 'workspace.read',
+  'GET workspaces/:workspaceId/settings/assignments': 'workspace.read',
+  'GET workspaces/:workspaceId/settings/assignments/history': 'workspace.read',
+  'PUT workspaces/:workspaceId/settings/assignments': 'workspace.configure',
+  'POST workspaces/:workspaceId/settings/assignments/restore': 'workspace.configure',
+  'GET workspaces/:workspaceId/settings/effective': 'workspace.read',
+  'GET workspaces/:workspaceId/audit-events': 'audit.read',
+  'POST workspaces/:workspaceId/audit-events/export': 'audit.export',
+  'POST workspaces/:workspaceId/retention/purge': 'retention.purge',
+};
+
+const controllers = [
+  WorkspaceController,
+  TopicsController,
+  ProjectsController,
+  ConfigController,
+  AuditController,
+];
+
+function routeTable(): Record<string, string | undefined> {
+  const table: Record<string, string | undefined> = {};
+  for (const controller of controllers) {
+    const base = Reflect.getMetadata(PATH_METADATA, controller) as string;
+    const prototype = controller.prototype as unknown as Record<string, unknown>;
+    for (const name of Object.getOwnPropertyNames(prototype)) {
+      const handler = prototype[name];
+      if (typeof handler !== 'function' || name === 'constructor') continue;
+      const path = Reflect.getMetadata(PATH_METADATA, handler) as string | undefined;
+      const method = Reflect.getMetadata(METHOD_METADATA, handler) as RequestMethod | undefined;
+      if (path === undefined || method === undefined) continue;
+      const full = [base, path].filter((part) => part && part !== '/').join('/');
+      const guards = (Reflect.getMetadata(GUARDS_METADATA, handler) ?? []) as unknown[];
+      expect(guards, `${full} must use WorkspacePermissionGuard`).toContain(
+        WorkspacePermissionGuard,
+      );
+      table[`${RequestMethod[method]} ${full}`] = Reflect.getMetadata(
+        permissionMetadataKey,
+        handler,
+      ) as string | undefined;
+    }
+  }
+  return table;
+}
+
+describe('authorization matrix (AUTH-003, TC-AUTH-005)', () => {
+  it('protects every workspace route with exactly the documented permission', () => {
+    expect(routeTable()).toEqual(expectedMatrix);
+  });
+
+  it('uses only known permissions', () => {
+    for (const permission of Object.values(expectedMatrix)) {
+      expect(WORKSPACE_PERMISSIONS).toContain(permission);
+    }
+  });
+
+  it('grants Super Admin every permission and unknown roles none', () => {
+    expect([...ROLE_PERMISSIONS.super_admin].sort()).toEqual([...WORKSPACE_PERMISSIONS].sort());
+    for (const permission of WORKSPACE_PERMISSIONS) {
+      expect(roleHasPermission('super_admin', permission)).toBe(true);
+      expect(roleHasPermission('viewer', permission)).toBe(false);
+      expect(roleHasPermission('__proto__', permission)).toBe(false);
+    }
+  });
+
+  it('denies a membership whose role lacks the permission', async () => {
+    const workspace = {
+      id: '810b1170-629e-4718-b880-5cb0b81d6f32',
+      code: 'main',
+      name: 'Docoo',
+      role: 'viewer',
+    };
+    const authService = {
+      currentSession: vi.fn().mockResolvedValue({
+        user: { id: '405c9eaa-d469-493c-94b3-6ec7744df8e7' },
+        workspaces: [workspace],
+        maxAgeSeconds: 1800,
+      }),
+      assertSameOrigin: vi.fn(),
+      secureCookies: false,
+    } as unknown as AuthService;
+    const request = {
+      id: 'request-id',
+      method: 'GET',
+      headers: {},
+      cookies: { docoo_session: 'token' },
+      params: { workspaceId: workspace.id },
+    } as unknown as FastifyRequest;
+    const reply = { setCookie: vi.fn(), header: vi.fn() } as unknown as FastifyReply;
+    const context = {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- only read as metadata key
+      getHandler: () => TopicsController.prototype.list,
+      getClass: () => TopicsController,
+      switchToHttp: () => ({ getRequest: () => request, getResponse: () => reply }),
+    } as unknown as ExecutionContext;
+
+    const guard = new WorkspacePermissionGuard(authService, new Reflector());
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+});
