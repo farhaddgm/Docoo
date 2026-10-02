@@ -2,9 +2,9 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.0.0
+version: 1.1.0
 owner: API Architecture
-last_updated: 2026-09-24
+last_updated: 2026-10-02
 notion_sync: true
 ---
 
@@ -14,13 +14,27 @@ notion_sync: true
 
 - REST/JSON برای control plane؛ event/stream برای status.
 - OpenAPI منبع قرارداد HTTP و از CI validate می‌شود.
-- URL نسخهٔ major مانند `/api/v1`.
+- URL نسخهٔ major مانند `/v1` (وب از `/api/*` به آن proxy می‌کند)؛ منابع tenant زیر `/v1/workspaces/{workspaceId}/...` هستند.
 - resource ID opaque UUID؛ code در filter/lookup مجاز.
 - زمان ISO-8601 UTC؛ locale فقط نمایش.
 - commandهای قابل‌تکرار `Idempotency-Key` می‌خواهند.
-- update با `If-Match`/version برای optimistic concurrency.
+- update با `If-Match`/version برای optimistic concurrency: `GET` و `PATCH` سرآیند `ETag: "<version>"` دارند؛ `PATCH` بدون `If-Match` پاسخ 428 و با نسخهٔ قدیمی 412 می‌گیرد. commandهای وضعیت `expectedVersion` را در body می‌گیرند و تکرار command تحقق‌یافته no-op است.
+- commandها به‌صورت زیرمسیر `POST /{resource}/{id}/{command}` پیاده شده‌اند (نه `:{command}`) چون router Fastify دونقطه را پارامتر تفسیر می‌کند.
 
 ## ۲. پاسخ و خطا
+
+پیاده‌سازی فعلی بدنهٔ خطا را تخت برمی‌گرداند و `correlationId` همان `x-request-id` پاسخ است:
+
+```json
+{
+  "status": 409,
+  "title": "Conflict",
+  "code": "PROJECT_STATE_CONFLICT",
+  "detail": "A draft project cannot be changed with \"pause\"."
+}
+```
+
+قالب هدف قرارداد که در نسخهٔ بعدی API به آن مهاجرت می‌شود:
 
 ```json
 {
@@ -42,27 +56,32 @@ notion_sync: true
 - `POST /auth/logout`
 - `POST /auth/password/reset-request`
 - `POST /auth/password/reset`
-- `GET /me`
+- `GET /auth/session` و `GET /me`
 - `DELETE /me/sessions`
+- `POST /me/password` (تغییر گذرواژه؛ همهٔ نشست‌ها revoke و نشست جاری rotate می‌شود)
+
+`reset-request` همیشه پاسخ عمومی 202 می‌دهد؛ token یک‌بارمصرف فقط digest آن ذخیره و در fragment پیوند (`#token=`) ارسال می‌شود. تا افزودن adapter ایمیل، پیوند با `pnpm admin:reset-link` صادر می‌شود.
 
 ## ۴. حوزه‌ها
 
-- `GET/POST /topics`
+- `GET/POST /topics` (فیلتر `status=active|archived|deleted|all`)
 - `GET/PATCH /topics/{id}`
-- `POST /topics/{id}:archive`
-- `POST /topics/{id}:restore`
-- `DELETE /topics/{id}`
-- `GET/POST /topics/{id}/assets`
+- `POST /topics/{id}/archive`
+- `POST /topics/{id}/restore`
+- `DELETE /topics/{id}` (اگر پروژهٔ غیرحذف‌شده‌ای به آن وابسته باشد 409 با فهرست وابستگی)
 - `GET /topics/{id}/versions`
+- `GET /topics/{id}/dependencies`
+- `GET/POST /topics/{id}/assets` (با epic ING)
 
 ## ۵. پروژه‌ها
 
-- `GET/POST /projects`
+- `GET/POST /projects` (فیلتر `status`، پیش‌فرض همهٔ وضعیت‌ها جز deleted)
 - `GET/PATCH /projects/{id}`
-- `POST /projects/{id}:activate|pause|resume|complete|archive|restore`
-- `DELETE /projects/{id}`
-- `POST /projects/{id}:clone`
+- `POST /projects/{id}/activate|pause|resume|complete|reopen|archive|unarchive|restore`
+- `DELETE /projects/{id}` (۳۰ روز قابل بازیابی)
+- `POST /projects/{id}/clone`
 - `GET /projects/{id}/effective-config`
+- `GET /projects/{id}/config-snapshots`
 - `GET /projects/{id}/timeline`
 
 ## ۶. workflow و human task
@@ -127,7 +146,8 @@ Answer submission batch atomic و idempotent است.
 - `GET/PATCH /projects/{id}/agents/{role}`
 - `POST /projects/{id}/agents/{role}:copy-default`
 - `GET /settings/definitions`
-- `GET/PUT /settings/assignments`
+- `GET/PUT /settings/assignments`، `GET /settings/assignments/history`، `POST /settings/assignments/restore`
+- `GET /settings/effective?scopeType=&scopeId=` (مقدار مؤثر و منبع هر مقدار)
 
 ## ۱۲. provider
 
@@ -142,8 +162,9 @@ Secret input write-only است.
 
 ## ۱۳. audit و گزارش
 
-- `GET /audit-events`
-- `POST /audit-events:export`
+- `GET /audit-events` (فیلتر project، action یا خانوادهٔ `x.*`، target، actor، severity، بازهٔ زمان)
+- `POST /audit-events/export` (JSON/CSV تا ۵۰۰۰ رویداد؛ خودِ export ممیزی می‌شود)
+- `POST /retention/purge` (حذف دائمی موارد منقضی با tombstone ممیزی)
 - `POST /brain-reports`
 - `GET /brain-reports/{id}`
 - `GET /reports/projects/{id}/performance`

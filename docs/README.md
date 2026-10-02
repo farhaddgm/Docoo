@@ -2,9 +2,9 @@
 doc_id: DOCOO-DOC-INDEX
 title: فهرست مرجع مستندات Docoo
 status: active
-version: 0.1.1
+version: 0.2.0
 owner: Product & Architecture
-last_updated: 2026-09-24
+last_updated: 2026-10-02
 notion_sync: true
 ---
 
@@ -56,32 +56,34 @@ notion_sync: true
 
 22. [امنیت و threat model](05-security/01-security-and-threat-model.md) — کنترل‌های امنیتی، تهدیدهای AI و مرز اعتماد.
 23. [ممیزی و انطباق](05-security/02-audit-and-compliance.md) — رویدادهای ممیزی، نگهداری، تغییرناپذیری و گزارش.
+24. [ماتریس مجوز](05-security/03-authorization-matrix.md) — permission هر endpoint، ترتیب ارزیابی و ریسک‌های پذیرفته‌شده.
 
 ### ۶. تحویل و عملیات
 
-24. [راهبرد آزمون](06-delivery/01-testing-strategy.md) — هرم آزمون، eval ایجنت‌ها، امنیت و بار.
-25. [استقرار و عملیات](06-delivery/02-deployment-and-operations.md) — Docker، محیط‌ها، پشتیبان‌گیری و بازیابی.
-26. [مشاهده‌پذیری و SRE](06-delivery/03-observability-and-sre.md) — لاگ، متریک، trace، SLO و هشدار.
-27. [نقشهٔ راه توسعه](06-delivery/04-roadmap.md) — فازها، خروجی‌ها، دروازه‌ها و تعریف Done.
-28. [پذیرش و ردیابی](06-delivery/05-acceptance-and-traceability.md) — اتصال نیازمندی به آزمون و سند.
-29. [backlog اجرایی](06-delivery/06-implementation-backlog.md) — Issueهای خرد، milestoneها و traceability.
-30. [راهنمای مالک محصول](06-delivery/07-owner-action-guide.md) — اقدامات سادهٔ approve، دسترسی، UX، تست و release.
-31. [checklist آمادگی](06-delivery/08-readiness-checklist.md) — وضعیت واقعی gate شروع توسعه.
+25. [راهبرد آزمون](06-delivery/01-testing-strategy.md) — هرم آزمون، eval ایجنت‌ها، امنیت و بار.
+26. [استقرار و عملیات](06-delivery/02-deployment-and-operations.md) — Docker، محیط‌ها، پشتیبان‌گیری و بازیابی.
+27. [مشاهده‌پذیری و SRE](06-delivery/03-observability-and-sre.md) — لاگ، متریک، trace، SLO و هشدار.
+28. [نقشهٔ راه توسعه](06-delivery/04-roadmap.md) — فازها، خروجی‌ها، دروازه‌ها و تعریف Done.
+29. [پذیرش و ردیابی](06-delivery/05-acceptance-and-traceability.md) — اتصال نیازمندی به آزمون و سند.
+30. [backlog اجرایی](06-delivery/06-implementation-backlog.md) — Issueهای خرد، milestoneها و traceability.
+31. [راهنمای مالک محصول](06-delivery/07-owner-action-guide.md) — اقدامات سادهٔ approve، دسترسی، UX، تست و release.
+32. [checklist آمادگی](06-delivery/08-readiness-checklist.md) — وضعیت واقعی gate شروع توسعه.
+33. [شکست epicها به story](06-delivery/09-epic-breakdown.md) — خروجی spike فازهای ۲ تا ۶ با وابستگی و معیار پذیرش.
 
 ### ۷. یکپارچه‌سازی‌ها
 
-32. [همگام‌سازی Notion و GitHub](07-integrations/01-notion-and-github.md) — مخزن خصوصی، انتشار یک‌طرفه و کنترل تعارض.
-33. [قرارداد آداپترهای بیرونی](07-integrations/02-external-adapters.md) — AI، وب، ذخیره‌سازی، OCR و export.
+34. [همگام‌سازی Notion و GitHub](07-integrations/01-notion-and-github.md) — مخزن خصوصی، انتشار یک‌طرفه و کنترل تعارض.
+35. [قرارداد آداپترهای بیرونی](07-integrations/02-external-adapters.md) — AI، وب، ذخیره‌سازی، OCR و export.
 
 ### ۸. تصمیم‌های معماری
 
-34. [ADR-0001: modular monolith](adr/0001-modular-monolith.md)
-35. [ADR-0002: اجرای بادوام گردش‌کار](adr/0002-durable-workflows.md)
-36. [ADR-0003: مرز tenant و حوزهٔ موضوعی](adr/0003-tenant-and-topic-boundary.md)
-37. [ADR-0004: تنظیمات نسخه‌بندی‌شده](adr/0004-versioned-configuration.md)
-38. [ADR-0005: ممیزی دو‌سطحی دانش](adr/0005-two-level-knowledge-audit.md)
-39. [ADR-0006: پلتفرم و toolchain](adr/0006-application-platform-and-toolchain.md)
-40. [ADR-0007: نشست و امنیت احراز هویت](adr/0007-authentication-and-session-security.md)
+36. [ADR-0001: modular monolith](adr/0001-modular-monolith.md)
+37. [ADR-0002: اجرای بادوام گردش‌کار](adr/0002-durable-workflows.md)
+38. [ADR-0003: مرز tenant و حوزهٔ موضوعی](adr/0003-tenant-and-topic-boundary.md)
+39. [ADR-0004: تنظیمات نسخه‌بندی‌شده](adr/0004-versioned-configuration.md)
+40. [ADR-0005: ممیزی دو‌سطحی دانش](adr/0005-two-level-knowledge-audit.md)
+41. [ADR-0006: پلتفرم و toolchain](adr/0006-application-platform-and-toolchain.md)
+42. [ADR-0007: نشست و امنیت احراز هویت](adr/0007-authentication-and-session-security.md)
 
 ## وضعیت اسناد
 

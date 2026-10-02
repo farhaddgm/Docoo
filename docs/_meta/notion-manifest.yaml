@@ -77,6 +77,9 @@ documents:
   - path: docs/05-security/02-audit-and-compliance.md
     doc_id: DOCOO-AUDIT-COMPLIANCE
     section: 05 Security
+  - path: docs/05-security/03-authorization-matrix.md
+    doc_id: DOCOO-AUTHORIZATION-MATRIX
+    section: 05 Security
   - path: docs/06-delivery/01-testing-strategy.md
     doc_id: DOCOO-TESTING-STRATEGY
     section: 06 Delivery & Operations
@@ -100,6 +103,9 @@ documents:
     section: 06 Delivery & Operations
   - path: docs/06-delivery/08-readiness-checklist.md
     doc_id: DOCOO-READINESS-CHECKLIST
+    section: 06 Delivery & Operations
+  - path: docs/06-delivery/09-epic-breakdown.md
+    doc_id: DOCOO-EPIC-BREAKDOWN
     section: 06 Delivery & Operations
   - path: docs/07-integrations/01-notion-and-github.md
     doc_id: DOCOO-NOTION-GITHUB

@@ -2,9 +2,9 @@
 doc_id: DOCOO-OBSERVABILITY-SRE
 title: مشاهده‌پذیری و SRE
 status: proposed
-version: 1.0.0
+version: 1.1.0
 owner: SRE
-last_updated: 2026-09-24
+last_updated: 2026-10-02
 notion_sync: true
 ---
 
@@ -67,6 +67,10 @@ JSON با timestamp، level، service، environment، version، correlation، ev
 ## ۵. trace
 
 Spanها: auth، API application service، DB query group، workflow command، activity، provider invocation، tool، retrieval، renderer. Prompt/output raw span attribute ممنوع است.
+
+### پیاده‌سازی در API
+
+سرویس‌ها ESM هستند؛ OpenTelemetry فقط وقتی http و pg را patch می‌کند که پیش از بارگذاری برنامه فعال شود. بنابراین API با `node --import ./dist/instrumentation.js dist/main.js` اجرا می‌شود (`pnpm --filter @docoo/api start`). با تنظیم `OTEL_EXPORTER_OTLP_ENDPOINT` spanهای HTTP ورودی (`url.path`، method، status) و PostgreSQL (`db.query.text` پارامتری بدون مقدار) و متریک‌های runtime صادر می‌شوند و لاگ‌ها `trace_id` دارند. `enhancedDatabaseReporting` خاموش است تا مقدار پارامترها، که ممکن است محتوای مسئله باشد، هرگز ثبت نشود.
 
 ## ۶. dashboard
 
