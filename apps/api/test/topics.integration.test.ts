@@ -303,7 +303,7 @@ describe.skipIf(!adminUrl)('topics HTTP integration on disposable PostgreSQL 18'
       actor_id: string;
       action: string;
       target_id: string;
-      after: { redacted: boolean; fields: string[] };
+      after: Record<string, unknown>;
       correlation_id: string;
     }>(
       `select workspace_id, actor_id, action, target_id, after, correlation_id
@@ -328,9 +328,12 @@ describe.skipIf(!adminUrl)('topics HTTP integration on disposable PostgreSQL 18'
       ]),
     );
     for (const event of audit.rows) {
-      expect(event.after).toEqual({
-        redacted: true,
-        fields: ['code', 'title', 'description', 'language'],
+      expect(event.after).toMatchObject({
+        code: 'shared-code',
+        title: { redacted: true, length: 'Shared title'.length },
+        description: { redacted: true, length: 0 },
+        language: 'fa',
+        version: 1,
       });
       expect(JSON.stringify(event.after)).not.toContain('Shared title');
       expect(event.correlation_id).toMatch(/^[0-9a-f-]{36}$/);

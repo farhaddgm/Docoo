@@ -1,5 +1,11 @@
 import { hash, verify } from '@node-rs/argon2';
-import { ForbiddenException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient, QueryResultRow } from 'pg';
 import type { Environment } from '@docoo/config';
@@ -36,12 +42,28 @@ export interface AuthWorkspace {
   readonly role: 'super_admin';
 }
 
+export interface IssuedSession {
+  readonly token: string;
+  readonly maxAgeSeconds: number;
+}
+
+type AuthEventAction =
+  | 'login.failed'
+  | 'login.succeeded'
+  | 'logout.succeeded'
+  | 'login.locked'
+  | 'password.changed'
+  | 'password.reset_requested'
+  | 'password.reset_completed'
+  | 'sessions.revoked';
+
 interface UserRow extends QueryResultRow {
   id: string;
   email: string;
   password_hash: string;
   display_name: string;
   status: 'active' | 'locked' | 'disabled';
+  locked: boolean;
 }
 
 interface WorkspaceRow extends QueryResultRow {
@@ -60,14 +82,17 @@ interface SessionUserRow extends QueryResultRow {
   cookie_max_age_seconds: number;
 }
 
-interface CreateSessionInput {
+interface AuthEventInput {
   readonly actorId: string | null;
-  readonly action: 'login.failed' | 'login.succeeded' | 'logout.succeeded';
+  readonly action: AuthEventAction;
   readonly identifierDigest: string;
   readonly correlationId: string;
   readonly ipHash: string | null;
   readonly userAgentHash: string | null;
 }
+
+export const PASSWORD_MIN_LENGTH = 12;
+export const PASSWORD_MAX_LENGTH = 1024;
 
 @Injectable()
 export class AuthService {
@@ -89,21 +114,26 @@ export class AuthService {
     password: string,
     metadata: AuthRequestMetadata,
   ): Promise<LoginResult> {
-    const identifierDigest = digestSecret(identifier.toLowerCase(), this.config.SESSION_PEPPER);
+    const identifierDigest = this.identifierDigest(identifier);
     const userResult = await this.pool.query<UserRow>(
-      `select id, email, password_hash, display_name, status
+      `select id, email, password_hash, display_name, status,
+              coalesce(locked_until > now(), false) as locked
          from users
         where lower(email) = lower($1)
         limit 1`,
       [identifier],
     );
     const user = userResult.rows[0];
+    // Always verify a hash so unknown, locked and wrong-password attempts take similar time.
     const passwordMatches = await verify(
       user?.password_hash ?? (await this.dummyPasswordHash),
       password,
     );
 
-    if (!user || user.status !== 'active' || !passwordMatches) {
+    if (!user || user.status !== 'active' || user.locked || !passwordMatches) {
+      if (user && user.status === 'active' && !user.locked && !passwordMatches) {
+        await this.registerFailedAttempt(user.id, identifierDigest, metadata);
+      }
       await this.recordAuthEvent({
         actorId: user?.id ?? null,
         action: 'login.failed',
@@ -114,21 +144,11 @@ export class AuthService {
     }
 
     const client = await this.pool.connect();
-    const token = createSessionToken();
-    const now = new Date();
-    const idleExpiresAt = new Date(now.getTime() + this.config.SESSION_IDLE_TTL_SECONDS * 1000);
-    const absoluteExpiresAt = new Date(
-      now.getTime() + this.config.SESSION_ABSOLUTE_TTL_SECONDS * 1000,
-    );
-    const maxAgeSeconds = Math.min(
-      this.config.SESSION_IDLE_TTL_SECONDS,
-      this.config.SESSION_ABSOLUTE_TTL_SECONDS,
-    );
-
     try {
       await client.query('begin');
       const currentUserResult = await client.query<UserRow>(
-        `select id, email, password_hash, display_name, status
+        `select id, email, password_hash, display_name, status,
+                coalesce(locked_until > now(), false) as locked
            from users
           where id = $1
           for update`,
@@ -138,6 +158,7 @@ export class AuthService {
       if (
         !currentUser ||
         currentUser.status !== 'active' ||
+        currentUser.locked ||
         currentUser.password_hash !== user.password_hash
       ) {
         await client.query('rollback');
@@ -163,20 +184,10 @@ export class AuthService {
       }
 
       await client.query(
-        `insert into sessions (
-           user_id, token_digest, last_seen_at, idle_expires_at, absolute_expires_at,
-           ip_hash, user_agent_hash
-         ) values ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          user.id,
-          digestSecret(token, this.config.SESSION_PEPPER),
-          now,
-          idleExpiresAt,
-          absoluteExpiresAt,
-          this.digestOptional(metadata.ip),
-          this.digestOptional(metadata.userAgent),
-        ],
+        'update users set failed_login_count = 0, locked_until = null where id = $1',
+        [user.id],
       );
+      const session = await this.issueSession(client, user.id, metadata);
       await this.insertAuthEvent(client, {
         actorId: user.id,
         action: 'login.succeeded',
@@ -185,12 +196,7 @@ export class AuthService {
       });
       await client.query('commit');
 
-      return {
-        token,
-        maxAgeSeconds,
-        user: this.toAuthUser(user),
-        workspaces,
-      };
+      return { ...session, user: this.toAuthUser(user), workspaces };
     } catch (error) {
       await client.query('rollback').catch(() => undefined);
       throw error;
@@ -230,7 +236,7 @@ export class AuthService {
               r.cookie_max_age_seconds
          from refreshed r
          join users u on u.id = r.user_id`,
-      [digestSecret(token, this.config.SESSION_PEPPER), this.config.SESSION_IDLE_TTL_SECONDS],
+      [this.tokenDigest(token), this.config.SESSION_IDLE_TTL_SECONDS],
     );
     const user = result.rows[0];
     if (!user || user.status !== 'active') throw this.invalidSession();
@@ -263,10 +269,8 @@ export class AuthService {
 
   async logout(token: string | undefined, metadata: AuthRequestMetadata): Promise<void> {
     if (!token) return;
-    const digest = digestSecret(token, this.config.SESSION_PEPPER);
-    const client = await this.pool.connect();
-    try {
-      await client.query('begin');
+    const digest = this.tokenDigest(token);
+    await this.transaction(async (client) => {
       const result = await client.query<{ user_id: string } & QueryResultRow>(
         `update sessions
             set revoked_at = now()
@@ -283,13 +287,163 @@ export class AuthService {
           ...this.auditMetadata(metadata),
         });
       }
-      await client.query('commit');
-    } catch (error) {
-      await client.query('rollback').catch(() => undefined);
-      throw error;
-    } finally {
-      client.release();
+    });
+  }
+
+  /** Revokes every session of the signed-in user, including the current one. */
+  async revokeAllSessions(token: string | undefined, metadata: AuthRequestMetadata): Promise<void> {
+    const session = await this.currentSession(token);
+    await this.transaction(async (client) => {
+      const revoked = await this.revokeUserSessions(client, session.user.id);
+      await this.insertAuthEvent(client, {
+        actorId: session.user.id,
+        action: 'sessions.revoked',
+        identifierDigest: this.identifierDigest(session.user.email),
+        ...this.auditMetadata(metadata),
+      });
+      return revoked;
+    });
+  }
+
+  /**
+   * Changes the password after re-verifying the current one, revokes every session and
+   * issues a fresh session so the caller stays signed in (session rotation).
+   */
+  async changePassword(
+    token: string | undefined,
+    currentPassword: string,
+    newPassword: string,
+    metadata: AuthRequestMetadata,
+  ): Promise<IssuedSession> {
+    const session = await this.currentSession(token);
+    const identifierDigest = this.identifierDigest(session.user.email);
+    const stored = await this.pool.query<{ password_hash: string } & QueryResultRow>(
+      'select password_hash from users where id = $1',
+      [session.user.id],
+    );
+    const passwordHash = stored.rows[0]?.password_hash;
+    if (!passwordHash || !(await verify(passwordHash, currentPassword))) {
+      throw new BadRequestException({
+        status: 400,
+        title: 'Invalid request',
+        code: 'AUTH_CURRENT_PASSWORD_INVALID',
+        detail: 'The current password is incorrect.',
+      });
     }
+    this.assertPasswordPolicy(newPassword, session.user.email, currentPassword);
+    const newHash = await hash(newPassword, this.passwordHashOptions());
+
+    return this.transaction(async (client) => {
+      await client.query(
+        `update users
+            set password_hash = $2, password_changed_at = now(),
+                failed_login_count = 0, locked_until = null
+          where id = $1`,
+        [session.user.id, newHash],
+      );
+      await this.revokeUserSessions(client, session.user.id);
+      const issued = await this.issueSession(client, session.user.id, metadata);
+      for (const action of ['password.changed', 'sessions.revoked'] as const) {
+        await this.insertAuthEvent(client, {
+          actorId: session.user.id,
+          action,
+          identifierDigest,
+          ...this.auditMetadata(metadata),
+        });
+      }
+      return issued;
+    });
+  }
+
+  /**
+   * Creates a single-use reset token for an active user. The response never reveals
+   * whether the account exists; the raw token only leaves through the delivery port.
+   */
+  async requestPasswordReset(
+    identifier: string,
+    metadata: AuthRequestMetadata,
+  ): Promise<{ readonly email: string; readonly token: string } | null> {
+    const identifierDigest = this.identifierDigest(identifier);
+    const result = await this.pool.query<{ id: string; email: string } & QueryResultRow>(
+      `select id, email from users where lower(email) = lower($1) and status = 'active' limit 1`,
+      [identifier],
+    );
+    const user = result.rows[0];
+    const token = createSessionToken();
+
+    await this.transaction(async (client) => {
+      if (user) {
+        // Only the newest token stays usable.
+        await client.query(
+          `update password_reset_tokens set consumed_at = now()
+            where user_id = $1 and consumed_at is null`,
+          [user.id],
+        );
+        await client.query(
+          `insert into password_reset_tokens (user_id, token_digest, expires_at)
+           values ($1, $2, now() + ($3::integer * interval '1 second'))`,
+          [user.id, this.tokenDigest(token), this.config.PASSWORD_RESET_TTL_SECONDS],
+        );
+      }
+      await this.insertAuthEvent(client, {
+        actorId: user?.id ?? null,
+        action: 'password.reset_requested',
+        identifierDigest,
+        ...this.auditMetadata(metadata),
+      });
+    });
+    return user ? { email: user.email, token } : null;
+  }
+
+  /** Consumes a reset token exactly once, sets the password and revokes all sessions. */
+  async resetPassword(
+    token: string,
+    newPassword: string,
+    metadata: AuthRequestMetadata,
+  ): Promise<void> {
+    const digest = this.tokenDigest(token);
+    const candidate = await this.pool.query<{ email: string } & QueryResultRow>(
+      `select u.email
+         from password_reset_tokens t
+         join users u on u.id = t.user_id
+        where t.token_digest = $1 and t.consumed_at is null and t.expires_at > now()
+          and u.status = 'active'`,
+      [digest],
+    );
+    const email = candidate.rows[0]?.email;
+    if (!email) throw this.invalidResetToken();
+    this.assertPasswordPolicy(newPassword, email);
+    const newHash = await hash(newPassword, this.passwordHashOptions());
+
+    await this.transaction(async (client) => {
+      const consumed = await client.query<{ user_id: string } & QueryResultRow>(
+        `update password_reset_tokens t
+            set consumed_at = now()
+           from users u
+          where t.token_digest = $1 and t.consumed_at is null and t.expires_at > now()
+            and u.id = t.user_id and u.status = 'active'
+        returning t.user_id`,
+        [digest],
+      );
+      const userId = consumed.rows[0]?.user_id;
+      if (!userId) throw this.invalidResetToken();
+      await client.query(
+        `update users
+            set password_hash = $2, password_changed_at = now(),
+                failed_login_count = 0, locked_until = null
+          where id = $1`,
+        [userId, newHash],
+      );
+      await this.revokeUserSessions(client, userId);
+      for (const action of ['password.reset_completed', 'sessions.revoked'] as const) {
+        await this.insertAuthEvent(client, {
+          actorId: userId,
+          action,
+          identifierDigest: this.identifierDigest(email),
+          ...this.auditMetadata(metadata),
+        });
+      }
+    });
   }
 
   assertSameOrigin(metadata: AuthRequestMetadata): void {
@@ -301,6 +455,100 @@ export class AuthService {
         detail: 'The request origin is not allowed.',
       });
     }
+  }
+
+  assertPasswordPolicy(password: string, email: string, previousPassword?: string): void {
+    const tooShort = [...password].length < PASSWORD_MIN_LENGTH;
+    const tooLong = password.length > PASSWORD_MAX_LENGTH;
+    const sameAsEmail = password.trim().toLowerCase() === email.trim().toLowerCase();
+    const unchanged = previousPassword !== undefined && password === previousPassword;
+    if (tooShort || tooLong || sameAsEmail || unchanged) {
+      throw new BadRequestException({
+        status: 400,
+        title: 'Invalid request',
+        code: 'AUTH_PASSWORD_POLICY',
+        detail: `Use a new password of at least ${PASSWORD_MIN_LENGTH} characters that is not your email address.`,
+      });
+    }
+  }
+
+  private async registerFailedAttempt(
+    userId: string,
+    identifierDigest: string,
+    metadata: AuthRequestMetadata,
+  ): Promise<void> {
+    const threshold = this.config.AUTH_LOCKOUT_THRESHOLD;
+    // Progressive lockout: each further block of `threshold` failures doubles the lock.
+    const result = await this.pool.query<{ locked_now: boolean } & QueryResultRow>(
+      `update users
+          set failed_login_count = failed_login_count + 1,
+              locked_until = case
+                when failed_login_count + 1 >= $2 then now() + make_interval(secs => least(
+                  $4::double precision,
+                  $3::double precision * power(2, floor((failed_login_count + 1 - $2) / $2::numeric))
+                ))
+                else locked_until
+              end
+        where id = $1 and status = 'active'
+      returning failed_login_count >= $2 as locked_now`,
+      [
+        userId,
+        threshold,
+        this.config.AUTH_LOCKOUT_BASE_SECONDS,
+        this.config.AUTH_LOCKOUT_MAX_SECONDS,
+      ],
+    );
+    if (result.rows[0]?.locked_now) {
+      await this.recordAuthEvent({
+        actorId: userId,
+        action: 'login.locked',
+        identifierDigest,
+        ...this.auditMetadata(metadata),
+      });
+    }
+  }
+
+  private async issueSession(
+    client: PoolClient,
+    userId: string,
+    metadata: AuthRequestMetadata,
+  ): Promise<IssuedSession> {
+    const token = createSessionToken();
+    const now = new Date();
+    const idleExpiresAt = new Date(now.getTime() + this.config.SESSION_IDLE_TTL_SECONDS * 1000);
+    const absoluteExpiresAt = new Date(
+      now.getTime() + this.config.SESSION_ABSOLUTE_TTL_SECONDS * 1000,
+    );
+    await client.query(
+      `insert into sessions (
+         user_id, token_digest, last_seen_at, idle_expires_at, absolute_expires_at,
+         ip_hash, user_agent_hash
+       ) values ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        userId,
+        this.tokenDigest(token),
+        now,
+        idleExpiresAt,
+        absoluteExpiresAt,
+        this.digestOptional(metadata.ip),
+        this.digestOptional(metadata.userAgent),
+      ],
+    );
+    return {
+      token,
+      maxAgeSeconds: Math.min(
+        this.config.SESSION_IDLE_TTL_SECONDS,
+        this.config.SESSION_ABSOLUTE_TTL_SECONDS,
+      ),
+    };
+  }
+
+  private async revokeUserSessions(client: PoolClient, userId: string): Promise<number> {
+    const result = await client.query(
+      'update sessions set revoked_at = now() where user_id = $1 and revoked_at is null',
+      [userId],
+    );
+    return result.rowCount ?? 0;
   }
 
   private async getUserWorkspaces(
@@ -321,13 +569,28 @@ export class AuthService {
     }));
   }
 
-  private async recordAuthEvent(input: CreateSessionInput): Promise<void> {
+  private async transaction<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('begin');
+      const result = await operation(client);
+      await client.query('commit');
+      return result;
+    } catch (error) {
+      await client.query('rollback').catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  private async recordAuthEvent(input: AuthEventInput): Promise<void> {
     await this.insertAuthEvent(this.pool, input);
   }
 
   private async insertAuthEvent(
     connection: Pool | PoolClient,
-    input: CreateSessionInput,
+    input: AuthEventInput,
   ): Promise<void> {
     await connection.query(
       `insert into auth_events (
@@ -346,12 +609,20 @@ export class AuthService {
 
   private auditMetadata(
     metadata: AuthRequestMetadata,
-  ): Pick<CreateSessionInput, 'correlationId' | 'ipHash' | 'userAgentHash'> {
+  ): Pick<AuthEventInput, 'correlationId' | 'ipHash' | 'userAgentHash'> {
     return {
       correlationId: this.isUuid(metadata.correlationId) ? metadata.correlationId : randomUUID(),
       ipHash: this.digestOptional(metadata.ip),
       userAgentHash: this.digestOptional(metadata.userAgent),
     };
+  }
+
+  private identifierDigest(identifier: string): string {
+    return digestSecret(identifier.toLowerCase(), this.config.SESSION_PEPPER);
+  }
+
+  private tokenDigest(token: string): string {
+    return digestSecret(token, this.config.SESSION_PEPPER);
   }
 
   private digestOptional(value: string | undefined): string | null {
@@ -390,6 +661,15 @@ export class AuthService {
       title: 'Unauthorized',
       code: 'AUTH_SESSION_INVALID',
       detail: 'The session is expired or invalid.',
+    });
+  }
+
+  private invalidResetToken(): BadRequestException {
+    return new BadRequestException({
+      status: 400,
+      title: 'Invalid request',
+      code: 'AUTH_RESET_TOKEN_INVALID',
+      detail: 'The reset link is invalid or has expired. Request a new one.',
     });
   }
 

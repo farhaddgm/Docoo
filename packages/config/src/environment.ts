@@ -20,6 +20,10 @@ export const environmentSchema = z.object({
   PASSWORD_ARGON2_MEMORY_KIB: z.coerce.number().int().min(19_456).max(1_048_576).default(19_456),
   PASSWORD_ARGON2_ITERATIONS: z.coerce.number().int().min(2).max(20).default(2),
   PASSWORD_ARGON2_PARALLELISM: z.coerce.number().int().min(1).max(16).default(1),
+  AUTH_LOCKOUT_THRESHOLD: z.coerce.number().int().min(3).max(20).default(5),
+  AUTH_LOCKOUT_BASE_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
+  AUTH_LOCKOUT_MAX_SECONDS: z.coerce.number().int().min(60).max(604_800).default(86_400),
+  PASSWORD_RESET_TTL_SECONDS: z.coerce.number().int().min(300).max(86_400).default(1800),
   OTEL_SERVICE_NAME: z.string().min(1).default('docoo-api'),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.preprocess(emptyStringToUndefined, z.url().optional()),
 });

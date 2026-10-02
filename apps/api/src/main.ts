@@ -10,7 +10,6 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { parseEnvironment } from '@docoo/config';
-import { startTelemetry } from '@docoo/observability';
 
 import { AppModule } from './app.module.js';
 
@@ -18,11 +17,6 @@ const localEnv = new URL('../../../.env', import.meta.url);
 if (existsSync(localEnv)) process.loadEnvFile(localEnv);
 
 const config = parseEnvironment(process.env);
-const telemetry = startTelemetry({
-  serviceName: config.OTEL_SERVICE_NAME,
-  serviceVersion: '0.1.0',
-  ...(config.OTEL_EXPORTER_OTLP_ENDPOINT ? { endpoint: config.OTEL_EXPORTER_OTLP_ENDPOINT } : {}),
-});
 
 const adapter = new FastifyAdapter({
   logger: {
@@ -62,7 +56,12 @@ app
     const methods = Array.isArray(routeOptions.method)
       ? routeOptions.method
       : [routeOptions.method];
-    if (routeOptions.url.endsWith('/auth/login') && methods.includes('POST')) {
+    const sensitiveAuthRoute = [
+      '/auth/login',
+      '/auth/password/reset-request',
+      '/auth/password/reset',
+    ].some((suffix) => routeOptions.url.endsWith(suffix));
+    if (sensitiveAuthRoute && methods.includes('POST')) {
       routeOptions.config = {
         ...routeOptions.config,
         rateLimit: { max: 10, timeWindow: '1 minute' },
@@ -111,10 +110,3 @@ if (config.NODE_ENV !== 'production') {
 }
 
 await app.listen(config.API_PORT, config.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
-
-const shutdownTelemetry = async (): Promise<void> => {
-  await telemetry?.shutdown();
-};
-
-process.once('SIGTERM', () => void shutdownTelemetry());
-process.once('SIGINT', () => void shutdownTelemetry());

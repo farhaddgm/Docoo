@@ -6,3 +6,5 @@ playwright-report
 test-results
 pnpm-lock.yaml
 docs/_meta/notion-state.json
+apps/web/next-env.d.ts
+qa/acceptance-corpus/v*/

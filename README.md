@@ -40,5 +40,5 @@ pnpm verify
 - مالک محصول: ادمین کل Docoo
 - مخزن مقصد: `https://github.com/farhaddgm/Docoo`
 - وضعیت Notion: هر ۴۱ سند manifest در ۲۰۲۶-۱۰-۰۱ با موتور sync مستقیم (`scripts/notion/`) منتشر و در `docs/_meta/notion-state.json` با commit SHA ثبت شدند. هر تغییر در `docs/**` پس از merge به `main` خودکار در Notion به‌روز می‌شود؛ `pnpm docs:sync:plan` برنامهٔ انتشار بعدی را نشان می‌دهد.
-- وضعیت توسعه: stack محلی، migration/RLS و ورود ادمین در API آماده‌اند؛ مجوزدهی workspace، فهرست/ساخت موضوع و رابط ورود فارسی/انگلیسی نیز پیاده‌سازی شده‌اند. CRUD کامل موضوع، سایر بخش‌های محصول و workerها هنوز backlog باز هستند.
+- وضعیت توسعه: فاز ۰ و ۱ (control plane) کامل است: هویت و نشست امن، ماتریس مجوز، حوزه‌ها و پروژه‌ها با نسخه و چرخهٔ عمر، تنظیمات نسخه‌دار، audit explorer و رابط دوزبانهٔ قابل‌دسترس. فاز ۲ (دریافت و حاکمیت دانش) طبق [شکست epicها](docs/06-delivery/09-epic-breakdown.md) آغاز می‌شود.
 - دسترسی GitHub با حساب مالک تأیید شده است؛ وضعیت انتشار کد، Issueها و CI در خود GitHub دنبال می‌شود.

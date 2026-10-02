@@ -11,7 +11,7 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     services:
       postgres:
         image: pgvector/pgvector:0.8.1-pg18
@@ -42,6 +42,7 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm docs:validate
+      - run: pnpm qa:corpus
       - run: pnpm docs:test
       - run: pnpm docs:sync:plan
       - run: pnpm db:migrate
@@ -50,9 +51,24 @@ jobs:
       - run: pnpm db:test:rls
         env:
           DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
-      - run: pnpm --filter @docoo/api test:topics:integration
+      - run: pnpm --filter @docoo/api test:integration
         env:
           DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+      - name: Prepare end-to-end data
+        env:
+          DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+        run: |
+          # A non-superuser runtime role so the API runs under RLS exactly as in production.
+          psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c \
+            "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'docoo_e2e') THEN CREATE ROLE docoo_e2e LOGIN PASSWORD 'docoo-e2e-runtime' IN ROLE docoo_app; END IF; END \$\$;"
+          node apps/web/e2e/prepare.mjs
+      - run: pnpm --filter @docoo/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @docoo/web test:e2e
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://docoo_e2e:docoo-e2e-runtime@localhost:5432/docoo_ci
+          SESSION_PEPPER: docoo-ci-e2e-pepper-with-at-least-32-characters
+          WEB_ORIGIN: http://localhost:3000
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -61,4 +77,5 @@ jobs:
           path: |
             **/coverage/
             **/test-results/
+            **/playwright-report/
           if-no-files-found: ignore

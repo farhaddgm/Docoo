@@ -2,9 +2,9 @@
 doc_id: DOCOO-READINESS-CHECKLIST
 title: checklist آمادگی شروع توسعه Docoo
 status: active
-version: 1.0.0
+version: 1.1.0
 owner: Product & Engineering
-last_updated: 2026-09-24
+last_updated: 2026-10-02
 notion_sync: true
 ---
 
@@ -12,23 +12,25 @@ notion_sync: true
 
 `READY` یعنی شواهد کافی موجود است، `PARTIAL` یعنی پیاده‌سازی اولیه هست ولی هنوز اثبات نشده، `OWNER` یعنی تصمیم/امضای مالک محصول لازم است و `BLOCKED` یعنی دسترسی یا ابزار بیرونی مانع ادامه است.
 
-| مورد                             | وضعیت                  | مدرک                                                                                                                                                                                   |
-| -------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| repository خصوصی و branch کاری   | READY                  | GitHub `farhaddgm/Docoo`                                                                                                                                                               |
-| manifest و sync اولیه Notion     | READY                  | هر ۴۱ سند در ۲۰۲۶-۱۰-۰۱ با workflow `Notion documentation sync` منتشر شدند و state با commit SHA در `main` ثبت شد                                                                      |
-| PRD/FR/NFR                       | READY                  | تأیید شش‌گانهٔ مالک در گفت‌وگوی ۲۰۲۶-۰۹-۲۴؛ بندهای ۱، ۲ و ۶ [راهنمای مالک](07-owner-action-guide.md)                                                                                   |
-| domain/state/data dictionary     | READY                  | تأیید شش‌گانهٔ مالک در گفت‌وگوی ۲۰۲۶-۰۹-۲۴؛ بند ۳ [راهنمای مالک](07-owner-action-guide.md)                                                                                             |
-| agent charter و knowledge policy | READY                  | تأیید شش‌گانهٔ مالک در گفت‌وگوی ۲۰۲۶-۰۹-۲۴؛ بند ۴ [راهنمای مالک](07-owner-action-guide.md)                                                                                             |
-| architecture/security/acceptance | READY                  | تأیید شش‌گانهٔ مالک در گفت‌وگوی ۲۰۲۶-۰۹-۲۴؛ بندهای ۵ و ۶ [راهنمای مالک](07-owner-action-guide.md)                                                                                      |
-| toolchain و session ADR          | READY                  | `adr/0006`, `adr/0007`; نیازمندی Node 24 و pnpm 12 ثبت شده                                                                                                                             |
-| monorepo و lockfile              | READY                  | نصب `pnpm install --frozen-lockfile` با Node 24 و pnpm 12.6.0 موفق شد                                                                                                                  |
-| API/web/worker scaffold          | PARTIAL                | API health، login/session/logout، guard مجوز workspace و list/create موضوع پیاده‌سازی شده؛ web ورود فارسی/انگلیسی دارد؛ reset/revoke، CRUD کامل موضوع و workerهای واقعی هنوز باز هستند |
-| migration اولیه + RLS            | READY                  | migration روی PostgreSQL 18 اجرا شد؛ تست transaction نشان داد tenant A یک workspace می‌بیند و workspace متعلق به B صفر ردیف                                                            |
-| local Compose                    | READY                  | PostgreSQL، Redis، SeaweedFS S3، Temporal و Temporal UI همگی healthy و پورت‌های توسعه فقط به `127.0.0.1` متصل‌اند؛ profile مشاهده‌پذیری فقط از نظر config بررسی شده                    |
-| lint/typecheck/test/build        | READY                  | `pnpm verify` و `pnpm docs:validate` در container موقت Node 24/pnpm 12 سبز شدند                                                                                                        |
-| GitHub Issues/Milestones         | READY                  | [GitHub Issueها](https://github.com/farhaddgm/Docoo/issues): ۷ milestone، ۹ label و ۳۱ Issue برای همهٔ تسک‌های فاز ۰/۱ و epicهای بعدی با dependency و acceptance ثبت شدند              |
-| provider/OCR/search credentials  | BLOCKED تا integration | `.env.example`                                                                                                                                                                         |
-| CodeQL و حفاظت شاخه              | DEFERRED               | مالک موقتاً پذیرفت توسعه متوقف نشود؛ CodeQL در مخزن خصوصی تا فراهم‌شدن Code Security اجرا نمی‌شود؛ `pnpm audit` و Trivy فعال‌اند؛ بازبینی امنیتی کامل بعداً انجام می‌شود               |
+| مورد                             | وضعیت                  | مدرک                                                                                                                                                                                                                     |
+| -------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| repository خصوصی و branch کاری   | READY                  | GitHub `farhaddgm/Docoo`                                                                                                                                                                                                 |
+| manifest و sync اولیه Notion     | READY                  | هر ۴۱ سند در ۲۰۲۶-۱۰-۰۱ با workflow `Notion documentation sync` منتشر شدند و state با commit SHA در `main` ثبت شد                                                                                                        |
+| PRD/FR/NFR                       | READY                  | تأیید شش‌گانهٔ مالک در گفت‌وگوی ۲۰۲۶-۰۹-۲۴؛ بندهای ۱، ۲ و ۶ [راهنمای مالک](07-owner-action-guide.md)                                                                                                                     |
+| domain/state/data dictionary     | READY                  | تأیید شش‌گانهٔ مالک در گفت‌وگوی ۲۰۲۶-۰۹-۲۴؛ بند ۳ [راهنمای مالک](07-owner-action-guide.md)                                                                                                                               |
+| agent charter و knowledge policy | READY                  | تأیید شش‌گانهٔ مالک در گفت‌وگوی ۲۰۲۶-۰۹-۲۴؛ بند ۴ [راهنمای مالک](07-owner-action-guide.md)                                                                                                                               |
+| architecture/security/acceptance | READY                  | تأیید شش‌گانهٔ مالک در گفت‌وگوی ۲۰۲۶-۰۹-۲۴؛ بندهای ۵ و ۶ [راهنمای مالک](07-owner-action-guide.md)                                                                                                                        |
+| toolchain و session ADR          | READY                  | `adr/0006`, `adr/0007`; نیازمندی Node 24 و pnpm 12 ثبت شده                                                                                                                                                               |
+| monorepo و lockfile              | READY                  | نصب `pnpm install --frozen-lockfile` با Node 24 و pnpm 12.6.0 موفق شد                                                                                                                                                    |
+| control plane فاز ۱              | READY                  | هویت کامل (قفل تدریجی، تغییر/reset/revoke)، ماتریس مجوز، CRUD و نسخهٔ موضوع، چرخهٔ پروژه با بازیابی ۳۰روزه، تنظیمات نسخه‌دار، audit explorer و shell دوزبانه؛ ۳۱ آزمون integration روی PostgreSQL 18 و ۴ آزمون E2E در CI |
+| workerها                         | PARTIAL                | اسکلت worker آماده است؛ پیاده‌سازی واقعی با storyهای ING و WF در [شکست epicها](09-epic-breakdown.md)                                                                                                                     |
+| migration + RLS                  | READY                  | `db:test:rls` همهٔ ۹ جدول tenant (از جمله تاریخچهٔ موضوع و تنظیمات) را با آزمون منفی خواندن/نوشتن/تغییر در CI روی PostgreSQL 18 اجرا می‌کند                                                                              |
+| local Compose                    | READY                  | PostgreSQL، Redis، SeaweedFS S3، Temporal و Temporal UI همگی healthy و پورت‌های توسعه فقط به `127.0.0.1` متصل‌اند؛ profile مشاهده‌پذیری فقط از نظر config بررسی شده                                                      |
+| lint/typecheck/test/build/e2e    | READY                  | `pnpm verify`، آزمون‌های integration، Playwright با axe (WCAG 2.2 AA) و `pnpm qa:corpus` روی هر PR در CI اجرا می‌شوند                                                                                                    |
+| acceptance corpus                | READY                  | [corpus v0](../../qa/acceptance-corpus/README.md): PDF اسکن‌شدهٔ فارسی و انگلیسی و صوت فارسی و انگلیسی با ground truth و checksum                                                                                        |
+| GitHub Issues/Milestones         | READY                  | [GitHub Issueها](https://github.com/farhaddgm/Docoo/issues): ۷ milestone، ۹ label و ۳۱ Issue برای همهٔ تسک‌های فاز ۰/۱ و epicهای بعدی با dependency و acceptance ثبت شدند                                                |
+| provider/OCR/search credentials  | BLOCKED تا integration | `.env.example`                                                                                                                                                                                                           |
+| CodeQL و حفاظت شاخه              | DEFERRED               | مالک موقتاً پذیرفت توسعه متوقف نشود؛ CodeQL در مخزن خصوصی تا فراهم‌شدن Code Security اجرا نمی‌شود؛ `pnpm audit` و Trivy فعال‌اند؛ بازبینی امنیتی کامل بعداً انجام می‌شود                                                 |
 
 ## gate شروع توسعه
 

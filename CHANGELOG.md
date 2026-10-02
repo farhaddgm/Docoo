@@ -2,6 +2,25 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.3.0] — 2026-10-02
+
+Phase 1 (control plane) complete; phase 0 closed with evidence.
+
+### Added
+
+- Authentication (AUTH-001..003): progressive lockout with audit, password change with session rotation, single-use reset tokens (`/auth/password/reset-request`, `/auth/password/reset`, `pnpm admin:reset-link`), `GET /me`, `DELETE /me/sessions`, and a role → permission matrix enforced on every workspace route.
+- Topics (TOP-001): read, edit with `If-Match`/`ETag`, full version history, archive, restore, soft delete with dependent-project check and 30-day recovery.
+- Projects (PRJ-001): CRUD with prioritized topics, the formal state machine (activate, pause, resume, complete, reopen, archive, unarchive, delete, restore) with expected versions and reasons, 30-day recovery, timeline, and clone without history.
+- Versioned configuration (CFG-001): setting definitions, append-only assignments per workspace/topic/project, effective values with sources, history, restore as a new version, and config snapshots pinned at activation and resume.
+- Audit explorer (AUD-001): filters by project, action family, target, actor, severity and time; JSON/CSV export that is itself audited; retention purge with audit tombstones.
+- Bilingual shell (UX-001): design tokens, skip link, landmarks, focus management, locale switch that keeps the session, locale formatting, and forgot/reset password pages.
+- Quality gates (QA-001, QA-002): 31 API integration tests and the extended RLS gate on PostgreSQL 18, Playwright E2E with axe (WCAG 2.2 AA), and acceptance corpus v0 (scanned Persian/English PDFs, Persian/English speech) with `pnpm qa:corpus`.
+- Docs: authorization matrix and the story breakdown of the phase 2–6 epics.
+
+### Fixed
+
+- Telemetry (ENG-007): the API exported no traces because OpenTelemetry started after its ESM imports. It now starts from an `--import` entry, so HTTP and PostgreSQL spans are exported without query values.
+
 ## [0.2.1] — 2026-10-01
 
 ### Fixed
@@ -44,6 +63,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - Monorepo foundation: NestJS API, Next.js bilingual web shell, workers, Compose stack, CI and security workflows.
 - Super Admin authentication, workspace authorization, topic list/create and PostgreSQL RLS.
 
+[0.3.0]: https://github.com/farhaddgm/Docoo/releases/tag/v0.3.0
 [0.2.1]: https://github.com/farhaddgm/Docoo/releases/tag/v0.2.1
 [0.2.0]: https://github.com/farhaddgm/Docoo/releases/tag/v0.2.0
 [0.1.0]: https://github.com/farhaddgm/Docoo/commit/e7cebc9dd478c86ed31d0e83d495965621b31bf9

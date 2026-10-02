@@ -1,0 +1,8 @@
+Sample problem memo for acceptance testing
+Northwind Demo Ltd. sells office furniture online.
+Average delivery time grew from three to nine days
+after the warehouse moved in the last quarter.
+
+Goal: bring delivery back under four days within
+two quarters without raising logistics cost by more
+than ten percent. Carrier contracts end in March.
