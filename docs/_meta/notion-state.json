@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "5b7421afcdb0ef55478c0508d5c00dd42de3d66a"
+    "source_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,15 +62,15 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-01T17:05:19.860Z",
-    "created": 0,
-    "updated": 2,
-    "unchanged": 39,
+    "synced_at": "2026-10-02T17:40:42.204Z",
+    "created": 2,
+    "updated": 5,
+    "unchanged": 36,
     "failed": 0,
     "failures": [],
     "validation": {
-      "manifest_documents": 41,
-      "state_documents": 41,
+      "manifest_documents": 43,
+      "state_documents": 43,
       "orphaned_state_documents": []
     }
   },
@@ -330,16 +330,16 @@
     "DOCOO-API-CONTRACTS": {
       "path": "docs/04-architecture/03-api-contracts.md",
       "section": "04 Architecture",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "proposed",
       "owner": "API Architecture",
-      "checksum_sha256": "15fdc036f01edea118cb22c091c36cc13b128c7f49c20eacba877ae653d36b88",
+      "checksum_sha256": "aed0e6723c839f7da015ce2331b4cc416f3053970fe11fa7dffd59c5b90be8f0",
       "notion_page_id": "3e55a24a-6668-812d-9f69-cd7fceb4fea8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812d9f69cd7fceb4fea8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a8-8910-fed8b8b362d3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a88910fed8b8b362d3",
-      "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
-      "synced_at": "2026-10-01T16:08:48.251Z"
+      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
+      "synced_at": "2026-10-02T17:40:42.204Z"
     },
     "DOCOO-WORKFLOWS-JOBS": {
       "path": "docs/04-architecture/04-workflows-and-jobs.md",
@@ -428,16 +428,16 @@
     "DOCOO-OBSERVABILITY-SRE": {
       "path": "docs/06-delivery/03-observability-and-sre.md",
       "section": "06 Delivery & Operations",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "proposed",
       "owner": "SRE",
-      "checksum_sha256": "690b05f11c50609efa7d6de38e418b0a7b371cc72393e7a0e8863ff81ec9f0e2",
+      "checksum_sha256": "c6b51cc875ec9d47ae4b081f84a2f19d1cc796d173f9f6295c0aeab7499f0a78",
       "notion_page_id": "3e55a24a-6668-81cf-a61e-facee34459ca",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881cfa61efacee34459ca?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81c1-8310-c4e2f0f01374",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881c18310c4e2f0f01374",
-      "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
-      "synced_at": "2026-10-01T16:08:48.251Z"
+      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
+      "synced_at": "2026-10-02T17:40:42.204Z"
     },
     "DOCOO-ROADMAP": {
       "path": "docs/06-delivery/04-roadmap.md",
@@ -568,30 +568,30 @@
     "DOCOO-DOC-INDEX": {
       "path": "docs/README.md",
       "section": "Root",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "status": "active",
       "owner": "Product & Architecture",
-      "checksum_sha256": "5ffa001ffb8f7432f541ebd371496c39ebdda26cb020b190bb80528841cb93ed",
+      "checksum_sha256": "0316f03d5c0ab578a31340cd38024b56ae1ba290530e2829d5fa7af5772a05db",
       "notion_page_id": "3e55a24a-6668-814f-a8af-c79e5a2e44ee",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668814fa8afc79e5a2e44ee?pvs=204",
       "index_row_page_id": "3e55a24a-6668-818e-b8a6-e77117562585",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a6668818eb8a6e77117562585",
-      "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
-      "synced_at": "2026-10-01T16:08:48.251Z"
+      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
+      "synced_at": "2026-10-02T17:40:42.204Z"
     },
     "DOCOO-IMPLEMENTATION-BACKLOG": {
       "path": "docs/06-delivery/06-implementation-backlog.md",
       "section": "06 Delivery & Operations",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "89bee5594aff158554866d0dcfa8cb03f93bae759f41d8090fd8b5a6dfcaeecb",
+      "checksum_sha256": "99eb728231d3b99731a4598165f258bb9ddedec9bef6d0339264b8f34265dd9a",
       "notion_page_id": "3e55a24a-6668-81d0-8651-ea854009b9ff",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881d08651ea854009b9ff",
       "index_row_page_id": "3e55a24a-6668-81a2-918d-e7aca2669701",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a2918de7aca2669701",
-      "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
-      "synced_at": "2026-10-01T16:08:48.251Z"
+      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
+      "synced_at": "2026-10-02T17:40:42.204Z"
     },
     "DOCOO-OWNER-ACTION-GUIDE": {
       "path": "docs/06-delivery/07-owner-action-guide.md",
@@ -610,16 +610,16 @@
     "DOCOO-READINESS-CHECKLIST": {
       "path": "docs/06-delivery/08-readiness-checklist.md",
       "section": "06 Delivery & Operations",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "58c3b5d5c65170c9ac1fd30bdb19270714666f591becace243f85c206febcd75",
+      "checksum_sha256": "43add32c781a4997a7ecc63d115eb33b386bb8f180d432af4ac0a2aa243d8b0b",
       "notion_page_id": "3e55a24a-6668-815d-b2f0-d451feffe55e",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668815db2f0d451feffe55e",
       "index_row_page_id": "3e55a24a-6668-81d3-9a8e-d3b801cb1eb3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881d39a8ed3b801cb1eb3",
-      "synced_commit": "5b7421afcdb0ef55478c0508d5c00dd42de3d66a",
-      "synced_at": "2026-10-01T17:05:19.860Z"
+      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
+      "synced_at": "2026-10-02T17:40:42.204Z"
     },
     "DOCOO-ADR-0006": {
       "path": "docs/adr/0006-application-platform-and-toolchain.md",
@@ -648,6 +648,34 @@
       "index_row_page_url": "https://app.notion.com/p/3e55a24a66688150aa6bc49bc974c9d2",
       "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
       "synced_at": "2026-10-01T16:08:48.251Z"
+    },
+    "DOCOO-AUTHORIZATION-MATRIX": {
+      "path": "docs/05-security/03-authorization-matrix.md",
+      "section": "05 Security",
+      "version": "1.0.0",
+      "status": "active",
+      "owner": "Security & Engineering",
+      "checksum_sha256": "eeca0f0b9cb0477b6860d8040bd0b1e435c03dd755769f0a4ac35480ab5ebe74",
+      "notion_page_id": "3ed5a24a-6668-8161-89cf-feb622f23b1a",
+      "notion_page_url": "https://app.notion.com/p/3ed5a24a6668816189cffeb622f23b1a",
+      "index_row_page_id": "3ed5a24a-6668-8125-b8de-ff89f4514ef2",
+      "index_row_page_url": "https://app.notion.com/p/3ed5a24a66688125b8deff89f4514ef2",
+      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
+      "synced_at": "2026-10-02T17:40:42.204Z"
+    },
+    "DOCOO-EPIC-BREAKDOWN": {
+      "path": "docs/06-delivery/09-epic-breakdown.md",
+      "section": "06 Delivery & Operations",
+      "version": "1.0.0",
+      "status": "proposed",
+      "owner": "Product & Engineering",
+      "checksum_sha256": "3b6d258db66fb87767cd158ea16bf6c46756268263c02958366bcd25250aef15",
+      "notion_page_id": "3ed5a24a-6668-8189-8733-e103cfc7156b",
+      "notion_page_url": "https://app.notion.com/p/3ed5a24a666881898733e103cfc7156b",
+      "index_row_page_id": "3ed5a24a-6668-81e9-b455-ebd734626c7e",
+      "index_row_page_url": "https://app.notion.com/p/3ed5a24a666881e9b455ebd734626c7e",
+      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
+      "synced_at": "2026-10-02T17:40:42.204Z"
     }
   }
 }
