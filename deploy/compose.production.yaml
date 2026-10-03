@@ -175,7 +175,7 @@ services:
       args:
         PACKAGE: '@docoo/api'
         START: --import ./dist/instrumentation.js dist/main.js
-        SYSTEM_PACKAGES: chromium fonts-vazirmatn fonts-noto-core
+        SYSTEM_PACKAGES: chromium fonts-noto-core
     image: docoo-api:${DOCOO_VERSION:-local}
     environment:
       <<: *app-env
