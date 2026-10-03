@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  availableProjectCommands,
   canTransitionProject,
   InvalidProjectTransitionError,
   isProjectReadOnly,
   nextProjectAction,
   planProjectCommand,
   projectCommandRequiresReason,
+  projectCommands,
+  projectStatuses,
   transitionProject,
   type ProjectState,
 } from './project.js';
@@ -93,5 +96,30 @@ describe('project state machine', () => {
     expect(isProjectReadOnly('paused')).toBe(false);
     expect(nextProjectAction('paused')).toBe('resolve_pause_and_resume');
     expect(nextProjectAction('deleted')).toBe('restore_before_purge');
+  });
+
+  it('lists the commands each status accepts, in backoffice order', () => {
+    expect(availableProjectCommands('draft')).toEqual(['activate', 'archive', 'delete']);
+    expect(availableProjectCommands('active')).toEqual(['pause', 'complete', 'archive', 'delete']);
+    expect(availableProjectCommands('paused')).toEqual(['resume', 'complete', 'archive', 'delete']);
+    expect(availableProjectCommands('completed')).toEqual(['reopen', 'archive', 'delete']);
+    expect(availableProjectCommands('archived')).toEqual(['unarchive', 'delete']);
+    expect(availableProjectCommands('deleted')).toEqual(['restore']);
+  });
+
+  it('offers exactly the commands that change the status', () => {
+    for (const status of projectStatuses) {
+      for (const command of projectCommands) {
+        let changes = false;
+        try {
+          changes = planProjectCommand(state(status, 'draft'), command) !== null;
+        } catch {
+          changes = false;
+        }
+        expect(availableProjectCommands(status).includes(command), `${status} ${command}`).toBe(
+          changes,
+        );
+      }
+    }
   });
 });

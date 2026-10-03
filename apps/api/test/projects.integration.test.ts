@@ -9,6 +9,7 @@ interface ProjectBody {
   previousStatus: string | null;
   pauseReason: string | null;
   nextAction: string;
+  availableCommands: string[];
   version: number;
   configSnapshotId: string | null;
   clonedFromId: string | null;
@@ -83,6 +84,7 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
       status: 'draft',
       version: 1,
       nextAction: 'complete_setup_and_activate',
+      availableCommands: ['activate', 'archive', 'delete'],
     });
     expect(project.topics.map((topic) => [topic.topicId, topic.priority])).toEqual([
       [topicIds[0], 1],
@@ -129,6 +131,8 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
 
     project = await step(project, 'activate');
     expect(project).toMatchObject({ status: 'active', version: 2 });
+    // The backoffice offers exactly the commands the state machine accepts.
+    expect(project.availableCommands).toEqual(['pause', 'complete', 'archive', 'delete']);
     expect(project.configSnapshotId).toMatch(/^[0-9a-f-]{36}$/);
 
     const stale = await h.request('POST', projects(h.ids.workspaceA, `/${project.id}/pause`), {
@@ -175,6 +179,7 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
 
     project = await step(project, 'archive');
     expect(project).toMatchObject({ status: 'archived', previousStatus: 'active' });
+    expect(project.availableCommands).toEqual(['unarchive', 'delete']);
     const readOnly = await h.request('PATCH', projects(h.ids.workspaceA, `/${project.id}`), {
       cookie: cookieA,
       headers: { 'if-match': `"${project.version}"` },
@@ -189,6 +194,7 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
     let project = await createProject('recoverable');
     project = await step(project, 'delete', 'Duplicate request');
     expect(project.status).toBe('deleted');
+    expect(project.availableCommands).toEqual(['restore']);
     const days = (Date.parse(project.purgeAfter!) - Date.now()) / 86_400_000;
     expect(days).toBeGreaterThan(29.9);
     expect(days).toBeLessThanOrEqual(30);
@@ -214,6 +220,11 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
     );
     const expired = await command(project, 'restore');
     expect(expired.statusCode).toBe(410);
+    // Past the recovery window the backoffice must not offer a restore that cannot succeed.
+    const afterWindow = await h.request('GET', projects(h.ids.workspaceA, `/${project.id}`), {
+      cookie: cookieA,
+    });
+    expect(afterWindow.json<{ project: ProjectBody }>().project.availableCommands).toEqual([]);
 
     const dryRun = await h.request('POST', `/v1/workspaces/${h.ids.workspaceA}/retention/purge`, {
       cookie: cookieA,

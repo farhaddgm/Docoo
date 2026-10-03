@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  availableProjectCommands,
   InvalidProjectTransitionError,
   isProjectReadOnly,
   nextProjectAction,
@@ -53,6 +54,8 @@ export interface Project {
   readonly currentStage: string;
   readonly pauseReason: string | null;
   readonly nextAction: ProjectNextAction;
+  /** Lifecycle commands the project accepts now; the backoffice offers exactly these. */
+  readonly availableCommands: readonly ProjectCommand[];
   readonly topics: readonly ProjectTopicLink[];
   readonly configSnapshotId: string | null;
   readonly clonedFromId: string | null;
@@ -736,6 +739,9 @@ export class ProjectsService {
       currentStage: row.current_stage,
       pauseReason: row.pause_reason,
       nextAction: nextProjectAction(row.status),
+      availableCommands: availableProjectCommands(row.status).filter(
+        (command) => !(command === 'restore' && row.purge_expired),
+      ),
       topics,
       configSnapshotId: row.config_snapshot_id,
       clonedFromId: row.cloned_from_id,
