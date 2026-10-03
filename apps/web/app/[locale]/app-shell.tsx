@@ -67,12 +67,12 @@ export function AppShell({ locale, title, subtitle, showNavigation, children }: 
                       </li>
                     );
                   }
-                  const href = `/${locale}${route}`;
+                  const href = `/${locale}${route}` as Route;
                   return (
                     <li key={key}>
                       <Link
                         className="nav-item"
-                        href={href as Route}
+                        href={href}
                         aria-current={pathname === href ? 'page' : undefined}
                       >
                         {content.nav[key]}
