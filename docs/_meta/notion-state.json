@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "47b892de943d1c3347a4de6ed2d00168168fcf63"
+    "source_commit": "198d4966f126aab630a84e292eba4d0e2369126a"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,15 +62,15 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-03T06:03:18.346Z",
+    "synced_at": "2026-10-03T06:23:38.936Z",
     "created": 1,
     "updated": 4,
-    "unchanged": 40,
+    "unchanged": 41,
     "failed": 0,
     "failures": [],
     "validation": {
-      "manifest_documents": 45,
-      "state_documents": 45,
+      "manifest_documents": 46,
+      "state_documents": 46,
       "orphaned_state_documents": []
     }
   },
@@ -333,13 +333,13 @@
       "version": "1.3.0",
       "status": "proposed",
       "owner": "API Architecture",
-      "checksum_sha256": "2ae25218c4c8cf88fbb2f752381a2dd725205f30400b8de41aa8ec90a7825790",
+      "checksum_sha256": "f6a6b653f58161f4e2f5a1ed166cd6995859bf9046badce9e53c81483cce60bc",
       "notion_page_id": "3e55a24a-6668-812d-9f69-cd7fceb4fea8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812d9f69cd7fceb4fea8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a8-8910-fed8b8b362d3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a88910fed8b8b362d3",
-      "synced_commit": "47b892de943d1c3347a4de6ed2d00168168fcf63",
-      "synced_at": "2026-10-03T06:03:18.346Z"
+      "synced_commit": "198d4966f126aab630a84e292eba4d0e2369126a",
+      "synced_at": "2026-10-03T06:23:38.936Z"
     },
     "DOCOO-WORKFLOWS-JOBS": {
       "path": "docs/04-architecture/04-workflows-and-jobs.md",
@@ -571,13 +571,13 @@
       "version": "0.2.0",
       "status": "active",
       "owner": "Product & Architecture",
-      "checksum_sha256": "8581b37afd3621015ad95de66d62cccf1ddd967a5a6d3df097d9467a37c5a623",
+      "checksum_sha256": "ff46ab5f2c9112f7cc5f190110c90c8f5199a79a47e7e60d3ecef0a5d68c4dec",
       "notion_page_id": "3e55a24a-6668-814f-a8af-c79e5a2e44ee",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668814fa8afc79e5a2e44ee?pvs=204",
       "index_row_page_id": "3e55a24a-6668-818e-b8a6-e77117562585",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a6668818eb8a6e77117562585",
-      "synced_commit": "47b892de943d1c3347a4de6ed2d00168168fcf63",
-      "synced_at": "2026-10-03T06:03:18.346Z"
+      "synced_commit": "198d4966f126aab630a84e292eba4d0e2369126a",
+      "synced_at": "2026-10-03T06:23:38.936Z"
     },
     "DOCOO-IMPLEMENTATION-BACKLOG": {
       "path": "docs/06-delivery/06-implementation-backlog.md",
@@ -613,13 +613,13 @@
       "version": "1.1.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "908d3d82732eafa9895d6b0f3b6ad92848c0f02ec81f45c20ea241f26806b1aa",
+      "checksum_sha256": "fe7c725c53733b1aae0ca295321f770aec671eabda33e5cb82a94b3b5d0248e1",
       "notion_page_id": "3e55a24a-6668-815d-b2f0-d451feffe55e",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668815db2f0d451feffe55e",
       "index_row_page_id": "3e55a24a-6668-81d3-9a8e-d3b801cb1eb3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881d39a8ed3b801cb1eb3",
-      "synced_commit": "47b892de943d1c3347a4de6ed2d00168168fcf63",
-      "synced_at": "2026-10-03T06:03:18.346Z"
+      "synced_commit": "198d4966f126aab630a84e292eba4d0e2369126a",
+      "synced_at": "2026-10-03T06:23:38.936Z"
     },
     "DOCOO-ADR-0006": {
       "path": "docs/adr/0006-application-platform-and-toolchain.md",
@@ -655,13 +655,13 @@
       "version": "1.2.0",
       "status": "active",
       "owner": "Security & Engineering",
-      "checksum_sha256": "2fae5e2817c7d45535f9d66a40d6264786167a2c612869d5d270ceae7f606b08",
+      "checksum_sha256": "76b288fc83b5c5f0708121bd14b02ed86e4983953405a4c5afd31626ba55eae4",
       "notion_page_id": "3ed5a24a-6668-8161-89cf-feb622f23b1a",
       "notion_page_url": "https://app.notion.com/p/3ed5a24a6668816189cffeb622f23b1a",
       "index_row_page_id": "3ed5a24a-6668-8125-b8de-ff89f4514ef2",
       "index_row_page_url": "https://app.notion.com/p/3ed5a24a66688125b8deff89f4514ef2",
-      "synced_commit": "47b892de943d1c3347a4de6ed2d00168168fcf63",
-      "synced_at": "2026-10-03T06:03:18.346Z"
+      "synced_commit": "198d4966f126aab630a84e292eba4d0e2369126a",
+      "synced_at": "2026-10-03T06:23:38.936Z"
     },
     "DOCOO-EPIC-BREAKDOWN": {
       "path": "docs/06-delivery/09-epic-breakdown.md",
@@ -704,6 +704,20 @@
       "index_row_page_url": "https://app.notion.com/p/3ee5a24a6668810aaf6ee72205453348",
       "synced_commit": "47b892de943d1c3347a4de6ed2d00168168fcf63",
       "synced_at": "2026-10-03T06:03:18.346Z"
+    },
+    "DOCOO-ADR-0010": {
+      "path": "docs/adr/0010-documents-solutions-and-evaluation.md",
+      "section": "ADRs",
+      "version": "1.0.0",
+      "status": "accepted",
+      "owner": "Platform & AI Architecture",
+      "checksum_sha256": "d98c471d1d23c82275343e662913237d5f5dcbe04f9ffed36fe0708776d2837d",
+      "notion_page_id": "3ee5a24a-6668-8145-91b8-e0c9478725b1",
+      "notion_page_url": "https://app.notion.com/p/3ee5a24a6668814591b8e0c9478725b1",
+      "index_row_page_id": "3ee5a24a-6668-8101-8820-c43a64d90f8d",
+      "index_row_page_url": "https://app.notion.com/p/3ee5a24a666881018820c43a64d90f8d",
+      "synced_commit": "198d4966f126aab630a84e292eba4d0e2369126a",
+      "synced_at": "2026-10-03T06:23:38.936Z"
     }
   }
 }
