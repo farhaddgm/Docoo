@@ -1,0 +1,28 @@
+{
+  "name": "@docoo/documents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --exclude 'dist/**'",
+    "test:coverage": "vitest run --coverage --exclude 'dist/**'"
+  },
+  "dependencies": {
+    "fflate": "0.7.5",
+    "playwright-core": "1.63.0"
+  },
+  "devDependencies": {
+    "pdfjs-dist": "6.3.289"
+  }
+}

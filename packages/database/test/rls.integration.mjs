@@ -80,6 +80,17 @@ const knowledgeTables = [
   'gate_decisions',
   'human_tasks',
   'command_receipts',
+  'solution_criteria_versions',
+  'solution_sets',
+  'solutions',
+  'solution_selections',
+  'documents',
+  'document_versions',
+  'document_artifacts',
+  'rubric_versions',
+  'evaluations',
+  'evaluation_findings',
+  'evaluation_exceptions',
 ];
 
 async function withContext(workspaceId, actorId, action) {
@@ -594,8 +605,55 @@ try {
   );
   await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM model_invocations');
 
+  // Solution, document and evaluation tables (SOL-*, DOC-*, EVA-*).
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    `INSERT INTO documents (workspace_id, project_id, priority, title, level, language) VALUES ($1, $2, 1, 'cross', 1, 'en')`,
+    [ids.workspaceB, ids.projectB],
+  );
+  const documentRow = await admin.query(
+    `INSERT INTO documents (workspace_id, project_id, priority, title, level, language) VALUES ($1, $2, 1, 'rls', 1, 'en') RETURNING id`,
+    [ids.workspaceA, ids.projectA],
+  );
+  await admin.query(
+    `INSERT INTO document_versions (workspace_id, document_id, version_no, content, content_sha256, char_count, count_algorithm, level, bounds, within_bounds, origin)
+     VALUES ($1, $2, 1, '{}'::jsonb, 'sha', 0, 'unicode-letter-number-v1', 1, '{"min":0,"max":1}'::jsonb, true, 'edit')`,
+    [ids.workspaceA, documentRow.rows[0].id],
+  );
+  const foreignDocuments = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query(
+      'SELECT (SELECT count(*) FROM documents)::int + (SELECT count(*) FROM document_versions)::int AS count',
+    ),
+  );
+  assert.equal(
+    foreignDocuments.rows[0].count,
+    0,
+    'Documents must not be visible to another workspace.',
+  );
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'UPDATE document_versions SET reason = $1',
+    ['x'],
+  );
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM documents');
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM evaluations');
+  await assert.rejects(
+    admin.query('UPDATE document_versions SET reason = $2 WHERE document_id = $1', [
+      documentRow.rows[0].id,
+      'rewrite',
+    ]),
+    (error) => {
+      assert.equal(error.code, 'P0001');
+      return true;
+    },
+  );
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion and orchestration tables, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration and document tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {

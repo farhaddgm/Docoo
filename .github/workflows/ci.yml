@@ -77,11 +77,17 @@ jobs:
           done
           docker logs clamd; docker logs temporal; docker logs object-store
           exit 1
+      - run: pnpm --filter @docoo/web exec playwright install --with-deps chromium
+      - name: Render a real PDF in Chromium (DOC-103)
+        run: pnpm --filter @docoo/documents exec vitest run
+        env:
+          RENDER_PDF: '1'
       - run: pnpm --filter @docoo/api test:integration
         env:
           DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
           CLAMD_HOST: localhost
           TEMPORAL_ADDRESS: localhost:7233
+          RENDER_PDF: '1'
       - run: pnpm --filter @docoo/worker-ingestion test:integration
         env:
           DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
@@ -101,7 +107,6 @@ jobs:
           psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c \
             "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'docoo_e2e') THEN CREATE ROLE docoo_e2e LOGIN PASSWORD 'docoo-e2e-runtime' IN ROLE docoo_app; END IF; END \$\$;"
           node apps/web/e2e/prepare.mjs
-      - run: pnpm --filter @docoo/web exec playwright install --with-deps chromium
       - run: pnpm --filter @docoo/web test:e2e
         env:
           NODE_ENV: test

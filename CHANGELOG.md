@@ -2,6 +2,25 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.6.0] — 2026-10-03
+
+Phase 4 (solutions, documents and evaluation) complete.
+
+### Added
+
+- Solutions (SOL-001..003): 2–20 solutions per run (default `solution.count`) from the configured model with structured output; every solution has a title, summary, assumptions, evidence, an implementation plan, risks and 1–5 score inputs, otherwise nothing is stored; versioned weighted criteria that can be enabled and reweighted (enabled weights add up to 100) with an explanation for every score; ordered selection that creates one document per selected solution.
+- Documents (DOC-101..103): `packages/documents` with the structured document model and validator, the official `unicode-letter-number-v1` character count and five length levels (`document.level`, `document.level_bounds`); append-only versions for every edit, restore and supersede with `If-Match`, block-level diff, submit (`non_compliant` outside the level), approve, reject, lock and supersede; a database guard for locked documents; deterministic DOCX and PPTX (management summary with an explicit overflow error) and PDF rendered in Chromium with page numbers and RTL support; HMAC-signed manifests (`ARTIFACT_SIGNING_KEY`) checked again on download and by `verify`.
+- Evaluation (EVA-001..002): the nine-criteria system rubric and versioned project rubrics; a model judge with evidence per criterion plus the deterministic format and length validator; `passed`, `failed_quality`, `failed_compliance` and `technical_error` results; findings with severity and target stage that an administrator can retarget with a reason; approval only after a passed evaluation of the same version or a visibly accepted exception.
+- 27 API routes in the authorization matrix, 11 RLS-protected tables, ADR-0010, and the API contracts for §9–§10.
+
+### Fixed
+
+- Settings with list values (such as `document.level_bounds`) can now be set through the settings API.
+
+### Tests
+
+- 9 new API integration tests, 14 document package tests, the extended RLS gate, and a real Chromium PDF render in CI.
+
 ## [0.5.0] — 2026-10-02
 
 Phase 3 (orchestration and provider runtime) complete.

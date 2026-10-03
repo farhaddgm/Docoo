@@ -130,26 +130,27 @@ Answer submission batch atomic و idempotent است.
 - `GET /knowledge-conflicts` و `POST /knowledge-conflicts/{id}/resolve`.
 - `POST /knowledge/retrieve` — بازیابی ترکیبی lexical (FTS) و vector (`hash-ngram-v1`، pgvector) فقط روی دانش approved، جاری، معتبر و داخل scope/نقش؛ هر نتیجه `conflictWarnings` دارد و کل پاسخ در `retrieval_snapshots` با hash ثابت pin می‌شود. `GET /retrieval-snapshots/{id}` همان نتیجه را برمی‌گرداند.
 
-## ۹. راه‌حل و ارزیابی
+## ۹. راه‌حل و ارزیابی (پیاده‌شده در 0.6.0)
 
-- `GET /projects/{id}/solutions`
-- `GET /solutions/{id}/versions`
-- `POST /projects/{id}/solution-selections`
-- `PUT /projects/{id}/criteria-weights`
-- `GET /evaluations/{id}`
-- `POST /evaluations/{id}:accept-exception`
+- `GET|PUT /projects/{id}/solution-criteria`: معیارهای نسخه‌دار؛ وزن معیارهای فعال باید ۱۰۰ شود (`SOLUTION_CRITERIA_INVALID`).
+- `POST /projects/{id}/solutions/generate` با `{count?}` (۲ تا ۲۰، پیش‌فرض `solution.count`) → 201؛ خروجی ناقص 409 `SOLUTION_INCOMPLETE` و بدون ذخیره.
+- `GET /projects/{id}/solutions`: آخرین مجموعه با امتیاز و توضیح هر معیار و اولویت انتخاب.
+- `POST /projects/{id}/solution-selections` با `{solutionIds[], reason?}` به ترتیب اولویت → 201 و یک سند برای هر راه‌حل.
+- `GET|PUT /projects/{id}/rubric`: rubric فعال (system یا نسخهٔ پروژه).
+- `POST /documents/{id}/evaluate` → 201؛ `GET /evaluations/{id}`.
+- `POST /evaluations/{id}/accept-exception` با `{reason}`؛ برای `technical_error` و `passed` مجاز نیست.
+- `PATCH /evaluation-findings/{id}` با `{targetStage, reason}`.
 
-## ۱۰. سند
+## ۱۰. سند (پیاده‌شده در 0.6.0)
 
-- `GET /projects/{id}/documents`
-- `GET/PATCH /documents/{id}`
-- `GET /documents/{id}/versions`
-- `POST /documents/{id}/versions/{versionId}:approve|lock|restore`
-- `GET /documents/{id}/diff?from=&to=`
-- `POST /documents/{id}/versions/{versionId}/exports`
-- `GET /exports/{id}`
-
-دانلود artifact با URL کوتاه‌عمر و authorization مجدد.
+- `GET /projects/{id}/documents`؛ `GET /documents/{id}` با `ETag`.
+- `PUT /documents/{id}/content` با `If-Match` و `{content, reason, level?}`؛ ساختار نامعتبر 422 `DOCUMENT_INVALID` با `problems`، سند locked 409 `DOCUMENT_LOCKED`.
+- `GET /documents/{id}/versions`، `GET /documents/{id}/versions/{versionId}`، `GET /documents/{id}/diff?from=&to=`.
+- `POST /documents/{id}/versions/{versionId}/restore` با `{reason}`.
+- `POST /documents/{id}/submit|approve|reject|lock|supersede` (reject و supersede دلیل لازم دارند). approve بدون ارزیابی 409 `DOCUMENT_NOT_EVALUATED`، با ارزیابی ناموفق 409 `DOCUMENT_EVALUATION_FAILED` و خارج از سطح طول 409 `DOCUMENT_OUT_OF_BOUNDS`.
+- `POST /documents/{id}/exports` با `{format: docx|pdf|pptx}` → 201 و manifest امضاشده؛ `GET /documents/{id}/artifacts`.
+- `GET /documents/{id}/artifacts/{artifactId}/download` پس از بررسی دوبارهٔ امضا و authorization؛ بایت دست‌کاری‌شده 409 `DOCUMENT_ARTIFACT_TAMPERED`.
+- `GET /documents/{id}/artifacts/{artifactId}/verify` → `{valid, sha256}`.
 
 ## ۱۱. ایجنت و config
 

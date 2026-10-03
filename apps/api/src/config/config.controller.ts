@@ -14,7 +14,8 @@ const scopeSchema = {
 };
 const keySchema = z.string().regex(/^[a-z][a-z0-9_.]{2,99}$/);
 const reasonSchema = z.string().trim().min(1).max(1000);
-const jsonValue = z.union([z.boolean(), z.number(), z.string().max(10_000), z.null()]);
+const scalarValue = z.union([z.boolean(), z.number(), z.string().max(10_000)]);
+const jsonValue = z.union([scalarValue, z.array(scalarValue).max(100), z.null()]);
 
 const scopeQuerySchema = z.object(scopeSchema).strict();
 const historyQuerySchema = z.object({ ...scopeSchema, key: keySchema }).strict();

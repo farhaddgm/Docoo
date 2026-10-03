@@ -29,7 +29,7 @@ import {
   ProviderRuntime,
   type RunRef,
 } from '@docoo/orchestration';
-import { createAdapter, FakeAdapter, type FakeScript } from '@docoo/providers';
+import { createAdapter, FakeAdapter, masterKeyFromEnv, type FakeScript } from '@docoo/providers';
 import {
   Client as TemporalClient,
   Connection as TemporalConnection,
@@ -49,6 +49,7 @@ import {
   type PasswordResetDelivery,
   type PasswordResetMessage,
 } from '../../src/auth/auth.reset-delivery.js';
+import { PROVIDER_RUNTIME } from '../../src/providers/providers.service.js';
 import { INGESTION_DISPATCHER, OBJECT_STORE } from '../../src/sources/ingestion.providers.js';
 import { DATABASE_POOL } from '../../src/tokens.js';
 
@@ -216,6 +217,8 @@ export interface Harness {
   readonly objects: MemoryObjectStore;
   readonly ingestion: InlineIngestion;
   readonly engine: RecordingEngine | TemporalTestRuntime;
+  /** Fake model provider shared by the API and the test worker; tests may set `responder`/`script`. */
+  readonly fake: FakeAdapter;
   readonly ids: {
     readonly userA: string;
     readonly userB: string;
@@ -326,6 +329,10 @@ export async function createHarness(
   } else {
     engine = new RecordingEngine();
   }
+  const fake = engine instanceof TemporalTestRuntime ? engine.fake : new FakeAdapter();
+  const providerRuntime = new ProviderRuntime(runtimePool, masterKeyFromEnv(), (kind, options) =>
+    kind === 'fake' ? fake : createAdapter(kind, options),
+  );
   const module = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(DATABASE_POOL)
     .useValue(runtimePool)
@@ -337,6 +344,8 @@ export async function createHarness(
     .useValue(ingestion)
     .overrideProvider(WORKFLOW_ENGINE)
     .useValue(engine)
+    .overrideProvider(PROVIDER_RUNTIME)
+    .useValue(providerRuntime)
     .compile();
   const app = module.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
     logger: false,
@@ -392,6 +401,7 @@ export async function createHarness(
     objects,
     ingestion,
     engine,
+    fake,
     ids,
     emails,
     suffix,
