@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "69859dba44d96f8937f8d8fce6d14a45a6cfbc5c"
+    "source_commit": "263495496384e819eb258dd3afba6a8765e17b25"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-03T12:33:05.099Z",
-    "created": 2,
-    "updated": 4,
-    "unchanged": 44,
+    "synced_at": "2026-10-03T16:47:35.405Z",
+    "created": 0,
+    "updated": 2,
+    "unchanged": 48,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -750,30 +750,30 @@
     "DOCOO-PRODUCTION-INSTALL": {
       "path": "docs/06-delivery/11-production-install.md",
       "section": "06 Delivery & Operations",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "active",
       "owner": "Platform & Operations",
-      "checksum_sha256": "bc060161019b76d2613b15e992133dd974ddfd1af2c8f8d41bbaa35a91a87ce8",
+      "checksum_sha256": "1c4f538e308fa9dee94fe8a81eddbce9a3a0b5cc4d55192fa8ac3753e3a2e6be",
       "notion_page_id": "3ee5a24a-6668-81c0-853a-d51dd68270a3",
       "notion_page_url": "https://app.notion.com/p/3ee5a24a666881c0853ad51dd68270a3",
       "index_row_page_id": "3ee5a24a-6668-81fb-9c08-eb1c6d2c8c58",
       "index_row_page_url": "https://app.notion.com/p/3ee5a24a666881fb9c08eb1c6d2c8c58",
-      "synced_commit": "69859dba44d96f8937f8d8fce6d14a45a6cfbc5c",
-      "synced_at": "2026-10-03T12:33:05.099Z"
+      "synced_commit": "263495496384e819eb258dd3afba6a8765e17b25",
+      "synced_at": "2026-10-03T16:47:35.405Z"
     },
     "DOCOO-ADR-0012": {
       "path": "docs/adr/0012-single-server-production-deployment.md",
       "section": "ADRs",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "accepted",
       "owner": "Platform & Operations",
-      "checksum_sha256": "e111ebbfeec6ad371ed9507eda93cea205d3b94889b9032fe48772ab1f3e50f9",
+      "checksum_sha256": "817d92368e97a2fb0b73301d4a10eb1c0845530720a69c00dd41458a17e2bc60",
       "notion_page_id": "3ee5a24a-6668-8157-97b9-f48c5f8fefbb",
       "notion_page_url": "https://app.notion.com/p/3ee5a24a6668815797b9f48c5f8fefbb",
       "index_row_page_id": "3ee5a24a-6668-81c3-92f0-e827d9c0915c",
       "index_row_page_url": "https://app.notion.com/p/3ee5a24a666881c392f0e827d9c0915c",
-      "synced_commit": "69859dba44d96f8937f8d8fce6d14a45a6cfbc5c",
-      "synced_at": "2026-10-03T12:33:05.099Z"
+      "synced_commit": "263495496384e819eb258dd3afba6a8765e17b25",
+      "synced_at": "2026-10-03T16:47:35.405Z"
     }
   }
 }
