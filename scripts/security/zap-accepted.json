@@ -1,0 +1,7 @@
+[
+  {
+    "pluginid": "10062",
+    "uri": "^https?://[^/]+/v1/workspaces/[0-9a-f-]{36}/audit-events/export$",
+    "reason": "The audit export (FR-AUD-004) returns the audit log on purpose to an administrator holding audit.export; the export itself is audited. During the active scan the log contains ZAP's own injected payloads, which the passive PII rule then matches. Accepted by design, reviewed with SEC-002."
+  }
+]
