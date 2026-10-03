@@ -26,6 +26,9 @@ export function startTelemetry(options: TelemetryOptions): NodeSDK | undefined {
     return undefined;
   }
 
+  // Stable HTTP semantic conventions: `http.server.request.duration` in seconds with the
+  // route template, which the SLO recording rules in infra/prometheus/rules expect.
+  process.env['OTEL_SEMCONV_STABILITY_OPT_IN'] ??= 'http';
   const endpoint = options.endpoint.replace(/\/$/, '');
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({

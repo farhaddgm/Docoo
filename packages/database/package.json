@@ -19,9 +19,12 @@
     "test:rls": "node test/rls.integration.mjs",
     "test:coverage": "vitest run --coverage --passWithNoTests",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/migrate.ts"
+    "db:migrate": "tsx src/migrate.ts",
+    "ops:backup-drill": "node ops/backup-drill.mjs",
+    "ops:load-seed": "node ops/load-seed.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1140.0",
     "drizzle-orm": "0.45.2",
     "pg": "8.23.0"
   },

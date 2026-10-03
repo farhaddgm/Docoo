@@ -434,6 +434,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: 3.1140.0
+        version: 3.1140.0
       drizzle-orm:
         specifier: 0.45.2
         version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(pg@8.23.0)

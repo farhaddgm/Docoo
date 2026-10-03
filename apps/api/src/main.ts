@@ -69,7 +69,7 @@ app
     }
   });
 await app.register(rateLimit, {
-  max: 120,
+  max: config.API_RATE_LIMIT_PER_MINUTE,
   timeWindow: '1 minute',
   ban: 3,
   errorResponseBuilder: (_request, context) =>

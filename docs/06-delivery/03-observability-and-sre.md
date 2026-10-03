@@ -72,6 +72,14 @@ Spanها: auth، API application service، DB query group، workflow command، a
 
 سرویس‌ها ESM هستند؛ OpenTelemetry فقط وقتی http و pg را patch می‌کند که پیش از بارگذاری برنامه فعال شود. بنابراین API با `node --import ./dist/instrumentation.js dist/main.js` اجرا می‌شود (`pnpm --filter @docoo/api start`). با تنظیم `OTEL_EXPORTER_OTLP_ENDPOINT` spanهای HTTP ورودی (`url.path`، method، status) و PostgreSQL (`db.query.text` پارامتری بدون مقدار) و متریک‌های runtime صادر می‌شوند و لاگ‌ها `trace_id` دارند. `enhancedDatabaseReporting` خاموش است تا مقدار پارامترها، که ممکن است محتوای مسئله باشد، هرگز ثبت نشود.
 
+### پیاده‌سازی SLI و هشدار (0.8.0)
+
+- API با semantic convention پایدار HTTP متریک `http_server_request_duration_seconds` (با `http_route` و کد پاسخ) و متریک‌های برنامه `docoo_document_exports_total`، `docoo_audit_writes_total` و `docoo_audit_write_duration_seconds` را از راه OTLP به collector و Prometheus می‌فرستد.
+- workerها با `TEMPORAL_METRICS_ADDRESS` متریک‌های SDK Temporal (`temporal_activity_schedule_to_start_latency_seconds`، `temporal_workflow_failed_total` و …) را برای scrape مستقیم باز می‌کنند.
+- قواعد recording و هشدار در `infra/prometheus/rules/slo.yml` (burn rate چندپنجره‌ای برای دسترس‌پذیری، تأخیر، تازگی صف، دوام workflow، اعتبار export، کامل‌بودن audit و کهنگی backup) با `promtool test rules` در CI آزموده می‌شوند و هر هشدار به `docs/06-delivery/10-runbooks.md` پیوند دارد.
+- داشبورد Grafana `docoo-slo` (فایل `infra/grafana/dashboards/docoo-slo.json`) SLIها و error budget را نشان می‌دهد.
+- آزمون بار `scripts/load/main-path.js` (k6، ۲۵ کاربر هم‌زمان روی ۱٬۰۰۰ پروژه) با آستانهٔ همین SLOها در گردش‌کار Hardening اجرا می‌شود.
+
 ## ۶. dashboard
 
 - Executive health؛

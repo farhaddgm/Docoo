@@ -107,6 +107,9 @@ documents:
   - path: docs/06-delivery/09-epic-breakdown.md
     doc_id: DOCOO-EPIC-BREAKDOWN
     section: 06 Delivery & Operations
+  - path: docs/06-delivery/10-runbooks.md
+    doc_id: DOCOO-RUNBOOKS
+    section: 06 Delivery & Operations
   - path: docs/07-integrations/01-notion-and-github.md
     doc_id: DOCOO-NOTION-GITHUB
     section: 07 Integrations

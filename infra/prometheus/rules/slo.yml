@@ -1,0 +1,138 @@
+# SLIs, SLOs and alerts of docs/06-delivery/03-observability-and-sre.md §2 and §7 (SRE-001).
+# Every alert links its runbook; transient single errors never page except for security.
+groups:
+  - name: docoo-sli
+    interval: 30s
+    rules:
+      # Control plane availability: share of API requests that are not 5xx (SLO 99.5 %).
+      - record: docoo:http_requests:rate5m
+        expr: sum(rate(http_server_request_duration_seconds_count{job="docoo-api"}[5m]))
+      - record: docoo:http_error_ratio:rate5m
+        expr: |
+          sum(rate(http_server_request_duration_seconds_count{job="docoo-api",http_response_status_code=~"5.."}[5m]))
+          / clamp_min(sum(rate(http_server_request_duration_seconds_count{job="docoo-api"}[5m])), 1e-9)
+      - record: docoo:http_error_ratio:rate30m
+        expr: |
+          sum(rate(http_server_request_duration_seconds_count{job="docoo-api",http_response_status_code=~"5.."}[30m]))
+          / clamp_min(sum(rate(http_server_request_duration_seconds_count{job="docoo-api"}[30m])), 1e-9)
+      - record: docoo:http_error_ratio:rate1h
+        expr: |
+          sum(rate(http_server_request_duration_seconds_count{job="docoo-api",http_response_status_code=~"5.."}[1h]))
+          / clamp_min(sum(rate(http_server_request_duration_seconds_count{job="docoo-api"}[1h])), 1e-9)
+      - record: docoo:http_error_ratio:rate6h
+        expr: |
+          sum(rate(http_server_request_duration_seconds_count{job="docoo-api",http_response_status_code=~"5.."}[6h]))
+          / clamp_min(sum(rate(http_server_request_duration_seconds_count{job="docoo-api"}[6h])), 1e-9)
+      # API latency: p95 of read requests (SLO < 500 ms).
+      - record: docoo:http_read_latency_seconds:p95_5m
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_server_request_duration_seconds_bucket{job="docoo-api",http_request_method="GET"}[5m])))
+      # Queue freshness: p95 schedule-to-start of normal tasks (SLO < 60 s).
+      - record: docoo:task_schedule_to_start_seconds:p95_5m
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, task_queue) (rate(temporal_activity_schedule_to_start_latency_seconds_bucket[5m])))
+      # Export reliability: successful artifacts per valid request (SLO >= 99 %).
+      - record: docoo:document_export_success_ratio:rate1h
+        expr: |
+          sum(rate(docoo_document_exports_total{result="succeeded"}[1h]))
+          / clamp_min(sum(rate(docoo_document_exports_total[1h])), 1e-9)
+      # Audit completeness: mandatory audit writes persisted within 5 s.
+      - record: docoo:audit_write_seconds:p99_5m
+        expr: |
+          histogram_quantile(0.99, sum by (le) (rate(docoo_audit_write_duration_seconds_bucket[5m])))
+
+  - name: docoo-slo-alerts
+    rules:
+      - alert: DocooAvailabilityFastBurn
+        # 14.4x burn of the 0.5 % budget: 2 % of the monthly budget in one hour.
+        expr: docoo:http_error_ratio:rate1h > (14.4 * 0.005) and docoo:http_error_ratio:rate5m > (14.4 * 0.005)
+        for: 2m
+        labels:
+          severity: critical
+          slo: availability
+        annotations:
+          summary: API error budget is burning fast ({{ $value | humanizePercentage }} 5xx).
+          runbook_url: docs/06-delivery/10-runbooks.md#availability-burn
+      - alert: DocooAvailabilitySlowBurn
+        expr: docoo:http_error_ratio:rate6h > (6 * 0.005) and docoo:http_error_ratio:rate30m > (6 * 0.005)
+        for: 15m
+        labels:
+          severity: warning
+          slo: availability
+        annotations:
+          summary: API error budget is burning steadily ({{ $value | humanizePercentage }} 5xx).
+          runbook_url: docs/06-delivery/10-runbooks.md#availability-burn
+      - alert: DocooApiLatencyHigh
+        expr: docoo:http_read_latency_seconds:p95_5m > 0.5 and docoo:http_requests:rate5m > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          slo: latency
+        annotations:
+          summary: p95 of API reads is {{ $value | humanizeDuration }} (SLO 500 ms).
+          runbook_url: docs/06-delivery/10-runbooks.md#latency
+      - alert: DocooQueueStale
+        expr: docoo:task_schedule_to_start_seconds:p95_5m > 60
+        for: 10m
+        labels:
+          severity: warning
+          slo: queue-freshness
+        annotations:
+          summary: Tasks on {{ $labels.task_queue }} wait {{ $value | humanizeDuration }} before starting.
+          runbook_url: docs/06-delivery/10-runbooks.md#queue-backlog
+      - alert: DocooWorkflowFailed
+        # Durability SLO is 100 %: any failed workflow is an incident.
+        expr: increase(temporal_workflow_failed_total[10m]) > 0
+        labels:
+          severity: critical
+          slo: workflow-durability
+        annotations:
+          summary: '{{ $value }} workflow(s) failed on {{ $labels.task_queue }}.'
+          runbook_url: docs/06-delivery/10-runbooks.md#workflow-failure
+      - alert: DocooWorkerDown
+        expr: up{job="docoo-workers"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          slo: workflow-durability
+        annotations:
+          summary: Worker {{ $labels.instance }} is not reporting.
+          runbook_url: docs/06-delivery/10-runbooks.md#workflow-failure
+      - alert: DocooExportReliabilityLow
+        expr: docoo:document_export_success_ratio:rate1h < 0.99 and sum(increase(docoo_document_exports_total[1h])) >= 20
+        for: 15m
+        labels:
+          severity: warning
+          slo: export-reliability
+        annotations:
+          summary: Only {{ $value | humanizePercentage }} of exports succeeded in the last hour.
+          runbook_url: docs/06-delivery/10-runbooks.md#export-failures
+      - alert: DocooAuditWriteFailed
+        # Security relevant: a single failed mandatory audit write pages.
+        expr: increase(docoo_audit_writes_total{result="failed"}[5m]) > 0
+        labels:
+          severity: critical
+          slo: audit-completeness
+        annotations:
+          summary: Mandatory audit writes failed; the request was rolled back.
+          runbook_url: docs/06-delivery/10-runbooks.md#audit-gap
+      - alert: DocooAuditWriteSlow
+        expr: docoo:audit_write_seconds:p99_5m > 5
+        for: 10m
+        labels:
+          severity: warning
+          slo: audit-completeness
+        annotations:
+          summary: p99 audit write takes {{ $value | humanizeDuration }} (SLO 5 s).
+          runbook_url: docs/06-delivery/10-runbooks.md#audit-gap
+      - alert: DocooBackupStale
+        # Daily logical backups on top of 15-minute PITR (NFR-REL-004).
+        expr: time() - docoo_backup_last_success_timestamp_seconds > 26 * 3600
+        labels:
+          severity: critical
+          slo: recovery
+        annotations:
+          summary: The last verified backup is older than 26 hours.
+          runbook_url: docs/06-delivery/10-runbooks.md#backup-restore

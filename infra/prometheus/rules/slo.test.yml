@@ -1,0 +1,129 @@
+# promtool test rules infra/prometheus/rules/slo.test.yml
+rule_files:
+  - slo.yml
+evaluation_interval: 30s
+tests:
+  - name: healthy traffic raises no alert
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{job="docoo-api",http_request_method="GET",http_response_status_code="200"}'
+        values: '0+600x120'
+      - series: 'http_server_request_duration_seconds_count{job="docoo-api",http_request_method="GET",http_response_status_code="500"}'
+        values: '0+1x120'
+      - series: 'http_server_request_duration_seconds_bucket{job="docoo-api",http_request_method="GET",le="0.1"}'
+        values: '0+590x120'
+      - series: 'http_server_request_duration_seconds_bucket{job="docoo-api",http_request_method="GET",le="0.5"}'
+        values: '0+600x120'
+      - series: 'http_server_request_duration_seconds_bucket{job="docoo-api",http_request_method="GET",le="+Inf"}'
+        values: '0+601x120'
+      - series: 'docoo_backup_last_success_timestamp_seconds'
+        values: '0x120'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: DocooAvailabilityFastBurn
+        exp_alerts: []
+      - eval_time: 2h
+        alertname: DocooApiLatencyHigh
+        exp_alerts: []
+  - name: a 10 % error rate burns the budget fast
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{job="docoo-api",http_request_method="GET",http_response_status_code="200"}'
+        values: '0+540x90'
+      - series: 'http_server_request_duration_seconds_count{job="docoo-api",http_request_method="GET",http_response_status_code="503"}'
+        values: '0+60x90'
+    alert_rule_test:
+      - eval_time: 80m
+        alertname: DocooAvailabilityFastBurn
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              slo: availability
+            exp_annotations:
+              summary: API error budget is burning fast (10% 5xx).
+              runbook_url: docs/06-delivery/10-runbooks.md#availability-burn
+  - name: slow reads breach the latency SLO
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{job="docoo-api",http_request_method="GET",http_response_status_code="200"}'
+        values: '0+100x30'
+      - series: 'http_server_request_duration_seconds_bucket{job="docoo-api",http_request_method="GET",le="0.5"}'
+        values: '0+50x30'
+      - series: 'http_server_request_duration_seconds_bucket{job="docoo-api",http_request_method="GET",le="2"}'
+        values: '0+100x30'
+      - series: 'http_server_request_duration_seconds_bucket{job="docoo-api",http_request_method="GET",le="+Inf"}'
+        values: '0+100x30'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: DocooApiLatencyHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: latency
+            exp_annotations:
+              summary: p95 of API reads is 1.85s (SLO 500 ms).
+              runbook_url: docs/06-delivery/10-runbooks.md#latency
+  - name: workflow failure, stale queue, failed audit and stale backup page
+    interval: 1m
+    input_series:
+      - series: 'temporal_workflow_failed_total{task_queue="docoo.agent"}'
+        values: '0 0 0 1 1 1 1 1'
+      - series: 'temporal_activity_schedule_to_start_latency_seconds_bucket{task_queue="docoo.agent",le="10"}'
+        values: '0+1x30'
+      - series: 'temporal_activity_schedule_to_start_latency_seconds_bucket{task_queue="docoo.agent",le="120"}'
+        values: '0+10x30'
+      - series: 'temporal_activity_schedule_to_start_latency_seconds_bucket{task_queue="docoo.agent",le="+Inf"}'
+        values: '0+10x30'
+      - series: 'docoo_audit_writes_total{result="failed"}'
+        values: '0 0 0 1 1 1 1 1'
+      - series: 'docoo_backup_last_success_timestamp_seconds'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: DocooWorkflowFailed
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              slo: workflow-durability
+              task_queue: docoo.agent
+            exp_annotations:
+              summary: '1 workflow(s) failed on docoo.agent.'
+              runbook_url: docs/06-delivery/10-runbooks.md#workflow-failure
+      - eval_time: 25m
+        alertname: DocooQueueStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: queue-freshness
+              task_queue: docoo.agent
+            exp_annotations:
+              summary: Tasks on docoo.agent wait 1m 53s before starting.
+              runbook_url: docs/06-delivery/10-runbooks.md#queue-backlog
+      - eval_time: 5m
+        alertname: DocooAuditWriteFailed
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              slo: audit-completeness
+              result: failed
+            exp_annotations:
+              summary: Mandatory audit writes failed; the request was rolled back.
+              runbook_url: docs/06-delivery/10-runbooks.md#audit-gap
+  - name: a backup older than 26 hours pages
+    interval: 1h
+    input_series:
+      - series: 'docoo_backup_last_success_timestamp_seconds'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 25h
+        alertname: DocooBackupStale
+        exp_alerts: []
+      - eval_time: 27h
+        alertname: DocooBackupStale
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              slo: recovery
+            exp_annotations:
+              summary: The last verified backup is older than 26 hours.
+              runbook_url: docs/06-delivery/10-runbooks.md#backup-restore

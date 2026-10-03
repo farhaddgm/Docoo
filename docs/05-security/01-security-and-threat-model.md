@@ -134,6 +134,13 @@ Debug content capture فقط با feature flag کوتاه‌عمر، محیط م
 - threat model update برای هر connector/tool؛
 - release blocked در critical/high باز بدون acceptance رسمی.
 
+### پیاده‌سازی گیت‌ها (0.8.0)
+
+- گردش‌کار **Security** روی هر PR و push: `pnpm audit --audit-level=high`، Trivy روی مخزن (آسیب‌پذیری، secret و misconfiguration) و Trivy روی image هر سرویس؛ هر یافتهٔ high/critical قابل‌اصلاح گیت را قرمز می‌کند. CodeQL پس از فعال‌شدن Code Security توسط مالک اجرا می‌شود.
+- imageها فقط وابستگی production دارند (`pnpm deploy --prod`) و npm/corepack از image اجرا حذف شده‌اند.
+- گردش‌کار **Hardening**: ZAP baseline وب، ZAP API scan با نشست واقعی در workspace ادمین و گیت روی هشدار High (استثنا فقط با شناسهٔ قاعده، الگوی URL و دلیل در `scripts/security/zap-accepted.json`)، و `scripts/security/auth-probe.mjs` (عدم افشای کاربر، پرچم‌های cookie، session fixation، دست‌کاری token، CSRF، CORS، ورودی تزریقی، نشت خطا، brute force و جعل `X-Forwarded-For`).
+- صفحه‌های وب Content-Security-Policy با منبع فقط same-origin دارند.
+
 ## ۱۱. incident response
 
 طبقه‌بندی: credential، data exposure، provider، malware، integrity، availability. مراحل: detect، contain، preserve evidence، revoke/rotate، assess scope، recover، notify طبق الزام، postmortem و control update. Workflowهای مشکوک pause می‌شوند اما evidence حذف نمی‌شود.

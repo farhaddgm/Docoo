@@ -2,6 +2,21 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.8.0] — 2026-10-03
+
+Phase 6 (hardening and private-beta readiness) complete, except the owner actions listed in the runbook.
+
+### Added
+
+- Security gates (SEC-001): the Security workflow runs on every pull request and push; `pnpm audit`, Trivy filesystem scan (now failing on findings) and a Trivy image scan of every service image; CodeQL stays behind the owner's Code Security decision. Service images are built with `pnpm deploy --prod` and without npm/corepack, so build tools never ship.
+- DAST and auth-path penetration test (SEC-002): ZAP baseline of the web app, ZAP API scan with a real session against the administrator's workspace, a gate on high/critical alerts, and `scripts/security/auth-probe.mjs` (enumeration, cookie flags, fixation, tampering, CSRF, CORS, injection, error leakage, brute force and spoofed `X-Forwarded-For`). Web pages now send a Content-Security-Policy.
+- SLOs and alerts (SRE-001): stable HTTP metrics, export and audit SLI metrics, Temporal worker metrics (`TEMPORAL_METRICS_ADDRESS`), Prometheus recording and multi-window burn-rate alerts with runbook links and `promtool` unit tests, and the Grafana SLO dashboard.
+- Load test (SRE-002): k6 main-path scenario with 25 concurrent administrators over 1,000 projects and SLO thresholds; `ops:load-seed` for the baseline volume.
+- Backup and restore (REL-001): `ops:backup-drill` backs up roles, database and objects, restores them into a separate PostgreSQL 18 server and bucket, verifies every table checksum, RLS, append-only triggers, policies, migrations and object hashes, and reports RTO.
+- Runbooks and private beta (REL-002): incident process, one runbook per alert, release rollback and the private-beta checklist with owner sign-off.
+- The Hardening workflow runs all of the above on every pull request and nightly and keeps the reports as artifacts.
+- `API_RATE_LIMIT_PER_MINUTE` (default 120) for single-source load and DAST runs.
+
 ## [0.7.0] — 2026-10-03
 
 Phase 5 (dashboard, Brain report and audit explorer) complete.
