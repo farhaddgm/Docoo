@@ -35,14 +35,92 @@ install_docker() {
   systemctl enable --now docker
 }
 
-check_ports() { # Caddy needs 80 and 443; another web server on them breaks HTTPS halfway.
+# Ports 80/443: free → Docoo's Caddy takes them and gets the certificates itself. Held by a
+# Caddy container the server already runs → Docoo runs behind it (EDGE_PROXY). Held by
+# anything else → stop before anything on the server is changed.
+detect_edge() {
+  [ -f "$deploy/.env" ] && EDGE_PROXY=${EDGE_PROXY:-$(sed -n 's/^EDGE_PROXY=//p' "$deploy/.env")}
+  EDGE_PROXY=${EDGE_PROXY:-}
+  [ -n "$EDGE_PROXY" ] && return 0
+  local holder="" busy=""
+  if command -v docker >/dev/null 2>&1; then
+    holder=$(docker ps --format '{{.Names}}{{"\t"}}{{.Label "com.docker.compose.project"}}{{"\t"}}{{.Ports}}' |
+      awk -F'\t' '$2 != "docoo" && $3 ~ /:(80|443)->/ { print $1; exit }')
+  fi
+  if [ -n "$holder" ]; then
+    if docker exec "$holder" caddy version >/dev/null 2>&1; then
+      EDGE_PROXY=$holder
+      say "Ports 80/443 belong to the Caddy container '$holder'; Docoo will run behind it."
+      return 0
+    fi
+    fail "Ports 80/443 are used by the container '$holder', which is not Caddy. Send this message to support.
+پورت‌های ۸۰ و ۴۴۳ را کانتینر '$holder' گرفته است که Caddy نیست؛ این پیام را برای پشتیبانی بفرستید."
+  fi
   command -v ss >/dev/null 2>&1 || return 0
-  local busy
   busy=$(ss -Hltnp 'sport = :80 or sport = :443' | grep -v docker-proxy || true)
   [ -z "$busy" ] && return 0
   printf '%s\n' "$busy"
   fail "Ports 80/443 are already used by another program (shown above). Stop it or move it first.
 پورت‌های ۸۰ و ۴۴۳ را برنامهٔ دیگری گرفته است؛ خروجی بالا را برای پشتیبانی بفرستید."
+}
+
+set_env() { # set_env KEY VALUE: write one value into deploy/.env
+  if grep -q "^$1=" "$deploy/.env"; then
+    sed -i "s|^$1=.*|$1=$2|" "$deploy/.env"
+  else
+    printf '%s=%s\n' "$1" "$2" >>"$deploy/.env"
+  fi
+}
+
+use_edge() { # Record the edge mode and switch compose to the edge override.
+  [ -n "$EDGE_PROXY" ] || return 0
+  set_env EDGE_PROXY "$EDGE_PROXY"
+  # Two proxies (the existing Caddy, then Docoo's) stand in front of the API.
+  set_env TRUST_PROXY_HOPS 2
+  compose+=(-f "$deploy/compose.edge.yaml")
+}
+
+# Joins the existing Caddy to the docoo network and adds one site block for the two host names
+# to its Caddyfile (a backup is kept next to it); the block is validated before the reload.
+attach_edge() {
+  [ -n "$EDGE_PROXY" ] || return 0
+  local c=$EDGE_PROXY config host_file="" dest src added=0 check
+  local block
+  block=$(printf '# docoo:begin (added by the Docoo installer; delete this block to detach Docoo)\n%s, %s {\n\treverse_proxy docoo-edge:80\n}\n# docoo:end' "$DOMAIN" "$FILES_DOMAIN")
+  say "Connecting Docoo to the existing Caddy '$c'…"
+  if ! docker inspect -f '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}} {{end}}' "$c" | grep -qw docoo_default; then
+    docker network connect docoo_default "$c"
+  fi
+  config=$(docker inspect -f '{{join .Args " "}}' "$c" | grep -o -- '--config [^ ]*' | cut -d' ' -f2 || true)
+  config=${config:-/etc/caddy/Caddyfile}
+  while IFS=$'\t' read -r dest src; do
+    [ -n "$dest" ] || continue
+    if [ "$dest" = "$config" ]; then host_file=$src; break; fi
+    case "$config" in "$dest"/*) host_file="$src${config#"$dest"}" ;; esac
+  done < <(docker inspect -f '{{range .Mounts}}{{.Destination}}{{"\t"}}{{.Source}}{{"\n"}}{{end}}' "$c")
+  if [ -z "$host_file" ] || [ ! -f "$host_file" ] || [[ "$config" == *.json ]]; then
+    printf '%s\n' "$block"
+    fail "Could not find the Caddyfile of '$c' on this server. Add the block above to it and reload it.
+Caddyfile کانتینر '$c' پیدا نشد؛ این پیام را برای پشتیبانی بفرستید."
+  fi
+  if ! grep -q '^# docoo:begin' "$host_file"; then
+    cp -p "$host_file" "$host_file.before-docoo"
+    # Append (never replace) so a single-file bind mount keeps pointing at the same file.
+    printf '\n%s\n' "$block" >>"$host_file"
+    added=1
+  fi
+  if ! check=$(docker exec "$c" caddy validate --config "$config" --adapter caddyfile 2>&1); then
+    [ "$added" = 1 ] && cat "$host_file.before-docoo" >"$host_file"
+    printf '%s\n' "$check" | tail -5
+    fail "The existing Caddy rejected the Docoo block; its Caddyfile was left unchanged."
+  fi
+  docker exec "$c" caddy reload --config "$config" --adapter caddyfile >/dev/null 2>&1 || docker restart "$c" >/dev/null
+  command -v curl >/dev/null 2>&1 || return 0
+  for _ in $(seq 1 30); do
+    [ "$(curl -sk -o /dev/null -w '%{http_code}' "https://$DOMAIN/fa" || true)" = 200 ] && return 0
+    sleep 4
+  done
+  printf '\nWarning: https://%s did not answer yet; check that its DNS points to this server.\n' "$DOMAIN"
 }
 
 configure() {
@@ -54,8 +132,11 @@ configure() {
   ask DOMAIN "Domain for Docoo, e.g. docoo.example.com"
   [ -n "$DOMAIN" ] || fail "A domain is required."
   ask FILES_DOMAIN "Domain for file uploads" "files.$DOMAIN"
-  ask ACME_EMAIL "Email for the HTTPS certificate (Let's Encrypt)"
-  ask ADMIN_EMAIL "Administrator email" "$ACME_EMAIL"
+  ask ADMIN_EMAIL "Administrator email"
+  [ -n "$ADMIN_EMAIL" ] || fail "An administrator email is required."
+  # Behind an existing Caddy that proxy holds the certificates; the email is unused then.
+  [ -n "$EDGE_PROXY" ] && ACME_EMAIL=${ACME_EMAIL:-$ADMIN_EMAIL}
+  ask ACME_EMAIL "Email for the HTTPS certificate (Let's Encrypt)" "$ADMIN_EMAIL"
   ask ADMIN_DISPLAY_NAME "Administrator name" "Admin"
   ask SMTP_URL "SMTP for password mail, e.g. smtps://user:pass@smtp.example.com:465 (empty = later)" ""
   ask MAIL_FROM "Sender address for mail" "Docoo <no-reply@$DOMAIN>"
@@ -144,27 +225,34 @@ update() {
   say "Updating to the latest release…"
   git -C "$root" fetch --tags --quiet
   local latest
-  latest=$(git -C "$root" tag --list 'v*' --sort=-v:refname | head -1)
+  # DOCOO_UPDATE_REF pins another commit (used by the Deploy smoke test of a pull request).
+  latest=${DOCOO_UPDATE_REF:-$(git -C "$root" tag --list 'v*' --sort=-v:refname | head -1)}
   [ -n "$latest" ] && git -C "$root" checkout --quiet "$latest"
   sed -i "s/^DOCOO_VERSION=.*/DOCOO_VERSION=${latest:-local}/" "$deploy/.env"
+  set -a; . "$deploy/.env"; set +a
+  use_edge
   start
+  attach_edge
   say "Docoo is now on ${latest:-the current checkout}."
 }
 
 if [ "${1:-install}" = update ]; then
   install_docker
+  detect_edge
   update
   exit 0
 fi
 
-check_ports
 install_docker
+detect_edge
 configure
+set -a; . "$deploy/.env"; set +a
+use_edge
 open_firewall
 start
+attach_edge
 ADMIN_LINK=""
 create_admin
-set -a; . "$deploy/.env"; set +a
 say "Docoo is running at https://$DOMAIN"
 if [ -n "$ADMIN_LINK" ]; then
   printf 'Open this link once to choose your password (valid 24 hours):\n%s\n' "$ADMIN_LINK"

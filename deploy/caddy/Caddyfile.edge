@@ -1,0 +1,19 @@
+# Entry point behind a Caddy the server already runs on ports 80/443 (compose.edge.yaml).
+# That proxy terminates HTTPS and forwards both host names here over the Docker network;
+# its X-Forwarded-For is kept so every client keeps its own rate limit (TRUST_PROXY_HOPS=2).
+{
+	auto_https off
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+import routes.caddy
+
+http://{$DOMAIN} {
+	import docoo_app
+}
+
+http://{$FILES_DOMAIN} {
+	import docoo_files
+}

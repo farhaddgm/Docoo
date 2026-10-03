@@ -1,0 +1,14 @@
+# Public entry point: automatic HTTPS (Let's Encrypt) for the app and the upload host.
+{
+	email {$ACME_EMAIL}
+}
+
+import routes.caddy
+
+{$DOMAIN} {
+	import docoo_app
+}
+
+{$FILES_DOMAIN} {
+	import docoo_files
+}
