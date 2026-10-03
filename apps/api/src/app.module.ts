@@ -9,6 +9,7 @@ import { HealthService } from './health.service.js';
 import { KnowledgeModule } from './knowledge/knowledge.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
 import { ProvidersModule } from './providers/providers.module.js';
+import { ReportsModule } from './reports/reports.module.js';
 import { SourcesModule } from './sources/sources.module.js';
 import { TopicsModule } from './topics/topics.module.js';
 import { WorkflowModule } from './workflow/workflow.module.js';
@@ -28,6 +29,7 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
     ProvidersModule,
     WorkflowModule,
     DocumentsModule,
+    ReportsModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],

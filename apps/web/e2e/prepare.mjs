@@ -34,6 +34,19 @@ try {
     `insert into memberships (workspace_id, user_id) values ($1, $2) on conflict do nothing`,
     [workspace.rows[0].id, user.rows[0].id],
   );
+  // Two audit events for the audit explorer test; audit is append-only, so seed them once.
+  const seeded = await client.query(
+    `select 1 from audit_events where workspace_id = $1 and reason = 'E2E seed' limit 1`,
+    [workspace.rows[0].id],
+  );
+  if (!seeded.rowCount) {
+    await client.query(
+      `insert into audit_events (workspace_id, actor_id, action, target_type, reason, severity, security_relevant, correlation_id)
+       values ($1, $2, 'project.create', 'project', 'E2E seed', 'info', false, gen_random_uuid()),
+              ($1, $2, 'knowledge.override', 'audit_review', 'E2E seed', 'critical', true, gen_random_uuid())`,
+      [workspace.rows[0].id, user.rows[0].id],
+    );
+  }
   await client.query(
     'update sessions set revoked_at = now() where user_id = $1 and revoked_at is null',
     [user.rows[0].id],

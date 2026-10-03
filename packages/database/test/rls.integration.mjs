@@ -91,6 +91,7 @@ const knowledgeTables = [
   'evaluations',
   'evaluation_findings',
   'evaluation_exceptions',
+  'brain_reports',
 ];
 
 async function withContext(workspaceId, actorId, action) {

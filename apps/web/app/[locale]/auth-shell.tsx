@@ -3,15 +3,9 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
-import {
-  errorMessage,
-  formatDate,
-  formatNumber,
-  messagesFor,
-  problemCode,
-  type Locale,
-} from '../i18n';
+import { errorMessage, formatNumber, messagesFor, problemCode, type Locale } from '../i18n';
 import { AppShell } from './app-shell';
+import { DashboardCards } from './dashboard-cards';
 
 interface SessionIdentity {
   user: { id: string; email: string; displayName: string; role: 'super_admin' };
@@ -218,20 +212,9 @@ export function AuthShell({ locale }: { locale: Locale }) {
               {error}
             </p>
           )}
-          <div className="grid">
-            <section className="card" aria-labelledby="status-title">
-              <h2 id="status-title">{content.statusTitle}</h2>
-              <span className="status">{content.statusValue}</span>
-              <p className="muted">
-                {content.today}:{' '}
-                <time dateTime={new Date().toISOString()}>{formatDate(locale, new Date())}</time>
-              </p>
-            </section>
-            <section className="card" aria-labelledby="next-title">
-              <h2 id="next-title">{content.nextTitle}</h2>
-              <p>{content.nextValue}</p>
-            </section>
-          </div>
+          {view.identity.workspaces[0] && (
+            <DashboardCards locale={locale} workspaceId={view.identity.workspaces[0].id} />
+          )}
         </>
       )}
     </AppShell>

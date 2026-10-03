@@ -2,6 +2,22 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.7.0] — 2026-10-03
+
+Phase 5 (dashboard, Brain report and audit explorer) complete.
+
+### Added
+
+- Dashboard (REP-001): `GET /dashboard` and live cards for pending human tasks, workflow states, knowledge pending/expired/needing revision and open conflicts, provider health with cost-ceiling warnings, stages close to their attempt limit, 30-day usage and the latest Brain report, plus quick actions.
+- Brain report (REP-002): `POST/GET /brain-reports` with the deterministic `charter-v1` rules; every deviation names the charter clause, role, severity and evidence records and becomes an actionable recommendation; reports are append-only and generating one changes no project, document, setting or task.
+- Audit explorer (REP-003): filters (action family, target type, severity, period, security-only), paging and JSON/CSV export in the web app, usable by keyboard in Persian (RTL) and English (LTR).
+- Cost report (REP-004): `GET /reports/usage` grouped by project, stage, day or model for a period, with totals, failures and latency; the web page shows it as a table.
+- `brain_reports` table with RLS and append-only history (migrations 0013/0014); ADR-0011; 5 routes in the authorization matrix.
+
+### Tests
+
+- 3 API integration tests (live dashboard data, usage groupings, Brain evidence and no side effects), the extended RLS gate, and an end-to-end test of the reporting pages by keyboard in both languages with axe checks.
+
 ## [0.6.0] — 2026-10-03
 
 Phase 4 (solutions, documents and evaluation) complete.

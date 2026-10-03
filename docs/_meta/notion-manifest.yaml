@@ -143,3 +143,6 @@ documents:
   - path: docs/adr/0010-documents-solutions-and-evaluation.md
     doc_id: DOCOO-ADR-0010
     section: ADRs
+  - path: docs/adr/0011-reporting-and-brain-reports.md
+    doc_id: DOCOO-ADR-0011
+    section: ADRs
