@@ -68,6 +68,7 @@ export function createNotionClient({
     createPage: (body) => request('POST', '/pages', body),
     updatePage: (id, body) => request('PATCH', `/pages/${id}`, body),
     deleteBlock: (id) => request('DELETE', `/blocks/${id}`),
+    updateBlock: (id, body) => request('PATCH', `/blocks/${id}`, body),
     appendChildren: (id, children) => request('PATCH', `/blocks/${id}/children`, { children }),
     async listChildren(id) {
       const results = [];

@@ -130,6 +130,13 @@ function fakeNotion() {
       if (body.children.length > 100) return json({ message: 'too many' }, 400);
       return json({ results: addChildren(match[1], body.children) });
     }
+    if ((match = route.match(/^PATCH \/blocks\/(.+)$/))) {
+      for (const list of children.values()) {
+        const block = list.find((item) => item.id === match[1]);
+        if (block) Object.assign(block, body);
+      }
+      return json({});
+    }
     if ((match = route.match(/^DELETE \/blocks\/(.+)$/))) {
       for (const [parent, list] of children) {
         children.set(
@@ -198,6 +205,15 @@ test('syncDocs creates, updates and records state idempotently', async () => {
     { id: 'old-block', type: 'paragraph' },
     { id: 'kept', type: 'child_page', child_page: { title: 'x' } },
   ]);
+  const bullet = (text) => ({
+    type: 'bulleted_list_item',
+    bulleted_list_item: { rich_text: [{ plain_text: text, text: { content: text } }] },
+  });
+  notion.children.set('root', [
+    { id: 'h', type: 'heading_2' },
+    { id: 'b-commit', ...bullet('Source commit: `old`') },
+    { id: 'b-sync', ...bullet('آخرین همگام‌سازی محتوا و فهرست: `2026-09-24`') },
+  ]);
   const client = createNotionClient({
     token: 'secret',
     baseUrl: 'https://notion.test/v1',
@@ -217,6 +233,18 @@ test('syncDocs creates, updates and records state idempotently', async () => {
   assert.deepEqual(report.created, ['DOC-B']);
   assert.deepEqual(report.updated, ['DOC-A']);
   assert.deepEqual(report.failed, []);
+
+  const header = notion.children.get('root');
+  const headerCommit = header.find((block) => block.id === 'b-commit');
+  assert.equal(headerCommit.bulleted_list_item.rich_text[1].text.content, commit);
+  assert.equal(
+    headerCommit.bulleted_list_item.rich_text[1].text.link.url,
+    `https://github.com/o/r/commit/${commit}`,
+  );
+  assert.match(
+    header.find((block) => block.id === 'b-sync').bulleted_list_item.rich_text[0].text.content,
+    /2026-09-30 — 2 از 2 سند/,
+  );
 
   const pageA = notion.children.get('page-a');
   assert.deepEqual(

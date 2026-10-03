@@ -146,6 +146,55 @@ async function findExisting(client, doc, dataSourceId, schema) {
   return { pageId: page?.id, rowId: row?.id };
 }
 
+// The root page opens with a hand-written "source and policy" list. Nothing else
+// rewrites it, so after every publish its commit and sync-time bullets are refreshed
+// in place (matched by their label, never by position) to keep the header truthful.
+const ROOT_COMMIT_LABEL = 'Source commit:';
+const ROOT_SYNC_LABEL = 'آخرین همگام‌سازی';
+
+const blockText = (block) =>
+  (block.bulleted_list_item?.rich_text ?? [])
+    .map((item) => item.plain_text ?? item.text?.content ?? '')
+    .join('');
+
+export async function refreshRootHeader({
+  client,
+  rootPageId,
+  repoUrl,
+  commit,
+  syncedAt,
+  total,
+  synced,
+}) {
+  const bullets = (await client.listChildren(rootPageId)).filter(
+    (block) => block.type === 'bulleted_list_item',
+  );
+  const commitBlock = bullets.find((block) => blockText(block).startsWith(ROOT_COMMIT_LABEL));
+  const syncBlock = bullets.find((block) => blockText(block).startsWith(ROOT_SYNC_LABEL));
+  if (!commitBlock || !syncBlock) return false;
+  const code = (content, link) => ({
+    type: 'text',
+    text: { content, ...(link ? { link: { url: link } } : {}) },
+    annotations: { code: true },
+  });
+  await client.updateBlock(commitBlock.id, {
+    bulleted_list_item: {
+      rich_text: [
+        ...richText(`${ROOT_COMMIT_LABEL} `),
+        code(commit, `${repoUrl}/commit/${commit}`),
+      ],
+    },
+  });
+  await client.updateBlock(syncBlock.id, {
+    bulleted_list_item: {
+      rich_text: richText(
+        `${ROOT_SYNC_LABEL} محتوا و فهرست: ${syncedAt.slice(0, 10)} — ${synced} از ${total} سند به همین SHA متصل است.`,
+      ),
+    },
+  });
+  return true;
+}
+
 export async function syncDocs({
   root,
   client,
@@ -317,6 +366,23 @@ export async function syncDocs({
   }
 
   const manifestIds = new Set(docs.map((doc) => doc.docId));
+  const synced = docs.length - report.failed.length;
+  if (pending.length > 0 || state.repository.source_commit !== commit) {
+    try {
+      const refreshed = await refreshRootHeader({
+        client,
+        rootPageId: state.notion.root_page.page_id,
+        repoUrl,
+        commit,
+        syncedAt,
+        total: docs.length,
+        synced,
+      });
+      if (!refreshed) log('Root page header not found; left unchanged.');
+    } catch (error) {
+      log(`Root page header not refreshed: ${error.message}`);
+    }
+  }
   state.repository.source_commit = commit;
   state.sync = {
     synced_at: syncedAt,
