@@ -73,8 +73,9 @@ jobs:
       - name: Start the API (load/DAST rate ceiling) and the web app
         run: |
           mkdir -p reports
-          (cd apps/api && NODE_ENV=test DATABASE_URL="$RUNTIME_URL" API_RATE_LIMIT_PER_MINUTE=1000000 \
-            nohup node --import ./dist/instrumentation.js dist/main.js > ../../reports/api.log 2>&1 & echo $! > ../../api.pid)
+          (cd apps/api; NODE_ENV=test DATABASE_URL="$RUNTIME_URL" API_RATE_LIMIT_PER_MINUTE=1000000 \
+            nohup node --import ./dist/instrumentation.js dist/main.js > ../../reports/api.log 2>&1 &
+            echo $! > "$GITHUB_WORKSPACE/api.pid")
           (cd apps/web && nohup node node_modules/next/dist/bin/next start -p 3000 > ../../reports/web.log 2>&1 &)
           for i in $(seq 1 60); do
             curl -sf http://127.0.0.1:4000/v1/health/live >/dev/null && curl -sf -o /dev/null http://127.0.0.1:3000/fa && exit 0
@@ -96,10 +97,13 @@ jobs:
           python3 scripts/security/zap-gate.py reports/zap/web.json reports/zap/api.json
       - name: Auth-path penetration test with production rate limits (SEC-002)
         run: |
-          kill "$(cat api.pid)"; sleep 1
-          (cd apps/api && NODE_ENV=test DATABASE_URL="$RUNTIME_URL" \
+          # Restart the API with the production rate limits; the probe must see them.
+          kill "$(cat "$GITHUB_WORKSPACE/api.pid")"
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4000/v1/health/live >/dev/null || break; sleep 1; done
+          (cd apps/api; NODE_ENV=test DATABASE_URL="$RUNTIME_URL" \
             nohup node --import ./dist/instrumentation.js dist/main.js > ../../reports/api-probe.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:4000/v1/health/live >/dev/null && break; sleep 1; done
+          set -o pipefail
           node scripts/security/auth-probe.mjs | tee reports/auth-probe.txt
       - name: Backup and restore drill into a separate server (REL-001)
         env:
