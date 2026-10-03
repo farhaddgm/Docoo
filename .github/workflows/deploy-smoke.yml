@@ -75,8 +75,8 @@ jobs:
         if: matrix.mode == 'edge'
         run: |
           set -euo pipefail
-          grep -x 'EDGE_PROXY=existing-proxy' deploy/.env
-          grep -x 'TRUST_PROXY_HOPS=2' deploy/.env
+          sudo grep -x 'EDGE_PROXY=existing-proxy' deploy/.env
+          sudo grep -x 'TRUST_PROXY_HOPS=2' deploy/.env
           grep -q '^# docoo:begin' "$RUNNER_TEMP/edge/Caddyfile"
           test -f "$RUNNER_TEMP/edge/Caddyfile.before-docoo"
           test "$(curl -sk https://other.localhost/ --resolve other.localhost:443:127.0.0.1)" = 'other site'
