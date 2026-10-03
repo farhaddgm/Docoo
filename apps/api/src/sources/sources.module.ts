@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { ConfigModule } from '../config/config.module.js';
-import { dispatcherProvider, objectStoreProvider } from './ingestion.providers.js';
+import { dispatcherProvider, OBJECT_STORE, objectStoreProvider } from './ingestion.providers.js';
 import { SourcesController } from './sources.controller.js';
 import { SourcesService } from './sources.service.js';
 
@@ -9,6 +9,6 @@ import { SourcesService } from './sources.service.js';
   imports: [ConfigModule],
   controllers: [SourcesController],
   providers: [SourcesService, objectStoreProvider, dispatcherProvider],
-  exports: [SourcesService],
+  exports: [SourcesService, OBJECT_STORE],
 })
 export class SourcesModule {}

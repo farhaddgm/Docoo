@@ -212,6 +212,9 @@ importers:
       '@docoo/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@docoo/documents':
+        specifier: workspace:*
+        version: link:../../packages/documents
       '@docoo/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -447,6 +450,19 @@ importers:
       tsx:
         specifier: 4.23.13
         version: 4.23.13
+
+  packages/documents:
+    dependencies:
+      fflate:
+        specifier: 0.7.5
+        version: 0.7.5
+      playwright-core:
+        specifier: 1.63.0
+        version: 1.63.0
+    devDependencies:
+      pdfjs-dist:
+        specifier: 6.3.289
+        version: 6.3.289
 
   packages/domain: {}
 

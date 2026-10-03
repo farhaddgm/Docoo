@@ -1120,3 +1120,270 @@ export const commandReceipts = pgTable(
   },
   (table) => [uniqueIndex('command_receipts_key_uq').on(table.workspaceId, table.idempotencyKey)],
 );
+
+// Phase 4: solutions, documents and evaluation (SOL-*, DOC-*, EVA-*).
+
+export const documentStatus = pgEnum('document_status', [
+  'draft',
+  'ready_for_review',
+  'non_compliant',
+  'approved',
+  'rejected',
+  'locked',
+  'superseded',
+]);
+export const evaluationStatus = pgEnum('evaluation_status', [
+  'passed',
+  'failed_quality',
+  'failed_compliance',
+  'needs_human_decision',
+  'technical_error',
+]);
+export const findingSeverity = pgEnum('finding_severity', [
+  'critical',
+  'high',
+  'medium',
+  'low',
+  'info',
+]);
+
+const tenant = () =>
+  uuid('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'restrict' });
+
+export const solutionCriteriaVersions = pgTable(
+  'solution_criteria_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    versionNo: integer('version_no').notNull(),
+    criteria: jsonb('criteria').notNull(),
+    reason: text('reason').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('solution_criteria_versions_uq').on(table.projectId, table.versionNo)],
+);
+
+export const solutionSets = pgTable(
+  'solution_sets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    requestedCount: integer('requested_count').notNull(),
+    origin: text('origin').notNull(),
+    invocationId: uuid('invocation_id'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('solution_sets_project_idx').on(table.projectId, table.createdAt)],
+);
+
+export const solutions = pgTable(
+  'solutions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    setId: uuid('set_id')
+      .notNull()
+      .references(() => solutionSets.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    ordinal: integer('ordinal').notNull(),
+    title: text('title').notNull(),
+    summary: text('summary').notNull(),
+    assumptions: jsonb('assumptions').notNull(),
+    evidence: jsonb('evidence').notNull(),
+    plan: jsonb('plan').notNull(),
+    risks: jsonb('risks').notNull(),
+    scoreInputs: jsonb('score_inputs').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('solutions_set_ordinal_uq').on(table.setId, table.ordinal)],
+);
+
+export const solutionSelections = pgTable(
+  'solution_selections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    setId: uuid('set_id')
+      .notNull()
+      .references(() => solutionSets.id, { onDelete: 'cascade' }),
+    selected: jsonb('selected').notNull(),
+    criteriaVersionId: uuid('criteria_version_id'),
+    reason: text('reason'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('solution_selections_project_idx').on(table.projectId, table.createdAt)],
+);
+
+export const documents = pgTable(
+  'documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    solutionId: uuid('solution_id').references(() => solutions.id, { onDelete: 'set null' }),
+    priority: integer('priority').notNull().default(1),
+    title: text('title').notNull(),
+    level: integer('level').notNull(),
+    language: locale('language').notNull(),
+    status: documentStatus('status').notNull().default('draft'),
+    currentVersionId: uuid('current_version_id'),
+    approvedVersionId: uuid('approved_version_id'),
+    approvalKind: text('approval_kind'),
+    lockedAt: timestamp('locked_at', { withTimezone: true }),
+    version: integer('version').notNull().default(1),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('documents_project_idx').on(table.workspaceId, table.projectId),
+    uniqueIndex('documents_solution_uq').on(table.projectId, table.solutionId),
+  ],
+);
+
+export const documentVersions = pgTable(
+  'document_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    versionNo: integer('version_no').notNull(),
+    content: jsonb('content').notNull(),
+    contentSha256: text('content_sha256').notNull(),
+    charCount: integer('char_count').notNull(),
+    countAlgorithm: text('count_algorithm').notNull(),
+    level: integer('level').notNull(),
+    bounds: jsonb('bounds').notNull(),
+    withinBounds: boolean('within_bounds').notNull(),
+    origin: text('origin').notNull(),
+    restoredFromId: uuid('restored_from_id'),
+    reason: text('reason'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('document_versions_uq').on(table.documentId, table.versionNo)],
+);
+
+export const documentArtifacts = pgTable(
+  'document_artifacts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    documentVersionId: uuid('document_version_id')
+      .notNull()
+      .references(() => documentVersions.id, { onDelete: 'cascade' }),
+    format: text('format').notNull(),
+    objectKey: text('object_key').notNull(),
+    sha256: text('sha256').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    rendererVersion: text('renderer_version').notNull(),
+    templateVersion: text('template_version').notNull(),
+    signature: text('signature').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('document_artifacts_document_idx').on(table.documentId, table.createdAt)],
+);
+
+export const rubricVersions = pgTable(
+  'rubric_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+    versionNo: integer('version_no').notNull(),
+    rubric: jsonb('rubric').notNull(),
+    reason: text('reason').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('rubric_versions_uq').on(
+      table.workspaceId,
+      sql`coalesce(${table.projectId}, '00000000-0000-0000-0000-000000000000'::uuid)`,
+      table.versionNo,
+    ),
+  ],
+);
+
+export const evaluations = pgTable(
+  'evaluations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    documentVersionId: uuid('document_version_id')
+      .notNull()
+      .references(() => documentVersions.id, { onDelete: 'cascade' }),
+    rubricVersionId: uuid('rubric_version_id'),
+    rubric: jsonb('rubric').notNull(),
+    status: evaluationStatus('status').notNull(),
+    overall: real('overall').notNull(),
+    scores: jsonb('scores').notNull(),
+    evaluator: text('evaluator').notNull(),
+    invocationId: uuid('invocation_id'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('evaluations_document_idx').on(table.documentId, table.createdAt)],
+);
+
+export const evaluationFindings = pgTable(
+  'evaluation_findings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    evaluationId: uuid('evaluation_id')
+      .notNull()
+      .references(() => evaluations.id, { onDelete: 'cascade' }),
+    severity: findingSeverity('severity').notNull(),
+    criterion: text('criterion').notNull(),
+    evidence: text('evidence').notNull(),
+    location: text('location').notNull(),
+    defaultTargetStage: stageKind('default_target_stage').notNull(),
+    targetStage: stageKind('target_stage').notNull(),
+    targetReason: text('target_reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('evaluation_findings_evaluation_idx').on(table.evaluationId)],
+);
+
+export const evaluationExceptions = pgTable(
+  'evaluation_exceptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    evaluationId: uuid('evaluation_id')
+      .notNull()
+      .references(() => evaluations.id, { onDelete: 'cascade' }),
+    reason: text('reason').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('evaluation_exceptions_uq').on(table.evaluationId)],
+);

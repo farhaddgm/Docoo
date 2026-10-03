@@ -23,6 +23,7 @@
     "@docoo/ingestion": "workspace:*",
     "@docoo/knowledge": "workspace:*",
     "@docoo/observability": "workspace:*",
+    "@docoo/documents": "workspace:*",
     "@docoo/orchestration": "workspace:*",
     "@docoo/providers": "workspace:*",
     "@fastify/cookie": "11.1.2",

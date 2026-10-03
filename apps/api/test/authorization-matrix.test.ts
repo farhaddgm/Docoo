@@ -15,6 +15,7 @@ import {
   WorkspacePermissionGuard,
 } from '../src/auth/auth.authorization.js';
 import type { AuthService } from '../src/auth/auth.service.js';
+import { DocumentsController } from '../src/documents/documents.controller.js';
 import { ConfigController } from '../src/config/config.controller.js';
 import { KnowledgeController } from '../src/knowledge/knowledge.controller.js';
 import { ProjectsController } from '../src/projects/projects.controller.js';
@@ -120,6 +121,35 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/attempt-decision':
     'workflow.override',
   'GET workspaces/:workspaceId/human-tasks': 'workspace.read',
+  'GET workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.read',
+  'PUT workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/solutions/generate': 'project.run',
+  'GET workspaces/:workspaceId/projects/:projectId/solutions': 'project.read',
+  'POST workspaces/:workspaceId/projects/:projectId/solution-selections': 'workflow.approve',
+  'GET workspaces/:workspaceId/projects/:projectId/documents': 'document.read',
+  'GET workspaces/:workspaceId/documents/:documentId': 'document.read',
+  'PUT workspaces/:workspaceId/documents/:documentId/content': 'document.edit',
+  'GET workspaces/:workspaceId/documents/:documentId/versions': 'document.read',
+  'GET workspaces/:workspaceId/documents/:documentId/versions/:versionId': 'document.read',
+  'GET workspaces/:workspaceId/documents/:documentId/diff': 'document.read',
+  'POST workspaces/:workspaceId/documents/:documentId/versions/:versionId/restore':
+    'document.restore',
+  'POST workspaces/:workspaceId/documents/:documentId/submit': 'document.edit',
+  'POST workspaces/:workspaceId/documents/:documentId/approve': 'document.approve',
+  'POST workspaces/:workspaceId/documents/:documentId/reject': 'document.approve',
+  'POST workspaces/:workspaceId/documents/:documentId/lock': 'document.lock',
+  'POST workspaces/:workspaceId/documents/:documentId/supersede': 'document.lock',
+  'POST workspaces/:workspaceId/documents/:documentId/exports': 'document.export',
+  'GET workspaces/:workspaceId/documents/:documentId/artifacts': 'document.read',
+  'GET workspaces/:workspaceId/documents/:documentId/artifacts/:artifactId/download':
+    'document.export',
+  'GET workspaces/:workspaceId/documents/:documentId/artifacts/:artifactId/verify': 'document.read',
+  'GET workspaces/:workspaceId/projects/:projectId/rubric': 'project.read',
+  'PUT workspaces/:workspaceId/projects/:projectId/rubric': 'project.update',
+  'POST workspaces/:workspaceId/documents/:documentId/evaluate': 'document.approve',
+  'GET workspaces/:workspaceId/evaluations/:evaluationId': 'document.read',
+  'POST workspaces/:workspaceId/evaluations/:evaluationId/accept-exception': 'workflow.override',
+  'PATCH workspaces/:workspaceId/evaluation-findings/:findingId': 'workflow.override',
 };
 
 const controllers = [
@@ -132,6 +162,7 @@ const controllers = [
   KnowledgeController,
   ProvidersController,
   WorkflowController,
+  DocumentsController,
 ];
 
 function routeTable(): Record<string, string | undefined> {

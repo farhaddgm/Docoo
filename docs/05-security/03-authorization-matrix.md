@@ -123,6 +123,33 @@ notion_sync: true
 | `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/edit`    | `project.update`         |
 | `POST /projects/{id}/stages/{stageRunId}/attempt-decision`           | `workflow.override`      |
 | `GET /human-tasks`                                                   | `workspace.read`         |
+| `GET /projects/{id}/solution-criteria`                               | `project.read`           |
+| `PUT /projects/{id}/solution-criteria`                               | `project.update`         |
+| `POST /projects/{id}/solutions/generate`                             | `project.run`            |
+| `GET /projects/{id}/solutions`                                       | `project.read`           |
+| `POST /projects/{id}/solution-selections`                            | `workflow.approve`       |
+| `GET /projects/{id}/documents`                                       | `document.read`          |
+| `GET /projects/{id}/rubric`                                          | `project.read`           |
+| `PUT /projects/{id}/rubric`                                          | `project.update`         |
+| `GET /documents/{id}`                                                | `document.read`          |
+| `PUT /documents/{id}/content`                                        | `document.edit`          |
+| `GET /documents/{id}/versions`                                       | `document.read`          |
+| `GET /documents/{id}/versions/{versionId}`                           | `document.read`          |
+| `GET /documents/{id}/diff`                                           | `document.read`          |
+| `POST /documents/{id}/versions/{versionId}/restore`                  | `document.restore`       |
+| `POST /documents/{id}/submit`                                        | `document.edit`          |
+| `POST /documents/{id}/approve`                                       | `document.approve`       |
+| `POST /documents/{id}/reject`                                        | `document.approve`       |
+| `POST /documents/{id}/lock`                                          | `document.lock`          |
+| `POST /documents/{id}/supersede`                                     | `document.lock`          |
+| `POST /documents/{id}/exports`                                       | `document.export`        |
+| `GET /documents/{id}/artifacts`                                      | `document.read`          |
+| `GET /documents/{id}/artifacts/{artifactId}/download`                | `document.export`        |
+| `POST /documents/{id}/evaluate`                                      | `document.approve`       |
+| `GET /documents/{id}/artifacts/{artifactId}/verify`                  | `document.read`          |
+| `GET /evaluations/{id}`                                              | `document.read`          |
+| `POST /evaluations/{id}/accept-exception`                            | `workflow.override`      |
+| `PATCH /evaluation-findings/{id}`                                    | `workflow.override`      |
 
 ## endpointهای هویت
 

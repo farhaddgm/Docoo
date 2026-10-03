@@ -65,7 +65,10 @@ export class FakeAdapter implements ModelProviderAdapter {
   readonly kind = 'fake' as const;
   calls = 0;
 
-  constructor(private readonly script: FakeScript = () => null) {}
+  /** Optional canned structured answer per request (tests); null falls back to the schema sample. */
+  responder: (request: NormalizedModelRequest) => unknown = () => null;
+
+  constructor(public script: FakeScript = () => null) {}
 
   listModels(): Promise<ModelDescriptor[]> {
     const capabilities = {
@@ -124,8 +127,9 @@ export class FakeAdapter implements ModelProviderAdapter {
       request.instructions ?? '',
       ...request.messages.map((message) => message.content),
     ].join('\n');
+    const canned = request.responseSchema ? this.responder(request) : null;
     const json = request.responseSchema
-      ? sampleForSchema(request.responseSchema.schema, request.responseSchema.name)
+      ? (canned ?? sampleForSchema(request.responseSchema.schema, request.responseSchema.name))
       : null;
     const text =
       json !== null
