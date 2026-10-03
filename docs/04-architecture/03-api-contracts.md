@@ -173,14 +173,16 @@ Answer submission batch atomic و idempotent است.
 - `GET /model-invocations` و `GET /projects/{id}/usage` — token، latency، finish reason و هزینهٔ برآوردی هر invocation و جمع مرحله/پروژه در بازهٔ زمانی، مقایسه با `ai.max_cost_usd_per_run`.
 - retry provider طبق جدول ۵،۵،۵،۱۰،۱۵،۲۰،۲۵،۳۰،۳۵،۴۰ ثانیه (یا `Retry-After` بزرگ‌تر) و پس از آن pause پروژه و human task.
 
-## ۱۳. audit و گزارش
+## ۱۳. audit و گزارش (گزارش‌ها پیاده‌شده در 0.7.0)
 
 - `GET /audit-events` (فیلتر project، action یا خانوادهٔ `x.*`، target، actor، severity، بازهٔ زمان)
 - `POST /audit-events/export` (JSON/CSV تا ۵۰۰۰ رویداد؛ خودِ export ممیزی می‌شود)
 - `POST /retention/purge` (حذف دائمی موارد منقضی با tombstone ممیزی)
-- `POST /brain-reports`
-- `GET /brain-reports/{id}`
-- `GET /reports/projects/{id}/performance`
+- `GET /dashboard?from=&to=`: کارت‌های داشبورد با دادهٔ زنده (بازهٔ مصرف پیش‌فرض ۳۰ روز).
+- `GET /reports/usage?from=&to=&projectId=&groupBy=project|stage|day|model`: token و هزینهٔ برآوردی؛ بازه حداکثر ۴۰۰ روز.
+- `POST /brain-reports` با `{projectId?, from?, to?}` → 201؛ گزارش پروژه یا workspace با `deviations[]` (rule، clause، role، severity، count، detail، evidence) و `recommendations[]`. هیچ وضعیتی تغییر نمی‌کند.
+- `GET /brain-reports?projectId=&limit=` و `GET /brain-reports/{id}`.
+- `GET /projects/{id}/usage`: مصرف پروژه نسبت به سقف (از 0.5.0).
 
 ## ۱۴. pagination و filter
 

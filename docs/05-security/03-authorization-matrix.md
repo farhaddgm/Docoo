@@ -150,6 +150,11 @@ notion_sync: true
 | `GET /evaluations/{id}`                                              | `document.read`          |
 | `POST /evaluations/{id}/accept-exception`                            | `workflow.override`      |
 | `PATCH /evaluation-findings/{id}`                                    | `workflow.override`      |
+| `GET /dashboard`                                                     | `workspace.read`         |
+| `GET /reports/usage`                                                 | `provider.read`          |
+| `POST /brain-reports`                                                | `knowledge.audit`        |
+| `GET /brain-reports`                                                 | `knowledge.read`         |
+| `GET /brain-reports/{id}`                                            | `knowledge.read`         |
 
 ## endpointهای هویت
 

@@ -45,6 +45,7 @@ export const navigation = [
   'templates',
   'brain',
   'providers',
+  'costs',
   'audit',
   'settings',
 ] as const;
@@ -67,6 +68,7 @@ const messages = {
       templates: 'قالب‌ها و سطوح سند',
       brain: 'گزارش Brain',
       providers: 'ارائه‌دهندگان AI',
+      costs: 'هزینه و مصرف',
       audit: 'Audit Log',
       settings: 'تنظیمات سامانه',
     } satisfies Record<NavigationKey, string>,
@@ -132,6 +134,7 @@ const messages = {
       templates: 'Templates & levels',
       brain: 'Brain report',
       providers: 'AI providers',
+      costs: 'Cost & usage',
       audit: 'Audit log',
       settings: 'System settings',
     } satisfies Record<NavigationKey, string>,

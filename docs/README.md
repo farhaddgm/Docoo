@@ -87,6 +87,7 @@ notion_sync: true
 43. [ADR-0008: اجرای ingestion و حاکمیت دانش](adr/0008-ingestion-and-knowledge-runtime.md)
 44. [ADR-0009: workflow پروژه و runtime ارائه‌دهندهٔ AI](adr/0009-project-workflow-and-provider-runtime.md)
 45. [ADR-0010: راه‌حل، سند، artifact امضاشده و ارزیابی](adr/0010-documents-solutions-and-evaluation.md)
+46. [ADR-0011: داشبورد، گزارش هزینه و گزارش Brain](adr/0011-reporting-and-brain-reports.md)
 
 ## وضعیت اسناد
 

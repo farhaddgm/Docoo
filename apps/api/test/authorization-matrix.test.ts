@@ -16,6 +16,7 @@ import {
 } from '../src/auth/auth.authorization.js';
 import type { AuthService } from '../src/auth/auth.service.js';
 import { DocumentsController } from '../src/documents/documents.controller.js';
+import { ReportsController } from '../src/reports/reports.controller.js';
 import { ConfigController } from '../src/config/config.controller.js';
 import { KnowledgeController } from '../src/knowledge/knowledge.controller.js';
 import { ProjectsController } from '../src/projects/projects.controller.js';
@@ -150,6 +151,11 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/evaluations/:evaluationId': 'document.read',
   'POST workspaces/:workspaceId/evaluations/:evaluationId/accept-exception': 'workflow.override',
   'PATCH workspaces/:workspaceId/evaluation-findings/:findingId': 'workflow.override',
+  'GET workspaces/:workspaceId/dashboard': 'workspace.read',
+  'GET workspaces/:workspaceId/reports/usage': 'provider.read',
+  'POST workspaces/:workspaceId/brain-reports': 'knowledge.audit',
+  'GET workspaces/:workspaceId/brain-reports': 'knowledge.read',
+  'GET workspaces/:workspaceId/brain-reports/:reportId': 'knowledge.read',
 };
 
 const controllers = [
@@ -163,6 +169,7 @@ const controllers = [
   ProvidersController,
   WorkflowController,
   DocumentsController,
+  ReportsController,
 ];
 
 function routeTable(): Record<string, string | undefined> {

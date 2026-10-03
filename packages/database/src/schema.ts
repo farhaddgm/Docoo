@@ -1387,3 +1387,28 @@ export const evaluationExceptions = pgTable(
   },
   (table) => [uniqueIndex('evaluation_exceptions_uq').on(table.evaluationId)],
 );
+
+export const brainReportScope = pgEnum('brain_report_scope', ['project', 'workspace']);
+
+/** REP-002: Brain performance reports are recommendations only and never change state. */
+export const brainReports = pgTable(
+  'brain_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    scope: brainReportScope('scope').notNull(),
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+    charterVersion: text('charter_version').notNull(),
+    periodFrom: timestamp('period_from', { withTimezone: true }),
+    periodTo: timestamp('period_to', { withTimezone: true }).notNull(),
+    summary: jsonb('summary').notNull(),
+    deviations: jsonb('deviations').notNull(),
+    recommendations: jsonb('recommendations').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('brain_reports_latest_idx').on(table.workspaceId, table.scope, table.createdAt),
+    index('brain_reports_project_idx').on(table.projectId, table.createdAt),
+  ],
+);

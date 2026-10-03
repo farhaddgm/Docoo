@@ -109,4 +109,58 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     await expect(page.getByText('پیوند بازنشانی ناقص است')).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
+
+  test('reporting pages work by keyboard in both languages (REP-001..004)', async ({ page }) => {
+    await page.goto('/fa');
+    await signInWithKeyboard(page);
+    await expect(
+      page.getByRole('heading', { level: 2, name: /منتظر پاسخ یا تأیید/u }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'سلامت ارائه‌دهندگان' }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    const nav = page.getByRole('navigation', { name: 'ناوبری اصلی' });
+    await nav.getByRole('link', { name: 'Audit Log' }).click();
+    await expect(page).toHaveURL(/\/fa\/audit$/u);
+    await expect(nav.getByRole('link', { name: 'Audit Log' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(page.getByRole('cell', { name: 'knowledge.override' }).first()).toBeVisible();
+    await page.getByLabel('شدت').selectOption('critical');
+    await page.getByRole('button', { name: 'اعمال فیلتر' }).focus();
+    await page.keyboard.press('Enter');
+    const results = page.getByRole('heading', { level: 2, name: /نتیجه‌ها/u });
+    await expect(results).toBeFocused();
+    await expect(page.getByRole('cell', { name: 'project.create' })).toHaveCount(0);
+    await expect(page.getByRole('cell', { name: 'knowledge.override' }).first()).toBeVisible();
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'خروجی CSV' }).click();
+    expect((await download).suggestedFilename()).toBe('docoo-audit.csv');
+    await expect(page.getByRole('status').filter({ hasText: 'خروجی آماده شد' })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    await page.getByRole('link', { name: 'Switch to English' }).click();
+    await expect(page).toHaveURL(/\/en\/audit$/u);
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+    await expect(page.getByRole('heading', { level: 1, name: 'Audit log' })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    await page.getByRole('link', { name: 'Brain report' }).click();
+    await page.getByRole('button', { name: 'Generate workspace report' }).click();
+    await expect(
+      page.getByText('This report did not change any project, setting or output.'),
+    ).toBeVisible();
+    await expect(page.locator('#report-title')).toBeFocused();
+    await expectNoSeriousA11yViolations(page);
+
+    await page.getByRole('link', { name: 'Cost & usage' }).click();
+    await expect(page.getByRole('rowheader', { name: 'Total' })).toBeVisible();
+    await page.getByLabel('Group by').selectOption('model');
+    await page.getByRole('button', { name: 'Show' }).click();
+    await expect(page.getByRole('rowheader', { name: 'Total' })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
 });
