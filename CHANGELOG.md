@@ -2,6 +2,17 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.5.0] — 2026-10-02
+
+Phase 3 (orchestration and provider runtime) complete.
+
+### Added
+
+- Project workflows (WF-001..006): activation starts a Temporal `projectWorkflow` (`apps/worker-agent`, queue `docoo.agent`) with the fixed stages analysis → research → ideation → documentation → evaluation; manual gates by default (`waiting_for_human`, human tasks, timeline events) or automatic gates; approve, reject with feedback, comment and edit, where an edit creates a new output version and expires the earlier gate and approval; pause at the next safe boundary, resume, cancel that keeps outputs, and `workflow/sync` after an engine outage; attempt limit (at most 10) passed only by a recorded `extend` or `pass` decision with a reason; `Idempotency-Key` receipts so a repeated command has no second side effect; deterministic replay checked in CI.
+- Provider runtime (AI-001..005): one contract with OpenAI (Responses, `store=false`), Gemini (`generateContent`) and Anthropic (Messages, forced tool for structured output) adapters plus a deterministic fake; write-only secrets with envelope encryption (`SECRET_MASTER_KEY`) and versioned rotation; sanitised health checks; live model catalog snapshots with no model names in code; the approved retry schedule with `Retry-After`, then pause and a human task, with fallback off; every invocation stores tokens, latency, finish reason and estimated cost from dated price snapshots; project usage per stage against `ai.max_cost_usd_per_run`.
+- Settings `ai.connection_id` and `ai.model`; ADR-0009; 13 RLS-protected tables with append-only secret, output, review, invocation and receipt history.
+- Tests: provider contract tests against official-shaped mock APIs, 13 new API integration tests (8 on a real Temporal worker in CI), the extended RLS gate and the authorization matrix for 24 new routes.
+
 ## [0.4.0] — 2026-10-02
 
 Phase 2 (ingestion and knowledge) complete, except speech-to-text acceptance, which needs a provider key.
@@ -79,6 +90,7 @@ Phase 1 (control plane) complete; phase 0 closed with evidence.
 - Monorepo foundation: NestJS API, Next.js bilingual web shell, workers, Compose stack, CI and security workflows.
 - Super Admin authentication, workspace authorization, topic list/create and PostgreSQL RLS.
 
+[0.5.0]: https://github.com/farhaddgm/Docoo/releases/tag/v0.5.0
 [0.4.0]: https://github.com/farhaddgm/Docoo/releases/tag/v0.4.0
 [0.3.0]: https://github.com/farhaddgm/Docoo/releases/tag/v0.3.0
 [0.2.1]: https://github.com/farhaddgm/Docoo/releases/tag/v0.2.1

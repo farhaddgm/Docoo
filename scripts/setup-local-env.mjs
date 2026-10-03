@@ -10,10 +10,9 @@ if (!/^SESSION_PEPPER=.*$/m.test(template)) {
   throw new Error('.env.example must define SESSION_PEPPER.');
 }
 
-const localEnvironment = template.replace(
-  /^SESSION_PEPPER=.*$/m,
-  `SESSION_PEPPER=${randomBytes(32).toString('base64')}`,
-);
+const localEnvironment = template
+  .replace(/^SESSION_PEPPER=.*$/m, `SESSION_PEPPER=${randomBytes(32).toString('base64')}`)
+  .replace(/^SECRET_MASTER_KEY=.*$/m, `SECRET_MASTER_KEY=${randomBytes(32).toString('base64')}`);
 
 let file;
 try {
@@ -28,7 +27,9 @@ try {
 try {
   await file.writeFile(localEnvironment, 'utf8');
   await file.close();
-  stdout.write('Created .env with a fresh local SESSION_PEPPER. Keep this file private.\n');
+  stdout.write(
+    'Created .env with a fresh local SESSION_PEPPER and SECRET_MASTER_KEY. Keep this file private.\n',
+  );
 } catch (error) {
   await file.close().catch(() => undefined);
   throw error;

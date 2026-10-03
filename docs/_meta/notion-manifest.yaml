@@ -137,3 +137,6 @@ documents:
   - path: docs/adr/0008-ingestion-and-knowledge-runtime.md
     doc_id: DOCOO-ADR-0008
     section: ADRs
+  - path: docs/adr/0009-project-workflow-and-provider-runtime.md
+    doc_id: DOCOO-ADR-0009
+    section: ADRs

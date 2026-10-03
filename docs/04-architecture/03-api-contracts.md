@@ -2,7 +2,7 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.2.0
+version: 1.3.0
 owner: API Architecture
 last_updated: 2026-10-02
 notion_sync: true
@@ -84,18 +84,18 @@ notion_sync: true
 - `GET /projects/{id}/config-snapshots`
 - `GET /projects/{id}/timeline`
 
-## ۶. workflow و human task
+## ۶. workflow و human task (پیاده‌شده در 0.5.0)
 
-- `POST /projects/{id}/workflow:start`
-- `GET /workflows/{id}`
-- `POST /workflows/{id}:pause|resume|cancel`
-- `GET /workflows/{id}/stages`
-- `POST /stage-runs/{id}:retry`
-- `POST /stage-runs/{id}:approve|reject`
-- `GET /human-tasks?status=pending`
-- `POST /human-tasks/{id}:resolve`
-
-شروع و transition طولانی `202` و operation reference برمی‌گرداند.
+- activate و reopen پروژه یک اجرای Temporal `projectWorkflow` (شناسهٔ `project-{id}-run-{n}`) با ترتیب ثابت تحلیل → تحقیق → ایده‌پردازی → مستندسازی → ارزیابی می‌سازند؛ pause/resume/archive/delete سیگنال متناظر را می‌فرستند.
+- `GET /projects/{id}/workflow` — اجرای جاری، مراحل، gate در انتظار و human taskها.
+- `POST /projects/{id}/workflow/start` و `POST /projects/{id}/workflow/sync` — شروع یا هم‌ترازکردن دوباره پس از قطع موتور (idempotent)؛ قطع موتور `503 WORKFLOW_ENGINE_UNAVAILABLE`.
+- `POST /projects/{id}/workflow/cancel` — لغو با دلیل؛ خروجی‌ها می‌مانند ولی downstream مصرف نمی‌شوند.
+- `GET /projects/{id}/stages/{stageRunId}` — همهٔ نسخه‌های خروجی، بازبینی‌ها، gateها و attemptها.
+- `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/approve|reject|comment|edit` — reject بازخورد لازم دارد و attempt بعدی را می‌سازد؛ edit نسخهٔ جدید می‌سازد و approval/gate نسخهٔ قبلی را `expired` می‌کند؛ بازبینی نسخهٔ جایگزین‌شده `409 WORKFLOW_OUTPUT_SUPERSEDED`.
+- `POST /projects/{id}/stages/{stageRunId}/attempt-decision` — پس از سقف attempt (حداکثر ۱۰، قابل کاهش با `workflow.max_attempts_per_stage`) فقط با تصمیم `extend|pass` و دلیل.
+- `GET /human-tasks?status=pending`.
+- commandهای بازبینی و تصمیم سرآیند `Idempotency-Key` می‌پذیرند؛ تکرار همان کلید پاسخ ذخیره‌شده را با `replayed: true` برمی‌گرداند و کلید تکراری با بدنهٔ متفاوت `409 IDEMPOTENCY_KEY_REUSED` است.
+- gate پیش‌فرض دستی است (`workflow.require_human_approval`)؛ در gate خودکار مرحله بدون human task جلو می‌رود.
 
 ## ۷. تحلیل
 
@@ -162,16 +162,15 @@ Answer submission batch atomic و idempotent است.
 - `GET/PUT /settings/assignments`، `GET /settings/assignments/history`، `POST /settings/assignments/restore`
 - `GET /settings/effective?scopeType=&scopeId=` (مقدار مؤثر و منبع هر مقدار)
 
-## ۱۲. provider
+## ۱۲. provider (پیاده‌شده در 0.5.0)
 
-- `GET /providers`
-- `PUT /providers/{provider}/connection`
-- `POST /providers/{provider}:test`
-- `POST /providers/{provider}:rotate-secret`
-- `GET /providers/{provider}/models`
-- `POST /providers/{provider}/models:refresh`
-
-Secret input write-only است.
+- `GET/POST /provider-connections` و `GET/PATCH /provider-connections/{id}` — OpenAI، Gemini، Anthropic و fake (غیر production)؛ secret فقط نوشتنی، با envelope encryption (`SECRET_MASTER_KEY`) ذخیره و در هیچ پاسخ، لاگ یا audit برنمی‌گردد؛ پاسخ فقط نسخه و fingerprint دارد. `fallback` همیشه خاموش است.
+- `POST /provider-connections/{id}/rotate-secret` — نسخهٔ جدید secret؛ نسخهٔ قبلی قابل‌بازگردانی نیست.
+- `POST /provider-connections/{id}/health-check` — بدون دادهٔ مشتری؛ وضعیت healthy/degraded/unavailable/invalid و خطای sanitize‌شده.
+- `POST /provider-connections/{id}/models/refresh` و `GET /provider-connections/{id}/models` — catalog زنده به snapshot تاریخ‌دار؛ هیچ نام مدلی در کد نیست و مدل اجرا از تنظیم `ai.model` می‌آید.
+- `GET/POST /model-prices` — snapshot قیمت تاریخ‌دار برای برآورد هزینه.
+- `GET /model-invocations` و `GET /projects/{id}/usage` — token، latency، finish reason و هزینهٔ برآوردی هر invocation و جمع مرحله/پروژه در بازهٔ زمانی، مقایسه با `ai.max_cost_usd_per_run`.
+- retry provider طبق جدول ۵،۵،۵،۱۰،۱۵،۲۰،۲۵،۳۰،۳۵،۴۰ ثانیه (یا `Retry-After` بزرگ‌تر) و پس از آن pause پروژه و human task.
 
 ## ۱۳. audit و گزارش
 

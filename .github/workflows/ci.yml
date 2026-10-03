@@ -81,6 +81,7 @@ jobs:
         env:
           DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
           CLAMD_HOST: localhost
+          TEMPORAL_ADDRESS: localhost:7233
       - run: pnpm --filter @docoo/worker-ingestion test:integration
         env:
           DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci

@@ -22,6 +22,7 @@ import { pageQuerySchema } from '../common/pagination.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { ConfigService } from '../config/config.service.js';
+import { WorkflowService } from '../workflow/workflow.service.js';
 import { PROJECT_MAX_TOPICS, ProjectsService } from './projects.service.js';
 
 const codeSchema = z
@@ -103,6 +104,7 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly configService: ConfigService,
+    private readonly workflowService: WorkflowService,
   ) {}
 
   @Get()
@@ -282,8 +284,10 @@ export class ProjectsController {
   ) {
     const id = projectId(rawId);
     const input = parse(commandSchema, body);
-    return {
-      project: await this.projectsService.command(workspaceContext(request), id, command, input),
-    };
+    const context = workspaceContext(request);
+    const project = await this.projectsService.command(context, id, command, input);
+    // Start, pause, resume or cancel the project workflow to match (WF-001, WF-004).
+    await this.workflowService.onProjectCommand(context, id, command);
+    return { project };
   }
 }

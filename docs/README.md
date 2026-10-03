@@ -85,6 +85,7 @@ notion_sync: true
 41. [ADR-0006: پلتفرم و toolchain](adr/0006-application-platform-and-toolchain.md)
 42. [ADR-0007: نشست و امنیت احراز هویت](adr/0007-authentication-and-session-security.md)
 43. [ADR-0008: اجرای ingestion و حاکمیت دانش](adr/0008-ingestion-and-knowledge-runtime.md)
+44. [ADR-0009: workflow پروژه و runtime ارائه‌دهندهٔ AI](adr/0009-project-workflow-and-provider-runtime.md)
 
 ## وضعیت اسناد
 

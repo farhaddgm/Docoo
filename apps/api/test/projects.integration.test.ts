@@ -290,7 +290,11 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
       },
     );
     const page = timeline.json<{ items: { action: string }[]; nextCursor: string | null }>();
-    expect(page.items.map((item) => item.action)).toEqual(['project.activate', 'config.set']);
+    // Activation also creates the workflow run (WF-001), which joins the timeline.
+    expect(page.items.map((item) => item.action)).toEqual([
+      'workflow.run_created',
+      'project.activate',
+    ]);
     expect(page.nextCursor).not.toBeNull();
     const next = await h.request(
       'GET',
@@ -298,6 +302,7 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
       { cookie: cookieA },
     );
     expect(next.json<{ items: { action: string }[] }>().items.map((item) => item.action)).toEqual([
+      'config.set',
       'project.create',
     ]);
 
