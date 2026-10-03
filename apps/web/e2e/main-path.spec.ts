@@ -163,4 +163,44 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     await expect(page.getByRole('rowheader', { name: 'Total' })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
+
+  test('AI providers page sets the default connection and model (AI-001, AI-003)', async ({
+    page,
+  }) => {
+    await page.goto('/fa');
+    await signInWithKeyboard(page);
+    await expect(page.getByRole('heading', { level: 1, name: 'داشبورد Docoo' })).toBeVisible();
+
+    // An offline test provider stands in for a real key; the page lists every connection.
+    const session = await (await page.request.get('/api/auth/session')).json();
+    const workspaceId = session.workspaces[0].id as string;
+    const headers = { origin: new URL(page.url()).origin, 'sec-fetch-site': 'same-origin' };
+    const created = await page.request.post(`/api/workspaces/${workspaceId}/provider-connections`, {
+      headers,
+      data: { provider: 'fake', name: `E2E test provider ${Date.now()}` },
+    });
+    expect(created.status()).toBe(201);
+    const connection = (await created.json()).connection as { id: string; name: string };
+    await page.request.post(
+      `/api/workspaces/${workspaceId}/provider-connections/${connection.id}/models/refresh`,
+      { headers },
+    );
+
+    const nav = page.getByRole('navigation', { name: 'ناوبری اصلی' });
+    await nav.getByRole('link', { name: 'ارائه‌دهندگان AI' }).click();
+    await expect(page).toHaveURL(/\/fa\/providers$/u);
+    await expect(page.getByRole('rowheader', { name: connection.name })).toBeVisible();
+    await expect(page.getByLabel('کلید API')).toHaveAttribute('type', 'password');
+    await expectNoSeriousA11yViolations(page);
+
+    await page.getByLabel('اتصال', { exact: true }).selectOption(connection.id);
+    await page.getByLabel('مدل', { exact: true }).selectOption('fake-standard');
+    await page.getByRole('button', { name: 'ذخیرهٔ مدل پیش‌فرض' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'ذخیره شد' })).toBeVisible();
+    await expect(page.getByText(`${connection.name} · fake-standard`)).toBeVisible();
+
+    await page.getByRole('link', { name: 'Switch to English' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'AI providers' })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
 });

@@ -66,6 +66,13 @@ services:
       retries: 30
       start_period: 120s
 
+  mail:
+    # Local inbox for password-reset mail: SMTP on 1025, web UI on http://localhost:8025.
+    image: axllent/mailpit:latest
+    ports:
+      - '127.0.0.1:${MAIL_SMTP_PORT:-1025}:1025'
+      - '127.0.0.1:${MAIL_UI_PORT:-8025}:8025'
+
   temporal:
     image: temporalio/temporal:latest
     command:

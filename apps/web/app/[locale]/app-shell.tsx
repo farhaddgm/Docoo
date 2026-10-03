@@ -18,6 +18,7 @@ import {
 const implemented: Partial<Record<NavigationKey, string>> = {
   dashboard: '',
   brain: '/brain',
+  providers: '/providers',
   costs: '/costs',
   audit: '/audit',
 };

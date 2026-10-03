@@ -19,6 +19,9 @@ if (existsSync(localEnv)) process.loadEnvFile(localEnv);
 const config = parseEnvironment(process.env);
 
 const adapter = new FastifyAdapter({
+  // Behind the TLS proxy, trust exactly that many hops of X-Forwarded-For so rate limits see
+  // the real client; with 0 (default) the header is ignored and cannot be spoofed.
+  trustProxy: (_address: string, hop: number) => hop < config.TRUST_PROXY_HOPS,
   logger: {
     level: config.LOG_LEVEL,
     redact: {
@@ -36,8 +39,6 @@ const adapter = new FastifyAdapter({
   },
   requestIdHeader: 'x-request-id',
   genReqId: () => randomUUID(),
-  // Only enable this for explicitly trusted proxy addresses in a deployment profile.
-  trustProxy: false,
 });
 
 const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, {

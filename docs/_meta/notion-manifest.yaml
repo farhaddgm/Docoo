@@ -110,6 +110,9 @@ documents:
   - path: docs/06-delivery/10-runbooks.md
     doc_id: DOCOO-RUNBOOKS
     section: 06 Delivery & Operations
+  - path: docs/06-delivery/11-production-install.md
+    doc_id: DOCOO-PRODUCTION-INSTALL
+    section: 06 Delivery & Operations
   - path: docs/07-integrations/01-notion-and-github.md
     doc_id: DOCOO-NOTION-GITHUB
     section: 07 Integrations
@@ -148,4 +151,7 @@ documents:
     section: ADRs
   - path: docs/adr/0011-reporting-and-brain-reports.md
     doc_id: DOCOO-ADR-0011
+    section: ADRs
+  - path: docs/adr/0012-single-server-production-deployment.md
+    doc_id: DOCOO-ADR-0012
     section: ADRs

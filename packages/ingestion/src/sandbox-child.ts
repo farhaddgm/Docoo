@@ -47,6 +47,7 @@ async function probe(): Promise<Record<string, boolean>> {
   };
   const childProcess = await import('node:child_process');
   return {
+    // nosemgrep -- deliberate: the probe proves outbound HTTP is blocked in the sandbox
     fetch: await blocked(() => fetch('http://example.com/')),
     socket: await blocked(() => net.connect(80, 'example.com')),
     dns: await blocked(() => dns.promises.lookup('example.com')),

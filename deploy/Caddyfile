@@ -1,0 +1,25 @@
+# Public entry point: automatic HTTPS (Let's Encrypt) for the app and the upload host.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	# The browser calls /api/...; the API itself serves /v1/...
+	handle_path /api/* {
+		rewrite * /v1{path}
+		reverse_proxy api:4000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+# Presigned direct uploads and downloads go to the object store under its own host name.
+{$FILES_DOMAIN} {
+	request_body {
+		max_size 500MB
+	}
+	reverse_proxy object-store:8333
+}

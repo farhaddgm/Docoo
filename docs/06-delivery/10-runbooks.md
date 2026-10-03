@@ -72,11 +72,11 @@ notion_sync: true
 
 ## ۸. backup و restore
 
-- **هدف:** RPO ۱۵ دقیقه با PITR (آرشیو WAL در زیرساخت production) و RTO ۴ ساعت (NFR-REL-004).
+- **هدف:** RPO ۱۵ دقیقه با PITR و RTO ۴ ساعت (NFR-REL-004). در استقرار production (`deploy/compose.production.yaml`) WAL-G هر بخش WAL را حداکثر هر ۵ دقیقه و یک base backup را هر ۲۴ ساعت به S3 خارج از سرور می‌فرستد؛ `infra/postgres/pitr-drill.sh` در CI بازگردانی دقیق به یک لحظه را اثبات می‌کند.
 - **backup روزانه و تمرین:** `pnpm --filter @docoo/database ops:backup-drill` نقش‌ها، کل پایگاه‌داده و همهٔ objectها را backup می‌گیرد، روی یک PostgreSQL 18 **جدا** و bucket جدا restore می‌کند و تعداد ردیف و checksum همهٔ جدول‌ها، RLS، triggerهای append-only، policyها، تاریخچهٔ migration و SHA-256 هر object را مقایسه می‌کند. گزارش JSON زمان backup، restore و RTO را دارد و در صورت موفقیت `docoo_backup_last_success_timestamp_seconds` را منتشر می‌کند (`PUSHGATEWAY_URL`). این تمرین در هر PR و هر شب در گردش‌کار Hardening اجرا می‌شود (NFR-REL-005).
 - **restore واقعی:**
   1. سرویس‌های نویسنده (API و workerها) را متوقف کن.
-  2. `globals.sql` را با `psql` و سپس `database.dump` را با `pg_restore --exit-on-error` روی سرور جدید اجرا کن؛ برای PITR، base backup و WAL را تا زمان هدف replay کن.
+  2. **بازگردانی به یک لحظه (PITR):** روی سرور تازه با همان image پایگاه‌داده و متغیرهای `BACKUP_S3_*`، `wal-g backup-fetch $PGDATA LATEST` را اجرا کن، در `postgresql.auto.conf` مقادیر `restore_command = 'wal-g wal-fetch %f %p'` و `recovery_target_time = '<زمان هدف>'` و `recovery_target_action = 'promote'` را بگذار، فایل `recovery.signal` را بساز و PostgreSQL را بالا بیاور (همان گام‌های `infra/postgres/pitr-drill.sh`). برای بازگردانی منطقی، `globals.sql` و `database.dump` تمرین backup هم قابل استفاده‌اند.
   3. objectها را از manifest بازگردان و SHA-256 هر کدام را بسنج.
   4. `pnpm db:test:rls` و `ops:backup-drill` را روی محیط بازیابی‌شده اجرا کن، بعد سرویس‌ها را با `DATABASE_URL` جدید بالا بیاور.
 
@@ -101,8 +101,12 @@ notion_sync: true
 
 ### اقدامات مالک پیش از شروع beta
 
-- [ ] تعیین `SECRET_MASTER_KEY`، `ARTIFACT_SIGNING_KEY` و `SESSION_PEPPER` از secret manager.
-- [ ] فعال‌کردن آرشیو WAL/PITR در PostgreSQL production و `PUSHGATEWAY_URL` برای متریک backup.
-- [ ] branch protection روی `main` با الزام checkهای CI، Security و Hardening.
+موارد زیر خودکار شده‌اند و دیگر کار دستی ندارند: ساخت رمزهای production (`SESSION_PEPPER`، `SECRET_MASTER_KEY`، `ARTIFACT_SIGNING_KEY`، رمزهای پایگاه‌داده) توسط `scripts/deploy/install.sh`؛ HTTPS؛ آرشیو WAL و PITR؛ ساخت مدیر؛ صفحهٔ ورود کلید AI. باقی‌مانده‌ها (راهنمای گام‌به‌گام: [راهنمای نصب](11-production-install.md)):
+
+- [ ] تهیهٔ سرور، دامنه و رکوردهای DNS و اجرای `install.sh`.
+- [ ] تهیهٔ bucket S3 خارج از سرور برای پشتیبان و وارد کردن آن در نصب.
+- [ ] وارد کردن کلید یکی از ارائه‌دهندگان AI در صفحهٔ «ارائه‌دهندگان AI».
+- [ ] (اختیاری) SMTP برای ایمیل بازنشانی و کلید تبدیل گفتار به متن.
+- [ ] branch protection روی `main` (نیازمند GitHub Pro یا عمومی‌کردن مخزن).
 - [ ] تعریف کاربران beta و کانال گزارش مشکل.
 - [ ] **پذیرش مالک:** امضای این بخش با تاریخ در Issue مربوط (REL-002).

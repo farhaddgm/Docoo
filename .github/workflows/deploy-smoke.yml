@@ -1,0 +1,90 @@
+name: Deploy smoke
+
+# Runs the real installer (scripts/deploy/install.sh) on a clean machine with the production
+# stack: images, migrations, HTTPS through Caddy, the administrator's set-password link and a
+# signed-in request. Proves a non-expert owner can install a release with one command.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '7 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Install the production stack (unattended)
+        env:
+          DOCOO_UNATTENDED: '1'
+          DOCOO_SKIP_FIREWALL: '1'
+          DOMAIN: localhost
+          FILES_DOMAIN: files.localhost
+          ACME_EMAIL: ops@example.test
+          ADMIN_EMAIL: owner@example.test
+          ADMIN_DISPLAY_NAME: Owner
+          # Backups go to a bucket in the stack's own object store here; in production this is
+          # an off-host S3 bucket.
+          S3_SECRET_ACCESS_KEY: deploy-smoke-object-secret
+          BACKUP_S3_PREFIX: s3://docoo-backups/smoke
+          BACKUP_S3_ENDPOINT: http://object-store:8333
+          BACKUP_S3_ACCESS_KEY_ID: docoo
+          BACKUP_S3_SECRET_ACCESS_KEY: deploy-smoke-object-secret
+          BACKUP_S3_FORCE_PATH_STYLE: 'true'
+        run: sudo -E ./scripts/deploy/install.sh 2>&1 | tee install.log
+      - name: Set the password with the printed link and sign in over HTTPS
+        run: |
+          set -euo pipefail
+          link=$(grep -o 'https://localhost/fa/reset-password#token=[^ ]*' install.log | head -1)
+          test -n "$link" || { echo 'No set-password link was printed'; exit 1; }
+          token=${link#*token=}
+          h=(-H 'content-type: application/json' -H 'origin: https://localhost' -H 'sec-fetch-site: same-origin')
+          test "$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/fa)" = 200
+          curl -skI https://localhost/fa | grep -i '^strict-transport-security'
+          test "$(curl -sk -o /dev/null -w '%{http_code}' -X POST https://localhost/api/auth/password/reset "${h[@]}" \
+            -d "{\"token\":\"$token\",\"newPassword\":\"owner-chosen-password-1\"}")" = 204
+          curl -sk -D headers.txt -o login.json -X POST https://localhost/api/auth/login "${h[@]}" \
+            -d '{"identifier":"owner@example.test","password":"owner-chosen-password-1"}'
+          grep -i '^set-cookie' headers.txt | grep -i 'secure' | grep -i 'httponly'
+          cookie=$(grep -i '^set-cookie' headers.txt | sed -E 's/^[Ss]et-[Cc]ookie: ([^;]+).*/\1/')
+          workspace=$(python3 -c "import json;print(json.load(open('login.json'))['workspaces'][0]['id'])")
+          test "$(curl -sk -o /dev/null -w '%{http_code}' -H "cookie: $cookie" https://localhost/api/workspaces/$workspace/dashboard)" = 200
+          echo 'Installed, HTTPS, set-password link and signed-in dashboard: OK'
+      - name: Runtime checks (PDF renderer, OCR, object store, scanner)
+        run: |
+          set -euo pipefail
+          c=(sudo docker compose --project-directory deploy -f deploy/compose.production.yaml)
+          "${c[@]}" exec -T api /usr/bin/chromium --version
+          "${c[@]}" exec -T worker-ingestion tesseract --list-langs | grep -x fas
+          curl -sk -o /dev/null -w 'files host %{http_code}\n' https://files.localhost/
+          "${c[@]}" ps
+      - name: Off-host backup (WAL-G base backup + WAL archive, object mirror)
+        run: |
+          set -euo pipefail
+          c=(sudo docker compose --project-directory deploy -f deploy/compose.production.yaml)
+          sudo docker run --rm --network docoo_default \
+            -e RCLONE_CONFIG_S_TYPE=s3 -e RCLONE_CONFIG_S_PROVIDER=Other -e RCLONE_CONFIG_S_ENDPOINT=http://object-store:8333 \
+            -e RCLONE_CONFIG_S_ACCESS_KEY_ID=docoo -e RCLONE_CONFIG_S_SECRET_ACCESS_KEY=deploy-smoke-object-secret \
+            rclone/rclone:latest mkdir s:docoo-backups
+          "${c[@]}" restart backup object-backup
+          for i in $(seq 1 60); do
+            "${c[@]}" logs backup | grep -q backup.completed && break
+            sleep 5
+          done
+          "${c[@]}" logs backup | tail -5
+          "${c[@]}" exec -T backup wal-g backup-list
+          "${c[@]}" exec -T postgres psql -U docoo_admin -d docoo -tAc "select pg_switch_wal()" >/dev/null
+          sleep 10
+          "${c[@]}" exec -T postgres psql -U docoo_admin -d docoo -tAc \
+            "select archived_count > 0 and failed_count = 0 from pg_stat_archiver" | grep -x t
+      - name: Logs on failure
+        if: failure()
+        run: sudo docker compose --project-directory deploy -f deploy/compose.production.yaml logs --tail 80
