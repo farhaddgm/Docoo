@@ -1,11 +1,16 @@
 name: Release
 
 # Publishes a GitHub Release for vX.Y.Z from the matching CHANGELOG.md section.
-# Either push the tag, or run this workflow manually on main: it then creates
-# the tag from package.json's version on the current main commit.
+# Raising "version" in package.json on main releases it automatically (the tag is
+# created on that commit; nothing happens if the tag already exists). You can also
+# push a tag yourself, or run this workflow manually on main.
+# `install.sh update` installs the latest tag, so a change reaches servers only
+# once its version is released.
 
 on:
   push:
+    branches: [main]
+    paths: [package.json]
     tags: ['v*.*.*']
   workflow_dispatch:
 
@@ -28,7 +33,15 @@ jobs:
         run: |
           version="$(node -p "require('./package.json').version")"
           tag="v${version}"
-          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+          echo "create=false" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_EVENT_NAME}" = 'push' ] && [ "${GITHUB_REF}" = 'refs/heads/main' ]; then
+            if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+              echo "Tag ${tag} already exists; no release needed."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "create=true" >> "$GITHUB_OUTPUT"
+          elif [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
             if [ "${GITHUB_REF}" != 'refs/heads/main' ]; then
               echo '::error::Manual releases run only on main.'
               exit 1
@@ -37,12 +50,14 @@ jobs:
               echo "::error::Tag ${tag} already exists. Bump package.json before releasing."
               exit 1
             fi
+            echo "create=true" >> "$GITHUB_OUTPUT"
           elif [ "${tag}" != "${GITHUB_REF_NAME}" ]; then
             echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version}."
             exit 1
           fi
           echo "name=${tag}" >> "$GITHUB_OUTPUT"
       - name: Extract release notes
+        if: ${{ steps.tag.outputs.skip != 'true' }}
         env:
           TAG: ${{ steps.tag.outputs.name }}
         run: |
@@ -57,7 +72,7 @@ jobs:
             exit 1
           fi
       - name: Create tag
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ steps.tag.outputs.create == 'true' }}
         env:
           TAG: ${{ steps.tag.outputs.name }}
         run: |
@@ -66,6 +81,7 @@ jobs:
           git tag -a "${TAG}" -m "Docoo ${TAG}"
           git push origin "refs/tags/${TAG}"
       - name: Publish GitHub Release
+        if: ${{ steps.tag.outputs.skip != 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.name }}

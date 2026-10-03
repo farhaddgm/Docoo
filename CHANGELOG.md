@@ -2,6 +2,15 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.9.2] — 2026-10-03
+
+Modern backoffice look.
+
+### Changed
+
+- Backoffice redesign: shared design tokens, automatic dark mode (follows the operating system), icons in the navigation with a clear current-page marker, a sticky sidebar, refined cards, buttons, form fields and tables, and a centred sign-in layout without the empty sidebar. The markup and texts are unchanged; contrast stays WCAG 2.2 AA in light and dark.
+- Releases are now published automatically when the version in `package.json` is raised on `main`, so a merged change no longer waits for someone to run the Release workflow by hand.
+
 ## [0.9.1] — 2026-10-03
 
 Install on a server that already runs other websites.
