@@ -2,6 +2,20 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.9.1] — 2026-10-03
+
+Install on a server that already runs other websites.
+
+### Added
+
+- The installer detects a Caddy container that already owns ports 80/443 and runs Docoo behind it: Docoo's Caddy publishes no ports, the existing proxy joins the docoo network and gets one validated site block for the two host names (its Caddyfile is backed up first and left unchanged if the block is rejected). The Deploy smoke workflow covers this case, including an update.
+- The installer stops before changing anything when ports 80/443 belong to any other program.
+
+### Changed
+
+- Caddy configuration moved to `deploy/caddy/` (shared routes plus the direct and edge entry points); `TRUST_PROXY_HOPS` comes from `deploy/.env` (2 behind an existing proxy).
+- The administrator email is asked first and is the default for the certificate email.
+
 ## [0.9.0] — 2026-10-03
 
 Production install for a non-expert owner, and the owner-blocked items reduced to accounts and keys.

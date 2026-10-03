@@ -2,7 +2,7 @@
 doc_id: DOCOO-ADR-0012
 title: ADR-0012 استقرار تک‌سرور production با نصب یک‌فرمانه
 status: accepted
-version: 1.0.0
+version: 1.1.0
 owner: Platform & Operations
 last_updated: 2026-10-03
 notion_sync: true
@@ -30,3 +30,7 @@ notion_sync: true
 ## رد گزینه‌ها
 
 Kubernetes برای beta تک‌مستاجره، ذخیرهٔ رمزها در مخزن، و ساخت حساب مدیر با گذرواژهٔ تایپ‌شده در ترمینال رد شدند.
+
+## به‌روزرسانی ۲۰۲۶-۱۰-۰۳: نصب کنار سایت‌های موجود
+
+روی سروری که از قبل یک Caddy (در Docker) پورت‌های ۸۰/۴۴۳ را دارد، Caddy خود Docoo پورتی منتشر نمی‌کند (`deploy/compose.edge.yaml`) و Caddy موجود از راه شبکهٔ `docoo_default` درخواست‌های دو نام میزبان را به نام مستعار `docoo-edge` می‌فرستد. گواهی‌ها با همان Caddy است. `TRUST_PROXY_HOPS=2` و `trusted_proxies` محدود به بازه‌های خصوصی، نشانی واقعی کاربر را برای محدودیت نرخ نگه می‌دارد و `X-Forwarded-For` جعلی همچنان نادیده گرفته می‌شود (Caddy موجود سرآیند ورودی را جایگزین می‌کند). اسکریپت فقط یک بلوک علامت‌دار به انتهای Caddyfile اضافه می‌کند، پیش از reload آن را validate می‌کند و در صورت رد شدن فایل را برمی‌گرداند.

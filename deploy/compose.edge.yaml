@@ -1,0 +1,10 @@
+# Added by scripts/deploy/install.sh when another Caddy already serves ports 80/443 on the
+# server (EDGE_PROXY in deploy/.env). Docoo's Caddy then publishes no ports; the existing
+# proxy joins the docoo network and forwards the two host names to the alias docoo-edge.
+services:
+  caddy:
+    ports: !reset []
+    command: ['caddy', 'run', '--config', '/etc/caddy/Caddyfile.edge', '--adapter', 'caddyfile']
+    networks:
+      default:
+        aliases: [docoo-edge]

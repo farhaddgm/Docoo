@@ -3,6 +3,8 @@ name: Deploy smoke
 # Runs the real installer (scripts/deploy/install.sh) on a clean machine with the production
 # stack: images, migrations, HTTPS through Caddy, the administrator's set-password link and a
 # signed-in request. Proves a non-expert owner can install a release with one command.
+# The edge variant installs on a server whose ports 80/443 already belong to another Caddy
+# (a site that must keep working): Docoo has to run behind it.
 on:
   pull_request:
   push:
@@ -18,10 +20,21 @@ jobs:
   install:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [direct, edge]
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: An existing Caddy already serves another site on ports 80/443
+        if: matrix.mode == 'edge'
+        run: |
+          mkdir -p "$RUNNER_TEMP/edge"
+          printf 'other.localhost {\n\trespond "other site"\n}\n' > "$RUNNER_TEMP/edge/Caddyfile"
+          docker run -d --name existing-proxy -p 80:80 -p 443:443 \
+            -v "$RUNNER_TEMP/edge/Caddyfile:/etc/caddy/Caddyfile" caddy:2
       - name: Install the production stack (unattended)
         env:
           DOCOO_UNATTENDED: '1'
@@ -58,6 +71,22 @@ jobs:
           workspace=$(python3 -c "import json;print(json.load(open('login.json'))['workspaces'][0]['id'])")
           test "$(curl -sk -o /dev/null -w '%{http_code}' -H "cookie: $cookie" https://localhost/api/workspaces/$workspace/dashboard)" = 200
           echo 'Installed, HTTPS, set-password link and signed-in dashboard: OK'
+      - name: The existing site keeps working and Docoo runs behind its proxy
+        if: matrix.mode == 'edge'
+        run: |
+          set -euo pipefail
+          sudo grep -x 'EDGE_PROXY=existing-proxy' deploy/.env
+          sudo grep -x 'TRUST_PROXY_HOPS=2' deploy/.env
+          grep -q '^# docoo:begin' "$RUNNER_TEMP/edge/Caddyfile"
+          test -f "$RUNNER_TEMP/edge/Caddyfile.before-docoo"
+          test "$(curl -sk https://other.localhost/ --resolve other.localhost:443:127.0.0.1)" = 'other site'
+          # Docoo's own Caddy publishes no ports in this mode.
+          test -z "$(sudo docker port docoo-caddy-1)"
+          # A second run (an update) changes nothing in the existing Caddyfile.
+          sudo git config --global --add safe.directory "$PWD"
+          sudo DOCOO_UPDATE_REF="$(git rev-parse HEAD)" ./scripts/deploy/install.sh update > update.log 2>&1 || { tail -40 update.log; exit 1; }
+          test "$(grep -c '^# docoo:begin' "$RUNNER_TEMP/edge/Caddyfile")" = 1
+          test "$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/fa)" = 200
       - name: Runtime checks (PDF renderer, OCR, object store, scanner)
         run: |
           set -euo pipefail
