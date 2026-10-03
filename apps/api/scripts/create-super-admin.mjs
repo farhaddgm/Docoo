@@ -1,5 +1,5 @@
 import { hash } from '@node-rs/argon2';
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { Pool } from 'pg';
 import { stdin, stdout } from 'node:process';
@@ -80,15 +80,31 @@ function readHidden(prompt) {
 const databaseUrl = process.env.DATABASE_ADMIN_URL;
 if (!databaseUrl) throw new Error('DATABASE_ADMIN_URL is required.');
 
-const email = (await readLine('Admin email: ')).trim().toLowerCase();
-const displayName = (await readLine('Display name: ')).trim();
+// Unattended mode (installer): ADMIN_EMAIL is set, the password is random and never shown, and
+// a single-use link lets the owner choose their own password in the browser.
+const unattended = Boolean(process.env.ADMIN_EMAIL);
+const email = (unattended ? process.env.ADMIN_EMAIL : await readLine('Admin email: '))
+  .trim()
+  .toLowerCase();
+const displayName = (
+  unattended ? (process.env.ADMIN_DISPLAY_NAME ?? 'Admin') : await readLine('Display name: ')
+).trim();
 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address.');
 if (!displayName) throw new Error('Display name cannot be empty.');
 
-const password = await readHidden('Password (minimum 12 characters): ');
-const passwordConfirmation = await readHidden('Confirm password: ');
-if (password.length < 12) throw new Error('Password must contain at least 12 characters.');
-if (password !== passwordConfirmation) throw new Error('Passwords do not match.');
+let password;
+if (unattended) {
+  password = randomBytes(32).toString('base64url');
+} else {
+  password = await readHidden('Password (minimum 12 characters): ');
+  const passwordConfirmation = await readHidden('Confirm password: ');
+  if (password.length < 12) throw new Error('Password must contain at least 12 characters.');
+  if (password !== passwordConfirmation) throw new Error('Passwords do not match.');
+}
+const pepper = process.env.SESSION_PEPPER;
+if (unattended && (!pepper || pepper.length < 32)) {
+  throw new Error('SESSION_PEPPER (32+ characters) is required for the set-password link.');
+}
 
 const pool = new Pool({ connectionString: databaseUrl, max: 1 });
 const passwordHash = await hash(password, {
@@ -137,8 +153,21 @@ try {
      values ($1, $2, 'super_admin')`,
     [workspace.rows[0].id, user.rows[0].id],
   );
+  let link = null;
+  if (unattended) {
+    const token = randomBytes(32).toString('base64url');
+    await client.query(
+      `insert into password_reset_tokens (user_id, token_digest, expires_at)
+       values ($1, $2, now() + interval '24 hours')`,
+      [user.rows[0].id, createHmac('sha256', pepper).update(token).digest('hex')],
+    );
+    const origin = (process.env.WEB_ORIGIN ?? 'http://localhost:3000').replace(/\/$/, '');
+    link = `${origin}/fa/reset-password#token=${token}`;
+  }
   await client.query('commit');
   stdout.write(`Super Admin created for ${email}. Keep your recovery path secure.\n`);
+  if (link)
+    stdout.write(`Choose your password with this single-use link (valid 24 hours):\n${link}\n`);
 } catch (error) {
   await client.query('rollback').catch(() => undefined);
   throw error;

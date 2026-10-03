@@ -19,3 +19,8 @@ test-results
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Production secrets written by scripts/deploy/install.sh
+deploy/.env
+deploy/.env.production
+deploy/.admin

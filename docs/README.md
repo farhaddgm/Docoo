@@ -70,25 +70,27 @@ notion_sync: true
 32. [checklist آمادگی](06-delivery/08-readiness-checklist.md) — وضعیت واقعی gate شروع توسعه.
 33. [شکست epicها به story](06-delivery/09-epic-breakdown.md) — خروجی spike فازهای ۲ تا ۶ با وابستگی و معیار پذیرش.
 34. [runbook عملیات و private beta](06-delivery/10-runbooks.md) — حادثه، هشدارها، backup/restore، rollback و پذیرش beta.
+35. [راهنمای سادهٔ نصب روی سرور](06-delivery/11-production-install.md) — نصب یک‌فرمانه، HTTPS، کلید AI، به‌روزرسانی و پشتیبان.
 
 ### ۷. یکپارچه‌سازی‌ها
 
-35. [همگام‌سازی Notion و GitHub](07-integrations/01-notion-and-github.md) — مخزن خصوصی، انتشار یک‌طرفه و کنترل تعارض.
-36. [قرارداد آداپترهای بیرونی](07-integrations/02-external-adapters.md) — AI، وب، ذخیره‌سازی، OCR و export.
+36. [همگام‌سازی Notion و GitHub](07-integrations/01-notion-and-github.md) — مخزن خصوصی، انتشار یک‌طرفه و کنترل تعارض.
+37. [قرارداد آداپترهای بیرونی](07-integrations/02-external-adapters.md) — AI، وب، ذخیره‌سازی، OCR و export.
 
 ### ۸. تصمیم‌های معماری
 
-37. [ADR-0001: modular monolith](adr/0001-modular-monolith.md)
-38. [ADR-0002: اجرای بادوام گردش‌کار](adr/0002-durable-workflows.md)
-39. [ADR-0003: مرز tenant و حوزهٔ موضوعی](adr/0003-tenant-and-topic-boundary.md)
-40. [ADR-0004: تنظیمات نسخه‌بندی‌شده](adr/0004-versioned-configuration.md)
-41. [ADR-0005: ممیزی دو‌سطحی دانش](adr/0005-two-level-knowledge-audit.md)
-42. [ADR-0006: پلتفرم و toolchain](adr/0006-application-platform-and-toolchain.md)
-43. [ADR-0007: نشست و امنیت احراز هویت](adr/0007-authentication-and-session-security.md)
-44. [ADR-0008: اجرای ingestion و حاکمیت دانش](adr/0008-ingestion-and-knowledge-runtime.md)
-45. [ADR-0009: workflow پروژه و runtime ارائه‌دهندهٔ AI](adr/0009-project-workflow-and-provider-runtime.md)
-46. [ADR-0010: راه‌حل، سند، artifact امضاشده و ارزیابی](adr/0010-documents-solutions-and-evaluation.md)
-47. [ADR-0011: داشبورد، گزارش هزینه و گزارش Brain](adr/0011-reporting-and-brain-reports.md)
+38. [ADR-0001: modular monolith](adr/0001-modular-monolith.md)
+39. [ADR-0002: اجرای بادوام گردش‌کار](adr/0002-durable-workflows.md)
+40. [ADR-0003: مرز tenant و حوزهٔ موضوعی](adr/0003-tenant-and-topic-boundary.md)
+41. [ADR-0004: تنظیمات نسخه‌بندی‌شده](adr/0004-versioned-configuration.md)
+42. [ADR-0005: ممیزی دو‌سطحی دانش](adr/0005-two-level-knowledge-audit.md)
+43. [ADR-0006: پلتفرم و toolchain](adr/0006-application-platform-and-toolchain.md)
+44. [ADR-0007: نشست و امنیت احراز هویت](adr/0007-authentication-and-session-security.md)
+45. [ADR-0008: اجرای ingestion و حاکمیت دانش](adr/0008-ingestion-and-knowledge-runtime.md)
+46. [ADR-0009: workflow پروژه و runtime ارائه‌دهندهٔ AI](adr/0009-project-workflow-and-provider-runtime.md)
+47. [ADR-0010: راه‌حل، سند، artifact امضاشده و ارزیابی](adr/0010-documents-solutions-and-evaluation.md)
+48. [ADR-0011: داشبورد، گزارش هزینه و گزارش Brain](adr/0011-reporting-and-brain-reports.md)
+49. [ADR-0012: استقرار تک‌سرور با نصب یک‌فرمانه](adr/0012-single-server-production-deployment.md)
 
 ## وضعیت اسناد
 

@@ -38,13 +38,15 @@ export function masterKeyFromEnv(env: NodeJS.ProcessEnv = process.env): MasterKe
   };
 }
 
+const TAG_BYTES = 16;
+
 function seal(
   key: Buffer,
   plaintext: Buffer,
   aad: string,
 ): { data: string; iv: string; tag: string } {
   const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const cipher = createCipheriv('aes-256-gcm', key, iv, { authTagLength: TAG_BYTES });
   cipher.setAAD(Buffer.from(aad));
   const data = Buffer.concat([cipher.update(plaintext), cipher.final()]);
   return {
@@ -55,7 +57,10 @@ function seal(
 }
 
 function open(key: Buffer, sealed: { data: string; iv: string; tag: string }, aad: string): Buffer {
-  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(sealed.iv, 'base64'));
+  // A pinned tag length rejects truncated tags, which would weaken authentication.
+  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(sealed.iv, 'base64'), {
+    authTagLength: TAG_BYTES,
+  });
   decipher.setAAD(Buffer.from(aad));
   decipher.setAuthTag(Buffer.from(sealed.tag, 'base64'));
   return Buffer.concat([decipher.update(Buffer.from(sealed.data, 'base64')), decipher.final()]);

@@ -41,6 +41,28 @@ jobs:
       - uses: github/codeql-action/autobuild@v4
       - uses: github/codeql-action/analyze@v4
 
+  sast:
+    # Free SAST that also works on private repositories without Code Security (SEC-001):
+    # the open Semgrep JavaScript/TypeScript rules at a pinned commit; any ERROR finding fails.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Fetch the pinned Semgrep rules
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/semgrep/semgrep-rules.git "$RUNNER_TEMP/semgrep-rules"
+          git -C "$RUNNER_TEMP/semgrep-rules" checkout --quiet a84ff9cc2453ca91d581380de4b8b3f272f6f4be -- javascript typescript
+          mkdir -p "$RUNNER_TEMP/rules"
+          cp -r "$RUNNER_TEMP/semgrep-rules/javascript" "$RUNNER_TEMP/semgrep-rules/typescript" "$RUNNER_TEMP/rules/"
+          find "$RUNNER_TEMP/rules" -type f ! -name '*.yaml' ! -name '*.yml' -delete
+          find "$RUNNER_TEMP/rules" -name '*.test.*' -delete
+      - name: Semgrep
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/src" -v "$RUNNER_TEMP/rules:/rules:ro" -w /src semgrep/semgrep:latest \
+            semgrep scan --config /rules --severity ERROR --metrics off --error \
+              --exclude node_modules --exclude dist --exclude .next --exclude test-results \
+              --exclude '*.test.ts' --exclude test
+
   filesystem-scan:
     runs-on: ubuntu-latest
     steps:
@@ -65,7 +87,8 @@ jobs:
           - package: '@docoo/api'
             name: api
             start: '--import ./dist/instrumentation.js dist/main.js'
-            system: ''
+            # Same runtime packages as deploy/compose.production.yaml (PDF rendering).
+            system: 'chromium fonts-vazirmatn fonts-noto-core'
           - package: '@docoo/web'
             name: web
             start: 'node_modules/next/dist/bin/next start -p 3000'

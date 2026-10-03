@@ -2,6 +2,25 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.9.0] — 2026-10-03
+
+Production install for a non-expert owner, and the owner-blocked items reduced to accounts and keys.
+
+### Added
+
+- One-command production install (`scripts/deploy/install.sh`, `deploy/compose.production.yaml`, ADR-0012): Caddy with automatic HTTPS, all services, migrations, generated secrets kept out of git, firewall, an administrator created without a typed password plus a single-use set-password link, and `install.sh update` for new releases. The Deploy smoke workflow runs it on a clean machine for every pull request.
+- Continuous off-host backups: PostgreSQL image with WAL-G (pinned, checksummed), WAL shipped at least every 5 minutes, daily base backups with retention, object mirroring with rclone; `infra/postgres/pitr-drill.sh` proves point-in-time recovery in CI.
+- AI providers page: add OpenAI, Gemini or Anthropic keys (encrypted, write-only), check health, refresh models and choose the default connection and model.
+- Password-reset mail over SMTP (`SMTP_URL`, `MAIL_FROM`) with a bilingual message; Mailpit inbox for local development.
+- Provider acceptance workflow: real OpenAI/Gemini/Anthropic and speech-to-text checks (ING-005 word accuracy on the corpus) that run as soon as the repository secrets exist.
+- Free SAST in the Security workflow (Semgrep, pinned open rules), so private repositories without Code Security still get a SAST gate.
+- `TRUST_PROXY_HOPS` so rate limits see each real client behind the proxy while spoofed `X-Forwarded-For` stays ignored.
+
+### Fixed
+
+- AES-256-GCM secrets now pin the 16-byte authentication tag; a truncated tag is rejected.
+- Database migrations run from the built package (production images), not only through tsx.
+
 ## [0.8.0] — 2026-10-03
 
 Phase 6 (hardening and private-beta readiness) complete, except the owner actions listed in the runbook.

@@ -120,6 +120,11 @@ jobs:
                 await client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key, Body: body }));
             })();"
           pnpm --filter @docoo/database ops:backup-drill
+      - name: Point-in-time recovery drill with WAL-G (REL-001, NFR-REL-004)
+        run: |
+          docker build -q -t docoo-postgres:ci infra/postgres
+          set -o pipefail
+          IMAGE=docoo-postgres:ci infra/postgres/pitr-drill.sh 2>&1 | tail -5 | tee reports/pitr-drill.txt
       - name: Keep the evidence
         if: always()
         uses: actions/upload-artifact@v7

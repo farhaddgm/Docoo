@@ -331,6 +331,12 @@ describe('secret envelope encryption (AI-001)', () => {
     );
   });
 
+  it('rejects a truncated authentication tag', () => {
+    const sealed = encryptSecret('sk-test-secret-value', master, 'conn-1:1');
+    const shortTag = Buffer.from(sealed.tag, 'base64').subarray(0, 4).toString('base64');
+    expect(() => decryptSecret({ ...sealed, tag: shortTag }, master, 'conn-1:1')).toThrow();
+  });
+
   it('redacts credentials from error text', () => {
     expect(
       sanitizeError('failed with key sk-proj-abcdefghijklmnop and Bearer abc.def', ['abc.def']),

@@ -12,3 +12,6 @@ node_modules
 docs
 test-results
 playwright-report
+deploy/.env
+deploy/.env.production
+deploy/.admin
