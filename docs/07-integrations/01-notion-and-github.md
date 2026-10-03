@@ -73,6 +73,7 @@ Notion read-only واقعی ممکن است از نظر permission قابل‌ت
 - `pnpm docs:sync:plan` بدون token و بدون شبکه برنامهٔ create/update/unchanged را بر اساس checksum و state نشان می‌دهد و در CI روی هر PR اجرا می‌شود.
 - workflow `Notion documentation sync` پس از push به `main` (تغییر `docs/**` یا `scripts/notion/**`) یا اجرای دستی، با secret `NOTION_TOKEN` صفحه‌ها را به‌روز می‌کند، ردیف index را با Version، Status، Commit SHA و Last Synced می‌نویسد و `docs/_meta/notion-state.json` را با SHA واقعی در `main` commit می‌کند. اجرای دستی با گزینهٔ `force` همهٔ صفحه‌ها را بازنویسی می‌کند.
 - محتوای صفحه جایگزین می‌شود ولی صفحه‌ها و databaseهای فرزند حفظ می‌شوند. سندی که در state نیست ابتدا با عنوان در بخش خودش و با `Doc ID` در index جست‌وجو می‌شود تا ردیف یا صفحهٔ تکراری ساخته نشود.
+- پس از هر انتشار، دو بولت «Source commit» و «آخرین همگام‌سازی» در بالای صفحهٔ ریشه نیز با SHA و تاریخ واقعی به‌روز می‌شوند؛ پیش‌تر این هدر دستی بود و کهنه می‌ماند.
 - بدون `NOTION_TOKEN` workflow فقط validate و plan را اجرا و هشدار پیکربندی ثبت می‌کند.
 
 راه‌اندازی یک‌باره: در Notion یک internal integration با دسترسی read/update/insert content بسازید، صفحهٔ `Docoo — Product & Engineering` و `Docoo Document Index` را با آن share کنید و token را در GitHub به‌عنوان secret مخزن با نام `NOTION_TOKEN` ذخیره کنید؛ سپس workflow را یک‌بار با `force` اجرا کنید.
