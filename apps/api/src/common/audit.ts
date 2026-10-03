@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+
+import { recordAuditWrite } from '@docoo/observability';
 import type { PoolClient } from 'pg';
 
 import type { WorkspaceRequestContext } from './request-context.js';
@@ -55,6 +57,21 @@ export function redactForAudit(
 }
 
 export async function writeAudit(
+  client: PoolClient,
+  context: WorkspaceRequestContext,
+  entry: AuditEntry,
+): Promise<void> {
+  const started = performance.now();
+  try {
+    await insertAudit(client, context, entry);
+    recordAuditWrite('succeeded', (performance.now() - started) / 1000);
+  } catch (error) {
+    recordAuditWrite('failed', (performance.now() - started) / 1000);
+    throw error;
+  }
+}
+
+async function insertAudit(
   client: PoolClient,
   context: WorkspaceRequestContext,
   entry: AuditEntry,

@@ -26,6 +26,7 @@ import {
   type StructuredDocument,
 } from '@docoo/documents';
 import type { ObjectStore } from '@docoo/ingestion';
+import { recordDocumentExport } from '@docoo/observability';
 import { ProviderRuntime } from '@docoo/orchestration';
 import { ProviderError, type JsonSchema } from '@docoo/providers';
 import type { PoolClient, QueryResultRow } from 'pg';
@@ -475,6 +476,7 @@ export class DocumentsService {
         createdAt: source.version.created_at,
       });
     } catch (error) {
+      recordDocumentExport(format, 'failed');
       if (error instanceof SlideOverflowError)
         throw unprocessable('DOCUMENT_SLIDE_OVERFLOW', error.message);
       if (error instanceof RendererUnavailableError)
@@ -483,7 +485,12 @@ export class DocumentsService {
     }
     const signature = signManifest(artifact.manifest, this.signingKey());
     const key = `artifacts/${context.workspaceId}/${documentId}/${source.version.id}/${artifact.manifest.sha256}.${format}`;
-    await store.put(key, artifact.bytes, ARTIFACT_MIME[format]);
+    try {
+      await store.put(key, artifact.bytes, ARTIFACT_MIME[format]);
+    } catch (error) {
+      recordDocumentExport(format, 'failed');
+      throw error;
+    }
     return this.database.run(context, async (client) => {
       const row = (
         await client.query<{ id: string; created_at: string }>(
@@ -517,6 +524,7 @@ export class DocumentsService {
           versionNo: source.version.version_no,
         },
       });
+      recordDocumentExport(format, 'succeeded');
       return { id: row.id, ...artifact.manifest, signature, createdAt: row.created_at };
     });
   }

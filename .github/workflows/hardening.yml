@@ -1,0 +1,128 @@
+name: Hardening
+
+# Release gates of phase 6 on every pull request: load test of the main path (SRE-002),
+# DAST of the web app and the authenticated API plus the auth-path penetration test
+# (SEC-002), SLO alert rule tests (SRE-001) and a full backup/restore drill (REL-001).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '41 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hardening:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.1-pg18
+        env:
+          POSTGRES_DB: docoo_ci
+          POSTGRES_USER: docoo_admin
+          POSTGRES_PASSWORD: docoo-ci-admin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U docoo_admin -d docoo_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+      RUNTIME_URL: postgresql://docoo_e2e:docoo-e2e-runtime@localhost:5432/docoo_ci
+      SESSION_PEPPER: docoo-ci-hardening-pepper-with-at-least-32-characters
+      WEB_ORIGIN: http://localhost:3000
+      S3_ENDPOINT: http://localhost:8333
+      S3_REGION: us-east-1
+      S3_BUCKET: docoo-hardening
+      S3_ACCESS_KEY_ID: docoo-ci
+      S3_SECRET_ACCESS_KEY: docoo-ci-secret
+      S3_FORCE_PATH_STYLE: 'true'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.6.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: SLO alert rules (SRE-001)
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE/infra/prometheus:/etc/prometheus" --entrypoint promtool \
+            prom/prometheus:latest check config /etc/prometheus/prometheus.yml
+          docker run --rm -v "$GITHUB_WORKSPACE/infra/prometheus/rules:/rules" -w /rules --entrypoint promtool \
+            prom/prometheus:latest test rules slo.test.yml
+      - name: Prepare the database with the baseline volume
+        run: |
+          docker run -d --name object-store -p 8333:8333 \
+            -e AWS_ACCESS_KEY_ID=docoo-ci -e AWS_SECRET_ACCESS_KEY=docoo-ci-secret \
+            chrislusf/seaweedfs:latest mini -dir=/data
+          pnpm db:migrate
+          psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c \
+            "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'docoo_e2e') THEN CREATE ROLE docoo_e2e LOGIN PASSWORD 'docoo-e2e-runtime' IN ROLE docoo_app; END IF; END \$\$;"
+          node apps/web/e2e/prepare.mjs
+          pnpm --filter @docoo/database ops:load-seed
+      - name: Start the API (load/DAST rate ceiling) and the web app
+        run: |
+          mkdir -p reports
+          (cd apps/api && NODE_ENV=test DATABASE_URL="$RUNTIME_URL" API_RATE_LIMIT_PER_MINUTE=1000000 \
+            nohup node --import ./dist/instrumentation.js dist/main.js > ../../reports/api.log 2>&1 & echo $! > ../../api.pid)
+          (cd apps/web && nohup node node_modules/next/dist/bin/next start -p 3000 > ../../reports/web.log 2>&1 &)
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:4000/v1/health/live >/dev/null && curl -sf -o /dev/null http://127.0.0.1:3000/fa && exit 0
+            sleep 1
+          done
+          tail -50 reports/api.log reports/web.log; exit 1
+      - name: Load test of the main path (SRE-002)
+        run: |
+          docker run --rm --network host -v "$GITHUB_WORKSPACE/scripts/load:/scripts:ro" -v "$GITHUB_WORKSPACE/reports:/reports" \
+            grafana/k6:latest run --summary-export=/reports/k6-summary.json /scripts/main-path.js
+      - name: DAST of the web app and the authenticated API (SEC-002)
+        run: |
+          mkdir -p reports/zap && chmod 777 reports/zap
+          docker run --rm --network host -v "$GITHUB_WORKSPACE/reports/zap:/zap/wrk:rw" zaproxy/zap-stable \
+            zap-baseline.py -t http://127.0.0.1:3000/fa -I -J web.json -r web.html
+          OPTIONS=$(node scripts/security/dast-prepare.mjs reports/zap/openapi.json)
+          docker run --rm --network host -v "$GITHUB_WORKSPACE/reports/zap:/zap/wrk:rw" zaproxy/zap-stable \
+            zap-api-scan.py -t /zap/wrk/openapi.json -f openapi -I -J api.json -r api.html -z "$OPTIONS"
+          python3 scripts/security/zap-gate.py reports/zap/web.json reports/zap/api.json
+      - name: Auth-path penetration test with production rate limits (SEC-002)
+        run: |
+          kill "$(cat api.pid)"; sleep 1
+          (cd apps/api && NODE_ENV=test DATABASE_URL="$RUNTIME_URL" \
+            nohup node --import ./dist/instrumentation.js dist/main.js > ../../reports/api-probe.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4000/v1/health/live >/dev/null && break; sleep 1; done
+          node scripts/security/auth-probe.mjs | tee reports/auth-probe.txt
+      - name: Backup and restore drill into a separate server (REL-001)
+        env:
+          BACKUP_DIR: ${{ github.workspace }}/reports/backup
+          BACKUP_REPORT: ${{ github.workspace }}/reports/backup-drill.json
+        run: |
+          pnpm --filter @docoo/database exec node -e "
+            const { S3Client, CreateBucketCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
+            const client = new S3Client({ region: 'us-east-1', endpoint: process.env.S3_ENDPOINT, forcePathStyle: true,
+              credentials: { accessKeyId: process.env.S3_ACCESS_KEY_ID, secretAccessKey: process.env.S3_SECRET_ACCESS_KEY } });
+            (async () => {
+              await client.send(new CreateBucketCommand({ Bucket: process.env.S3_BUCKET })).catch(() => undefined);
+              for (const [key, body] of [['quarantine/a.txt', 'source A'], ['artifacts/b.pdf', Buffer.alloc(4096, 7)]])
+                await client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key, Body: body }));
+            })();"
+          pnpm --filter @docoo/database ops:backup-drill
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hardening-reports
+          path: |
+            reports/
+            !reports/backup/database.dump
+            !reports/backup/objects/
+          retention-days: 30

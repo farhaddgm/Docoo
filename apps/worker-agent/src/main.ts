@@ -7,7 +7,7 @@ import {
   ProviderRuntime,
 } from '@docoo/orchestration';
 import { masterKeyFromEnv } from '@docoo/providers';
-import { NativeConnection, Worker } from '@temporalio/worker';
+import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { Pool } from 'pg';
 
 function log(level: 'info' | 'error', event: string, fields: Record<string, unknown> = {}): void {
@@ -38,6 +38,23 @@ async function main(): Promise<void> {
     max: 8,
     application_name: 'docoo-worker-agent',
   });
+  // Workflow and queue SLIs (SRE-001): schedule-to-start latency, failures and completions
+  // are scraped by Prometheus from this address; names match infra/prometheus/rules.
+  const metricsAddress = process.env['TEMPORAL_METRICS_ADDRESS'];
+  if (metricsAddress) {
+    Runtime.install({
+      telemetryOptions: {
+        metrics: {
+          prometheus: {
+            bindAddress: metricsAddress,
+            countersTotalSuffix: true,
+            unitSuffix: true,
+            useSecondsForDurations: true,
+          },
+        },
+      },
+    });
+  }
   const connection = await NativeConnection.connect({
     address: process.env['TEMPORAL_ADDRESS'] ?? 'localhost:7233',
   });

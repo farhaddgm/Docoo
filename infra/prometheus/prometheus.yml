@@ -2,7 +2,19 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# SLO recording rules and alerts (SRE-001); unit tested with `promtool test rules`.
+rule_files:
+  - /etc/prometheus/rules/slo.yml
+
 scrape_configs:
+  # API and worker OpenTelemetry metrics (HTTP, database, app SLIs) via the collector.
   - job_name: otel-collector
+    honor_labels: true
     static_configs:
       - targets: ['otel-collector:9464']
+  # Temporal SDK metrics of the workers (TEMPORAL_METRICS_ADDRESS), run on the host locally.
+  - job_name: docoo-workers
+    static_configs:
+      - targets: ['host.docker.internal:9471', 'host.docker.internal:9472']
+        labels:
+          environment: local

@@ -23,6 +23,8 @@ export const environmentSchema = z.object({
   AUTH_LOCKOUT_THRESHOLD: z.coerce.number().int().min(3).max(20).default(5),
   AUTH_LOCKOUT_BASE_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
   AUTH_LOCKOUT_MAX_SECONDS: z.coerce.number().int().min(60).max(604_800).default(86_400),
+  /** Per-IP request ceiling; raised only for single-source load and DAST runs. */
+  API_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).max(1_000_000).default(120),
   PASSWORD_RESET_TTL_SECONDS: z.coerce.number().int().min(300).max(86_400).default(1800),
   OTEL_SERVICE_NAME: z.string().min(1).default('docoo-api'),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.preprocess(emptyStringToUndefined, z.url().optional()),
