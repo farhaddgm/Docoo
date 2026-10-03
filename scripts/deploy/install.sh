@@ -35,6 +35,16 @@ install_docker() {
   systemctl enable --now docker
 }
 
+check_ports() { # Caddy needs 80 and 443; another web server on them breaks HTTPS halfway.
+  command -v ss >/dev/null 2>&1 || return 0
+  local busy
+  busy=$(ss -Hltnp 'sport = :80 or sport = :443' | grep -v docker-proxy || true)
+  [ -z "$busy" ] && return 0
+  printf '%s\n' "$busy"
+  fail "Ports 80/443 are already used by another program (shown above). Stop it or move it first.
+پورت‌های ۸۰ و ۴۴۳ را برنامهٔ دیگری گرفته است؛ خروجی بالا را برای پشتیبانی بفرستید."
+}
+
 configure() {
   if [ -f "$deploy/.env" ] && [ -f "$deploy/.env.production" ]; then
     say "Existing configuration found in deploy/.env; keeping it."
@@ -147,6 +157,7 @@ if [ "${1:-install}" = update ]; then
   exit 0
 fi
 
+check_ports
 install_docker
 configure
 open_firewall
