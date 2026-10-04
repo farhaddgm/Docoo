@@ -155,3 +155,6 @@ documents:
   - path: docs/adr/0012-single-server-production-deployment.md
     doc_id: DOCOO-ADR-0012
     section: ADRs
+  - path: docs/adr/0013-backoffice-core-screens.md
+    doc_id: DOCOO-ADR-0013
+    section: ADRs

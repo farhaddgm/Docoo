@@ -11,7 +11,13 @@ import { reportMessagesFor } from '../report-messages';
 interface Dashboard {
   waiting: {
     total: number;
-    items: { id: string; title: string; projectTitle: string | null; createdAt: string }[];
+    items: {
+      id: string;
+      title: string;
+      projectId: string | null;
+      projectTitle: string | null;
+      createdAt: string;
+    }[];
   };
   workflows: { active: number; waitingForHuman: number; paused: number; failed: number };
   knowledge: { pending: number; expired: number; needsRevision: number; conflicted: number };
@@ -95,7 +101,13 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
           <ul className="plain-list">
             {data.waiting.items.map((item) => (
               <li key={item.id}>
-                <strong>{item.title}</strong>
+                {item.projectId ? (
+                  <Link href={`/${locale}/projects/${item.projectId}?tab=workflow` as Route}>
+                    <strong>{item.title}</strong>
+                  </Link>
+                ) : (
+                  <strong>{item.title}</strong>
+                )}
                 {item.projectTitle && <span className="muted"> — {item.projectTitle}</span>}
               </li>
             ))}
@@ -189,6 +201,15 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
       <section className="card" aria-labelledby="actions-title">
         <h2 id="actions-title">{text.quickActions}</h2>
         <ul className="plain-list">
+          <li>
+            <Link href={`/${locale}/projects/new` as Route}>{text.newProject}</Link>
+          </li>
+          <li>
+            <Link href={`/${locale}/topics` as Route}>{text.newTopic}</Link>
+          </li>
+          <li>
+            <Link href={`/${locale}/projects` as Route}>{text.openProjects}</Link>
+          </li>
           <li>
             <Link href={`/${locale}/brain` as Route}>{text.openBrain}</Link>
           </li>

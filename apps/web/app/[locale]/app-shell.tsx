@@ -17,6 +17,8 @@ import {
 /** Pages that exist; the others stay visible but disabled until their slice ships. */
 const implemented: Partial<Record<NavigationKey, string>> = {
   dashboard: '',
+  projects: '/projects',
+  topics: '/topics',
   brain: '/brain',
   providers: '/providers',
   costs: '/costs',
@@ -123,12 +125,15 @@ export function AppShell({ locale, title, subtitle, showNavigation, children }: 
                     );
                   }
                   const href = `/${locale}${route}` as Route;
+                  // A page below a section (a project of /projects) keeps its section marked.
+                  const current =
+                    pathname === href || (route !== '' && pathname.startsWith(`${href}/`));
                   return (
                     <li key={key}>
                       <Link
                         className="nav-item"
                         href={href}
-                        aria-current={pathname === href ? 'page' : undefined}
+                        aria-current={current ? 'page' : undefined}
                       >
                         <NavIcon name={key} />
                         <span className="nav-label">{content.nav[key]}</span>
@@ -151,6 +156,10 @@ export function AppShell({ locale, title, subtitle, showNavigation, children }: 
             <a
               className="locale-link"
               href={localizedPath(pathname, alternate)}
+              // Keep the section the page is showing (`?tab=…`); the hash may hold a secret.
+              onClick={(event) => {
+                event.currentTarget.href = `${localizedPath(location.pathname, alternate)}${location.search}`;
+              }}
               hrefLang={alternate}
               lang={alternate}
               aria-label={content.switchLanguageLabel}

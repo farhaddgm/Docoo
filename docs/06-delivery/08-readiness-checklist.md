@@ -2,9 +2,9 @@
 doc_id: DOCOO-READINESS-CHECKLIST
 title: checklist آمادگی شروع توسعه Docoo
 status: active
-version: 1.1.0
+version: 1.2.0
 owner: Product & Engineering
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -29,6 +29,7 @@ notion_sync: true
 | گزارش‌ها و Brain فاز ۵                    | READY                         | داشبورد با دادهٔ زنده، گزارش Brain با قواعد charter-v1 و شواهد بدون اثر جانبی، Audit Log با فیلتر و export در UI دوزبانه و کیبوردی، گزارش هزینه و token بر اساس پروژه/مرحله/روز/مدل؛ آزمون integration و E2E با axe. ارزیابی مدل‌محور نقش‌ها در فازهای بعد                                                                                                                                                                   |
 | hardening فاز ۶                           | READY (پذیرش مالک باقی)       | گیت‌های Security روی هر PR (audit، Trivy fs و image)، DAST وب و API احراز هویت‌شده و تست نفوذ مسیر احراز هویت، SLO و هشدار آزموده با promtool، آزمون بار ۲۵ کاربر روی ۱٬۰۰۰ پروژه، تمرین backup/restore روی سرور جدا و runbook. CodeQL، branch protection، PITR production و امضای private beta با مالک                                                                                                                      |
 | استقرار production                        | READY (سرور و کلیدها با مالک) | نصب یک‌فرمانه با HTTPS، رمزهای تولیدشده، PITR با WAL-G، صفحهٔ کلید AI، ایمیل SMTP و آزمون نصب روی ماشین تازه در هر PR. راهنما: `docs/06-delivery/11-production-install.md`                                                                                                                                                                                                                                                   |
+| صفحه‌های اصلی بک‌آفیس                     | READY                         | حوزه، پروژه و صفحهٔ پروژه با چرخهٔ عمر، گردش‌کار و بازبینی مرحله‌ها (تأیید، رد، نظر، ویرایش، سقف attempt)، راه‌حل‌ها با معیار وزن‌دار و انتخاب، اسناد با ارزیابی، استثنا، قفل، export و دانلود، نسخه و diff؛ آزمون E2E روی API، Temporal و worker واقعی با axe ([ADR-0013](../adr/0013-backoffice-core-screens.md)). پرسش‌وپاسخ تحلیلگر، ایجنت‌ها، دانش و ویرایشگر سند در [گام‌های بعدی](04-roadmap.md)                      |
 | workerها                                  | READY                         | worker ingestion (`docoo.ingestion`) و worker agent (`docoo.agent`) کامل؛ worker document و maintenance با storyهای فاز ۴ و ۶                                                                                                                                                                                                                                                                                                |
 | migration + RLS                           | READY                         | `db:test:rls` همهٔ جدول‌های tenant (control plane و ۱۳ جدول دانش/ingestion) را با آزمون منفی خواندن/نوشتن/تغییر در CI روی PostgreSQL 18 اجرا می‌کند                                                                                                                                                                                                                                                                          |
 | local Compose                             | READY                         | PostgreSQL، Redis، SeaweedFS S3، Temporal، Temporal UI و ClamAV (`malware-scanner`) با پورت‌های فقط `127.0.0.1`؛ profile مشاهده‌پذیری فقط از نظر config بررسی شده                                                                                                                                                                                                                                                            |
