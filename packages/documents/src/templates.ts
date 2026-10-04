@@ -98,6 +98,62 @@ const TABLE_LABELS = {
   },
 } as const;
 
+/** The score of a solution on each criterion as a table; the numbers come from the stored scoring. */
+export function scoreTableBlock(
+  score: SolutionScore,
+  language: 'fa' | 'en',
+  id: string,
+): Extract<Block, { type: 'table' }> {
+  const labels = TABLE_LABELS[language];
+  return {
+    type: 'table',
+    id,
+    caption: labels.caption,
+    columns: [...labels.columns],
+    rows: score.criteria.map((criterion) => [
+      criterion.label,
+      `${criterion.raw}/${criterion.max}`,
+      String(criterion.weight),
+      String(criterion.weighted),
+    ]),
+    notes: `${score.formula} = ${score.total}`,
+  };
+}
+
+const CHART_LABELS = {
+  fa: {
+    title: 'سهم وزن‌دار هر معیار در امتیاز راه‌حل',
+    unit: 'امتیاز',
+    alt: (total: number) => `نمودار میله‌ای سهم وزن‌دار معیارها؛ مجموع ${total}`,
+  },
+  en: {
+    title: 'Weighted contribution of each criterion to the solution score',
+    unit: 'points',
+    alt: (total: number) =>
+      `Bar chart of the weighted contribution of each criterion; total ${total}`,
+  },
+} as const;
+
+/** The same numbers as the score table as a bar chart; traceable to the solution's scoring. */
+export function scoreChartBlock(
+  score: SolutionScore,
+  language: 'fa' | 'en',
+  id: string,
+): Extract<Block, { type: 'chart' }> {
+  const labels = CHART_LABELS[language];
+  return {
+    type: 'chart',
+    id,
+    kind: 'bar',
+    title: labels.title,
+    unit: labels.unit,
+    source: score.formula,
+    alt: labels.alt(score.total),
+    labels: score.criteria.map((criterion) => criterion.label),
+    values: score.criteria.map((criterion) => criterion.weighted),
+  };
+}
+
 function sectionBlocks(
   section: TemplateSection,
   input: TemplateInput,
@@ -136,23 +192,7 @@ function sectionBlocks(
       return [heading, list(input.risks, false)];
     case 'scores': {
       if (!input.score) return [];
-      const labels = TABLE_LABELS[language];
-      return [
-        heading,
-        {
-          type: 'table',
-          id: `${section.key}-table`,
-          caption: labels.caption,
-          columns: [...labels.columns],
-          rows: input.score.criteria.map((criterion) => [
-            criterion.label,
-            `${criterion.raw}/${criterion.max}`,
-            String(criterion.weight),
-            String(criterion.weighted),
-          ]),
-          notes: `${input.score.formula} = ${input.score.total}`,
-        },
-      ];
+      return [heading, scoreTableBlock(input.score, language, `${section.key}-table`)];
     }
   }
 }

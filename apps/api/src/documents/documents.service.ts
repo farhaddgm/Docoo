@@ -1082,6 +1082,19 @@ export class DocumentsService {
       )
     ).rows[0];
     if (!row) throw notFound('DOCUMENT_NOT_FOUND', 'The document was not found.');
+    // While the documenter is writing the next version nothing else may change the document:
+    // the writing saves on top of the version it started from (ADR-0019).
+    if (forUpdate) {
+      const writing = await client.query(
+        `select 1 from document_writings where document_id = $1 and status in ('queued', 'running', 'paused') limit 1`,
+        [documentId],
+      );
+      if (writing.rowCount)
+        throw conflict(
+          'DOCUMENT_WRITING_ACTIVE',
+          'The documenter is writing this document; wait for it to finish or cancel the writing.',
+        );
+    }
     return row;
   }
 

@@ -21,6 +21,8 @@ export interface ToolCallScope {
   readonly projectId: string | null;
   readonly stageRunId: string | null;
   readonly attemptId: string | null;
+  /** Set when the role works for a document writing instead of a stage attempt (ADR-0019). */
+  readonly writingId?: string | null;
   readonly role: AgentRole;
   readonly agentDefinitionVersionId: string | null;
   /** The tools the pinned definition allows. */
@@ -65,8 +67,8 @@ export async function recordToolCall(
   const row = await client.query<{ id: string }>(
     `insert into agent_tool_calls
        (workspace_id, project_id, stage_run_id, attempt_id, role, agent_definition_version_id, tool,
-        decision, input_sha256, output_ref, result, latency_ms, error_code)
-     values ($1, $2, $3, $4, $5::agent_role, $6, $7, $8::agent_tool_decision, $9, $10::jsonb, $11::jsonb, $12, $13)
+        decision, input_sha256, output_ref, result, latency_ms, error_code, writing_id)
+     values ($1, $2, $3, $4, $5::agent_role, $6, $7, $8::agent_tool_decision, $9, $10::jsonb, $11::jsonb, $12, $13, $14)
      returning id`,
     [
       scope.workspaceId,
@@ -82,6 +84,7 @@ export async function recordToolCall(
       JSON.stringify(call.result ?? {}),
       call.latencyMs ?? null,
       call.errorCode ?? null,
+      scope.writingId ?? null,
     ],
   );
   return row.rows[0]!.id;
@@ -93,6 +96,24 @@ export async function loadToolCalls(
   attemptId: string,
   tool: AgentTool,
 ): Promise<ToolCallRecord[]> {
+  return loadCalls(client, 'attempt_id', attemptId, tool);
+}
+
+/** The same for a document writing: every step of the writing finds what the first one fetched. */
+export async function loadWritingToolCalls(
+  client: PoolClient,
+  writingId: string,
+  tool: AgentTool,
+): Promise<ToolCallRecord[]> {
+  return loadCalls(client, 'writing_id', writingId, tool);
+}
+
+async function loadCalls(
+  client: PoolClient,
+  column: 'attempt_id' | 'writing_id',
+  id: string,
+  tool: AgentTool,
+): Promise<ToolCallRecord[]> {
   const result = await client.query<{
     id: string;
     tool: AgentTool;
@@ -101,8 +122,8 @@ export async function loadToolCalls(
     result: Record<string, unknown>;
   }>(
     `select id, tool, decision::text as decision, output_ref, result
-       from agent_tool_calls where attempt_id = $1 and tool = $2 order by created_at, id`,
-    [attemptId, tool],
+       from agent_tool_calls where ${column} = $1 and tool = $2 order by created_at, id`,
+    [id, tool],
   );
   return result.rows.map((row) => ({
     id: row.id,

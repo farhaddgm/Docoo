@@ -157,6 +157,11 @@ notion_sync: true
 | `GET /documents/{id}/versions/{versionId}`                           | `document.read`             |
 | `GET /documents/{id}/diff`                                           | `document.read`             |
 | `POST /documents/{id}/versions/{versionId}/restore`                  | `document.restore`          |
+| `POST /documents/{id}/writings`                                      | `document.edit`             |
+| `GET /documents/{id}/writings`                                       | `document.read`             |
+| `GET /documents/{id}/writings/{writingId}`                           | `document.read`             |
+| `POST /documents/{id}/writings/{writingId}/pause                     | resume                      | cancel` | `document.edit` |
+| `POST /documents/{id}/check`                                         | `document.edit`             |
 | `POST /documents/{id}/submit`                                        | `document.edit`             |
 | `POST /documents/{id}/approve`                                       | `document.approve`          |
 | `POST /documents/{id}/reject`                                        | `document.approve`          |

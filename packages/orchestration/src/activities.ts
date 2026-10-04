@@ -5,6 +5,7 @@ import { checkCostLimit, ProviderError, retryDelaySeconds } from '@docoo/provide
 import type { Pool, PoolClient } from 'pg';
 
 import { createAnalysisActivities, loadDefinitionContext } from './analysis-activities.js';
+import { createWritingActivities, type WritingActivities } from './writing-activities.js';
 import type { AnalysisActivities } from './analysis-activities.js';
 import { audit, inWorkspace } from './db.js';
 import type { RunRef, StageRef } from './refs.js';
@@ -38,7 +39,7 @@ export type AttemptResult =
       readonly reason: 'provider_failure' | 'configuration' | 'cost_limit';
     };
 
-export interface OrchestrationActivities extends AnalysisActivities {
+export interface OrchestrationActivities extends AnalysisActivities, WritingActivities {
   startRun(ref: RunRef): Promise<{ paused: boolean }>;
   startStage(ref: RunRef & { stage: Stage }): Promise<StageStart>;
   runAttempt(ref: StageRef & { attemptNo: number; retryNo: number }): Promise<AttemptResult>;
@@ -73,6 +74,7 @@ export function createOrchestrationActivities(
 
   return {
     ...createAnalysisActivities(pool, runtime, options),
+    ...createWritingActivities(pool, runtime, options),
 
     startRun: (ref) =>
       run(ref.workspaceId, async (client) => {

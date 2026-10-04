@@ -1,5 +1,6 @@
+import { OUTLINE_SCHEMA, SECTION_SCHEMA } from '@docoo/documents';
 import { ROLE_EVALUATION_SCHEMA } from '@docoo/domain';
-import { strictSchemaProblems } from '@docoo/providers';
+import { strictSchemaProblems, type JsonSchema } from '@docoo/providers';
 import { describe, expect, it } from 'vitest';
 
 import { ANALYSIS_ROUND_SCHEMA } from './analysis.js';
@@ -23,5 +24,10 @@ describe('provider schemas of the platform', () => {
 
   it('the Brain role evaluation schema is accepted', () => {
     expect(strictSchemaProblems(ROLE_EVALUATION_SCHEMA)).toEqual([]);
+  });
+
+  it('the documenter outline and section schemas are accepted', () => {
+    expect(strictSchemaProblems(OUTLINE_SCHEMA as unknown as JsonSchema)).toEqual([]);
+    expect(strictSchemaProblems(SECTION_SCHEMA as unknown as JsonSchema)).toEqual([]);
   });
 });

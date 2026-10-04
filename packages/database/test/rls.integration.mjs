@@ -899,8 +899,97 @@ try {
     });
   }
 
+  // Document writings (ADR-0019): tenant-scoped runs of the documenter with state rules.
+  const writingDocument = await admin.query(
+    `INSERT INTO documents (workspace_id, project_id, priority, title, level, language) VALUES ($1, $2, 1, 'writing', 1, 'en') RETURNING id`,
+    [ids.workspaceA, ids.projectA],
+  );
+  const writingSql = `INSERT INTO document_writings (workspace_id, project_id, document_id, level, template_version, language, temporal_workflow_id)
+     VALUES ($1, $2, $3, 1, 'standard-v1', 'en', 'document-writing-test') RETURNING id`;
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, writingSql, [
+    ids.workspaceB,
+    ids.projectB,
+    writingDocument.rows[0].id,
+  ]);
+  const writing = await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(writingSql, [ids.workspaceA, ids.projectA, writingDocument.rows[0].id]),
+  );
+  const writingId = writing.rows[0].id;
+  const foreignWritings = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM document_writings'),
+  );
+  assert.equal(foreignWritings.rows[0].count, 0, 'Writings must not leak across tenants.');
+  // Only one live writing per document.
+  await assert.rejects(
+    admin.query(writingSql, [ids.workspaceA, ids.projectA, writingDocument.rows[0].id]),
+    (error) => {
+      assert.equal(error.code, '23505', 'a second live writing of one document is refused');
+      return true;
+    },
+  );
+  // Values: unknown status, level outside 1..5, parts that are not an object, success without a result.
+  for (const [label, sql] of [
+    ['status', `UPDATE document_writings SET status = 'done' WHERE id = $1`],
+    ['phase', `UPDATE document_writings SET phase = 'later' WHERE id = $1`],
+    ['parts', `UPDATE document_writings SET parts = '[]'::jsonb WHERE id = $1`],
+    ['bibliography', `UPDATE document_writings SET bibliography = '[]'::jsonb WHERE id = $1`],
+    ['success without a result', `UPDATE document_writings SET status = 'succeeded' WHERE id = $1`],
+    ['failure without a code', `UPDATE document_writings SET status = 'failed' WHERE id = $1`],
+  ]) {
+    await assert.rejects(admin.query(sql, [writingId]), (error) => {
+      assert.equal(error.code, '23514', label);
+      return true;
+    });
+  }
+  // What a writing belongs to does not change.
+  await assert.rejects(
+    admin.query('UPDATE document_writings SET level = 2 WHERE id = $1', [writingId]),
+    (error) => {
+      assert.equal(error.code, 'P0001', 'the level of a writing is fixed');
+      return true;
+    },
+  );
+  // The worker (docoo_app) moves a live writing along; a finished one is a record.
+  await withContext(ids.workspaceA, null, () =>
+    runtime.query(
+      `UPDATE document_writings SET status = 'running', phase = 'writing' WHERE id = $1`,
+      [writingId],
+    ),
+  );
+  await admin.query(`UPDATE document_writings SET status = 'cancelled' WHERE id = $1`, [writingId]);
+  await assert.rejects(
+    admin.query(`UPDATE document_writings SET status = 'running' WHERE id = $1`, [writingId]),
+    (error) => {
+      assert.equal(error.code, 'P0001', 'a finished writing cannot change');
+      return true;
+    },
+  );
+  // A document of another workspace cannot be the target.
+  await assert.rejects(
+    admin.query(writingSql, [ids.workspaceB, ids.projectB, writingDocument.rows[0].id]),
+    (error) => {
+      assert.equal(error.code, '23503', 'a writing needs a document of its own workspace');
+      return true;
+    },
+  );
+  // A finished writing frees the document for the next one.
+  const next = await admin.query(writingSql, [
+    ids.workspaceA,
+    ids.projectA,
+    writingDocument.rows[0].id,
+  ]);
+  assert.equal(next.rowCount, 1);
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM document_writings');
+  // Deleting the document (a purge) takes its writings with it.
+  await admin.query('DELETE FROM documents WHERE id = $1', [writingDocument.rows[0].id]);
+  const remaining = await admin.query(
+    'SELECT count(*)::int AS count FROM document_writings WHERE document_id = $1',
+    [writingDocument.rows[0].id],
+  );
+  assert.equal(remaining.rows[0].count, 0, 'writings go with their document');
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, analysis, agent and tool-call tables, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent and tool-call tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {

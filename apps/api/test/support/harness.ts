@@ -29,6 +29,7 @@ import {
   fakeResponder,
   ProviderRuntime,
   type RunRef,
+  type WritingRef,
 } from '@docoo/orchestration';
 import { createAdapter, FakeAdapter, masterKeyFromEnv, type FakeScript } from '@docoo/providers';
 import {
@@ -126,6 +127,10 @@ export class RecordingEngine implements WorkflowEngine {
     this.calls.push({ kind: 'start', workflowId });
     return Promise.resolve();
   }
+  startWriting(workflowId: string): Promise<void> {
+    this.calls.push({ kind: 'start', workflowId });
+    return Promise.resolve();
+  }
   signal(workflowId: string, signal: WorkflowSignal, payload?: unknown): Promise<void> {
     this.calls.push({ kind: 'signal', workflowId, signal, payload });
     return Promise.resolve();
@@ -187,6 +192,19 @@ export class TemporalTestRuntime implements WorkflowEngine {
     this.started.push(workflowId);
     try {
       await this.client.workflow.start('projectWorkflow', {
+        taskQueue: this.taskQueue,
+        workflowId,
+        args: [ref],
+      });
+    } catch (error) {
+      if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
+    }
+  }
+
+  async startWriting(workflowId: string, ref: WritingRef): Promise<void> {
+    this.started.push(workflowId);
+    try {
+      await this.client.workflow.start('documentWritingWorkflow', {
         taskQueue: this.taskQueue,
         workflowId,
         args: [ref],

@@ -9,6 +9,7 @@ import {
 
 import type { OrchestrationActivities, RunRef, StageRef } from './activities.js';
 import { STAGES, type Stage } from './stages.js';
+import type { WritingActivities, WritingRef } from './writing-activities.js';
 
 export interface GateSignal {
   readonly stageRunId: string;
@@ -272,4 +273,119 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
   }
   await activities.completeRun(ref);
   return { status: 'completed' };
+}
+
+/** Fit rounds are capped by the `document.writing.fit_rounds` setting (at most this many). */
+const MAX_FIT_ROUNDS = 3;
+
+const writing = proxyActivities<WritingActivities>({
+  startToCloseTimeout: '15 minutes',
+  retry: {
+    initialInterval: '2 seconds',
+    backoffCoefficient: 2,
+    maximumInterval: '1 minute',
+    maximumAttempts: 20,
+  },
+});
+
+/**
+ * DocumentWritingWorkflow (ADR-0019): the documenter writes the whole document of a solution,
+ * one subsection at a time, then brings its length into the level's bounds and saves it as a new
+ * version. Every step is an idempotent activity, so a worker restart resumes at the last finished
+ * subsection. A provider failure that outlasts the approved retry schedule, missing configuration,
+ * a missing tool or the cost limit pauses the writing for the administrator; fallback to another
+ * model stays off.
+ */
+export async function documentWritingWorkflow(
+  ref: WritingRef,
+): Promise<{ status: 'succeeded' | 'failed' | 'cancelled' }> {
+  let paused = false;
+  let cancelled: { reason: string | null } | null = null;
+  setHandler(pauseSignal, () => {
+    paused = true;
+  });
+  setHandler(resumeSignal, () => {
+    paused = false;
+  });
+  setHandler(cancelSignal, (input) => {
+    cancelled = input;
+  });
+
+  /** Waits while paused; false when the writing was cancelled meanwhile. */
+  const whileActive = async (): Promise<boolean> => {
+    if (paused && cancelled === null) {
+      await writing.writingBlock({ ...ref, code: 'paused_by_administrator', reason: 'pause' });
+      await condition(() => !paused || cancelled !== null);
+      if (cancelled === null) await writing.writingResume(ref);
+    }
+    return cancelled === null;
+  };
+
+  /** Runs a step through the retry schedule and the administrator pauses. */
+  const drive = async <T extends { status: string }>(
+    call: (retryNo: number) => Promise<T>,
+  ): Promise<Exclude<T, { status: 'retry' } | { status: 'blocked' }> | { status: 'cancelled' }> => {
+    let retryNo = 0;
+    for (;;) {
+      if (!(await whileActive())) return { status: 'cancelled' };
+      const result = await call(retryNo);
+      if (result.status === 'retry') {
+        retryNo += 1;
+        const delay = (result as unknown as { delaySeconds: number }).delaySeconds;
+        await condition(() => cancelled !== null, delay * 1000);
+        continue;
+      }
+      if (result.status === 'blocked') {
+        const blocked = result as unknown as { code: string; reason: string };
+        await writing.writingBlock({ ...ref, code: blocked.code, reason: blocked.reason });
+        paused = true;
+        retryNo = 0;
+        continue;
+      }
+      return result as Exclude<T, { status: 'retry' } | { status: 'blocked' }>;
+    }
+  };
+
+  const cancel = async (): Promise<{ status: 'cancelled' }> => {
+    await writing.writingCancel({
+      ...ref,
+      reason: cancelled?.reason ?? null,
+    });
+    return { status: 'cancelled' };
+  };
+  const fail = async (code: string): Promise<{ status: 'failed' }> => {
+    await writing.writingFail({ ...ref, code });
+    return { status: 'failed' };
+  };
+
+  const started = await writing.writingStart(ref);
+  if (started.finished) return { status: 'failed' };
+
+  const prepared = await drive(() => writing.writingPrepare(ref));
+  if (prepared.status === 'cancelled') return cancel();
+  if (prepared.status === 'failed') return fail(prepared.code);
+
+  const outline = await drive((retryNo) => writing.writingOutline({ ...ref, retryNo }));
+  if (outline.status === 'cancelled') return cancel();
+  if (outline.status === 'failed') return fail(outline.code);
+
+  for (const subsectionId of outline.subsectionIds) {
+    const written = await drive((retryNo) =>
+      writing.writingWrite({ ...ref, subsectionId, retryNo }),
+    );
+    if (written.status === 'cancelled') return cancel();
+    if (written.status === 'failed') return fail(written.code);
+  }
+
+  for (let round = 1; round <= MAX_FIT_ROUNDS; round += 1) {
+    const fitted = await drive((retryNo) => writing.writingFit({ ...ref, round, retryNo }));
+    if (fitted.status === 'cancelled') return cancel();
+    if (fitted.status === 'failed') return fail(fitted.code);
+    if (fitted.done) break;
+  }
+
+  const finished = await drive(() => writing.writingFinish(ref));
+  if (finished.status === 'cancelled') return cancel();
+  if (finished.status === 'failed') return { status: 'failed' };
+  return { status: 'succeeded' };
 }

@@ -537,6 +537,9 @@ importers:
 
   packages/orchestration:
     dependencies:
+      '@docoo/documents':
+        specifier: workspace:*
+        version: link:../documents
       '@docoo/domain':
         specifier: workspace:*
         version: link:../domain

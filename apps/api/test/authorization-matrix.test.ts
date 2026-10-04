@@ -160,6 +160,13 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/documents/:documentId/diff': 'document.read',
   'POST workspaces/:workspaceId/documents/:documentId/versions/:versionId/restore':
     'document.restore',
+  'POST workspaces/:workspaceId/documents/:documentId/writings': 'document.edit',
+  'GET workspaces/:workspaceId/documents/:documentId/writings': 'document.read',
+  'GET workspaces/:workspaceId/documents/:documentId/writings/:writingId': 'document.read',
+  'POST workspaces/:workspaceId/documents/:documentId/writings/:writingId/pause': 'document.edit',
+  'POST workspaces/:workspaceId/documents/:documentId/writings/:writingId/resume': 'document.edit',
+  'POST workspaces/:workspaceId/documents/:documentId/writings/:writingId/cancel': 'document.edit',
+  'POST workspaces/:workspaceId/documents/:documentId/check': 'document.edit',
   'POST workspaces/:workspaceId/documents/:documentId/submit': 'document.edit',
   'POST workspaces/:workspaceId/documents/:documentId/approve': 'document.approve',
   'POST workspaces/:workspaceId/documents/:documentId/reject': 'document.approve',

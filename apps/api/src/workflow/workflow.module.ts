@@ -12,6 +12,6 @@ import { WorkflowService } from './workflow.service.js';
     CommandRunner,
     { provide: WORKFLOW_ENGINE, useClass: TemporalWorkflowEngine },
   ],
-  exports: [WorkflowService, CommandRunner],
+  exports: [WorkflowService, CommandRunner, WORKFLOW_ENGINE],
 })
 export class WorkflowModule {}

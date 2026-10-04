@@ -24,6 +24,7 @@
     "test:acceptance": "vitest run --exclude 'dist/**' acceptance"
   },
   "dependencies": {
+    "@docoo/documents": "workspace:*",
     "@docoo/domain": "workspace:*",
     "@docoo/knowledge": "workspace:*",
     "@docoo/providers": "workspace:*",
