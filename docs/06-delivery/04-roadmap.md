@@ -2,9 +2,9 @@
 doc_id: DOCOO-ROADMAP
 title: نقشه راه توسعه Docoo
 status: proposed
-version: 1.0.0
+version: 1.1.0
 owner: Product & Engineering
-last_updated: 2026-09-24
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -117,6 +117,19 @@ workflow پس از kill/deploy ادامه یابد و provider outage state را
 ### Gate
 
 تمام معیارهای acceptance، zero critical open و sign-off ادمین.
+
+## گام‌های بعدی پس از فاز ۶
+
+فازهای ۰ تا ۶ و نصب production بسته شده‌اند؛ آنچه می‌ماند به این ترتیب اولویت دارد (هر مورد با story و Issue خودش وارد backlog می‌شود):
+
+1. **پرسش‌وپاسخ تحلیلگر** ([قرارداد API](../04-architecture/03-api-contracts.md) §۷): batchهای ۳۰ تا ۳۰۰ سؤال، پاسخ اتمیک، تعریف نهایی مسئله و تأیید آن. مرحلهٔ «تحلیل» اکنون یک فراخوانی ساختاریافته است و این قلب محصول را کامل می‌کند.
+2. **ایجنت‌ها و پیکربندی پروژه** (§۱۱ قرارداد API، UX §۹): تعریف نسخه‌دار هر نقش، کپی مستقل برای پروژه، allowlist ابزار و صفحهٔ «ایجنت‌ها».
+3. **دانش در بک‌آفیس** (UX §۸): بارگذاری منبع، صف ممیزی دو‌نمایی، override با دلیل و تعارض‌ها؛ API از فاز ۲ آماده است.
+4. **نگارش سند**: عامل documentation سند کامل را با citation می‌نویسد (ADR-0010) و ویرایشگر ساختاریافتهٔ بلوک‌ها در صفحهٔ سند.
+5. **تحقیق با دانش**: مرحلهٔ research از بازیابی دانش approved و citation استفاده کند، نه فقط فراخوانی مدل.
+6. **ارزیابی مدل‌محور نقش‌ها** در گزارش Brain روی قرارداد ADR-0011.
+7. **تنظیمات سامانه، قالب‌ها و سطوح سند** در UI و wizard ایجاد پروژه (UX §۵).
+8. **پذیرش با provider واقعی** ([issue ING-005](https://github.com/farhaddgm/Docoo/issues/53) و workflow پذیرش provider) و اقدام‌های مالک: CodeQL، حفاظت شاخه، سرور واقعی و امضای private beta (#89، #94).
 
 ## spikeهای لازم
 

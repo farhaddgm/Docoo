@@ -1,4 +1,5 @@
 import type { Locale } from '../../i18n';
+import { rateLimitErrors } from '../../rate-limit-messages';
 
 const messages = {
   fa: {
@@ -48,6 +49,7 @@ const messages = {
     deleted: 'حوزه حذف شد و تا ۳۰ روز قابل بازیابی است.',
     failed: 'عملیات انجام نشد. دوباره تلاش کنید.',
     errors: {
+      ...rateLimitErrors.fa,
       TOPIC_INVALID_REQUEST: 'اطلاعات واردشده معتبر نیست؛ کد و عنوان را بررسی کنید.',
       TOPIC_ALREADY_EXISTS: 'حوزه‌ای با این کد وجود دارد.',
       TOPIC_VERSION_CONFLICT: 'این حوزه پس از بارگذاری تغییر کرده است. صفحه را به‌روز کنید.',
@@ -105,6 +107,7 @@ const messages = {
     deleted: 'The topic was deleted and stays recoverable for 30 days.',
     failed: 'That did not work. Please try again.',
     errors: {
+      ...rateLimitErrors.en,
       TOPIC_INVALID_REQUEST: 'The details are not valid; check the code and title.',
       TOPIC_ALREADY_EXISTS: 'A topic with this code already exists.',
       TOPIC_VERSION_CONFLICT: 'This topic changed after you loaded it. Reload the page.',

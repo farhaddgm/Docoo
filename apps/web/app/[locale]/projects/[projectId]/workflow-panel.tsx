@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { StageOutput } from './stage-output';
@@ -72,7 +72,10 @@ interface StageDetail {
 type RunAction = (action: () => Promise<void>, okText: string) => Promise<boolean>;
 
 const LIVE = ['starting', 'running', 'paused', 'waiting_for_human'];
-const POLL_MS = 5000;
+// A running stage changes within seconds; a run waiting for you or paused changes only when you act.
+const POLL_ACTIVE_MS = 5000;
+const POLL_IDLE_MS = 15000;
+const ACTED_WINDOW_MS = 60000;
 
 export function WorkflowPanel({
   locale,
@@ -94,6 +97,7 @@ export function WorkflowPanel({
   const base = `/workspaces/${workspaceId}/projects/${projectId}`;
   const [overview, setOverview] = useState<Overview | null>(null);
   const [failed, setFailed] = useState(false);
+  const [tick, setTick] = useState(0);
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const signature = useRef('');
@@ -107,6 +111,7 @@ export function WorkflowPanel({
     const { workflow } = await apiGet<{ workflow: Overview }>(`${base}/workflow`);
     setOverview(workflow);
     setFailed(false);
+    setTick((value) => value + 1);
     // A change of run or stage can change the project too (a blocked run pauses it).
     const next = `${workflow.run?.status}:${workflow.run?.currentStage}:${workflow.humanTasks.length}`;
     if (signature.current && signature.current !== next) onProjectRefresh();
@@ -118,15 +123,26 @@ export function WorkflowPanel({
   }, [load, refreshKey]);
 
   const live = overview?.run ? LIVE.includes(overview.run.status) : false;
+  // After the administrator acts, the next stage starts within seconds: poll quickly for a while.
+  const [recentlyActed, setRecentlyActed] = useState(false);
+  const actedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => (actedTimer.current ? clearTimeout(actedTimer.current) : undefined), []);
+  const interval =
+    recentlyActed || overview?.run?.status === 'starting' || overview?.run?.status === 'running'
+      ? POLL_ACTIVE_MS
+      : POLL_IDLE_MS;
   useEffect(() => {
     if (!live) return;
     const timer = setInterval(() => {
       if (!document.hidden) load().catch(() => undefined);
-    }, POLL_MS);
+    }, interval);
     return () => clearInterval(timer);
-  }, [live, load]);
+  }, [live, interval, load]);
 
   const afterChange = useCallback(async () => {
+    setRecentlyActed(true);
+    if (actedTimer.current) clearTimeout(actedTimer.current);
+    actedTimer.current = setTimeout(() => setRecentlyActed(false), ACTED_WINDOW_MS);
     await load().catch(() => setFailed(true));
     onProjectRefresh();
   }, [load, onProjectRefresh]);
@@ -351,6 +367,7 @@ export function WorkflowPanel({
           locale={locale}
           base={base}
           stage={stage}
+          tick={tick}
           busy={busy}
           run={run}
           onChanged={afterChange}
@@ -365,6 +382,7 @@ function ReviewPanel({
   locale,
   base,
   stage,
+  tick,
   busy,
   run,
   onChanged,
@@ -372,6 +390,8 @@ function ReviewPanel({
   locale: Locale;
   base: string;
   stage: StageItem;
+  /** Changes whenever the workflow was read again; a failed load is retried then. */
+  tick: number;
   busy: boolean;
   run: RunAction;
   onChanged: () => Promise<void>;
@@ -394,8 +414,11 @@ function ReviewPanel({
   }, [stageBase]);
 
   useEffect(() => {
-    load().catch(() => setFailed(true));
-  }, [load]);
+    if (detail && !failed) return;
+    load()
+      .then(() => setFailed(false))
+      .catch(() => setFailed(true));
+  }, [load, tick]);
 
   const output = detail?.outputs.find((item) => item.id === outputId);
   const history = (detail?.reviews ?? []).filter((review) => review.outputId === outputId);
@@ -460,10 +483,25 @@ function ReviewPanel({
   return (
     <section className="card" aria-labelledby={headingId}>
       <h2 id={headingId}>{heading}</h2>
-      {failed ? (
-        <p className="notice error" role="alert">
-          {common.loadFailed}
-        </p>
+      {failed && !detail ? (
+        <div className="stack">
+          <p className="notice error" role="alert">
+            {common.loadFailed}
+          </p>
+          <div className="toolbar">
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() =>
+                void load()
+                  .then(() => setFailed(false))
+                  .catch(() => setFailed(true))
+              }
+            >
+              {messagesFor(locale).retry}
+            </button>
+          </div>
+        </div>
       ) : !detail ? (
         <p role="status">{common.loading}</p>
       ) : !output ? (

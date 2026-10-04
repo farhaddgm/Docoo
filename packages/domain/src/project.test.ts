@@ -11,6 +11,7 @@ import {
   projectCommands,
   projectStatuses,
   transitionProject,
+  type ProjectCommand,
   type ProjectState,
 } from './project.js';
 
@@ -108,16 +109,17 @@ describe('project state machine', () => {
   });
 
   it('offers exactly the commands that change the status', () => {
+    const changesStatus = (status: ProjectState['status'], command: ProjectCommand): boolean => {
+      try {
+        return planProjectCommand(state(status, 'draft'), command) !== null;
+      } catch {
+        return false;
+      }
+    };
     for (const status of projectStatuses) {
       for (const command of projectCommands) {
-        let changes = false;
-        try {
-          changes = planProjectCommand(state(status, 'draft'), command) !== null;
-        } catch {
-          changes = false;
-        }
         expect(availableProjectCommands(status).includes(command), `${status} ${command}`).toBe(
-          changes,
+          changesStatus(status, command),
         );
       }
     }

@@ -35,7 +35,8 @@ export function useAction(explain: (error: unknown) => string) {
       setNotice(null);
       try {
         await action();
-        setNotice({ ok: true, text: okText });
+        // An empty text means the result is shown by the page itself (a diff, a preview).
+        if (okText) setNotice({ ok: true, text: okText });
         return true;
       } catch (error) {
         setNotice({ ok: false, text: explain(error) });

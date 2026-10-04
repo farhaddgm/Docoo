@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ApiError, apiGet, apiPost } from '../../api-client';
 import { formatDateTime, type Locale } from '../../i18n';
@@ -82,10 +82,15 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
     [base],
   );
 
+  // Only the newest load may update the page: a slow earlier one must not bring back values
+  // that a save has just replaced.
+  const latestLoad = useRef(0);
   const load = useCallback(async () => {
+    const mine = ++latestLoad.current;
     const items = (
       await apiGet<{ items: Connection[] }>(`${base}/provider-connections`)
     ).items.filter((item) => item.status !== 'disabled');
+    if (mine !== latestLoad.current) return;
     setConnections(items);
     await Promise.all(items.map((item) => loadModels(item.id).catch(() => undefined)));
     const effective = (
@@ -93,6 +98,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
         `${base}/settings/effective?scopeType=workspace&scopeId=${workspaceId}`,
       )
     ).config.values;
+    if (mine !== latestLoad.current) return;
     const saved = {
       connectionId:
         typeof effective['ai.connection_id'] === 'string' ? effective['ai.connection_id'] : '',

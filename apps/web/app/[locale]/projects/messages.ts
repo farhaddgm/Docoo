@@ -1,4 +1,5 @@
 import type { Locale } from '../../i18n';
+import { rateLimitErrors } from '../../rate-limit-messages';
 
 const messages = {
   fa: {
@@ -72,6 +73,7 @@ const messages = {
     cancel: 'انصراف',
     reason: 'دلیل تغییر (اختیاری)',
     errors: {
+      ...rateLimitErrors.fa,
       PROJECT_INVALID_REQUEST: 'اطلاعات واردشده معتبر نیست؛ کد، عنوان و مسئله را بررسی کنید.',
       PROJECT_ALREADY_EXISTS: 'پروژه‌ای با این کد وجود دارد.',
       PROJECT_TOPIC_UNAVAILABLE: 'یکی از حوزه‌ها بایگانی یا حذف شده است؛ آن را از فهرست بردارید.',
@@ -165,6 +167,7 @@ const messages = {
     cancel: 'Cancel',
     reason: 'Reason for the change (optional)',
     errors: {
+      ...rateLimitErrors.en,
       PROJECT_INVALID_REQUEST: 'The details are not valid; check the code, title and problem.',
       PROJECT_ALREADY_EXISTS: 'A project with this code already exists.',
       PROJECT_TOPIC_UNAVAILABLE: 'A topic was archived or deleted; remove it from the list.',

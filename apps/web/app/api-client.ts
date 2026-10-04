@@ -26,12 +26,27 @@ async function failure(response: Response): Promise<ApiError> {
   }
 }
 
+/** A reverse proxy that reuses a connection the API just closed fails once and then works. */
+const RETRY_STATUSES = new Set([502, 503, 504]);
+const RETRY_DELAY_MS = 400;
+
 export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`/api${path}`, {
-    cache: 'no-store',
-    credentials: 'same-origin',
-    ...(signal ? { signal } : {}),
-  });
+  const request = () =>
+    fetch(`/api${path}`, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      ...(signal ? { signal } : {}),
+    });
+  let response: Response;
+  try {
+    response = await request();
+    if (RETRY_STATUSES.has(response.status)) throw new TypeError('Bad gateway');
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    // Reads are safe to repeat; one retry hides a transient network or gateway failure.
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    response = await request();
+  }
   if (!response.ok) throw await failure(response);
   return (await response.json()) as T;
 }

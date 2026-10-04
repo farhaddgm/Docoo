@@ -1,4 +1,5 @@
 import type { Locale } from '../../../i18n';
+import { rateLimitErrors } from '../../../rate-limit-messages';
 
 const messages = {
   fa: {
@@ -137,6 +138,7 @@ const messages = {
       decided: 'تصمیم ثبت شد.',
     },
     errors: {
+      ...rateLimitErrors.fa,
       WORKFLOW_ENGINE_UNAVAILABLE:
         'تغییر ذخیره شد ولی موتور گردش‌کار در دسترس نیست. کمی بعد «هم‌ترازی با موتور» را بزنید.',
       WORKFLOW_FEEDBACK_REQUIRED: 'برای رد کردن، بازخورد لازم است.',
@@ -282,6 +284,7 @@ const messages = {
       decided: 'The decision was recorded.',
     },
     errors: {
+      ...rateLimitErrors.en,
       WORKFLOW_ENGINE_UNAVAILABLE:
         'The change is saved but the workflow engine is unavailable. Press "Sync with the engine" shortly.',
       WORKFLOW_FEEDBACK_REQUIRED: 'A rejection needs feedback.',

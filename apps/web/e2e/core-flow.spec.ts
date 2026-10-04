@@ -1,10 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { documentMessages } from '../app/[locale]/projects/[projectId]/document-messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
+import { solutionMessages } from '../app/[locale]/projects/[projectId]/solution-messages';
 import { workflowMessages } from '../app/[locale]/projects/[projectId]/workflow-messages';
 import { projectMessages } from '../app/[locale]/projects/messages';
 import { topicMessages } from '../app/[locale]/topics/messages';
 import {
+  apiSession,
   createViaApi,
   expectNoSeriousA11yViolations,
   signInWithKeyboard,
@@ -17,7 +20,17 @@ const topicText = topicMessages('fa');
 const projectText = projectMessages('fa');
 const detail = projectPageMessages('fa');
 const flow = workflowMessages('fa');
+const solutionText = solutionMessages('fa');
+const documentText = documentMessages('fa');
 const stamp = Date.now().toString(36);
+const titles = {
+  market: `بازار هدف ${stamp}`,
+  marketEdited: `بازار هدف بازنگری‌شده ${stamp}`,
+  first: `حوزهٔ اول ${stamp}`,
+  second: `حوزهٔ دوم ${stamp}`,
+  flow: `حوزهٔ جریان ${stamp}`,
+  solutions: `حوزهٔ راه‌حل ${stamp}`,
+};
 
 const mainNavigation = (page: Page) => page.getByRole('navigation', { name: 'ناوبری اصلی' });
 const failureNotice = (page: Page) => page.locator('.notice.error[role="alert"]');
@@ -36,12 +49,12 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     ).toHaveAttribute('aria-current', 'page');
 
     await page.locator('#topic-code').fill(code);
-    await page.locator('#topic-title').fill('بازار هدف');
+    await page.locator('#topic-title').fill(titles.market);
     await page.locator('#topic-description').fill('تحلیل بازار مشتریان');
     await page.getByRole('button', { name: topicText.createSubmit }).click();
     await expect(page.getByRole('status').filter({ hasText: topicText.created })).toBeVisible();
     const row = page.getByRole('row').filter({ has: page.getByRole('rowheader', { name: code }) });
-    await expect(row).toContainText('بازار هدف');
+    await expect(row).toContainText(titles.market);
     await expectNoSeriousA11yViolations(page);
 
     // Edit keeps the version history: the page sends If-Match with the loaded version.
@@ -49,11 +62,11 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(
       page.getByRole('heading', { level: 2, name: topicText.editTitle.replace('{code}', code) }),
     ).toBeFocused();
-    await page.locator('#edit-title').fill('بازار هدف (بازنگری‌شده)');
+    await page.locator('#edit-title').fill(titles.marketEdited);
     await page.locator('#edit-reason').fill('اصلاح عنوان');
     await page.getByRole('button', { name: topicText.save }).click();
     await expect(page.getByRole('status').filter({ hasText: topicText.updatedDone })).toBeVisible();
-    await expect(row).toContainText('بازنگری‌شده');
+    await expect(row).toContainText(titles.marketEdited);
     await expect(row.getByRole('cell').nth(2)).toHaveText('۲'); // version 2, in Persian digits
 
     // Archive shows its effect first and moves the topic to the archived view.
@@ -80,11 +93,11 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await useFakeProvider(page);
     const first = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
       code: `pa-${stamp}`,
-      title: 'حوزهٔ اول',
+      title: titles.first,
     });
     const second = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
       code: `pb-${stamp}`,
-      title: 'حوزهٔ دوم',
+      title: titles.second,
     });
 
     await mainNavigation(page).getByRole('link', { name: 'پروژه‌ها' }).click();
@@ -104,9 +117,9 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: projectText.addTopic }).click();
     const order = page.locator('.priority-list > li');
     await expect(order).toHaveCount(2);
-    await expect(order.first()).toContainText('حوزهٔ اول');
-    await page.getByRole('button', { name: `${projectText.moveDown}: حوزهٔ اول` }).click();
-    await expect(order.first()).toContainText('حوزهٔ دوم');
+    await expect(order.first()).toContainText(titles.first);
+    await page.getByRole('button', { name: `${projectText.moveDown}: ${titles.first}` }).click();
+    await expect(order.first()).toContainText(titles.second);
     await expectNoSeriousA11yViolations(page);
     await page.getByRole('button', { name: projectText.createSubmit }).click();
 
@@ -117,7 +130,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(statusBadge(page)).toHaveText(detail.statuses['draft']!);
     await expect(page.getByRole('button', { name: detail.commands['pause']! })).toHaveCount(0);
     const topicItems = page.locator('#topics-title').locator('xpath=following-sibling::ol/li');
-    await expect(topicItems.first()).toContainText('حوزهٔ دوم'); // saved in the chosen priority
+    await expect(topicItems.first()).toContainText(titles.second); // saved in the chosen priority
     await expectNoSeriousA11yViolations(page);
 
     // Activate, then pause: a reason is required and the pause reason stays visible.
@@ -193,7 +206,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await useFakeProvider(page);
     const topic = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
       code: `ft-${stamp}`,
-      title: 'حوزهٔ جریان',
+      title: titles.flow,
     });
     const created = await createViaApi<{ project: { id: string } }>(page, '/projects', {
       code: `flow-${stamp}`,
@@ -255,6 +268,156 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('link', { name: 'Switch to English' }).click();
     await expect(page).toHaveURL(/\/en\/projects\/[0-9a-f-]{36}\?tab=timeline$/u);
     await expect(page.getByRole('heading', { level: 1, name: 'Project' })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('solutions and documents: generate, select, evaluate, accept an exception, approve, lock and reopen (SOL-001..003, DOC-101..102, EVA-001..002)', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await signInWithKeyboard(page);
+    await useFakeProvider(page);
+    // Level 1 accepts the short drafts of the offline provider, so the document is compliant.
+    const { workspaceId, headers } = await apiSession(page);
+    for (const [key, value] of [
+      ['document.level', 1],
+      [
+        'document.level_bounds',
+        [20, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000],
+      ],
+    ] as const) {
+      const response = await page.request.put(
+        `/api/workspaces/${workspaceId}/settings/assignments`,
+        {
+          headers,
+          data: { key, scopeType: 'workspace', scopeId: workspaceId, value, reason: 'E2E setup' },
+        },
+      );
+      expect(response.ok(), await response.text()).toBe(true);
+    }
+    const topic = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
+      code: `sd-${stamp}`,
+      title: titles.solutions,
+    });
+    const created = await createViaApi<{ project: { id: string } }>(page, '/projects', {
+      code: `sol-${stamp}`,
+      title: 'راه‌حل و سند',
+      initialProblem: 'کاهش ریزش مشتریان تکراری',
+      topics: [{ topicId: topic.topic.id }],
+    });
+
+    // Solutions: generate three, tune the weights (must add up to 100), select two.
+    await page.goto(`/fa/projects/${created.project.id}?tab=solutions`);
+    await page.locator('#solution-count').fill('3');
+    await page.getByRole('button', { name: solutionText.generate }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: solutionText.done.generated }),
+    ).toBeVisible();
+    const articles = page.locator('article');
+    await expect(articles).toHaveCount(3);
+    await expectNoSeriousA11yViolations(page);
+
+    const impact = page.getByLabel(`${solutionText.weight}: Impact on the problem`);
+    const cost = page.getByLabel(`${solutionText.weight}: Cost and resources`);
+    const save = page.getByRole('button', { name: solutionText.saveCriteria });
+    await impact.fill('30');
+    await expect(save).toBeDisabled(); // 105: the weights no longer add up to 100
+    await cost.fill('10');
+    await expect(save).toBeEnabled();
+    await save.click(); // a reason is required: the browser stops the empty form
+    await expect(page.locator('#criteria-reason:invalid')).toHaveCount(1);
+    await page.locator('#criteria-reason').fill('اهمیت تأثیر بیشتر از هزینه است');
+    await save.click();
+    await expect(
+      page.getByRole('status').filter({ hasText: solutionText.done.criteria }),
+    ).toBeVisible();
+    await expect(articles.first().getByText(solutionText.outOf)).toBeVisible();
+
+    await articles.nth(0).getByRole('button', { name: solutionText.addToSelection }).click();
+    await articles.nth(2).getByRole('button', { name: solutionText.addToSelection }).click();
+    const selection = page.locator('.priority-list > li');
+    await expect(selection).toHaveCount(2);
+    await selection
+      .nth(1)
+      .getByRole('button', { name: new RegExp(solutionText.moveUp, 'u') })
+      .click();
+    await page.locator('#selection-reason').fill('دو گزینهٔ برتر');
+    await page.getByRole('button', { name: solutionText.select }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: solutionText.done.selected }),
+    ).toBeVisible();
+    await expect(page.getByText(/انتخاب‌شده با اولویت/u)).toHaveCount(2);
+
+    // Documents: one per selected solution, in priority order.
+    await page.getByRole('button', { name: detail.tabs.documents }).click();
+    const rows = page.locator('#documents-title').locator('xpath=following-sibling::div//tbody/tr');
+    await expect(rows).toHaveCount(2);
+    await rows.first().getByRole('button', { name: documentText.open }).click();
+    await expect(page.locator('.document-view')).toContainText('خلاصه');
+    const badge = page
+      .locator('#document-heading')
+      .locator('xpath=following-sibling::dl//dd/span')
+      .first();
+    await expect(badge).toHaveText(documentText.statuses['draft']!);
+    await expectNoSeriousA11yViolations(page);
+
+    // Approval is guarded: not before evaluation, not after a failed one.
+    await page.getByRole('button', { name: documentText.submit }).click();
+    await expect(badge).toHaveText(documentText.statuses['ready_for_review']!);
+    await page.getByRole('button', { name: documentText.approve }).click();
+    await expect(failureNotice(page)).toContainText(documentText.errors['DOCUMENT_NOT_EVALUATED']!);
+    await page.getByRole('button', { name: documentText.evaluate }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: documentText.done['evaluate']! }),
+    ).toBeVisible();
+    await expect(
+      page.locator('#evaluation-title').locator('xpath=following-sibling::p/span').first(),
+    ).toHaveText(documentText.evaluationStatuses['failed_quality']!);
+    await page.getByRole('button', { name: documentText.approve }).click();
+    await expect(failureNotice(page)).toContainText(
+      documentText.errors['DOCUMENT_EVALUATION_FAILED']!,
+    );
+
+    // An exception is visible everywhere and is never confused with a normal approval.
+    await page.getByRole('button', { name: documentText.acceptException }).click();
+    await page.locator('#document-reason').fill('مدیر عامل نتیجه را پذیرفت');
+    await page.getByRole('button', { name: documentText.confirm, exact: true }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: documentText.done['exception']! }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: documentText.approve }).click();
+    await expect(badge).toHaveText(documentText.statuses['approved']!);
+    await expect(
+      page.getByText(documentText.approvalKinds['accepted_with_exception']!),
+    ).toBeVisible();
+    await expect(
+      page.locator('.facts .badge', { hasText: documentText.exceptionBadge }),
+    ).toBeVisible();
+
+    // Lock, then reopen with a reason: that creates a new draft version.
+    await page.getByRole('button', { name: documentText.lock }).click();
+    await page.getByRole('button', { name: documentText.confirm, exact: true }).click();
+    await expect(badge).toHaveText(documentText.statuses['locked']!);
+    await expect(page.getByRole('button', { name: documentText.submit })).toHaveCount(0);
+    await page.getByRole('button', { name: documentText.supersede }).click();
+    await page.locator('#document-reason').fill('بازنگری فصلی');
+    await page.getByRole('button', { name: documentText.confirm, exact: true }).click();
+    await expect(badge).toHaveText(documentText.statuses['draft']!);
+
+    // Versions: compare and restore the first one as a new version.
+    const versionRows = page
+      .locator('#versions-title')
+      .locator('xpath=following-sibling::div//tbody/tr');
+    await expect(versionRows).toHaveCount(2);
+    await page.getByRole('button', { name: documentText.showDiff }).click();
+    await expect(page.locator('.output-view')).toBeVisible();
+    await versionRows.last().getByRole('button', { name: documentText.restore }).click();
+    await page.locator('#document-reason').fill('بازگشت به متن اول');
+    await page.getByRole('button', { name: documentText.confirm, exact: true }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: documentText.done['restore']! }),
+    ).toBeVisible();
+    await expect(versionRows).toHaveCount(3);
     await expectNoSeriousA11yViolations(page);
   });
 
