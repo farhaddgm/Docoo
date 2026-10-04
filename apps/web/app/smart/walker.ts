@@ -1,3 +1,5 @@
+import type { Route } from 'next';
+
 import type { Locale } from '../i18n';
 import type { WalkerProgress, WalkerStep } from './api';
 
@@ -24,9 +26,9 @@ export function stepHref(
   locale: Locale,
   key: string,
   projectId: string | null = null,
-): string | null {
+): Route | null {
   const route = STEP_TARGETS[key]?.(projectId);
-  return route ? `/${locale}${route}` : null;
+  return route ? (`/${locale}${route}` as Route) : null;
 }
 
 /** The step the walker shows first: the suggested one, or the last step once all are done. */

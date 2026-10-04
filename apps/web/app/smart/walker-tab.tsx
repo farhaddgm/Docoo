@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import type { Route } from 'next';
 import { useCallback, useEffect, useState } from 'react';
 
 import { ApiError } from '../api-client';
@@ -202,7 +201,7 @@ export function WalkerTab({
               )}
               <div className="toolbar">
                 {href && (
-                  <Link className="primary-button link-button" href={href as Route}>
+                  <Link className="primary-button link-button" href={href}>
                     {text.walker.goToPage}
                   </Link>
                 )}
