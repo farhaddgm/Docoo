@@ -69,9 +69,13 @@ has_systemd() { return 0; }
 systemctl() { calls+=("systemctl $*"); }
 say() { :; }
 
+umask 077 # the installer runs like this while it writes .env; the units must not inherit it
 auto_update_command on
+umask 022
 assert_eq on "$(env_value AUTO_UPDATE)" 'on is stored'
 assert_eq yes "$([ -f "$units/docoo-update.timer" ] && [ -f "$units/docoo-update.service" ] && echo yes)" 'on writes both units'
+assert_eq 644 "$(stat -c %a "$units/docoo-update.service")" 'service unit is world-readable under umask 077'
+assert_eq 644 "$(stat -c %a "$units/docoo-update.timer")" 'timer unit is world-readable under umask 077'
 assert_contains "${calls[*]}" 'systemctl enable --now docoo-update.timer' 'on enables the timer'
 auto_update_command off
 assert_eq off "$(env_value AUTO_UPDATE)" 'off is stored (replaces the value)'

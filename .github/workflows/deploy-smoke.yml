@@ -90,6 +90,9 @@ jobs:
       - name: Nightly update is installed, can be switched off and on, and a night with nothing new changes nothing
         run: |
           set -euo pipefail
+          # The runner's checkout belongs to the runner user, git refuses it for root; on a server
+          # /opt/docoo is root's own, so only the test needs this.
+          sudo git config --global --add safe.directory "$PWD"
           test "$(systemctl is-enabled docoo-update.timer)" = enabled
           systemctl is-active docoo-update.timer
           systemctl cat docoo-update.service | grep -F "ExecStart=$PWD/scripts/deploy/install.sh update --scheduled"
@@ -103,7 +106,6 @@ jobs:
           test "$(systemctl is-enabled docoo-update.timer)" = enabled
           # Nothing newer than what runs: the nightly run must not rebuild or restart anything.
           current=$(sudo sed -n 's/^DOCOO_VERSION=//p' deploy/.env)
-          sudo git config --global --add safe.directory "$PWD"
           sudo DOCOO_UPDATE_REF="$current" ./scripts/deploy/install.sh update --scheduled 2>&1 | tee nightly-same.log
           grep -q 'nothing to do' nightly-same.log
           ! grep -q 'Building and starting' nightly-same.log

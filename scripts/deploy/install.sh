@@ -271,6 +271,9 @@ install_auto_update() {
   local unit
   for unit in docoo-update.service docoo-update.timer; do
     render_unit "$unit" >"$units/$unit"
+    # The installer runs with umask 077 to keep .env private; units hold no secrets and are
+    # world-readable like every other unit (systemctl cat works without sudo).
+    chmod 644 "$units/$unit"
   done
   systemctl daemon-reload
   systemctl enable --now docoo-update.timer >/dev/null
