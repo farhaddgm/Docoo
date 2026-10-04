@@ -968,6 +968,8 @@ export const stageAttempts = pgTable(
     outputId: uuid('output_id'),
     feedback: text('feedback'),
     errorCode: text('error_code'),
+    /** The exact definition of the role that ran this attempt (FR-AGT-003). */
+    agentDefinitionVersionId: uuid('agent_definition_version_id'),
     startedAt: timestamp('started_at', { withTimezone: true }),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
     ...timestamps,
@@ -1098,6 +1100,9 @@ export const modelInvocations = pgTable(
     providerRequestId: text('provider_request_id'),
     errorCode: text('error_code'),
     retryNo: integer('retry_no').notNull().default(0),
+    /** The role definition version and the digest of the exact instructions sent (FR-AGT-003). */
+    agentDefinitionVersionId: uuid('agent_definition_version_id'),
+    promptSha256: text('prompt_sha256'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1710,4 +1715,85 @@ export const walkerIssues = pgTable(
     uniqueIndex('walker_issues_message_uq').on(table.workspaceId, table.sourceMessageId),
     index('walker_issues_status_idx').on(table.workspaceId, table.status, table.createdAt),
   ],
+);
+
+// Phase 8: agent roles and their versioned definitions (AGT-*).
+
+export const agentRole = pgEnum('agent_role', [
+  'analyst',
+  'researcher',
+  'ideator',
+  'documenter',
+  'evaluator',
+  'brain',
+]);
+
+/**
+ * One immutable version of a role's definition. `projectId` null is the workspace default
+ * stream; otherwise it is a project's own copy, with its own sequence (FR-AGT-002).
+ */
+export const agentDefinitionVersions = pgTable(
+  'agent_definition_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+    role: agentRole('role').notNull(),
+    sequence: integer('sequence').notNull(),
+    principles: jsonb('principles').notNull(),
+    duties: jsonb('duties').notNull(),
+    promptTemplate: text('prompt_template').notNull(),
+    tools: jsonb('tools').notNull(),
+    modelPolicy: jsonb('model_policy'),
+    outputSchemaId: text('output_schema_id').notNull(),
+    changedSections: jsonb('changed_sections')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    baseVersionId: uuid('base_version_id'),
+    reason: text('reason').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('agent_definition_versions_default_uq')
+      .on(table.workspaceId, table.role, table.sequence)
+      .where(sql`${table.projectId} is null`),
+    uniqueIndex('agent_definition_versions_project_uq')
+      .on(table.projectId, table.role, table.sequence)
+      .where(sql`${table.projectId} is not null`),
+    index('agent_definition_versions_role_idx').on(table.workspaceId, table.role, table.createdAt),
+  ],
+);
+
+/** Which version of the workspace default stream is active for each role (FR-AGT-001). */
+export const agentRoles = pgTable(
+  'agent_roles',
+  {
+    workspaceId: tenant(),
+    role: agentRole('role').notNull(),
+    activeVersionId: uuid('active_version_id').notNull(),
+    activatedBy: uuid('activated_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [primaryKey({ columns: [table.workspaceId, table.role] })],
+);
+
+/**
+ * The definition a project runs a role with: pinned to a default version (customized false)
+ * or to the project's own copy. It moves only by an administrator's decision.
+ */
+export const projectAgentProfiles = pgTable(
+  'project_agent_profiles',
+  {
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    role: agentRole('role').notNull(),
+    definitionVersionId: uuid('definition_version_id').notNull(),
+    customized: boolean('customized').notNull().default(false),
+    pinnedBy: uuid('pinned_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [primaryKey({ columns: [table.projectId, table.role] })],
 );

@@ -98,6 +98,9 @@ const knowledgeTables = [
   'analysis_questions',
   'analysis_answers',
   'analysis_contradictions',
+  'agent_definition_versions',
+  'agent_roles',
+  'project_agent_profiles',
 ];
 
 async function withContext(workspaceId, actorId, action) {
@@ -659,8 +662,167 @@ try {
     },
   );
 
+  // Agent definitions (AGT-*).
+  const agentInsert = (role, tools, extra = '') =>
+    `INSERT INTO agent_definition_versions (workspace_id, project_id, role, sequence, principles, duties, prompt_template, tools, output_schema_id, reason${extra})
+     VALUES ($1, $2, '${role}', $3, '["Cite every claim."]'::jsonb, '["Read the sources."]'::jsonb, 'Do the research well.', '${tools}'::jsonb, 'research-v1', 'seed')
+     RETURNING id`;
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, agentInsert('researcher', '[]'), [
+    ids.workspaceB,
+    null,
+    1,
+  ]);
+  const defaultVersion = (
+    await admin.query(agentInsert('researcher', '["web_search", "web_read"]'), [
+      ids.workspaceA,
+      null,
+      1,
+    ])
+  ).rows[0].id;
+  const foreignAgents = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query(
+      'SELECT (SELECT count(*) FROM agent_definition_versions)::int + (SELECT count(*) FROM agent_roles)::int + (SELECT count(*) FROM project_agent_profiles)::int AS count',
+    ),
+  );
+  assert.equal(foreignAgents.rows[0].count, 0, 'Agent definitions must not leak across tenants.');
+
+  // Versions are append-only, also for the runtime role (FR-AGT-002).
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'UPDATE agent_definition_versions SET reason = $1',
+    ['x'],
+  );
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'DELETE FROM agent_definition_versions',
+  );
+  await assert.rejects(
+    admin.query('UPDATE agent_definition_versions SET reason = $2 WHERE id = $1', [
+      defaultVersion,
+      'rewrite',
+    ]),
+    (error) => {
+      assert.equal(error.code, 'P0001');
+      return true;
+    },
+  );
+  // A faulty writer cannot exceed the tool ceiling of a role or store an empty definition.
+  for (const [role, tools] of [
+    ['researcher', '["document_renderer"]'],
+    ['ideator', '["web_search"]'],
+    ['brain', '["request_human_input"]'],
+    ['analyst', '["shell"]'],
+  ]) {
+    await assert.rejects(
+      admin.query(agentInsert(role, tools), [ids.workspaceA, null, 9]),
+      (error) => {
+        assert.equal(error.code, '23514', `${role} ${tools}`);
+        return true;
+      },
+    );
+  }
+  await assert.rejects(
+    admin.query(
+      agentInsert('analyst', '["web_search"]').replace('\'["Cite every claim."]\'', "'[]'"),
+      [ids.workspaceA, null, 9],
+    ),
+    (error) => {
+      assert.equal(error.code, '23514', 'empty principles');
+      return true;
+    },
+  );
+  await admin.query(agentInsert('analyst', '["web_search", "calculator"]'), [
+    ids.workspaceA,
+    null,
+    9,
+  ]);
+
+  // The active version of a role is a workspace version of that role; a project pins either a
+  // default or its own copy, never another project's.
+  const ownCopy = (
+    await admin.query(agentInsert('researcher', '["web_search"]'), [
+      ids.workspaceA,
+      ids.projectA,
+      1,
+    ])
+  ).rows[0].id;
+  await assert.rejects(
+    admin.query(
+      "INSERT INTO agent_roles (workspace_id, role, active_version_id) VALUES ($1, 'researcher', $2)",
+      [ids.workspaceA, ownCopy],
+    ),
+    (error) => {
+      assert.equal(error.code, 'P0001', 'a project copy cannot be the default');
+      return true;
+    },
+  );
+  await admin.query(
+    "INSERT INTO agent_roles (workspace_id, role, active_version_id) VALUES ($1, 'researcher', $2)",
+    [ids.workspaceA, defaultVersion],
+  );
+  await assert.rejects(
+    admin.query(
+      "INSERT INTO agent_roles (workspace_id, role, active_version_id) VALUES ($1, 'ideator', $2)",
+      [ids.workspaceA, defaultVersion],
+    ),
+    (error) => {
+      assert.equal(error.code, 'P0001', 'the default must belong to the role');
+      return true;
+    },
+  );
+  const pin = (version, customized, role = 'researcher') =>
+    admin.query(
+      `INSERT INTO project_agent_profiles (workspace_id, project_id, role, definition_version_id, customized)
+       VALUES ($1, $2, $3, $4, $5) ON CONFLICT (project_id, role) DO UPDATE
+         SET definition_version_id = EXCLUDED.definition_version_id, customized = EXCLUDED.customized`,
+      [ids.workspaceA, ids.projectA, role, version, customized],
+    );
+  await pin(defaultVersion, false);
+  await pin(ownCopy, true);
+  for (const attempt of [
+    () => pin(defaultVersion, true),
+    () => pin(ownCopy, false),
+    () => pin(defaultVersion, false, 'ideator'),
+  ]) {
+    await assert.rejects(attempt(), (error) => {
+      assert.equal(error.code, 'P0001');
+      return true;
+    });
+  }
+  const otherProject = randomUUID();
+  await admin.query(
+    'INSERT INTO projects (id, workspace_id, code, title, initial_problem) VALUES ($1, $2, $3, $4, $5)',
+    [otherProject, ids.workspaceA, `o-${otherProject.slice(0, 8)}`, 'Other', 'Other'],
+  );
+  await assert.rejects(
+    admin.query(
+      `INSERT INTO project_agent_profiles (workspace_id, project_id, role, definition_version_id, customized)
+       VALUES ($1, $2, 'researcher', $3, true)`,
+      [ids.workspaceA, otherProject, ownCopy],
+    ),
+    (error) => {
+      assert.equal(error.code, 'P0001', "another project's copy cannot be pinned");
+      return true;
+    },
+  );
+  await assert.rejects(
+    admin.query(
+      `INSERT INTO project_agent_profiles (workspace_id, project_id, role, definition_version_id, customized)
+       VALUES ($1, $2, 'researcher', $3, false)`,
+      [ids.workspaceB, ids.projectA, defaultVersion],
+    ),
+    (error) => {
+      assert.equal(error.code, 'P0001', 'a pin across workspaces is refused');
+      return true;
+    },
+  );
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration and document tables, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, analysis and agent tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {

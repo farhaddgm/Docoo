@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { STAGE_ROLE } from '@docoo/domain';
 import { checkCostLimit, ProviderError, retryDelaySeconds } from '@docoo/providers';
 import type { Pool, PoolClient } from 'pg';
 
@@ -9,6 +10,7 @@ import { audit, inWorkspace } from './db.js';
 import type { RunRef, StageRef } from './refs.js';
 import type { ProviderRuntime } from './runtime.js';
 import { loadSettings } from './settings.js';
+import { loadAgentVersion, promptDigest, resolveAgentProfile } from './agents.js';
 import { STAGE_SCHEMAS, stagePrompt, STAGES, type Stage } from './stages.js';
 
 export type { RunRef, StageRef } from './refs.js';
@@ -83,6 +85,15 @@ export function createOrchestrationActivities(
             targetId: ref.runId,
             projectId: ref.projectId,
             after: { stages: STAGES },
+          });
+        }
+        // One run uses one set of role definitions: every stage role is pinned now, so changing
+        // a default later cannot alter a project that is already going (FR-AGT-003).
+        for (const stage of STAGES) {
+          await resolveAgentProfile(client, {
+            workspaceId: ref.workspaceId,
+            projectId: ref.projectId,
+            role: STAGE_ROLE[stage],
           });
         }
         const project = await client.query<{ status: string }>(
@@ -162,8 +173,13 @@ export function createOrchestrationActivities(
       const key = `${ref.stageRunId}:${ref.attemptNo}`;
       const prepared = await run(ref.workspaceId, async (client) => {
         const existing = (
-          await client.query<{ id: string; status: string; output_id: string | null }>(
-            'select id, status, output_id from stage_attempts where idempotency_key = $1',
+          await client.query<{
+            id: string;
+            status: string;
+            output_id: string | null;
+            agent_definition_version_id: string | null;
+          }>(
+            'select id, status, output_id, agent_definition_version_id from stage_attempts where idempotency_key = $1',
             [key],
           )
         ).rows[0];
@@ -180,8 +196,6 @@ export function createOrchestrationActivities(
           ).rows[0]?.total ?? 0;
         const cost = checkCostLimit(spent, config.costLimitUsd);
         if (cost.status === 'exceeded') return { blocked: 'cost_limit' as const, cost };
-        if (!config.connectionId || !config.model)
-          return { blocked: 'configuration' as const, cost };
         const stage = (
           await client.query<{
             stage: Stage;
@@ -194,6 +208,23 @@ export function createOrchestrationActivities(
             [ref.stageRunId],
           )
         ).rows[0]!;
+        // A retry of an attempt keeps the definition it started with; a new attempt takes the
+        // version its project is pinned to (FR-AGT-003).
+        const pinned = existing?.agent_definition_version_id
+          ? await loadAgentVersion(client, ref.workspaceId, existing.agent_definition_version_id)
+          : null;
+        const definition =
+          pinned ??
+          (
+            await resolveAgentProfile(client, {
+              workspaceId: ref.workspaceId,
+              projectId: ref.projectId,
+              role: STAGE_ROLE[stage.stage],
+            })
+          ).definition;
+        const connectionId = definition.modelPolicy?.connectionId ?? config.connectionId;
+        const model = definition.modelPolicy?.model ?? config.model;
+        if (!connectionId || !model) return { blocked: 'configuration' as const, cost };
         const topics = await client.query<{ title: string }>(
           `select t.title from project_topics pt join topics t on t.id = pt.topic_id where pt.project_id = $1 order by pt.priority`,
           [ref.projectId],
@@ -215,11 +246,11 @@ export function createOrchestrationActivities(
         if (!attemptId) {
           attemptId = (
             await client.query<{ id: string }>(
-              `insert into stage_attempts (workspace_id, stage_run_id, attempt_no, idempotency_key, status, retry_of, started_at)
+              `insert into stage_attempts (workspace_id, stage_run_id, attempt_no, idempotency_key, status, retry_of, started_at, agent_definition_version_id)
                values ($1, $2, $3, $4, 'dispatched',
-                       (select id from stage_attempts where stage_run_id = $2 and attempt_no = $3 - 1), now())
+                       (select id from stage_attempts where stage_run_id = $2 and attempt_no = $3 - 1), now(), $5)
                returning id`,
-              [ref.workspaceId, ref.stageRunId, ref.attemptNo, key],
+              [ref.workspaceId, ref.stageRunId, ref.attemptNo, key, definition.id],
             )
           ).rows[0]!.id;
           await client.query(
@@ -228,8 +259,10 @@ export function createOrchestrationActivities(
           );
         }
         await client.query(
-          `update stage_attempts set status = 'executing', provider_retries = $2 where id = $1`,
-          [attemptId, ref.retryNo],
+          `update stage_attempts set status = 'executing', provider_retries = $2,
+                  agent_definition_version_id = coalesce(agent_definition_version_id, $3)
+            where id = $1`,
+          [attemptId, ref.retryNo, definition.id],
         );
         if (cost.status === 'warning' && ref.retryNo === 0) {
           await audit(client, ref.workspaceId, {
@@ -241,19 +274,23 @@ export function createOrchestrationActivities(
             after: { ...cost },
           });
         }
+        const prompt = stagePrompt({
+          stage: stage.stage,
+          definition,
+          language: stage.language,
+          projectTitle: stage.project_title,
+          problem: stage.problem,
+          topics: topics.rows.map((row) => row.title),
+          previous: previous.rows,
+          feedback: feedback.rows.map((row) => row.comment),
+          analysis: analysis ?? undefined,
+        });
         return {
           attemptId,
-          config,
-          prompt: stagePrompt({
-            stage: stage.stage,
-            language: stage.language,
-            projectTitle: stage.project_title,
-            problem: stage.problem,
-            topics: topics.rows.map((row) => row.title),
-            previous: previous.rows,
-            feedback: feedback.rows.map((row) => row.comment),
-            analysis: analysis ?? undefined,
-          }),
+          config: { ...config, connectionId, model },
+          agentDefinitionVersionId: definition.id,
+          promptSha256: promptDigest(prompt),
+          prompt,
           stage: stage.stage,
         } as const;
       });
@@ -276,6 +313,8 @@ export function createOrchestrationActivities(
             attemptId: prepared.attemptId,
             purpose: `stage:${prepared.stage}`,
             retryNo: ref.retryNo,
+            agentDefinitionVersionId: prepared.agentDefinitionVersionId,
+            promptSha256: prepared.promptSha256,
           },
           prepared.config.connectionId,
           {

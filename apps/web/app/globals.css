@@ -1586,3 +1586,117 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   color: inherit;
   opacity: 0.85;
 }
+
+/* Agents: rule lists, tool choices, diff preview, version history (AGT-001..005) */
+.rule-rows,
+.version-list,
+.agent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.rule-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'label label'
+    'field actions';
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.rule-row > label {
+  grid-area: label;
+  font-weight: 600;
+}
+
+.rule-row > textarea {
+  grid-area: field;
+  width: 100%;
+}
+
+.rule-actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--space-3);
+}
+
+.tool-choice {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.diff {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+}
+
+.diff-line {
+  display: flex;
+  gap: var(--space-2);
+  padding: 0.125rem var(--space-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diff-marker {
+  flex: none;
+  inline-size: 1ch;
+  font-weight: 700;
+}
+
+.diff-added {
+  background: var(--color-ok-bg);
+  color: var(--color-ok-ink);
+}
+
+.diff-removed {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-ink);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.version-row {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.version-row h3 {
+  margin: 0;
+}
+
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.schema-view {
+  max-block-size: 20rem;
+  overflow: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+}

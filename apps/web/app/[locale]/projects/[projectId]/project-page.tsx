@@ -12,6 +12,7 @@ import { WorkspacePage } from '../../workspace-page';
 import { explainProject } from '../explain';
 import { projectMessages } from '../messages';
 import { projectPageMessages } from './messages';
+import { AgentsPanel } from './agents-panel';
 import { DocumentsPanel } from './documents-panel';
 import { OverviewPanel } from './overview-panel';
 import { ProblemPanel } from './problem-panel';
@@ -20,7 +21,15 @@ import { SolutionsPanel } from './solutions-panel';
 import { TimelinePanel } from './timeline-panel';
 import { WorkflowPanel } from './workflow-panel';
 
-const tabs = ['overview', 'problem', 'workflow', 'solutions', 'documents', 'timeline'] as const;
+const tabs = [
+  'overview',
+  'problem',
+  'workflow',
+  'solutions',
+  'documents',
+  'agents',
+  'timeline',
+] as const;
 type Tab = (typeof tabs)[number];
 
 const isTab = (value: string | null): value is Tab => tabs.some((tab) => tab === value);
@@ -236,6 +245,15 @@ function ProjectView({
           locale={locale}
           workspaceId={workspaceId}
           projectId={projectId}
+          refreshKey={refreshKey}
+        />
+      )}
+      {tab === 'agents' && (
+        <AgentsPanel
+          locale={locale}
+          workspaceId={workspaceId}
+          projectId={projectId}
+          readOnly={project.status === 'archived' || project.status === 'deleted'}
           refreshKey={refreshKey}
         />
       )}

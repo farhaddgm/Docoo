@@ -2,7 +2,7 @@
 doc_id: DOCOO-ROLES-PERMISSIONS
 title: نقش‌های انسانی و مدل دسترسی
 status: proposed
-version: 1.0.0
+version: 1.0.1
 owner: Product & Security
 last_updated: 2026-09-24
 notion_sync: true
@@ -19,7 +19,7 @@ notion_sync: true
 - `workspace.read`, `workspace.configure`
 - `topic.create/read/update/archive/delete/restore`
 - `project.create/read/update/run/pause/resume/archive/delete/restore`
-- `agent_definition.read/update/version/activate`
+- `agent_definition.read/update/version/activate` — خواندن؛ کپی و ویرایش و سنجاق پروژه؛ ساخت نسخهٔ پیش‌فرض؛ فعال‌سازی و بازگشت ([ADR-0015](../adr/0015-agent-definitions.md))
 - `knowledge.create/read/update/audit/override/delete`
 - `document.read/edit/approve/export/lock/restore`
 - `provider.read/configure/test/rotate_secret`

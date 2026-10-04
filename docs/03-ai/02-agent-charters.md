@@ -2,13 +2,15 @@
 doc_id: DOCOO-AGENT-CHARTERS
 title: اصول و شرح وظایف پیش‌فرض ایجنت‌ها
 status: approved-baseline
-version: 1.0.1
+version: 1.0.2
 owner: AI Product
 last_updated: 2026-09-24
 notion_sync: true
 ---
 
 # اصول و شرح وظایف پیش‌فرض ایجنت‌ها
+
+> از نسخهٔ 0.13.0 همین متن‌ها، بدون تغییر، نسخهٔ ۱ هر نقش در هر workspace هستند ([ADR-0015](../adr/0015-agent-definitions.md)). ادمین نسخهٔ تازه می‌سازد و فعال می‌کند؛ این سند مبنای مصوب می‌ماند.
 
 ## اصول مشترک همهٔ نقش‌ها
 

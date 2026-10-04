@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AgentsModule } from './agents/agents.module.js';
 import { AnalysisModule } from './analysis/analysis.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -30,6 +31,7 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
     KnowledgeModule,
     ProvidersModule,
     WorkflowModule,
+    AgentsModule,
     AnalysisModule,
     DocumentsModule,
     ReportsModule,

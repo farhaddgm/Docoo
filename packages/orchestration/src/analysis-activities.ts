@@ -26,6 +26,7 @@ import {
 import { audit, inWorkspace } from './db.js';
 import type { StageRef } from './refs.js';
 import type { ProviderRuntime } from './runtime.js';
+import { promptDigest, resolveAgentProfile } from './agents.js';
 import { loadSettings } from './settings.js';
 
 export interface AnalysisRoundRef extends StageRef {
@@ -323,7 +324,15 @@ export function createAnalysisActivities(
             done: { status: 'blocked', code: 'cost_limit_exceeded', reason: 'cost_limit' } as const,
           } as const;
         }
-        if (!config.connectionId || !config.model) {
+        // The analyst's pinned definition may name its own model (FR-AGT-001).
+        const profile = await resolveAgentProfile(client, {
+          workspaceId: ref.workspaceId,
+          projectId: ref.projectId,
+          role: 'analyst',
+        });
+        const connectionId = profile.definition.modelPolicy?.connectionId ?? config.connectionId;
+        const model = profile.definition.modelPolicy?.model ?? config.model;
+        if (!connectionId || !model) {
           return {
             done: {
               status: 'blocked',
@@ -383,20 +392,24 @@ export function createAnalysisActivities(
             after: { ...cost },
           });
         }
+        const prompt = roundPrompt({
+          language: project.language,
+          projectTitle: project.title,
+          problem: project.problem,
+          topics: topics.rows.map((row) => row.title),
+          feedback: feedback.rows.map((row) => row.comment),
+          analysis: context,
+          definition: profile.definition,
+        });
         return {
           sessionId: session.id,
           lastBatchId: last?.id ?? null,
           lastBatchNo: last?.batch_no ?? 0,
-          config,
+          config: { ...config, connectionId, model },
+          agentDefinitionVersionId: profile.definition.id,
+          promptSha256: promptDigest(prompt),
           numbers: new Set(loaded.questions.map((question) => question.number)),
-          prompt: roundPrompt({
-            language: project.language,
-            projectTitle: project.title,
-            problem: project.problem,
-            topics: topics.rows.map((row) => row.title),
-            feedback: feedback.rows.map((row) => row.comment),
-            analysis: context,
-          }),
+          prompt,
         } as const;
       });
       if ('done' in prepared) return prepared.done;
@@ -412,6 +425,8 @@ export function createAnalysisActivities(
             attemptId: null,
             purpose: 'analysis:round',
             retryNo: ref.retryNo,
+            agentDefinitionVersionId: prepared.agentDefinitionVersionId,
+            promptSha256: prepared.promptSha256,
           },
           prepared.config.connectionId,
           {

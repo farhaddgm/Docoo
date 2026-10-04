@@ -6,6 +6,7 @@ import { Reflector } from '@nestjs/core';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AgentsController } from '../src/agents/agents.controller.js';
 import { AnalysisController } from '../src/analysis/analysis.controller.js';
 import { AuditController } from '../src/audit/audit.controller.js';
 import {
@@ -129,6 +130,19 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/projects/:projectId/problem-definitions': 'project.read',
   'POST workspaces/:workspaceId/question-batches/:batchId/answers': 'analysis.answer',
   'POST workspaces/:workspaceId/projects/:projectId/analysis/finish': 'workflow.approve',
+  'GET workspaces/:workspaceId/agent-roles': 'agent_definition.read',
+  'GET workspaces/:workspaceId/agent-roles/:role': 'agent_definition.read',
+  'GET workspaces/:workspaceId/agent-roles/:role/definitions': 'agent_definition.read',
+  'POST workspaces/:workspaceId/agent-roles/:role/definitions': 'agent_definition.version',
+  'POST workspaces/:workspaceId/agent-roles/:role/definitions/:definitionId/activate':
+    'agent_definition.activate',
+  'GET workspaces/:workspaceId/agent-roles/:role/outputs': 'agent_definition.read',
+  'GET workspaces/:workspaceId/projects/:projectId/agents': 'agent_definition.read',
+  'GET workspaces/:workspaceId/projects/:projectId/agents/:role': 'agent_definition.read',
+  'POST workspaces/:workspaceId/projects/:projectId/agents/:role/copy-default':
+    'agent_definition.update',
+  'PATCH workspaces/:workspaceId/projects/:projectId/agents/:role': 'agent_definition.update',
+  'POST workspaces/:workspaceId/projects/:projectId/agents/:role/pin': 'agent_definition.update',
   'GET workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.read',
   'PUT workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/solutions/generate': 'project.run',
@@ -192,6 +206,7 @@ const controllers = [
   KnowledgeController,
   ProvidersController,
   WorkflowController,
+  AgentsController,
   AnalysisController,
   DocumentsController,
   ReportsController,
