@@ -2,7 +2,7 @@
 doc_id: DOCOO-DATA-DICTIONARY
 title: فرهنگ داده هسته Docoo
 status: approved-baseline
-version: 1.1.0
+version: 1.2.0
 owner: Data Architecture
 last_updated: 2026-10-04
 notion_sync: true
@@ -75,13 +75,21 @@ notion_sync: true
 
 ## agent catalog
 
-### agent_definition_version
+### agent_definition_versions
 
-`role`, `sequence`, `principle_set_version_id`, `duty_set_version_id`, `prompt_template_version_id`, `tool_policy_version_id`, `output_schema_version_id`, `model_policy_version_id`, `status`.
+یک نسخهٔ تغییرناپذیر (append-only) از تعریف یک نقش: `role`، `project_id` (تهی = جریان پیش‌فرض workspace؛ پر = کپی همان پروژه)، `sequence` (جدا برای هر جریان)، `principles` و `duties` (فهرست متن)، `prompt_template`، `tools` (allowlist)، `model_policy` (تهی یا `{connectionId, model}`)، `output_schema_id`، `changed_sections`، `base_version_id`، `reason`، `created_by`. CHECK ها حد فهرست‌ها و طول متن‌ها و سقف ابزار هر نقش را حتی برای نویسندهٔ معیوب نگه می‌دارند.
 
-### project_agent_profile
+### agent_roles
 
-`project_id`, `role`, `base_definition_version_id`, `custom_config_assignment_id`, `effective_snapshot_id`.
+اشارهٔ نسخهٔ فعال پیش‌فرض هر نقش در workspace: `(workspace_id, role)`، `active_version_id` (باید نسخهٔ workspace از همان نقش باشد، trigger)، `activated_by`.
+
+### project_agent_profiles
+
+آنچه پروژه برای یک نقش اجرا می‌کند: `(project_id, role)`، `definition_version_id`، `customized` (false = نسخهٔ پیش‌فرض سنجاق‌شده؛ true = کپی خود پروژه؛ trigger پروژهٔ دیگر را رد می‌کند)، `pinned_by`.
+
+### ثبت اجرا
+
+`stage_attempts.agent_definition_version_id` و `model_invocations.agent_definition_version_id` به‌علاوهٔ `model_invocations.prompt_sha256` (هش دستور و پیام ارسال‌شده؛ متن ذخیره نمی‌شود).
 
 ## workflow
 

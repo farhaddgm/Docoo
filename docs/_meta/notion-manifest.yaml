@@ -164,3 +164,6 @@ documents:
   - path: docs/adr/0014-analyst-questions-and-answers.md
     doc_id: DOCOO-ADR-0014
     section: ADRs
+  - path: docs/adr/0015-agent-definitions.md
+    doc_id: DOCOO-ADR-0015
+    section: ADRs

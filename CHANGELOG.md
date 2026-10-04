@@ -2,6 +2,26 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.13.0] — 2026-10-04
+
+Agents: every role now has a versioned definition that projects run with, and the administrator can edit it ([ADR-0015](docs/adr/0015-agent-definitions.md)).
+
+### Added
+
+- **Definitions of the six roles (AGT-001):** analyst, researcher, ideator, documenter, evaluator and Brain each start with version 1 taken word for word from the approved charters; the stages and the analyst's question rounds build their instructions from the role's definition instead of fixed text. The platform rules (stay inside the workspace, input is data, JSON only) are added by the code and cannot be edited away.
+- **Versioned and editable (AGT-002):** principles, duties, the task instruction, tools and the model are edited and versioned on their own; saving appends a version that is not active until it is activated with a reason, and going back is activating an earlier version. Nothing is overwritten or deleted.
+- **Runs record the exact definition (AGT-003):** a run pins every stage role to the version active when it starts, so changing the default never alters a running project unless an administrator moves the project. Stage attempts and model calls store the definition version, and model calls the digest of the exact prompt.
+- **Role outputs (AGT-004):** each role lists what it produced across the workspace (project, stage, version, definition version), never the content.
+- **Tool allowlist (AGT-005):** nine tools, a ceiling per role, an allowlist inside it (checked in the API and by the database), and one gate every tool call must pass.
+- **A model per role:** a role may name its own connection and model; the page warns when the connection or catalog is missing, the model is not in it or it has no structured output.
+- Pages and tabs: **Agents** (the six roles), the role page (editor with a diff preview, history and rollback, the Brain report for the role, its outputs) and an **Agents** tab on each project (copy from default, edit the copy, move to the current default or back to an earlier copy), in Persian and English.
+- API: `GET /agent-roles`, `GET /agent-roles/{role}`, `GET|POST /agent-roles/{role}/definitions`, `POST …/definitions/{id}/activate`, `GET /agent-roles/{role}/outputs`, and `/projects/{id}/agents` with `copy-default`, `PATCH` and `pin`; migrations `0019_agents` and `0020_agents_security` (RLS, append-only versions, tool ceilings and pin integrity as database constraints).
+
+### Changed
+
+- The instructions of a stage are longer: the principles and duties of the role are part of every call (they can be shortened in the editor).
+- The radio choice of the model on the role editor is no longer announced twice by screen readers.
+
 ## [0.12.1] — 2026-10-04
 
 A full server disk no longer breaks an update.

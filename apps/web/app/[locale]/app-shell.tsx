@@ -20,6 +20,7 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   dashboard: '',
   projects: '/projects',
   topics: '/topics',
+  agents: '/agents',
   brain: '/brain',
   providers: '/providers',
   costs: '/costs',

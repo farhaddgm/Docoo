@@ -24,6 +24,9 @@ export interface InvocationScope {
   readonly attemptId: string | null;
   readonly purpose: string;
   readonly retryNo: number;
+  /** The role definition version the call runs with and the digest of its exact prompt (FR-AGT-003). */
+  readonly agentDefinitionVersionId?: string | null;
+  readonly promptSha256?: string | null;
 }
 
 interface ConnectionRow {
@@ -221,8 +224,8 @@ export class ProviderRuntime {
       `insert into model_invocations (workspace_id, connection_id, project_id, stage_run_id, attempt_id, provider, model,
                                       purpose, status, input_tokens, output_tokens, reasoning_tokens, cached_input_tokens,
                                       latency_ms, finish_reason, raw_finish_reason, cost_usd, price_id, provider_request_id,
-                                      error_code, retry_no)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+                                      error_code, retry_no, agent_definition_version_id, prompt_sha256)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
        returning id`,
       [
         scope.workspaceId,
@@ -246,6 +249,8 @@ export class ProviderRuntime {
         response?.providerRequestId ?? null,
         result.errorCode,
         scope.retryNo,
+        scope.agentDefinitionVersionId ?? null,
+        scope.promptSha256 ?? null,
       ],
     );
     return inserted.rows[0]!.id;

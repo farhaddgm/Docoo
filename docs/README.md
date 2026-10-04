@@ -2,7 +2,7 @@
 doc_id: DOCOO-DOC-INDEX
 title: فهرست مرجع مستندات Docoo
 status: active
-version: 0.3.0
+version: 0.3.1
 owner: Product & Architecture
 last_updated: 2026-10-03
 notion_sync: true
@@ -94,6 +94,7 @@ notion_sync: true
 49. [ADR-0012: استقرار تک‌سرور با نصب یک‌فرمانه](adr/0012-single-server-production-deployment.md)
 50. [ADR-0013: صفحه‌های اصلی بک‌آفیس](adr/0013-backoffice-core-screens.md)
 51. [ADR-0014: پرسش‌وپاسخ تحلیلگر و تعریف نهایی مسئله](adr/0014-analyst-questions-and-answers.md)
+52. [ADR-0015: تعریف نسخه‌دار ایجنت‌ها و سنجاق‌شدن به پروژه](adr/0015-agent-definitions.md)
 
 ## وضعیت اسناد
 

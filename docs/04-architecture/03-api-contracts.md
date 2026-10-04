@@ -2,7 +2,7 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.4.0
+version: 1.5.0
 owner: API Architecture
 last_updated: 2026-10-04
 notion_sync: true
@@ -155,13 +155,29 @@ notion_sync: true
 - `GET /documents/{id}/artifacts/{artifactId}/download` پس از بررسی دوبارهٔ امضا و authorization؛ بایت دست‌کاری‌شده 409 `DOCUMENT_ARTIFACT_TAMPERED`.
 - `GET /documents/{id}/artifacts/{artifactId}/verify` → `{valid, sha256}`.
 
-## ۱۱. ایجنت و config
+## ۱۱. ایجنت و config (ایجنت‌ها پیاده‌شده در 0.13.0، [ADR-0015](../adr/0015-agent-definitions.md))
 
-- `GET /agent-roles`
-- `GET/POST /agent-roles/{role}/definitions`
-- `POST /agent-roles/{role}/definitions/{id}:activate`
-- `GET/PATCH /projects/{id}/agents/{role}`
-- `POST /projects/{id}/agents/{role}:copy-default`
+همهٔ مسیرها زیر `/workspaces/{workspaceId}` هستند. فرمان‌های نوشتن `Idempotency-Key` می‌پذیرند و خطا با `code` پایدار برمی‌گردد.
+
+### نقش‌ها و نسخه‌ها
+
+- `GET /agent-roles` (`agent_definition.read`) — شش نقش با نسخهٔ فعال، شمارش اصول/وظایف/ابزار و سقف ابزار.
+- `GET /agent-roles/{role}` — تعریف فعال کامل، `latestSequence`، سقف ابزار، قالب خروجی (فقط‌خواندنی؛ `null` برای brain)، `modelWarnings` و `performance` (آخرین گزارش Brain workspace دربارهٔ همین نقش).
+- `GET /agent-roles/{role}/definitions?limit=&before=` — تاریخچهٔ نسخه‌ها از جدید به قدیم با `active` و `changedSections`.
+- `POST /agent-roles/{role}/definitions` (`agent_definition.version`) — بدنه `{changes: {principles?, duties?, promptTemplate?, tools?, modelPolicy?}, reason, baseVersionId?, expectedSequence?}`؛ نسخهٔ تازه می‌سازد و فعال نمی‌کند. خطاها: `422 AGENT_INVALID_DEFINITION` با `issues` و `problems` (`field:code[:index]`)، `400 AGENT_NO_CHANGES`، `412 AGENT_VERSION_STALE`.
+- `POST /agent-roles/{role}/definitions/{definitionId}/activate` (`agent_definition.activate`) — `{reason}`؛ برگشتی `{definition, changed}`. فعال‌کردن نسخهٔ قدیمی‌تر همان بازگشت است.
+- `GET /agent-roles/{role}/outputs?limit=&cursor=` — خروجی‌های نقش در workspace؛ فقط فراداده (پروژه، مرحله، نسخه، نسخهٔ تعریف)، هرگز محتوا.
+
+### پروژه
+
+- `GET /projects/{id}/agents` — برای هر نقش: نسخهٔ مؤثر، `pinned`، `customized`، پیش‌فرض فعلی و `behindDefault`.
+- `GET /projects/{id}/agents/{role}` — تعریف مؤثر، پیش‌فرض فعلی، نسخه‌های کپی پروژه و هشدارهای مدل.
+- `POST /projects/{id}/agents/{role}/copy-default` (`agent_definition.update`) — `{reason}`؛ کپی مستقل از پیش‌فرض فعلی (`409 AGENT_ALREADY_CUSTOMIZED` اگر کپی دارد).
+- `PATCH /projects/{id}/agents/{role}` — ویرایش کپی پروژه (نسخهٔ تازهٔ همان کپی)؛ `409 AGENT_NOT_CUSTOMIZED` پیش از کپی.
+- `POST /projects/{id}/agents/{role}/pin` — `{reason, versionId?}`؛ بدون `versionId` پروژه به پیش‌فرض فعلی می‌رود، با آن به نسخهٔ پیش‌فرض یا کپی قبلی خودش (`404 AGENT_VERSION_NOT_FOUND` برای نسخهٔ نقش یا پروژهٔ دیگر).
+
+### تنظیمات
+
 - `GET /settings/definitions`
 - `GET/PUT /settings/assignments`، `GET /settings/assignments/history`، `POST /settings/assignments/restore`
 - `GET /settings/effective?scopeType=&scopeId=` (مقدار مؤثر و منبع هر مقدار)

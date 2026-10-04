@@ -134,6 +134,20 @@
       "when": 1791108372516,
       "tag": "0018_analyst_qa_security",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791115691762,
+      "tag": "0019_agents",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791115736087,
+      "tag": "0020_agents_security",
+      "breakpoints": true
     }
   ]
 }
