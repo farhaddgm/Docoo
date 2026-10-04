@@ -2,7 +2,7 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.6.0
+version: 1.7.0
 owner: API Architecture
 last_updated: 2026-10-04
 notion_sync: true
@@ -75,7 +75,7 @@ notion_sync: true
 
 ## ۵. پروژه‌ها
 
-- `GET/POST /projects` (فیلتر `status`، پیش‌فرض همهٔ وضعیت‌ها جز deleted)
+- `GET/POST /projects` (فیلتر `status`، پیش‌فرض همهٔ وضعیت‌ها جز deleted). `POST` فیلد اختیاری `settings: [{key, value}]` (حداکثر ۴۰) می‌پذیرد؛ تخصیص‌های سطح پروژه در همان تراکنش ساخت پروژه، با دلیل خودکار، افزوده می‌شوند. هر مقدار مثل `PUT /settings/assignments` اعتبار می‌شود (`400 CONFIG_VALUE_INVALID`، کلید ناشناخته `404 CONFIG_SETTING_NOT_FOUND`، کلیدی که سطح پروژه را نمی‌پذیرد `400 CONFIG_SCOPE_NOT_ALLOWED`، کلید تکراری یا حساس `400 CONFIG_VALUE_INVALID`) و فقط نقش دارای `workspace.configure` می‌تواند `settings` بدهد (`403`). حسابرسی فقط کلیدها را می‌نویسد.
 - هر پروژه `availableCommands` دارد: فرمان‌هایی که ماشین حالت در وضعیت فعلی می‌پذیرد (پس از مهلت ۳۰روزه `restore` حذف می‌شود)؛ بک‌آفیس دقیقاً همین‌ها را پیشنهاد می‌دهد.
 - `GET/PATCH /projects/{id}` (پاسخ `approvedProblemVersionId` دارد: خروجی تأییدشدهٔ مرحلهٔ تحلیل؛ بخش ۷)
 - `POST /projects/{id}/activate|pause|resume|complete|reopen|archive|unarchive|restore`
@@ -185,6 +185,9 @@ notion_sync: true
 - `GET /settings/definitions`
 - `GET/PUT /settings/assignments`، `GET /settings/assignments/history`، `POST /settings/assignments/restore`
 - `GET /settings/effective?scopeType=&scopeId=` (مقدار مؤثر و منبع هر مقدار)
+- `POST /settings/preview` (`workspace.read`، پاسخ ۲۰۰، بدون اثر جانبی) با `{topicIds: [≤۲۰], settings: [{key, value} ≤۴۰]}` → `{config}`: مقدار مؤثر و منبع هر کلید برای پروژه‌ای که هنوز ساخته نشده است. منبع انتخاب‌های ارسالی `{scope: 'project', pending: true}` است. حوزه‌ها به ترتیب اعمال می‌شوند (اولویت ۱ برنده)؛ مقدار نامعتبر همان `400 CONFIG_VALUE_INVALID` را می‌دهد.
+- قاعدهٔ معنایی علاوه بر schema: `document.level_bounds` باید ده عدد باشد که برای هر سطح کمینه < بیشینه و هر سطح بالاتر از بیشینهٔ سطح قبل شروع شود؛ نقض آن `400 CONFIG_VALUE_INVALID` با شرح مشکل است (قاعدهٔ همان `levelBoundsProblem` در `@docoo/documents`).
+- `GET /document-templates` (`workspace.read`) → `{templates: [{key, version, sections}], levelDefaults, countAlgorithm}`. قالب‌ها متن کد و نسخه‌دارند (`brief-v1`، `standard-v1`، `detailed-v1`)؛ `document.default_template` یکی از `brief|standard|detailed` است و شکل پیش‌نویس اول سند راه‌حل را تعیین می‌کند.
 
 ## ۱۲. provider (پیاده‌شده در 0.5.0)
 

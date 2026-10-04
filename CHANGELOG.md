@@ -2,6 +2,33 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.16.0] — 2026-10-04
+
+Settings, document templates and levels in the backoffice, the project creation wizard, and the tooling that shows what is left for the private-beta sign-off ([ADR-0018](docs/adr/0018-settings-templates-wizard-and-acceptance-tooling.md)).
+
+### Added
+
+- **Settings page** (workspace scope) in groups, with a control built from each setting's schema, a required reason for every change, optimistic concurrency, history, restore and reset to the default. Settings that are recorded but not applied by any stage yet (`research.max_sources`, `knowledge.min_audit_score`) say so; the `ai.*` settings link to the AI providers page.
+- **Project Settings tab:** the project's own overrides next to the effective value and where it comes from (workspace, topic or project), with the model picker and a way back to the inherited value.
+- **Templates & document levels page:** the built-in templates (`brief`, `standard`, `detailed`, versioned `-v1`) with their sections, the default template, the default level and an editor for the length bounds of the five levels that checks the same rule as the server (each level has min < max and starts above the previous one). `GET /document-templates`.
+- **Document templates shape the draft.** The first draft of a solution document is built from the effective `document.default_template` (before, the setting had no effect); the version reason records the template version, and the detailed template adds a score table from the stored scoring.
+- **Project creation wizard** (UX §5) in eight steps with an autosaved local draft: basics and problem, topics and priority, workflow and gates, model, knowledge and research, solutions, documents, review. The review shows the effective value and source of every setting from the server (`POST /settings/preview`; choices not yet saved have the source `pending`). The project and its settings are created in one transaction (`POST /projects` takes `settings`, which needs `workspace.configure`).
+- **Strict structured-output compatibility check** (`strictSchemaProblems` in `@docoo/providers`) and tests that run every platform schema (the five stage outputs, the judge verdict, the role evaluation, the solution schema) through it, so a schema OpenAI `strict: true` would reject fails CI.
+- **Acceptance of the platform's own schemas on real providers:** the Provider acceptance workflow now also runs the five stage outputs (research with approved knowledge in the prompt) and the Brain's role evaluation against every provider that has a key. Without a key a part is skipped and the run summary says so.
+- **`pnpm owner:check`:** a read-only report on branch protection, CodeQL, whether Actions can start jobs, the acceptance secrets and the latest acceptance run; every line is PASS, ACTION (with the step), FAIL or UNKNOWN.
+- **`scripts/deploy/acceptance.sh`:** a read-only evidence report for a running server (containers, API, HTTPS and certificate, disk, release, nightly update, off-host backups, administrator, real AI connection, mail) ending with the owner-only checklist and a sign-off block. The Deploy smoke workflow now runs it on every fresh install and checks its stable rows.
+- Docs: [private beta acceptance](docs/06-delivery/12-private-beta-acceptance.md), install guide section on the report.
+
+### Changed
+
+- The project form's field groups moved to shared components (`BasicsFields`, `TopicsSection`) used by the wizard and the project edit form; the core-flow E2E creates its project through the wizard.
+- `POST /projects` accepts an optional `settings` list; setting values are validated like `PUT /settings/assignments` (including the new `document.level_bounds` rule, which answers `400 CONFIG_VALUE_INVALID`).
+- `deploy:test` runs the acceptance script's tests too; `docs:test` also runs the owner script's tests.
+
+### Not changed on purpose
+
+- Closing [#53](https://github.com/farhaddgm/Docoo/issues/53), [#89](https://github.com/farhaddgm/Docoo/issues/89) and [#94](https://github.com/farhaddgm/Docoo/issues/94) still needs the owner (real keys, repository settings, a real server). The tools above show what is missing and record the evidence; they do not accept anything.
+
 ## [0.15.0] — 2026-10-04
 
 Research with approved knowledge and model-based role evaluation ([ADR-0017](docs/adr/0017-research-with-knowledge-and-role-evaluation.md)).

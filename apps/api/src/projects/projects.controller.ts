@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   Param,
@@ -16,7 +17,7 @@ import { projectStatuses, type ProjectCommand } from '@docoo/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, roleHasPermission } from '../auth/auth.authorization.js';
 import { requireIfMatch, setVersionHeader } from '../common/concurrency.js';
 import { pageQuerySchema } from '../common/pagination.js';
 import { badRequest } from '../common/problems.js';
@@ -53,6 +54,18 @@ const listQuerySchema = z
   .strict();
 const pageSchema = z.object(pageQuerySchema).strict();
 
+const settingScalar = z.union([z.boolean(), z.number(), z.string().max(10_000)]);
+const settingsSchema = z
+  .array(
+    z
+      .object({
+        key: z.string().regex(/^[a-z][a-z0-9_.]{2,99}$/),
+        value: z.union([settingScalar, z.array(settingScalar).max(100)]),
+      })
+      .strict(),
+  )
+  .max(40);
+
 const createSchema = z
   .object({
     code: codeSchema,
@@ -61,6 +74,7 @@ const createSchema = z
     initialProblem: problemSchema,
     outputLanguage: languageSchema.default('fa'),
     topics: topicsSchema.default([]),
+    settings: settingsSchema.default([]),
   })
   .strict();
 
@@ -122,10 +136,19 @@ export class ProjectsController {
     @Res({ passthrough: true }) reply: FastifyReply,
     @Body() body: unknown,
   ) {
-    const project = await this.projectsService.create(
-      workspaceContext(request),
-      parse(createSchema, body),
-    );
+    const input = parse(createSchema, body);
+    // Starting values are settings: whoever may create projects but not configure the
+    // workspace cannot use the project form to change them.
+    const authorization = request.workspaceAuthorization;
+    if (
+      input.settings.length > 0 &&
+      (!authorization || !roleHasPermission(authorization.workspace.role, 'workspace.configure'))
+    ) {
+      throw new ForbiddenException(
+        'Setting values needs the permission to configure the workspace.',
+      );
+    }
+    const project = await this.projectsService.create(workspaceContext(request), input);
     setVersionHeader(reply, project.version);
     return { project };
   }

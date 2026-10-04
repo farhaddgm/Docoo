@@ -1,6 +1,6 @@
 name: Provider acceptance
 
-# Real AI provider and speech-to-text acceptance (AI-002..004, ING-005). Each check runs only
+# Real AI provider, platform schema and speech-to-text acceptance (AI-002..004, ING-005). Each check runs only
 # when its repository secret exists (Settings → Secrets and variables → Actions); without
 # secrets the tests are skipped and the summary says what is missing.
 on:
@@ -12,6 +12,10 @@ on:
     paths:
       - 'packages/providers/**'
       - 'packages/ingestion/src/transcription.ts'
+      - 'packages/orchestration/src/stages.ts'
+      - 'packages/orchestration/src/stages.acceptance.test.ts'
+      - 'packages/orchestration/src/research.ts'
+      - 'packages/domain/src/role-evaluation.ts'
       - '.github/workflows/provider-acceptance.yml'
 
 permissions:
@@ -41,7 +45,7 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter "@docoo/ingestion..." --filter "@docoo/providers..." build
+      - run: pnpm --filter "@docoo/ingestion..." --filter "@docoo/providers..." --filter "@docoo/orchestration..." build
       - name: Which secrets are configured
         run: |
           {
@@ -52,5 +56,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: AI providers (AI-002..004)
         run: pnpm --filter @docoo/providers test:acceptance
+      - name: Stage outputs and the Brain's role evaluation (ADR-0017)
+        run: pnpm --filter @docoo/orchestration test:acceptance
       - name: Speech-to-text on the acceptance corpus (ING-005)
         run: pnpm --filter @docoo/ingestion test:acceptance

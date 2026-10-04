@@ -1,6 +1,6 @@
 {
   "name": "docoo",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "private": true,
   "description": "Docoo product and engineering monorepo",
   "license": "UNLICENSED",
@@ -22,8 +22,8 @@
     "env:setup": "node scripts/setup-local-env.mjs",
     "docs:validate": "node scripts/validate-notion-manifest.mjs",
     "qa:corpus": "node scripts/validate-corpus.mjs qa/acceptance-corpus/v0",
-    "docs:test": "node --test \"scripts/notion/*.test.mjs\"",
-    "deploy:test": "bash scripts/deploy/install.test.sh",
+    "docs:test": "node --test \"scripts/notion/*.test.mjs\" \"scripts/owner/*.test.mjs\"",
+    "deploy:test": "bash scripts/deploy/install.test.sh && bash scripts/deploy/acceptance.test.sh",
     "docs:sync": "node scripts/notion/sync.mjs",
     "docs:sync:plan": "node scripts/notion/sync.mjs --dry-run",
     "admin:create": "pnpm --filter @docoo/api admin:create",
@@ -33,7 +33,8 @@
     "db:test:rls": "pnpm --filter @docoo/database test:rls",
     "stack:up": "docker compose up -d postgres redis object-store temporal temporal-ui malware-scanner",
     "stack:observability": "docker compose --profile observability up -d",
-    "stack:down": "docker compose down"
+    "stack:down": "docker compose down",
+    "owner:check": "node scripts/owner/check-github.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

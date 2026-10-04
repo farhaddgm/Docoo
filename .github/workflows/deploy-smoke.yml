@@ -152,6 +152,21 @@ jobs:
           sleep 10
           "${c[@]}" exec -T postgres psql -U docoo_admin -d docoo -tAc \
             "select archived_count > 0 and failed_count = 0 from pg_stat_archiver" | grep -x t
+      - name: Acceptance evidence report (the script the owner runs for the private-beta sign-off)
+        env:
+          DOCOO_ACCEPTANCE_CURL_OPTS: -k
+        run: |
+          set -uo pipefail
+          # Exit 1 means a FAIL row; the rows below are what a clean install must always show.
+          # The AI connection, mail and release rows depend on the owner and on tags, not on the install.
+          sudo -E ./scripts/deploy/acceptance.sh | tee acceptance.md
+          grep -F '| Containers | PASS |' acceptance.md
+          grep -F '| API ready | PASS |' acceptance.md
+          grep -F '| HTTPS (localhost) | PASS |' acceptance.md
+          grep -F '| Administrator | PASS |' acceptance.md
+          grep -F '| Backups | PASS |' acceptance.md
+          grep -F '| Nightly update | PASS |' acceptance.md
+          grep -F '| AI connection | ACTION |' acceptance.md
       - name: Logs on failure
         if: failure()
         run: sudo docker compose --project-directory deploy -f deploy/compose.production.yaml logs --tail 80

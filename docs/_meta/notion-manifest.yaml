@@ -116,6 +116,9 @@ documents:
   - path: docs/06-delivery/11-production-install.md
     doc_id: DOCOO-PRODUCTION-INSTALL
     section: 06 Delivery & Operations
+  - path: docs/06-delivery/12-private-beta-acceptance.md
+    doc_id: DOCOO-PRIVATE-BETA-ACCEPTANCE
+    section: 06 Delivery & Operations
   - path: docs/07-integrations/01-notion-and-github.md
     doc_id: DOCOO-NOTION-GITHUB
     section: 07 Integrations
@@ -172,4 +175,7 @@ documents:
     section: ADRs
   - path: docs/adr/0017-research-with-knowledge-and-role-evaluation.md
     doc_id: DOCOO-ADR-0017
+    section: ADRs
+  - path: docs/adr/0018-settings-templates-wizard-and-acceptance-tooling.md
+    doc_id: DOCOO-ADR-0018
     section: ADRs

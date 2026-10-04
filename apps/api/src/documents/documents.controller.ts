@@ -12,6 +12,12 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  COUNT_ALGORITHM,
+  DEFAULT_LEVEL_BOUNDS,
+  DOCUMENT_TEMPLATES,
+  TEMPLATE_KEYS,
+} from '@docoo/documents';
 import { STAGES } from '@docoo/orchestration';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
@@ -109,6 +115,22 @@ export class DocumentsController {
     private readonly documents: DocumentsService,
     private readonly solutions: SolutionsService,
   ) {}
+
+  // ------------------------------------------------------------ templates and levels (ADR-0018)
+
+  @Get('document-templates')
+  @ApiOperation({
+    summary:
+      'The document templates, the default length bounds of the five levels and the count rule',
+  })
+  @RequireWorkspacePermission('workspace.read')
+  documentTemplates() {
+    return {
+      templates: TEMPLATE_KEYS.map((key) => DOCUMENT_TEMPLATES[key]),
+      levelDefaults: DEFAULT_LEVEL_BOUNDS,
+      countAlgorithm: COUNT_ALGORITHM,
+    };
+  }
 
   // ------------------------------------------------------------ solutions (SOL-001..003)
 

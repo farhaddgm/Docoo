@@ -1,12 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  buildDocument,
   criteriaProblem,
   DEFAULT_CRITERIA,
   scoreSolution,
   SOLUTION_COUNT,
+  templateFor,
   type Criterion,
   type Level,
-  type StructuredDocument,
 } from '@docoo/documents';
 import { ProviderRuntime } from '@docoo/orchestration';
 import { ProviderError, type JsonSchema } from '@docoo/providers';
@@ -23,7 +24,7 @@ import { insertDocumentVersion, levelBoundsFrom, settingText } from './document-
 
 const SCORE_KEYS = DEFAULT_CRITERIA.map((criterion) => criterion.key);
 
-function solutionSchema(count: number): JsonSchema {
+export function solutionSchema(count: number): JsonSchema {
   const list = { type: 'array', items: { type: 'string' }, minItems: 1 };
   return {
     type: 'object',
@@ -291,8 +292,9 @@ export class SolutionsService {
           evidence: string[];
           plan: string[];
           risks: string[];
+          score_inputs: Record<string, number>;
         }>(
-          'select id, title, summary, assumptions, evidence, plan, risks from solutions where set_id = $1 and id = any($2::uuid[])',
+          'select id, title, summary, assumptions, evidence, plan, risks, score_inputs from solutions where set_id = $1 and id = any($2::uuid[])',
           [latest.id, input.solutionIds],
         )
       ).rows;
@@ -324,6 +326,8 @@ export class SolutionsService {
         Math.max(1, Number(effective.values['document.level'] ?? 3)),
       ) as Level;
       const bounds = levelBoundsFrom(effective.values['document.level_bounds']);
+      // The template lays out the first draft of every selected solution (ADR-0018).
+      const template = templateFor(effective.values['document.default_template']);
       const created: string[] = [];
       for (const [index, solutionId] of input.solutionIds.entries()) {
         const solution = rows.find((row) => row.id === solutionId)!;
@@ -355,7 +359,15 @@ export class SolutionsService {
             ],
           )
         ).rows[0]!;
-        const content = initialContent(solution, project.output_language);
+        const content = buildDocument(
+          template,
+          {
+            ...solution,
+            problem: project.initial_problem,
+            score: scoreSolution(solution.score_inputs, criteria.criteria),
+          },
+          project.output_language,
+        );
         await insertDocumentVersion(
           client,
           context,
@@ -365,7 +377,7 @@ export class SolutionsService {
           bounds,
           'model',
           null,
-          'Draft from the selected solution',
+          `Draft from the selected solution (${template.version})`,
         );
         created.push(document.id);
       }
@@ -375,7 +387,12 @@ export class SolutionsService {
         targetId: projectId,
         projectId,
         reason: input.reason ?? null,
-        after: { setId: latest.id, selected: input.solutionIds, documentsCreated: created },
+        after: {
+          setId: latest.id,
+          selected: input.solutionIds,
+          documentsCreated: created,
+          template: template.version,
+        },
       });
       return { setId: latest.id, selected: input.solutionIds, documentsCreated: created };
     });
@@ -465,50 +482,4 @@ export class SolutionsService {
     if (!project) throw notFound('PROJECT_NOT_FOUND', 'The project was not found.');
     return project;
   }
-}
-
-/** Deterministic first draft built from the solution's required parts. */
-export function initialContent(
-  solution: {
-    title: string;
-    summary: string;
-    assumptions: string[];
-    evidence: string[];
-    plan: string[];
-    risks: string[];
-  },
-  language: 'fa' | 'en',
-): StructuredDocument {
-  const labels =
-    language === 'fa'
-      ? {
-          summary: 'خلاصه',
-          assumptions: 'فرض‌ها',
-          evidence: 'شواهد',
-          plan: 'برنامهٔ اجرا',
-          risks: 'ریسک‌ها',
-        }
-      : {
-          summary: 'Summary',
-          assumptions: 'Assumptions',
-          evidence: 'Evidence',
-          plan: 'Implementation plan',
-          risks: 'Risks',
-        };
-  return {
-    title: solution.title,
-    language,
-    blocks: [
-      { type: 'heading', id: 'summary', level: 1, text: labels.summary },
-      { type: 'paragraph', id: 'summary-text', runs: [{ text: solution.summary }] },
-      { type: 'heading', id: 'assumptions', level: 1, text: labels.assumptions },
-      { type: 'list', id: 'assumptions-list', ordered: false, items: solution.assumptions },
-      { type: 'heading', id: 'evidence', level: 1, text: labels.evidence },
-      { type: 'list', id: 'evidence-list', ordered: false, items: solution.evidence },
-      { type: 'heading', id: 'plan', level: 1, text: labels.plan },
-      { type: 'list', id: 'plan-list', ordered: true, items: solution.plan },
-      { type: 'heading', id: 'risks', level: 1, text: labels.risks },
-      { type: 'list', id: 'risks-list', ordered: false, items: solution.risks },
-    ],
-  };
 }

@@ -80,6 +80,8 @@ export interface CreateProjectInput {
   readonly initialProblem: string;
   readonly outputLanguage: OutputLanguage;
   readonly topics: readonly TopicLinkInput[];
+  /** Project-scope settings saved together with the project (the wizard's choices). */
+  readonly settings?: readonly { readonly key: string; readonly value: unknown }[] | undefined;
 }
 
 export interface UpdateProjectInput {
@@ -259,12 +261,27 @@ export class ProjectsService {
       }
       if (!row) throw new Error('Project insert did not return a row');
       await this.replaceLinks(client, context, row.id, input.topics);
+      // The wizard's choices are saved in the same transaction: a bad value creates nothing.
+      const settings = input.settings ?? [];
+      if (settings.length > 0) {
+        await this.configService.applyProjectSettings(
+          client,
+          context,
+          row.id,
+          settings,
+          'Set while creating the project',
+        );
+      }
       await writeAudit(client, context, {
         action: 'project.create',
         targetType: 'project',
         targetId: row.id,
         projectId: row.id,
-        after: { ...this.snapshot(row), topics: input.topics.map((topic) => topic.topicId) },
+        after: {
+          ...this.snapshot(row),
+          topics: input.topics.map((topic) => topic.topicId),
+          settings: settings.map((setting) => setting.key),
+        },
       });
       return this.read(client, context, row.id);
     });

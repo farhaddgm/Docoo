@@ -84,7 +84,7 @@ const documentColumns = `id, project_id, solution_id, priority, title, level, la
 const versionColumns = `id, document_id, version_no, content, content_sha256, char_count, count_algorithm, level, bounds,
   within_bounds, origin, restored_from_id, reason, created_by, ${isoColumn('created_at', 'created_at')}`;
 
-const judgeSchema = (rubric: Rubric): JsonSchema => ({
+export const judgeSchema = (rubric: Rubric): JsonSchema => ({
   type: 'object',
   properties: {
     scores: {

@@ -2,7 +2,7 @@
 doc_id: DOCOO-ROADMAP
 title: نقشه راه توسعه Docoo
 status: proposed
-version: 1.5.0
+version: 1.6.0
 owner: Product & Engineering
 last_updated: 2026-10-04
 notion_sync: true
@@ -128,8 +128,8 @@ workflow پس از kill/deploy ادامه یابد و provider outage state را
 4. **نگارش سند**: عامل documentation سند کامل را با citation می‌نویسد (ADR-0010) و ویرایشگر ساختاریافتهٔ بلوک‌ها در صفحهٔ سند.
 5. ~~**تحقیق با دانش**~~ — انجام شد در 0.15.0 ([ADR-0017](../adr/0017-research-with-knowledge-and-role-evaluation.md)): مرحلهٔ research دانش approved را از دروازهٔ ابزار بازیابی می‌کند (ledger تماس‌ها)، با ارجاع `K#` و نقل‌قول استناد می‌کند، کد هر نقل‌قول را با متن دانش می‌سنجد، دانش `restricted` پیش‌فرض به مدل نمی‌رسد و صفحهٔ دانش «کجا استفاده شد» دارد.
 6. ~~**ارزیابی مدل‌محور نقش‌ها**~~ — انجام شد در 0.15.0 ([ADR-0017](../adr/0017-research-with-knowledge-and-role-evaluation.md)): Brain هر نقش را با مدل در برابر منشوری که با آن اجرا شد می‌سنجد؛ فقط یافتهٔ دارای بند منشور و شاهد می‌ماند و گزارش بدون اثر جانبی است.
-7. **تنظیمات سامانه، قالب‌ها و سطوح سند** در UI و wizard ایجاد پروژه (UX §۵).
-8. **پذیرش با provider واقعی** ([issue ING-005](https://github.com/farhaddgm/Docoo/issues/53) و workflow پذیرش provider) و اقدام‌های مالک: CodeQL، حفاظت شاخه، سرور واقعی و امضای private beta (#89، #94).
+7. ~~**تنظیمات سامانه، قالب‌ها و سطوح سند**~~ — انجام شد در 0.16.0 ([ADR-0018](../adr/0018-settings-templates-wizard-and-acceptance-tooling.md)): صفحهٔ «تنظیمات» با تاریخچه، بازگردانی و بازنشانی، تب «تنظیمات» پروژه، صفحهٔ «قالب‌ها و سطوح سند» با اعتبارسنجی بازه‌ها، قالب‌های نسخه‌دار که شکل پیش‌نویس سند را تعیین می‌کنند، و wizard هشت‌گامهٔ ساخت پروژه با مقدار مؤثر و منبع هر مقدار از سرور و ثبت اتمیک.
+8. **پذیرش با provider واقعی و اقدام‌های مالک** — ابزار و شاهد در 0.16.0 آماده است ([ADR-0018](../adr/0018-settings-templates-wizard-and-acceptance-tooling.md)، [پذیرش private beta](12-private-beta-acceptance.md)): بررسی سازگاری schemaهای پلتفرم با قاعدهٔ strict، آزمون زندهٔ schemaهای پلتفرم در گردش‌کار Provider acceptance، `pnpm owner:check` برای حفاظت شاخه و CodeQL و secretها، و `scripts/deploy/acceptance.sh` برای سرور. **باقی‌مانده با مالک** (کد نمی‌تواند انجام دهد): کلید provider و transcription ([#53](https://github.com/farhaddgm/Docoo/issues/53))، CodeQL و حفاظت شاخه ([#89](https://github.com/farhaddgm/Docoo/issues/89))، سرور واقعی و امضای private beta ([#94](https://github.com/farhaddgm/Docoo/issues/94)). تا آن شواهد در Issueها نباشد این گام بسته نیست.
 
 ## spikeهای لازم
 

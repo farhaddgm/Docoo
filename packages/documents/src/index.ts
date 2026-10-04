@@ -8,3 +8,4 @@ export * from './model.js';
 export * from './pdf.js';
 export * from './pptx.js';
 export * from './scoring.js';
+export * from './templates.js';

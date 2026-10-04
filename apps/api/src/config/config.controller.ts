@@ -28,6 +28,18 @@ const setSchema = z
     expectedSequence: z.number().int().min(0).optional(),
   })
   .strict();
+const previewSchema = z
+  .object({
+    topicIds: z
+      .array(z.uuid().transform((value) => value.toLowerCase()))
+      .max(20)
+      .default([]),
+    settings: z
+      .array(z.object({ key: keySchema, value: jsonValue }).strict())
+      .max(40)
+      .default([]),
+  })
+  .strict();
 const restoreSchema = z
   .object({
     ...scopeSchema,
@@ -105,6 +117,21 @@ export class ConfigController {
       parse(restoreSchema, body),
     );
     return { assignment };
+  }
+
+  @Post('preview')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Effective values a new project would start with, before it is created',
+  })
+  @RequireWorkspacePermission('workspace.read')
+  async preview(@Req() request: FastifyRequest, @Body() body: unknown) {
+    return {
+      config: await this.configService.preview(
+        workspaceContext(request),
+        parse(previewSchema, body),
+      ),
+    };
   }
 
   @Get('effective')

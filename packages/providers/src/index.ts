@@ -22,3 +22,4 @@ export function createAdapter(kind: ProviderKind, options: AdapterOptions): Mode
       return new FakeAdapter();
   }
 }
+export * from './schema-compat.js';

@@ -6,6 +6,7 @@ import { problemMessages } from '../app/[locale]/projects/[projectId]/problem-me
 import { solutionMessages } from '../app/[locale]/projects/[projectId]/solution-messages';
 import { workflowMessages } from '../app/[locale]/projects/[projectId]/workflow-messages';
 import { projectMessages } from '../app/[locale]/projects/messages';
+import { wizardMessages } from '../app/[locale]/projects/new/wizard-messages';
 import { topicMessages } from '../app/[locale]/topics/messages';
 import {
   apiSession,
@@ -20,6 +21,7 @@ import {
 // these tests while a behaviour change still does.
 const topicText = topicMessages('fa');
 const projectText = projectMessages('fa');
+const wizardText = wizardMessages('fa');
 const detail = projectPageMessages('fa');
 const flow = workflowMessages('fa');
 const solutionText = solutionMessages('fa');
@@ -117,6 +119,8 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.locator('#project-code').fill(code);
     await page.locator('#project-title').fill('پروژهٔ آزمون');
     await page.locator('#project-problem').fill('فروش آنلاین کند شده و علت آن را نمی‌دانیم.');
+    // The wizard: basics, then the prioritized topics.
+    await page.getByRole('button', { name: wizardText.next }).click();
     const picker = page.locator('#project-add-topic');
     await picker.selectOption(first.topic.id);
     await page.getByRole('button', { name: projectText.addTopic }).click();
@@ -128,7 +132,12 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: `${projectText.moveDown}: ${titles.first}` }).click();
     await expect(order.first()).toContainText(titles.second);
     await expectNoSeriousA11yViolations(page);
-    await page.getByRole('button', { name: projectText.createSubmit }).click();
+    // Nothing is changed in the later steps, so the project inherits every value.
+    for (let step = 2; step <= 7; step += 1) {
+      await page.getByRole('button', { name: wizardText.next }).click();
+    }
+    await expect(page.getByRole('region', { name: wizardText.reviewTable })).toBeVisible();
+    await page.getByRole('button', { name: wizardText.create }).click();
 
     await expect(page).toHaveURL(/\/fa\/projects\/[0-9a-f-]{36}$/u);
     await expect(
