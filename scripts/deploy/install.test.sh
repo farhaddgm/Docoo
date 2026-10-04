@@ -93,12 +93,12 @@ assert_eq 0 "$(find "$units" -type f | wc -l | tr -d ' ')" 'no systemd: writes n
 has_systemd() { return 0; }
 
 # ---- scheduled_update --------------------------------------------------------------------
-reset() { steps=(); lock_busy=0; fetch_ok=1; child_ok=1; rollback_ok=1; setting=on; installed=v0.10.0; newest=v0.10.1; }
+reset() { steps=(); lock_busy=0; fetch_ok=1; child_rc=0; rollback_ok=1; setting=on; installed=v0.10.0; newest=v0.10.1; }
 take_lock_now() { [ "$lock_busy" = 0 ]; }
 fetch_releases() { steps+=(fetch); [ "$fetch_ok" = 1 ]; }
 latest_release() { echo "$newest"; }
 env_value() { case "$1" in AUTO_UPDATE) echo "$setting" ;; DOCOO_VERSION) echo "$installed" ;; esac; }
-run_update_child() { steps+=(update); [ "$child_ok" = 1 ]; }
+run_update_child() { steps+=(update); return "$child_rc"; }
 rollback() { steps+=("rollback:$1"); [ "$rollback_ok" = 1 ]; }
 
 reset; scheduled_update; status=$?
@@ -125,12 +125,63 @@ reset; fetch_ok=0; scheduled_update; status=$?
 assert_eq 0 "$status" 'GitHub unreachable: succeeds (tries again tomorrow)'
 assert_eq fetch "${steps[*]}" 'GitHub unreachable: keeps the running version'
 
-reset; child_ok=0; scheduled_update; status=$?
+reset; child_rc=1; scheduled_update; status=$?
 assert_eq 1 "$status" 'failed update: reports failure'
 assert_eq 'fetch update rollback:v0.10.0' "${steps[*]}" 'failed update: goes back to the version it ran'
 
-reset; child_ok=0; rollback_ok=0; scheduled_update; status=$?
+reset; child_rc=1; rollback_ok=0; scheduled_update; status=$?
 assert_eq 1 "$status" 'failed update and rollback: reports failure'
+
+log=$(mktemp)
+say() { printf '%s\n' "$*" >>"$log"; }
+reset; child_rc=$exit_no_space; scheduled_update; status=$?
+assert_eq 1 "$status" 'no disk space: reports failure'
+assert_eq 'fetch update' "${steps[*]}" 'no disk space: nothing was changed, so no rollback'
+assert_contains "$(cat "$log")" 'Not enough free disk space' 'no disk space: says why'
+rm -f "$log"
+say() { :; }
+
+# ---- disk space --------------------------------------------------------------------------
+docker() { # a recorder for the Docker commands the tidy-up runs
+  case "$1" in
+    info) echo /tmp ;;
+    images) printf '%s\n' docoo-api:v0.12.0 docoo-api:v0.11.0 docoo-api:v0.10.0 docoo-web:v0.9.0 docoo-postgres:local other-app:v0.9.0 ;;
+    rmi) removed+=("$2") ;;
+    image | builder) cleared+=("$*") ;;
+  esac
+}
+removed=(); cleared=()
+remove_old_images v0.12.0 v0.11.0
+assert_eq 'docoo-api:v0.10.0 docoo-web:v0.9.0 docoo-postgres:local' "${removed[*]}" 'old images: other releases go, the two kept stay, other apps are never touched'
+removed=(); remove_old_images local
+assert_eq 'docoo-api:v0.12.0 docoo-api:v0.11.0 docoo-api:v0.10.0 docoo-web:v0.9.0' "${removed[*]}" 'old images: a clone of main keeps its local images'
+
+removed=(); cleared=(); tidy_docker light v0.12.0 v0.11.0
+assert_contains "${cleared[*]}" 'builder prune -f --filter' 'tidy light: keeps the last day of build cache'
+removed=(); cleared=(); tidy_docker deep v0.11.0
+assert_eq 'image prune -f;builder prune -f' "$(IFS=';'; echo "${cleared[*]}")" 'tidy deep: drops all build cache'
+
+assert_eq 1 "$(docker_free_gb | grep -Ec '^[0-9]+$')" 'free space: a whole number of GB'
+
+queue=$(mktemp); log=$(mktemp); tidied=0
+# One free-space reading per call, popped from a file because the callers run it in $( ).
+docker_free_gb() { head -1 "$queue"; sed -i 1d "$queue"; }
+tidy_docker() { tidied=$((tidied + 1)); }
+min_free_gb=10
+readings() { printf '%s\n' "$@" >"$queue"; }
+readings 25; tidied=0; ensure_disk_space v0.11.0 >/dev/null; status=$?
+assert_eq 0 "$status" 'enough space: update goes on'
+assert_eq 0 "$tidied" 'enough space: nothing is cleared first'
+readings 3 14; tidied=0; ensure_disk_space v0.11.0 >/dev/null; status=$?
+assert_eq 0 "$status" 'low space that tidying fixes: update goes on'
+assert_eq 1 "$tidied" 'low space: clears old images and cache once'
+readings 3 4; tidied=0; ensure_disk_space v0.11.0 >"$log" 2>&1; status=$?
+assert_eq 1 "$status" 'still too little space: refuses'
+assert_contains "$(cat "$log")" 'only 4 GB are free' 'still too little space: says how much is free'
+assert_contains "$(cat "$log")" 'Nothing was changed' 'still too little space: says nothing changed'
+readings ''; ensure_disk_space v0.11.0 >/dev/null; status=$?
+assert_eq 0 "$status" 'free space unknown: does not block the update'
+rm -f "$queue" "$log"
 
 printf '%s checks, %s failed\n' "$checks" "$failures"
 [ "$failures" = 0 ]
