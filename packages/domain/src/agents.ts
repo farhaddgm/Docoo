@@ -274,6 +274,8 @@ export interface ComposeInput {
   readonly language: 'fa' | 'en';
   /** The task of this call: the definition's prompt for a stage, code text for a mechanic. */
   readonly task: string;
+  /** Rules the code adds for this call (for example how to cite knowledge); never editable. */
+  readonly rules?: readonly string[];
 }
 
 const bullets = (items: readonly string[]) => items.map((item) => `- ${item}`).join('\n');
@@ -291,6 +293,7 @@ export function composeInstructions(input: ComposeInput): string {
     `Duties:\n${bullets(input.content.duties)}`,
     `Task: ${input.task.trim()}`,
     `Write in ${input.language === 'fa' ? 'Persian' : 'English'}.`,
+    ...(input.rules ?? []),
     ...DATA_RULES,
   ].join('\n');
 }

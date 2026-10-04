@@ -148,6 +148,20 @@
       "when": 1791115736087,
       "tag": "0020_agents_security",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791132237775,
+      "tag": "0021_research_knowledge",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791132245213,
+      "tag": "0022_research_knowledge_security",
+      "breakpoints": true
     }
   ]
 }

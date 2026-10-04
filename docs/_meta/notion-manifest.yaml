@@ -170,3 +170,6 @@ documents:
   - path: docs/adr/0016-knowledge-screens.md
     doc_id: DOCOO-ADR-0016
     section: ADRs
+  - path: docs/adr/0017-research-with-knowledge-and-role-evaluation.md
+    doc_id: DOCOO-ADR-0017
+    section: ADRs

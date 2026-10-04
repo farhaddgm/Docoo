@@ -2,15 +2,10 @@ import type { ReactNode } from 'react';
 
 import type { Locale } from '../../../i18n';
 import { DefinitionView } from './definition-view';
+import { ResearchView } from './research-view';
 import { workflowMessages } from './workflow-messages';
 
 const asText = (value: unknown): string => (typeof value === 'string' ? value : '');
-
-function textList(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string')
-    : [];
-}
 
 function objectList(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value)
@@ -27,19 +22,6 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
       <h4>{title}</h4>
       {children}
     </section>
-  );
-}
-
-function Bullets({ items, empty }: { items: string[]; empty: string }) {
-  if (items.length === 0) return <p className="muted">{empty}</p>;
-  return (
-    <ul>
-      {items.map((item, index) => (
-        <li key={index} dir="auto">
-          {item}
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -65,29 +47,7 @@ export function StageOutput({
     case 'analysis':
       return <DefinitionView locale={locale} content={data} />;
     case 'research':
-      return (
-        <div className="output-view">
-          <Block title={text.findings}>
-            {objectList(data['findings']).length === 0 ? (
-              <p className="muted">{text.none}</p>
-            ) : (
-              <ul>
-                {objectList(data['findings']).map((finding, index) => (
-                  <li key={index} dir="auto">
-                    {asText(finding['claim'])}{' '}
-                    <small className="muted">
-                      ({text.source}: {asText(finding['source'])})
-                    </small>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Block>
-          <Block title={text.gaps}>
-            <Bullets items={textList(data['gaps'])} empty={text.none} />
-          </Block>
-        </div>
-      );
+      return <ResearchView locale={locale} data={data} />;
     case 'ideation':
       return (
         <div className="output-view">

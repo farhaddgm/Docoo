@@ -26,7 +26,7 @@ import {
 import {
   AGENT_TASK_QUEUE,
   createOrchestrationActivities,
-  fakeAnalystResponder,
+  fakeResponder,
   ProviderRuntime,
   type RunRef,
 } from '@docoo/orchestration';
@@ -144,8 +144,8 @@ export class TemporalTestRuntime implements WorkflowEngine {
   readonly fake = new FakeAdapter((request, call) => this.fakeScript(request, call));
 
   constructor(private readonly pool: Pool) {
-    // The same analyst the stack uses for provider kind `fake`; tests may script their own.
-    this.fake.responder = fakeAnalystResponder;
+    // The same analyst, researcher and judge the stack uses for provider kind `fake`; tests may script their own.
+    this.fake.responder = fakeResponder;
   }
   private worker: Worker | null = null;
   private running: Promise<void> | null = null;
@@ -334,6 +334,7 @@ export async function createHarness(
     engine = new RecordingEngine();
   }
   const fake = engine instanceof TemporalTestRuntime ? engine.fake : new FakeAdapter();
+  if (!(engine instanceof TemporalTestRuntime)) fake.responder = fakeResponder;
   const providerRuntime = new ProviderRuntime(runtimePool, masterKeyFromEnv(), (kind, options) =>
     kind === 'fake' ? fake : createAdapter(kind, options),
   );

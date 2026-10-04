@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 
+import { RESEARCH_DEFAULTS } from './research.js';
 import { MAX_ATTEMPTS } from './stages.js';
 
 export interface Settings {
@@ -8,6 +9,18 @@ export interface Settings {
   manualGate: boolean;
   attemptLimit: number;
   costLimitUsd: number;
+  /** Queries the research stage runs against the knowledge base (`research.max_queries`). */
+  researchMaxQueries: number;
+  /** Passages the research stage may be given; 0 turns knowledge off (`research.knowledge_limit`). */
+  researchKnowledgeLimit: number;
+  /** Whether `restricted` knowledge may reach the research prompt (`research.allow_restricted_knowledge`). */
+  researchAllowRestricted: boolean;
+}
+
+function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
+  const number = typeof value === 'number' ? value : Number(value);
+  if (!Number.isInteger(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
 }
 
 /** The effective configuration the run was started with (FR-CFG-005). */
@@ -29,5 +42,18 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
       Math.min(MAX_ATTEMPTS, Number.isFinite(limit) ? limit : MAX_ATTEMPTS),
     ),
     costLimitUsd: Number(values['ai.max_cost_usd_per_run'] ?? 20),
+    researchMaxQueries: boundedInteger(
+      values['research.max_queries'],
+      RESEARCH_DEFAULTS.maxQueries,
+      1,
+      10,
+    ),
+    researchKnowledgeLimit: boundedInteger(
+      values['research.knowledge_limit'],
+      RESEARCH_DEFAULTS.knowledgeLimit,
+      0,
+      30,
+    ),
+    researchAllowRestricted: values['research.allow_restricted_knowledge'] === true,
   };
 }

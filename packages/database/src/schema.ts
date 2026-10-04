@@ -1411,6 +1411,10 @@ export const brainReports = pgTable(
     summary: jsonb('summary').notNull(),
     deviations: jsonb('deviations').notNull(),
     recommendations: jsonb('recommendations').notNull(),
+    /** The model-based evaluation of each role against its charter (ADR-0017); empty if not asked for. */
+    evaluations: jsonb('evaluations')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1796,4 +1800,42 @@ export const projectAgentProfiles = pgTable(
     ...timestamps,
   },
   (table) => [primaryKey({ columns: [table.projectId, table.role] })],
+);
+
+export const agentToolDecision = pgEnum('agent_tool_decision', ['allowed', 'denied']);
+
+/**
+ * Every call of a tool by a role, with the decision of the gate that let it through or stopped
+ * it (FR-AGT-005, docs/03-ai/01-agent-system.md §6). Append-only. Only ids are kept for the
+ * project, run and attempt: the record outlives a purged project, like a model invocation, and
+ * holds no project text (the query lives in the pinned retrieval snapshot).
+ */
+export const agentToolCalls = pgTable(
+  'agent_tool_calls',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id'),
+    stageRunId: uuid('stage_run_id'),
+    attemptId: uuid('attempt_id'),
+    role: agentRole('role').notNull(),
+    agentDefinitionVersionId: uuid('agent_definition_version_id'),
+    tool: text('tool').notNull(),
+    decision: agentToolDecision('decision').notNull(),
+    /** Digest of the exact input; the input itself is not stored. */
+    inputSha256: text('input_sha256').notNull(),
+    /** Where the output can be read: for example `{ "type": "retrieval_snapshot", "id": "…" }`. */
+    outputRef: jsonb('output_ref'),
+    /** Counts and ids only (what was found, what was cited), never content. */
+    result: jsonb('result')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    latencyMs: integer('latency_ms'),
+    errorCode: text('error_code'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('agent_tool_calls_attempt_idx').on(table.attemptId, table.createdAt),
+    index('agent_tool_calls_workspace_idx').on(table.workspaceId, table.tool, table.createdAt),
+  ],
 );

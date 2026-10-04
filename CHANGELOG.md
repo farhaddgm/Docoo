@@ -2,6 +2,26 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.15.0] — 2026-10-04
+
+Research with approved knowledge and model-based role evaluation ([ADR-0017](docs/adr/0017-research-with-knowledge-and-role-evaluation.md)).
+
+### Added
+
+- **The research stage uses approved knowledge.** Before the model call it retrieves knowledge through the tool gate (approved, current, in scope, for the researcher role) with queries from the approved problem definition, hands the passages to the model as `K1…Kn` and asks it to cite by reference and verbatim quote. The code then checks every quote against the text of the passage it points at: a finding with a verified citation is marked **supported by approved knowledge**, any other is **unverified**, and a failed citation stays visible with its reason (`unknown_ref`, `quote_not_found`, …). Later stages see the claims with their support, not the quotes.
+- **Tool ledger (FR-AGT-005).** Every tool use of an agent passes the allowlist of its pinned definition and is recorded in the append-only `agent_tool_calls` table, allowed or denied, with the digest of the input and a reference to the output (never the content). A researcher without `knowledge_retrieve` gets no knowledge and a denied call in the ledger; without `citation_verifier` nothing counts as verified.
+- **Settings:** `research.max_queries` (1–10, default 5), `research.knowledge_limit` (0–30, default 12; 0 turns knowledge off for research) and `research.allow_restricted_knowledge` (default off). Knowledge marked `restricted` never reaches the model unless that setting says so.
+- **Where it was used:** `GET /knowledge/{id}/uses` and a "Where it was used" section on the knowledge page (project, stage, attempt, query, version, and whether the output cited it with a verified quote).
+- **Research output view:** support badge per finding, each citation with its quote and whether it was verified, the approved knowledge given to the model (linked), conflicts, gaps and a verification summary; older outputs still display.
+- **Model-based role evaluation in the Brain report.** `POST /brain-reports` takes `modelEvaluation` (off by default; one model call per role). The Brain reads a few recent outputs of each stage role next to the principles and duties the role ran with and returns a 1–5 score, a summary and findings. A finding is kept only if it names charter clauses and real outputs as evidence; others are discarded and counted. A role that cannot be judged (no outputs, no model configured, provider failure, unusable answer) is reported with the reason and never loses the report. The Brain page has the option and a card per role.
+- Brain reports have an `evaluations` column (append-only like the rest of the report).
+
+### Changed
+
+- The retrieval code moved to `@docoo/orchestration` so the API and the agent worker share one implementation.
+- The offline test provider (`fake`) now also plays the researcher and the Brain judge, by the name of the requested schema.
+- The structured output schema of the research stage gained `evidence` per finding and `conflicts`.
+
 ## [0.14.0] — 2026-10-04
 
 Knowledge in the backoffice: sources, audit queue, Brain audit, override and conflicts, all usable without the API ([ADR-0016](docs/adr/0016-knowledge-screens.md)).

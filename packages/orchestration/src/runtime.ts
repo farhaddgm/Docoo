@@ -15,7 +15,7 @@ import {
 import type { Pool, PoolClient } from 'pg';
 
 import { inWorkspace } from './db.js';
-import { fakeAnalystResponder } from './fake-analyst.js';
+import { fakeResponder } from './fake-responders.js';
 
 export interface InvocationScope {
   readonly workspaceId: string;
@@ -57,12 +57,13 @@ export type AdapterFactory = (
 
 /**
  * Production adapters. The deterministic `fake` provider (never allowed in production) also
- * plays the analyst, so a stack without provider keys can run a project end to end.
+ * plays the analyst, the researcher and the Brain judge, so a stack without provider keys can
+ * run a project end to end.
  */
 export const defaultAdapters: AdapterFactory = (kind, options) => {
   if (kind !== 'fake') return createAdapter(kind, options);
   const adapter = new FakeAdapter();
-  adapter.responder = fakeAnalystResponder;
+  adapter.responder = fakeResponder;
   return adapter;
 };
 

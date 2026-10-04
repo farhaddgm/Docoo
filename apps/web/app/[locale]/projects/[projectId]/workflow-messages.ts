@@ -139,6 +139,33 @@ const messages = {
       evidence: 'شاهد',
       summary: 'خلاصه',
       none: 'موردی نیست.',
+      supportKnowledge: 'پشتیبانی‌شده با دانش تأییدشده',
+      supportUnverified: 'تأییدنشده',
+      citationsHeading: 'ارجاع‌ها',
+      citationVerified: 'تأییدشده: نقل‌قول عیناً در متن دانش پیدا شد',
+      citationFailed: 'تأیید نشد: {reason}',
+      citationProblems: {
+        unknown_ref: 'چنین قطعه‌ای به مدل داده نشده بود',
+        quote_missing: 'نقل‌قولی نوشته نشده',
+        quote_too_short: 'نقل‌قول برای سنجش بسیار کوتاه است',
+        quote_not_found: 'نقل‌قول در متن این دانش پیدا نشد',
+        verifier_not_allowed: 'نقش اجازهٔ ابزار «تأیید ارجاع» را ندارد و ارجاع سنجیده نشد',
+      } as Record<string, string>,
+      versionShort: 'نسخهٔ {n}',
+      knowledgeHeading: 'دانش تأییدشده‌ای که به مدل داده شد',
+      knowledgeNone:
+        'دانش تأییدشده‌ای برای این تحقیق پیدا نشد؛ یافته‌ها فقط بر دانش عمومی مدل تکیه دارند.',
+      knowledgeDenied:
+        'ابزار «بازیابی دانش» برای این نقش مجاز نیست؛ این خروجی بدون دانش تأییدشده نوشته شد. اجازهٔ ابزار را در صفحهٔ ایجنت‌ها تنظیم کنید.',
+      verifierDenied:
+        'ابزار «تأیید ارجاع» برای این نقش مجاز نیست؛ هیچ ارجاعی سنجیده نشد و هیچ یافته‌ای «پشتیبانی‌شده» حساب نمی‌شود.',
+      restrictedExcluded:
+        'دانش «محدود (بسیار محرمانه)» به مدل داده نمی‌شود، مگر در تنظیمات صریحاً اجازه داده شود.',
+      cited: 'ارجاع شد',
+      notCited: 'ارجاع نشد',
+      conflictsHeading: 'تعارض‌ها',
+      verificationSummary:
+        '{findings} یافته: {supported} پشتیبانی‌شده با دانش تأییدشده و {unverified} تأییدنشده. {verified} از {citations} ارجاع تأیید شد.',
     },
     done: {
       started: 'گردش‌کار شروع شد.',
@@ -298,6 +325,34 @@ const messages = {
       evidence: 'Evidence',
       summary: 'Summary',
       none: 'Nothing here.',
+      supportKnowledge: 'Supported by approved knowledge',
+      supportUnverified: 'Unverified',
+      citationsHeading: 'Citations',
+      citationVerified: 'Verified: the quote was found verbatim in the knowledge text',
+      citationFailed: 'Not verified: {reason}',
+      citationProblems: {
+        unknown_ref: 'no such passage was given to the model',
+        quote_missing: 'no quote was written',
+        quote_too_short: 'the quote is too short to check',
+        quote_not_found: 'the quote was not found in this knowledge text',
+        verifier_not_allowed:
+          'the role may not use the "citation verifier" tool, so the citation was not checked',
+      } as Record<string, string>,
+      versionShort: 'version {n}',
+      knowledgeHeading: 'Approved knowledge given to the model',
+      knowledgeNone:
+        'No approved knowledge was found for this research; the findings rest on the model’s general knowledge only.',
+      knowledgeDenied:
+        'The "knowledge retrieval" tool is not allowed for this role, so this output was written without approved knowledge. Set the tool allowance on the Agents page.',
+      verifierDenied:
+        'The "citation verifier" tool is not allowed for this role: no citation was checked and no finding counts as supported.',
+      restrictedExcluded:
+        '"Restricted (highly confidential)" knowledge is not given to the model unless the settings explicitly allow it.',
+      cited: 'Cited',
+      notCited: 'Not cited',
+      conflictsHeading: 'Conflicts',
+      verificationSummary:
+        '{findings} findings: {supported} supported by approved knowledge and {unverified} unverified. {verified} of {citations} citations were verified.',
     },
     done: {
       started: 'The workflow started.',

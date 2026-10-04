@@ -97,6 +97,8 @@ Parser نباید متن آزاد نامعتبر را silently قبول کند. 
 
 هر نقش allowlist مستقل دارد. tool call شامل input hash، output reference، latency و policy decision است.
 
+این ثبت در جدول append-only `agent_tool_calls` انجام می‌شود ([ADR-0017](../adr/0017-research-with-knowledge-and-role-evaluation.md)): هر استفاده از ابزار از `assertToolAllowed` (allowlist نسخهٔ سنجاق‌شدهٔ ایجنت داخل سقف نقش) می‌گذرد و یک سطر می‌نویسد، چه `allowed` چه `denied`؛ فقط digest ورودی (sha-256)، ارجاع خروجی (مثلاً snapshot بازیابی)، شمارش‌ها و شناسه‌ها نگه داشته می‌شود، نه محتوا. مرحلهٔ research از `knowledge_retrieve` و `citation_verifier` استفاده می‌کند؛ ابزارهای دیگر وقتی مرحله‌ای به آن‌ها نیاز پیدا کند از همین دروازه می‌گذرند.
+
 ## ۷. حافظه
 
 Docoo حافظهٔ ضمنی و نامحدود مدل را منبع حقیقت نمی‌داند:

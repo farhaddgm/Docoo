@@ -85,6 +85,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/knowledge/retrieve': 'knowledge.read',
   'GET workspaces/:workspaceId/knowledge/:knowledgeId': 'knowledge.read',
   'DELETE workspaces/:workspaceId/knowledge/:knowledgeId': 'knowledge.delete',
+  'GET workspaces/:workspaceId/knowledge/:knowledgeId/uses': 'knowledge.read',
   'GET workspaces/:workspaceId/knowledge/:knowledgeId/versions': 'knowledge.read',
   'GET workspaces/:workspaceId/knowledge/:knowledgeId/versions/:versionId': 'knowledge.read',
   'POST workspaces/:workspaceId/knowledge/:knowledgeId/versions': 'knowledge.update',

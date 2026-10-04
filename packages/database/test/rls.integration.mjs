@@ -101,6 +101,7 @@ const knowledgeTables = [
   'agent_definition_versions',
   'agent_roles',
   'project_agent_profiles',
+  'agent_tool_calls',
 ];
 
 async function withContext(workspaceId, actorId, action) {
@@ -821,8 +822,85 @@ try {
     },
   );
 
+  // Tool-call ledger (FR-AGT-005): tenant-scoped, append-only, digests and references only.
+  const digest = 'a'.repeat(64);
+  const callSql = `INSERT INTO agent_tool_calls (workspace_id, project_id, role, agent_definition_version_id, tool, decision, input_sha256, result, latency_ms)
+     VALUES ($1, $2, 'researcher', $3, $4, 'allowed', $5, $6::jsonb, $7) RETURNING id`;
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, callSql, [
+    ids.workspaceB,
+    null,
+    null,
+    'knowledge_retrieve',
+    digest,
+    '{}',
+    1,
+  ]);
+  const ownCall = await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(callSql, [
+      ids.workspaceA,
+      ids.projectA,
+      defaultVersion,
+      'knowledge_retrieve',
+      digest,
+      '{"results":1,"knowledgeIds":[]}',
+      3,
+    ]),
+  );
+  assert.equal(ownCall.rowCount, 1, 'a worker records a call in its own workspace');
+  const foreignCalls = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM agent_tool_calls'),
+  );
+  assert.equal(foreignCalls.rows[0].count, 0, 'Tool calls must not leak across tenants.');
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'UPDATE agent_tool_calls SET tool = $1',
+    ['calculator'],
+  );
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM agent_tool_calls');
+  await assert.rejects(
+    admin.query('UPDATE agent_tool_calls SET tool = $2 WHERE id = $1', [
+      ownCall.rows[0].id,
+      'calculator',
+    ]),
+    (error) => {
+      assert.equal(error.code, 'P0001', 'the ledger is append-only for everyone');
+      return true;
+    },
+  );
+  await assert.rejects(
+    admin.query('DELETE FROM agent_tool_calls WHERE id = $1', [ownCall.rows[0].id]),
+    (error) => {
+      assert.equal(error.code, 'P0001');
+      return true;
+    },
+  );
+  // A faulty writer cannot invent a tool, store a content-sized digest or a negative latency, or
+  // point at another workspace's definition version.
+  for (const [label, params, code] of [
+    ['unknown tool', [ids.workspaceA, null, null, 'shell', digest, '{}', 1], '23514'],
+    [
+      'digest not sha-256',
+      [ids.workspaceA, null, null, 'calculator', 'the full text of the query', '{}', 1],
+      '23514',
+    ],
+    ['negative latency', [ids.workspaceA, null, null, 'calculator', digest, '{}', -1], '23514'],
+    ['result not an object', [ids.workspaceA, null, null, 'calculator', digest, '[]', 1], '23514'],
+    [
+      'version of another workspace',
+      [ids.workspaceB, null, defaultVersion, 'calculator', digest, '{}', 1],
+      '23503',
+    ],
+  ]) {
+    await assert.rejects(admin.query(callSql, params), (error) => {
+      assert.equal(error.code, code, label);
+      return true;
+    });
+  }
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, analysis and agent tables, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, analysis, agent and tool-call tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {

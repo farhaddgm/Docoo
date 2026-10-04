@@ -9,6 +9,7 @@ import { projectMessages } from '../app/[locale]/projects/messages';
 import { topicMessages } from '../app/[locale]/topics/messages';
 import {
   apiSession,
+  completeAnalysis,
   createViaApi,
   expectNoSeriousA11yViolations,
   signInWithKeyboard,
@@ -37,30 +38,6 @@ const titles = {
 
 /** Persian digits, as the pages show numbers. */
 const digits = (value: number) => new Intl.NumberFormat('fa').format(value);
-
-/**
- * Plays the administrator in the Problem tab until the problem definition waits for a decision:
- * one real answer per batch and the rest marked with the bulk button.
- */
-async function completeAnalysis(page: Page) {
-  const wait = { timeout: 60_000 };
-  await page.getByRole('button', { name: detail.tabs.problem }).click();
-  const heading = page.locator('#batch-heading');
-  const definition = page.locator('#definition-heading');
-  for (let guard = 0; guard < 6; guard += 1) {
-    await expect(heading.or(definition)).toBeVisible(wait);
-    if (await definition.isVisible()) return;
-    const label = (await heading.innerText()).trim();
-    await page.locator('form[aria-labelledby="batch-heading"] textarea').first().fill('پاسخ آزمون');
-    await page.getByRole('button', { name: problemText.bulk.irrelevant }).click();
-    await page.getByRole('button', { name: problemText.save, exact: true }).click();
-    await expect(
-      page.getByRole('status').filter({ hasText: problemText.saved.complete }),
-    ).toBeVisible();
-    await expect(heading.filter({ hasText: label })).toHaveCount(0, wait);
-  }
-  throw new Error('The analysis did not reach a problem definition.');
-}
 
 const mainNavigation = (page: Page) => page.getByRole('navigation', { name: 'ناوبری اصلی' });
 const failureNotice = (page: Page) => page.locator('.notice.error[role="alert"]');

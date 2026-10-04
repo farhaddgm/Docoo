@@ -90,6 +90,7 @@ notion_sync: true
 | `POST /knowledge/retrieve`                                           | `knowledge.read`            |
 | `GET /knowledge/{id}`                                                | `knowledge.read`            |
 | `DELETE /knowledge/{id}`                                             | `knowledge.delete`          |
+| `GET /knowledge/{id}/uses`                                           | `knowledge.read`            |
 | `GET /knowledge/{id}/versions`                                       | `knowledge.read`            |
 | `GET /knowledge/{id}/versions/{versionId}`                           | `knowledge.read`            |
 | `POST /knowledge/{id}/versions`                                      | `knowledge.update`          |

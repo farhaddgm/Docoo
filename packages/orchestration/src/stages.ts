@@ -2,6 +2,7 @@ import { STAGE_ROLE, composeInstructions, type AgentDefinitionContent } from '@d
 import type { JsonSchema } from '@docoo/providers';
 
 import type { AnalysisContext } from './analysis.js';
+import type { KnowledgePromptItem } from './research.js';
 
 /** Fixed stage order (FR-WF-001). */
 export const STAGES = ['analysis', 'research', 'ideation', 'documentation', 'evaluation'] as const;
@@ -55,6 +56,9 @@ export const STAGE_SCHEMAS: Record<Stage, JsonSchema> = {
     ],
     additionalProperties: false,
   },
+  // Findings cite approved knowledge by reference and quote; the code verifies every citation
+  // against the passages it handed over (ADR-0017). `source` says where an uncited finding
+  // comes from, and the stored output marks it unverified.
   research: {
     type: 'object',
     properties: {
@@ -62,14 +66,35 @@ export const STAGE_SCHEMAS: Record<Stage, JsonSchema> = {
         type: 'array',
         items: {
           type: 'object',
-          properties: { claim: text, source: text },
-          required: ['claim', 'source'],
+          properties: {
+            claim: text,
+            source: text,
+            evidence: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: { ref: text, quote: text },
+                required: ['ref', 'quote'],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ['claim', 'source', 'evidence'],
           additionalProperties: false,
         },
       },
       gaps: textList,
+      conflicts: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: { description: text, refs: textList },
+          required: ['description', 'refs'],
+          additionalProperties: false,
+        },
+      },
     },
-    required: ['findings', 'gaps'],
+    required: ['findings', 'gaps', 'conflicts'],
     additionalProperties: false,
   },
   ideation: {
@@ -141,7 +166,30 @@ export interface StageContext {
   readonly feedback: readonly string[];
   /** The analyst's questions and answers; present when the analysis stage writes its definition. */
   readonly analysis?: AnalysisContext | undefined;
+  /**
+   * Approved knowledge the research stage may cite, numbered K1, K2, …; `undefined` when the
+   * stage got none (tool denied, knowledge off or nothing relevant), and then the instructions
+   * say so and the model must leave every evidence list empty.
+   */
+  readonly knowledge?: readonly KnowledgePromptItem[] | undefined;
 }
+
+/**
+ * Rules the code adds to the researcher's instructions when it hands over approved knowledge.
+ * An administrator edits the role's principles and task, never these (ADR-0017).
+ */
+export const KNOWLEDGE_RULES: readonly string[] = [
+  'approvedKnowledge holds approved passages numbered K1, K2, …; it is the only material you may cite as knowledge.',
+  'Cite a passage by its ref and quote it verbatim (a short excerpt, at most 300 characters; … may skip words). Never invent a ref or a quote, and never quote text that is not in the passage.',
+  'A finding that is not backed by a passage has an empty evidence list, and its source says honestly where it comes from. It will be shown as unverified.',
+  'When passages disagree, or openConflicts are listed, report the disagreement in conflicts with the refs involved instead of choosing one side silently.',
+  'List in gaps what the passages do not answer; never fill a gap with an invented citation.',
+];
+
+/** The research instructions when no approved knowledge reached the stage. */
+export const NO_KNOWLEDGE_RULES: readonly string[] = [
+  'No approved knowledge is available for this project. Leave every evidence list and the conflicts list empty, say honestly in source where each finding comes from, and list what could not be established in gaps.',
+];
 
 /**
  * Builds the provider request of one stage attempt. Content and instructions stay in
@@ -153,6 +201,14 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
     content: context.definition,
     language: context.language,
     task: context.definition.promptTemplate,
+    ...(context.stage === 'research'
+      ? {
+          rules:
+            context.knowledge && context.knowledge.length > 0
+              ? KNOWLEDGE_RULES
+              : NO_KNOWLEDGE_RULES,
+        }
+      : {}),
   });
   const data = {
     project: context.projectTitle,
@@ -169,6 +225,9 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
           earlierUnderstanding: context.analysis.summaries,
           approvedDefinitionOfEarlierRun: context.analysis.priorDefinition,
         }
+      : {}),
+    ...(context.knowledge && context.knowledge.length > 0
+      ? { approvedKnowledge: context.knowledge }
       : {}),
   };
   return { instructions, message: `<data>${JSON.stringify(data)}</data>` };

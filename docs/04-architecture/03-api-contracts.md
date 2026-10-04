@@ -127,6 +127,7 @@ notion_sync: true
 
 - `GET/POST /knowledge` — item با `sourceType`، `confidentiality`، `scopes` (workspace/topic/project و نقش اختیاری)، `provenance`، اعتبار زمانی و claim/citation. فهرست علاوه بر `status` (وضعیت دیده‌شده؛ `expired` برای تأییدشدهٔ دارای اعتبار تمام‌شده) فیلتر `sourceType`، `scopeType`+`scopeId` و `q` دارد و هر ردیف `versionNo`، `overall`، `decision`، `effectiveDecision`، `scopes` (با `title`)، `claimCount`، `openConflicts`، `validUntil` و `staleReason` می‌دهد.
 - `POST /knowledge/from-source` — دانش کاندید از منبع indexed با claimهای پیشنهادی و locator دقیق (`ING-008`)؛ منبع `partial` فقط با `acceptPartial`.
+- `GET /knowledge/{id}/uses?limit=` — بازیابی‌هایی که ایجنت‌ها از این دانش کردند: `items[]` با `projectId/projectTitle`، `stage`، `attemptNo`، `role`، `query`، `versionNos`، `snapshotId`، `cited` (ارجاع تأییدشدهٔ همان attempt) و `totals` ({`retrievals`، `cited`}). آزمون بازیابی دستی حساب نمی‌شود ([ADR-0017](../adr/0017-research-with-knowledge-and-role-evaluation.md)).
 - `GET /knowledge/{id}`، `GET /knowledge/{id}/versions`، `GET /knowledge/{id}/versions/{versionId}`، `DELETE /knowledge/{id}`.
 - `GET /knowledge-claims` — نمای ادعای صف ممیزی: ادعای نسخه‌های جاری با `supported`/`supportReason` (نتیجهٔ Brain؛ `null` پیش از ممیزی)، `citations` (`total`، `complete`)، `openConflicts` و `effectiveDecision`؛ فیلتر `status`، `supported` (`yes|no|unaudited`)، `conflicted`، `kind`، `knowledgeId`.
 - `POST /knowledge/{id}/versions` — محتوای جدید با `If-Match`؛ نسخهٔ جدید `pending` و نسخهٔ قبلی `superseded` و ممیزی قبلی stale می‌شود. به‌جای `content` می‌توان `sourceVersionId` (و `acceptPartial`) داد تا متن و ادعاها از نسخهٔ جدید همان منبع بیایند (تازه‌سازی دانش `stale`)؛ دقیقاً یکی از این دو، و `claims` فقط با `content`. دانشی که از منبع نیامده `409 KNOWLEDGE_NO_SOURCE` و نسخهٔ منبعی دیگر `404 SOURCE_VERSION_NOT_FOUND` می‌گیرد.
@@ -202,7 +203,7 @@ notion_sync: true
 - `POST /retention/purge` (حذف دائمی موارد منقضی با tombstone ممیزی)
 - `GET /dashboard?from=&to=`: کارت‌های داشبورد با دادهٔ زنده (بازهٔ مصرف پیش‌فرض ۳۰ روز).
 - `GET /reports/usage?from=&to=&projectId=&groupBy=project|stage|day|model`: token و هزینهٔ برآوردی؛ بازه حداکثر ۴۰۰ روز.
-- `POST /brain-reports` با `{projectId?, from?, to?}` → 201؛ گزارش پروژه یا workspace با `deviations[]` (rule، clause، role، severity، count، detail، evidence) و `recommendations[]`. هیچ وضعیتی تغییر نمی‌کند.
+- `POST /brain-reports` با `{projectId?, from?, to?, modelEvaluation?}` → 201؛ گزارش پروژه یا workspace با `deviations[]` (rule، clause، role، severity، count، detail، evidence) و `recommendations[]`. هیچ وضعیتی تغییر نمی‌کند. با `modelEvaluation: true` (پیش‌فرض false؛ هر نقش یک فراخوانی مدل) گزارش `evaluations[]` هم دارد: برای هر یک از پنج نقش مرحله `status`، `reason`، `score` ۱ تا ۵، `summary`، `charterVersionId`، `samples[]`، `findings[]` (هر یافته با `clauses[]` و `evidence[]` ‌ـ یافتهٔ بی‌شاهد دور ریخته می‌شود)، `discarded` و `errorCode`؛ `summary.modelEvaluation` شمارهٔ نسخهٔ داور و شمارش‌ها را دارد. نقشی که نمی‌تواند سنجیده شود (`no_samples`، `ai_not_configured`، `provider_failure`، `invalid_output`) گزارش را از بین نمی‌برد ([ADR-0017](../adr/0017-research-with-knowledge-and-role-evaluation.md)).
 - `GET /brain-reports?projectId=&limit=` و `GET /brain-reports/{id}`.
 - `GET /projects/{id}/usage`: مصرف پروژه نسبت به سقف (از 0.5.0).
 

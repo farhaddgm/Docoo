@@ -540,6 +540,9 @@ importers:
       '@docoo/domain':
         specifier: workspace:*
         version: link:../domain
+      '@docoo/knowledge':
+        specifier: workspace:*
+        version: link:../knowledge
       '@docoo/providers':
         specifier: workspace:*
         version: link:../providers

@@ -87,6 +87,14 @@ notion_sync: true
 
 آنچه پروژه برای یک نقش اجرا می‌کند: `(project_id, role)`، `definition_version_id`، `customized` (false = نسخهٔ پیش‌فرض سنجاق‌شده؛ true = کپی خود پروژه؛ trigger پروژهٔ دیگر را رد می‌کند)، `pinned_by`.
 
+### agent_tool_calls
+
+ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار ایجنت‌ها (FR-AGT-005): `project_id`، `stage_run_id`، `attempt_id`، `role`، `agent_definition_version_id` (کلید ترکیبی با workspace)، `tool` (یکی از ابزارهای شناخته‌شده، CHECK)، `decision` (`allowed|denied`)، `input_sha256` (فقط digest ۶۴ هگزا، CHECK)، `output_ref` (مثلاً `{type: "retrieval_snapshot", id}`)، `result` (شمارش‌ها و شناسه‌ها؛ برای بازیابی `results` و `knowledgeIds`، برای `citation_verifier` شمارش‌های تأیید و `cited[{ref, knowledgeId, versionId}]`)، `latency_ms`، `error_code`. ایندکس GIN روی `result` صفحهٔ «کجا استفاده شد» دانش را می‌دهد.
+
+### brain_reports.evaluations
+
+آرایهٔ ارزیابی مدل‌محور نقش‌ها در گزارش Brain (پیش‌فرض `[]`، مثل بقیهٔ ستون‌های گزارش تغییرناپذیر): برای هر نقش `status` (`completed|skipped|failed`)، `reason`، `score` (۱ تا ۵)، `summary`، نسخهٔ منشور سنجیده‌شده، نمونه‌ها (`S#` با شناسهٔ خروجی مرحله)، `findings[]` با `kind`، `severity`، `clauses[]` (بند و متن منشور) و `evidence[]` (`stage_output` با شناسه)، شمار یافته‌های دورریخته، `invocation_id` و `errorCode`. خلاصه در `summary.modelEvaluation`.
+
 ### ثبت اجرا
 
 `stage_attempts.agent_definition_version_id` و `model_invocations.agent_definition_version_id` به‌علاوهٔ `model_invocations.prompt_sha256` (هش دستور و پیام ارسال‌شده؛ متن ذخیره نمی‌شود).
