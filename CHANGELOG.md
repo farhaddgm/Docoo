@@ -2,6 +2,23 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.11.0] — 2026-10-04
+
+Smart: guided walker, AI chat, error tracker and issue ledger ([docs](docs/01-product/06-smart.md)).
+
+### Added
+
+- **Error tracker (SMT-001):** server 5xx (after the normal response is sent), browser errors and render crashes are stored, categorised by code, grouped by fingerprint and re-opened when a fixed error recurs; toasts for new errors; request bodies are never stored.
+- **Chat (SMT-003):** read-only Smart answers from a code-built snapshot of ids, statuses, counters and error codes, with no project titles, problem statements or document content; usage is recorded as `smart_chat`/`smart_report` in model invocations.
+- **Issue ledger (SMT-002):** save a Smart answer verbatim once per message; status, fix note and a "copy for the developer" Markdown report.
+- **Walker (SMT-004):** 12 steps from provider connection to the Brain report, completion computed by code from stored data.
+- Header button, floating window (walker, chat, errors), pages "Error tracker" and "Issue ledger", an `error.tsx` crash page, Persian and English texts.
+- Permissions `smart.read`, `smart.chat`, `smart.manage`; migrations `0015_smart` and `0016_smart_security` (RLS, per-admin chat ownership, immutable messages).
+
+### Changed
+
+- The web `api-client` reports 5xx and network failures to Smart.
+
 ## [0.10.0] — 2026-10-04
 
 Core backoffice screens: the owner can now run a project from topic to signed document without the API.

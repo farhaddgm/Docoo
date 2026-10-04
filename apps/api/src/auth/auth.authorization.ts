@@ -62,6 +62,9 @@ export const WORKSPACE_PERMISSIONS = [
   'audit.export',
   'retention.configure',
   'retention.purge',
+  'smart.read',
+  'smart.chat',
+  'smart.manage',
 ] as const;
 
 export type WorkspacePermission = (typeof WORKSPACE_PERMISSIONS)[number];

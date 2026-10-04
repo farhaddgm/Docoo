@@ -47,6 +47,7 @@ export const navigation = [
   'providers',
   'costs',
   'audit',
+  'smart',
   'settings',
 ] as const;
 
@@ -70,6 +71,7 @@ const messages = {
       providers: 'ارائه‌دهندگان AI',
       costs: 'هزینه و مصرف',
       audit: 'Audit Log',
+      smart: 'اسمارت',
       settings: 'تنظیمات سامانه',
     } satisfies Record<NavigationKey, string>,
     dashboardTitle: 'داشبورد Docoo',
@@ -136,6 +138,7 @@ const messages = {
       providers: 'AI providers',
       costs: 'Cost & usage',
       audit: 'Audit log',
+      smart: 'Smart',
       settings: 'System settings',
     } satisfies Record<NavigationKey, string>,
     dashboardTitle: 'Docoo dashboard',

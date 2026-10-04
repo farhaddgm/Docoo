@@ -213,3 +213,13 @@ Cursor opaque، `limit` سقف ۱۰۰، sort allowlist. filter fieldها schema-
 - mass assignment ممنوع؛ DTO allowlist؛
 - audit برای commandهای حساس؛
 - no secret/stack/raw provider response در error.
+
+## ۱۷. اسمارت (Unreleased)
+
+مسیرها زیر `/smart` هستند؛ شرح کامل، مجوزها و کد خطاها در [اسمارت](../01-product/06-smart.md).
+
+- `GET /smart/summary`، `GET /smart/walker/progress?projectId=`
+- `POST /smart/errors`، `GET /smart/errors`، `GET /smart/errors/feed?since=`، `GET|PATCH /smart/errors/{id}`
+- `GET|POST /smart/conversations`، `GET|DELETE /smart/conversations/{id}`، `POST /smart/conversations/{id}/messages` (۲۰۱؛ مدل همان لحظه و فقط‌خواندنی پاسخ می‌دهد؛ بدون تنظیم مدل `409 AI_NOT_CONFIGURED`)
+- `GET|POST /smart/issues`، `GET|PATCH|DELETE /smart/issues/{id}`
+- خطای 5xx پاسخ Nest را بدون تغییر می‌فرستد و پس از آن در خطایاب ثبت می‌شود؛ 4xx ثبت نمی‌شود.

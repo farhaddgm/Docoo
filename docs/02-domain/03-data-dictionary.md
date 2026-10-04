@@ -192,6 +192,20 @@ notion_sync: true
 
 `invocation_id`, `input_tokens`, `cached_tokens`, `output_tokens`, `reasoning_tokens`, `tool_calls`, `estimated_cost`, `currency`, `price_snapshot_id`.
 
+## smart
+
+### app_error
+
+`source` (`server`/`client`)، `category`، `fingerprint` (یکتا در workspace)، `message`، `status` (`new/seen/fixed/ignored`)، `occurrences`، `first_seen_at`، `last_seen_at`، `http_method`، `route`، `http_status`، `page`، `project_id nullable`، `correlation_id`، `stack`، `context` (scrub‌شده). بدنهٔ درخواست ذخیره نمی‌شود.
+
+### smart_conversation و smart_message
+
+گفتگوی یک ادمین: `user_id`، `kind` (`walker`/`error`)، `project_id nullable`، `error_id nullable`، `route`، `title`. پیام: `role`، `content`، `status` (`done`/`failed`)، `context`، `invocation_id nullable`. پیام تغییرناپذیر است.
+
+### walker_issue
+
+`title`، `body` (عین پاسخ ذخیره‌شده)، `status` (`open/in_progress/fixed/wont_fix`)، `note`، `context`، `source_message_id nullable` (یکتا در workspace)، `created_by`.
+
 ## audit_event
 
 `event_id`, `workspace_id`, `actor_type/id`, `action`, `target_type/id/version`, `occurred_at`, `correlation_id`, `ip_hash`, `reason`, `before_digest`, `after_digest`, `metadata_redacted`.
