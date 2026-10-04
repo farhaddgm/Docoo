@@ -1,0 +1,570 @@
+import type { Locale } from '../i18n';
+
+export interface StepText {
+  title: string;
+  summary: string;
+  todo: string[];
+}
+
+const fa = {
+  name: 'اسمارت',
+  toggleOn: 'اسمارت روشن است؛ برای خاموش کردن بزنید',
+  toggleOff: 'اسمارت خاموش است؛ برای روشن کردن بزنید',
+  openCount: '{n} مورد باز',
+  panel: {
+    label: 'پنجرهٔ اسمارت',
+    tabs: { walker: 'واکر', chat: 'گفتگو', errors: 'خطاها' },
+    minimize: 'کوچک کردن',
+    expand: 'باز کردن اسمارت',
+    switchSide: 'جابه‌جایی پنجره به سمت دیگر',
+  },
+  walker: {
+    project: 'پروژه',
+    noProject: 'بدون پروژه (مرحله‌های مشترک)',
+    stepOf: 'مرحلهٔ {n} از {total}',
+    progress: '{done} از {total} مرحله انجام شده است',
+    status: {
+      done: 'انجام شد',
+      ready: 'در انتظار شما',
+      blockedProject: 'برای این مرحله پروژه انتخاب کنید',
+      blockedStep: 'نیازمند مرحلهٔ قبل',
+    },
+    counter: '{current} از {total}',
+    attention: '{n} مورد منتظر تصمیم شماست',
+    todoTitle: 'چه کار کنم؟',
+    goToPage: 'رفتن به صفحهٔ این مرحله',
+    noPage: 'صفحهٔ این مرحله هنوز در بک‌آفیس نیست؛ طبق راهنمای بالا پیش بروید.',
+    ask: 'سؤال دربارهٔ این مرحله',
+    askPrompt: 'دربارهٔ مرحلهٔ «{step}» راهنمایی کن: الان چه کار باید بکنم؟',
+    goSuggested: 'رفتن به مرحلهٔ پیشنهادی',
+    prev: 'قبلی',
+    next: 'بعدی',
+    allDone: 'همهٔ مرحله‌ها انجام شده است.',
+    loadFailed: 'پیشرفت واکر خوانده نشد. چند ثانیه بعد دوباره امتحان می‌شود.',
+    steps: {
+      connect_provider: {
+        title: 'اتصال به ارائه‌دهندهٔ AI',
+        summary: 'بدون یک اتصال سالم به ارائه‌دهندهٔ AI هیچ مرحلهٔ هوشمندی اجرا نمی‌شود.',
+        todo: [
+          'صفحهٔ «ارائه‌دهندگان AI» را باز کنید.',
+          'یک اتصال تازه با کلید API بسازید.',
+          'دکمهٔ آزمون سلامت را بزنید تا وضعیت «سالم» شود.',
+        ],
+      },
+      configure_ai: {
+        title: 'انتخاب اتصال و مدل',
+        summary: 'تنظیم‌های ai.connection_id و ai.model مشخص می‌کنند کدام اتصال و مدل به‌کار برود.',
+        todo: [
+          'ai.connection_id را روی اتصال سالم بگذارید.',
+          'ai.model را از فهرست مدل‌های همان اتصال انتخاب کنید.',
+          'برای یک حوزه یا پروژهٔ خاص می‌توانید مقدار دیگری تعیین کنید.',
+        ],
+      },
+      create_topic: {
+        title: 'ساخت حوزهٔ موضوعی',
+        summary:
+          'هر پروژه به یک یا چند حوزه وابسته است؛ حوزه تنظیم‌ها و دانش مشترک را نگه می‌دارد.',
+        todo: ['یک حوزه با کد و عنوان بسازید.', 'زبان پیش‌فرض و توضیح حوزه را بنویسید.'],
+      },
+      add_sources: {
+        title: 'افزودن منبع',
+        summary:
+          'منبع‌ها فایل، آدرس یا متن‌اند و باید دریافت (ingestion) را کامل کنند تا «ایندکس‌شده» شوند.',
+        todo: [
+          'فایل، آدرس یا متن را اضافه کنید.',
+          'صبر کنید وضعیت منبع به «ایندکس‌شده» برسد.',
+          'اگر رد یا ناموفق شد، علت را در جزئیات منبع ببینید.',
+        ],
+      },
+      approve_knowledge: {
+        title: 'تأیید دانش',
+        summary: 'دانش تأییدنشده وارد مرحله‌های بعد نمی‌شود؛ ممیزی Brain باید آن را تأیید کند.',
+        todo: [
+          'موردهای دانش در انتظار ممیزی را بازبینی کنید.',
+          'ادعاها و منبع آن‌ها را بررسی و تأیید کنید.',
+          'تعارض‌های باز را حل کنید.',
+        ],
+      },
+      create_project: {
+        title: 'ساخت پروژه',
+        summary: 'پروژه با عنوان، کد، متن مسئله و حوزه‌ها ساخته می‌شود و در حالت پیش‌نویس می‌ماند.',
+        todo: [
+          'عنوان، کد و متن مسئله را بنویسید.',
+          'حوزه‌ها و اولویت آن‌ها را انتخاب کنید.',
+          'تنظیم‌های مؤثر را پیش از ثبت مرور کنید.',
+        ],
+      },
+      activate_project: {
+        title: 'فعال‌سازی پروژه',
+        summary:
+          'فعال‌سازی، جریان‌کار را شروع می‌کند: تحلیل، تحقیق، ایده‌پردازی، مستندسازی و ارزیابی.',
+        todo: [
+          'پروژه را در واکر انتخاب کنید.',
+          'مطمئن شوید AI پیکربندی شده است.',
+          'پروژه را فعال کنید.',
+        ],
+      },
+      complete_stages: {
+        title: 'پیشبرد مرحله‌ها',
+        summary: 'هر مرحله ممکن است برای تصمیم شما متوقف شود؛ کارهای منتظر را پاسخ دهید.',
+        todo: [
+          'کارهای منتظر انسان را در داشبورد ببینید.',
+          'خروجی هر مرحله را تأیید، رد یا ویرایش کنید.',
+          'اگر مرحله‌ای ناموفق شد، علتش را از اسمارت بپرسید.',
+        ],
+      },
+      choose_solution: {
+        title: 'انتخاب راه‌حل',
+        summary: 'راه‌حل‌ها تولید می‌شوند و شما یک یا چند مورد را انتخاب و اولویت‌بندی می‌کنید.',
+        todo: [
+          'راه‌حل‌ها را تولید کنید.',
+          'امتیاز و فرض‌های هر گزینه را بخوانید.',
+          'گزینه‌های انتخابی را ثبت کنید.',
+        ],
+      },
+      evaluate_document: {
+        title: 'ارزیابی سند',
+        summary:
+          'ارزیاب پوشش نیازمندی، شواهد، ریسک و انطباق طول و قالب را می‌سنجد؛ سند باید قبول شود.',
+        todo: [
+          'سند را برای ارزیابی ارسال کنید.',
+          'یافته‌های ارزیابی را بخوانید.',
+          'موردهای ردشده را اصلاح و دوباره ارزیابی کنید.',
+        ],
+      },
+      approve_document: {
+        title: 'تأیید سند',
+        summary: 'نسخهٔ تأییدشده قفل می‌شود و آمادهٔ خروجی است.',
+        todo: ['آخرین نسخه را بازبینی کنید.', 'سند را تأیید کنید.', 'خروجی DOCX یا PDF بگیرید.'],
+      },
+      review_brain: {
+        title: 'گزارش Brain',
+        summary: 'گزارش Brain انحراف‌ها و پیشنهادهای بهبود نقش‌ها را نشان می‌دهد.',
+        todo: [
+          'صفحهٔ «گزارش Brain» را باز کنید.',
+          'یک گزارش تازه بسازید.',
+          'انحراف‌های مهم را مرور کنید.',
+        ],
+      },
+    } as Record<string, StepText>,
+  },
+  chat: {
+    new: 'گفتگوی تازه',
+    history: 'تاریخچهٔ گفتگوها',
+    untitled: 'گفتگوی بدون عنوان',
+    remove: 'حذف این گفتگو',
+    removeConfirm: 'حذف قطعی؟ دوباره بزنید.',
+    placeholder: 'سؤال خود را بنویسید… (Ctrl+Enter برای ارسال)',
+    send: 'ارسال',
+    thinking: 'اسمارت در حال پاسخ است…',
+    report: 'خلاصه برای دفتر خطاها',
+    reportPrompt: 'کل این گفتگو را به‌صورت یک گزارش کامل برای دفتر خطاها بنویس.',
+    save: 'ذخیره در دفتر خطاهای واکر',
+    saving: 'در حال ذخیره…',
+    saved: 'در دفتر ذخیره شد',
+    openLedger: 'باز کردن دفتر',
+    empty: 'دربارهٔ مرحلهٔ فعلی یا یک خطا بپرسید. اسمارت فقط می‌خواند و چیزی را تغییر نمی‌دهد.',
+    you: 'شما',
+    assistant: 'اسمارت',
+    failed: 'اسمارت نتوانست پاسخ بدهد ({code}). دوباره بفرستید.',
+    notConfigured: 'مدل AI تنظیم نشده است. ai.connection_id و ai.model را مشخص کنید.',
+    loadFailed: 'گفتگو بارگذاری نشد.',
+    errorPrompt: 'این خطا یعنی چه و چطور رفع می‌شود؟',
+    errorContext: 'گفتگو دربارهٔ یک خطا',
+  },
+  errors: {
+    empty: 'خطایی ثبت نشده است.',
+    loadFailed: 'خطاها بارگذاری نشد.',
+    status: { new: 'جدید', seen: 'دیده‌شده', fixed: 'رفع‌شده', ignored: 'نادیده' },
+    source: { server: 'سرور', client: 'مرورگر' },
+    category: {
+      database: 'پایگاه داده',
+      validation: 'اعتبارسنجی',
+      permission: 'دسترسی',
+      network: 'شبکه',
+      provider: 'ارائه‌دهندهٔ AI',
+      not_found: 'یافت‌نشده',
+      ui: 'رابط کاربری',
+      unknown: 'نامشخص',
+    },
+    hint: {
+      database: 'مشکل در پایگاه داده یا اتصال به آن؛ لاگ سرور و وضعیت PostgreSQL را بررسی کنید.',
+      validation: 'ورودی نامعتبر بوده است؛ داده‌ای که ارسال شده را بررسی کنید.',
+      permission: 'دسترسی یا نشست معتبر نبوده است.',
+      network: 'ارتباط شبکه یا سرویس پایین‌دستی قطع یا کند بوده است.',
+      provider: 'ارائه‌دهندهٔ AI خطا داده است؛ سلامت اتصال و سهمیه را بررسی کنید.',
+      not_found: 'موردی که درخواست شد پیدا نشد.',
+      ui: 'خطای اجرایی در رابط کاربری مرورگر.',
+      unknown: 'دسته‌بندی خودکار ممکن نشد؛ جزئیات و stack را ببینید.',
+    },
+    occurrences: '{n} بار تکرار',
+    firstSeen: 'اولین بار',
+    lastSeen: 'آخرین بار',
+    request: 'درخواست',
+    page: 'صفحه',
+    stack: 'Stack',
+    context: 'کانتکست',
+    correlation: 'شناسهٔ پیگیری',
+    actions: { seen: 'دیده شد', fixed: 'رفع شد', ignored: 'نادیده بگیر', reopen: 'بازگشایی' },
+    chat: 'گفتگو با AI',
+    details: 'جزئیات',
+    openPage: 'صفحهٔ کامل',
+    back: 'بازگشت به فهرست',
+    all: 'همه',
+    filterStatus: 'وضعیت',
+    filterSource: 'منبع',
+    filterCategory: 'دسته',
+    search: 'جست‌وجو در پیام و مسیر',
+    loadMore: 'نمایش بیشتر',
+    copy: 'کپی شناسه',
+    apply: 'اعمال',
+    select: 'یک خطا را از فهرست انتخاب کنید.',
+  },
+  issues: {
+    empty: 'هنوز موردی در دفتر ذخیره نشده است. در گفتگو زیر پاسخ اسمارت دکمهٔ ذخیره را بزنید.',
+    status: { open: 'باز', in_progress: 'در حال رفع', fixed: 'رفع‌شده', wont_fix: 'رفع نمی‌شود' },
+    note: 'یادداشت رفع',
+    notePlaceholder: 'چه کاری انجام شد یا چرا رفع نمی‌شود؟',
+    title: 'عنوان',
+    save: 'ذخیرهٔ تغییرات',
+    saved: 'ذخیره شد.',
+    copy: 'کپی کامل برای توسعه‌دهنده',
+    copied: 'کپی شد.',
+    remove: 'حذف',
+    removeConfirm: 'حذف قطعی؟ دوباره بزنید.',
+    body: 'متن کامل',
+    contextTitle: 'کانتکست',
+    createdAt: 'ثبت‌شده در',
+    search: 'جست‌وجو در عنوان و متن',
+    loadFailed: 'دفتر بارگذاری نشد.',
+    select: 'یک مورد را از فهرست انتخاب کنید.',
+    developerHeader: 'گزارش اسمارت برای توسعه‌دهنده',
+  },
+  toast: {
+    server: 'خطای سرور ({status}) در {path}',
+    client: 'خطای مرورگر: {message}',
+    recorded: 'خطا ثبت شد: {message}',
+    details: 'جزئیات',
+    dismiss: 'بستن',
+    region: 'اعلان‌های اسمارت',
+  },
+  crash: {
+    title: 'این صفحه با خطا روبه‌رو شد',
+    body: 'خطا برای بررسی در خطایاب ثبت شد. می‌توانید دوباره تلاش کنید.',
+    retry: 'تلاش دوباره',
+  },
+  pages: {
+    errorsTitle: 'خطایاب',
+    errorsSubtitle: 'خطاهای سرور و مرورگر، گروه‌بندی‌شده و قابل پیگیری',
+    issuesTitle: 'دفتر خطاهای واکر',
+    issuesSubtitle: 'پاسخ‌های ذخیره‌شدهٔ اسمارت برای رفع مشکل‌ها',
+    subnav: 'بخش‌های اسمارت',
+    errors: 'خطایاب',
+    issues: 'دفتر خطاها',
+  },
+  errorCodes: {
+    SMART_INVALID_REQUEST: 'درخواست نامعتبر بود.',
+    SMART_ERROR_NOT_FOUND: 'این خطا پیدا نشد.',
+    SMART_CONVERSATION_NOT_FOUND: 'این گفتگو پیدا نشد.',
+    SMART_ISSUE_NOT_FOUND: 'این مورد پیدا نشد.',
+    SMART_MESSAGE_NOT_FOUND: 'این پیام پیدا نشد.',
+    SMART_MESSAGE_NOT_SAVABLE: 'فقط پاسخ کامل اسمارت را می‌شود ذخیره کرد.',
+    SMART_PROJECT_NOT_FOUND: 'این پروژه پیدا نشد.',
+    AI_NOT_CONFIGURED: 'مدل AI تنظیم نشده است. ai.connection_id و ai.model را مشخص کنید.',
+    generic: 'عملیات انجام نشد. دوباره تلاش کنید.',
+  } as Record<string, string>,
+};
+
+export type SmartMessages = typeof fa;
+
+const en: SmartMessages = {
+  name: 'Smart',
+  toggleOn: 'Smart is on; press to turn it off',
+  toggleOff: 'Smart is off; press to turn it on',
+  openCount: '{n} open',
+  panel: {
+    label: 'Smart window',
+    tabs: { walker: 'Walker', chat: 'Chat', errors: 'Errors' },
+    minimize: 'Minimise',
+    expand: 'Open Smart',
+    switchSide: 'Move the window to the other side',
+  },
+  walker: {
+    project: 'Project',
+    noProject: 'No project (shared steps)',
+    stepOf: 'Step {n} of {total}',
+    progress: '{done} of {total} steps done',
+    status: {
+      done: 'Done',
+      ready: 'Waiting for you',
+      blockedProject: 'Select a project for this step',
+      blockedStep: 'Needs an earlier step',
+    },
+    counter: '{current} of {total}',
+    attention: '{n} item(s) wait for your decision',
+    todoTitle: 'What should I do?',
+    goToPage: "Go to this step's page",
+    noPage: "This step's page is not in the back office yet; follow the guide above.",
+    ask: 'Ask about this step',
+    askPrompt: 'Guide me through the step "{step}": what should I do now?',
+    goSuggested: 'Go to the suggested step',
+    prev: 'Previous',
+    next: 'Next',
+    allDone: 'Every step is done.',
+    loadFailed: 'Walker progress could not be read. It retries in a few seconds.',
+    steps: {
+      connect_provider: {
+        title: 'Connect an AI provider',
+        summary: 'No AI stage can run without a healthy provider connection.',
+        todo: [
+          'Open the AI providers page.',
+          'Create a connection with an API key.',
+          'Run the health check until the status is healthy.',
+        ],
+      },
+      configure_ai: {
+        title: 'Choose connection and model',
+        summary:
+          'The settings ai.connection_id and ai.model decide which connection and model run.',
+        todo: [
+          'Set ai.connection_id to a healthy connection.',
+          "Pick ai.model from that connection's model list.",
+          'A topic or project may override the value.',
+        ],
+      },
+      create_topic: {
+        title: 'Create a topic',
+        summary:
+          'Every project depends on one or more topics; a topic holds shared settings and knowledge.',
+        todo: [
+          'Create a topic with a code and title.',
+          'Write its default language and description.',
+        ],
+      },
+      add_sources: {
+        title: 'Add sources',
+        summary: 'Sources are files, URLs or text and must finish ingestion to become "indexed".',
+        todo: [
+          'Add a file, URL or text.',
+          'Wait until the source status is "indexed".',
+          'If it was rejected or failed, read the reason in the source details.',
+        ],
+      },
+      approve_knowledge: {
+        title: 'Approve knowledge',
+        summary:
+          'Unapproved knowledge never reaches later stages; the Brain audit must approve it.',
+        todo: [
+          'Review knowledge items waiting for audit.',
+          'Check and approve their claims and sources.',
+          'Resolve open conflicts.',
+        ],
+      },
+      create_project: {
+        title: 'Create a project',
+        summary:
+          'A project has a title, code, problem statement and topics, and starts as a draft.',
+        todo: [
+          'Write the title, code and problem statement.',
+          'Choose topics and their priority.',
+          'Review the effective settings before saving.',
+        ],
+      },
+      activate_project: {
+        title: 'Activate the project',
+        summary:
+          'Activation starts the workflow: analysis, research, ideation, documentation, evaluation.',
+        todo: [
+          'Select the project in the walker.',
+          'Make sure AI is configured.',
+          'Activate the project.',
+        ],
+      },
+      complete_stages: {
+        title: 'Move the stages forward',
+        summary: 'A stage may pause for your decision; answer the waiting tasks.',
+        todo: [
+          'See the tasks waiting for a human on the dashboard.',
+          "Approve, reject or edit each stage's output.",
+          'If a stage failed, ask Smart why.',
+        ],
+      },
+      choose_solution: {
+        title: 'Choose a solution',
+        summary: 'Solutions are generated and you select and prioritise one or more.',
+        todo: [
+          'Generate the solutions.',
+          "Read each option's score and assumptions.",
+          'Record the selected options.',
+        ],
+      },
+      evaluate_document: {
+        title: 'Evaluate the document',
+        summary:
+          'The evaluator checks requirement coverage, evidence, risk and length/format compliance; it must pass.',
+        todo: [
+          'Submit the document for evaluation.',
+          'Read the evaluation findings.',
+          'Fix rejected points and evaluate again.',
+        ],
+      },
+      approve_document: {
+        title: 'Approve the document',
+        summary: 'The approved version is locked and ready to export.',
+        todo: ['Review the latest version.', 'Approve the document.', 'Export DOCX or PDF.'],
+      },
+      review_brain: {
+        title: 'Brain report',
+        summary: 'The Brain report shows deviations and recommendations to improve the roles.',
+        todo: [
+          'Open the Brain report page.',
+          'Generate a fresh report.',
+          'Review the important deviations.',
+        ],
+      },
+    },
+  },
+  chat: {
+    new: 'New chat',
+    history: 'Chat history',
+    untitled: 'Untitled chat',
+    remove: 'Delete this chat',
+    removeConfirm: 'Delete for good? Press again.',
+    placeholder: 'Write your question… (Ctrl+Enter to send)',
+    send: 'Send',
+    thinking: 'Smart is answering…',
+    report: 'Summary for the issue ledger',
+    reportPrompt: 'Write this whole conversation as one complete report for the issue ledger.',
+    save: 'Save to the walker issue ledger',
+    saving: 'Saving…',
+    saved: 'Saved in the ledger',
+    openLedger: 'Open the ledger',
+    empty: 'Ask about the current step or an error. Smart only reads; it never changes anything.',
+    you: 'You',
+    assistant: 'Smart',
+    failed: 'Smart could not answer ({code}). Send it again.',
+    notConfigured: 'No AI model is configured. Set ai.connection_id and ai.model.',
+    loadFailed: 'The chat could not be loaded.',
+    errorPrompt: 'What does this error mean and how do I fix it?',
+    errorContext: 'Chat about an error',
+  },
+  errors: {
+    empty: 'No errors recorded.',
+    loadFailed: 'Errors could not be loaded.',
+    status: { new: 'New', seen: 'Seen', fixed: 'Fixed', ignored: 'Ignored' },
+    source: { server: 'Server', client: 'Browser' },
+    category: {
+      database: 'Database',
+      validation: 'Validation',
+      permission: 'Permission',
+      network: 'Network',
+      provider: 'AI provider',
+      not_found: 'Not found',
+      ui: 'User interface',
+      unknown: 'Unknown',
+    },
+    hint: {
+      database: 'A database or connection problem; check the server log and PostgreSQL status.',
+      validation: 'The input was invalid; check the data that was sent.',
+      permission: 'Access or the session was not valid.',
+      network: 'The network or a downstream service was down or slow.',
+      provider: 'The AI provider returned an error; check connection health and quota.',
+      not_found: 'The requested item was not found.',
+      ui: 'A runtime error in the browser interface.',
+      unknown: 'No automatic category; read the details and stack.',
+    },
+    occurrences: '{n} occurrence(s)',
+    firstSeen: 'First seen',
+    lastSeen: 'Last seen',
+    request: 'Request',
+    page: 'Page',
+    stack: 'Stack',
+    context: 'Context',
+    correlation: 'Correlation ID',
+    actions: { seen: 'Seen', fixed: 'Fixed', ignored: 'Ignore', reopen: 'Reopen' },
+    chat: 'Chat with AI',
+    details: 'Details',
+    openPage: 'Full page',
+    back: 'Back to the list',
+    all: 'All',
+    filterStatus: 'Status',
+    filterSource: 'Source',
+    filterCategory: 'Category',
+    search: 'Search message and route',
+    loadMore: 'Show more',
+    copy: 'Copy ID',
+    apply: 'Apply',
+    select: 'Pick an error from the list.',
+  },
+  issues: {
+    empty: 'Nothing saved yet. Press the save button under a Smart answer in the chat.',
+    status: { open: 'Open', in_progress: 'In progress', fixed: 'Fixed', wont_fix: "Won't fix" },
+    note: 'Fix note',
+    notePlaceholder: 'What was done, or why is it not fixed?',
+    title: 'Title',
+    save: 'Save changes',
+    saved: 'Saved.',
+    copy: 'Copy in full for the developer',
+    copied: 'Copied.',
+    remove: 'Delete',
+    removeConfirm: 'Delete for good? Press again.',
+    body: 'Full text',
+    contextTitle: 'Context',
+    createdAt: 'Saved at',
+    search: 'Search title and text',
+    loadFailed: 'The ledger could not be loaded.',
+    select: 'Pick an item from the list.',
+    developerHeader: 'Smart report for the developer',
+  },
+  toast: {
+    server: 'Server error ({status}) on {path}',
+    client: 'Browser error: {message}',
+    recorded: 'Error recorded: {message}',
+    details: 'Details',
+    dismiss: 'Dismiss',
+    region: 'Smart notifications',
+  },
+  crash: {
+    title: 'This page ran into an error',
+    body: 'The error was recorded in the error tracker. You can try again.',
+    retry: 'Try again',
+  },
+  pages: {
+    errorsTitle: 'Error tracker',
+    errorsSubtitle: 'Server and browser errors, grouped and traceable',
+    issuesTitle: 'Walker issue ledger',
+    issuesSubtitle: 'Saved Smart answers for fixing problems',
+    subnav: 'Smart sections',
+    errors: 'Error tracker',
+    issues: 'Issue ledger',
+  },
+  errorCodes: {
+    SMART_INVALID_REQUEST: 'The request was invalid.',
+    SMART_ERROR_NOT_FOUND: 'This error was not found.',
+    SMART_CONVERSATION_NOT_FOUND: 'This chat was not found.',
+    SMART_ISSUE_NOT_FOUND: 'This item was not found.',
+    SMART_MESSAGE_NOT_FOUND: 'This message was not found.',
+    SMART_MESSAGE_NOT_SAVABLE: 'Only a finished Smart answer can be saved.',
+    SMART_PROJECT_NOT_FOUND: 'This project was not found.',
+    AI_NOT_CONFIGURED: 'No AI model is configured. Set ai.connection_id and ai.model.',
+    generic: 'Something went wrong. Please try again.',
+  },
+};
+
+const table: Record<Locale, SmartMessages> = { fa, en };
+
+export function smartMessagesFor(locale: Locale): SmartMessages {
+  return table[locale];
+}
+
+/** `fill('{n} of {total}', { n: 1, total: 5 })` → `1 of 5`. */
+export function fill(text: string, values: Record<string, string | number>): string {
+  return text.replace(/\{(\w+)\}/g, (match, key: string) =>
+    key in values ? String(values[key]) : match,
+  );
+}
+
+export function smartErrorMessage(locale: Locale, code: string | undefined): string {
+  const codes = table[locale].errorCodes;
+  return (code && codes[code]) || codes['generic'] || '';
+}

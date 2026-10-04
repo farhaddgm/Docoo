@@ -13,6 +13,7 @@ import {
   type Locale,
   type NavigationKey,
 } from '../i18n';
+import { SmartRoot, SmartToggle } from '../smart/smart-root';
 
 /** Pages that exist; the others stay visible but disabled until their slice ships. */
 const implemented: Partial<Record<NavigationKey, string>> = {
@@ -21,6 +22,7 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   providers: '/providers',
   costs: '/costs',
   audit: '/audit',
+  smart: '/smart/errors',
 };
 
 /** Stroke icon paths (24x24 grid), decorative only: the text label carries the meaning. */
@@ -38,6 +40,8 @@ const icons: Record<NavigationKey, string> = {
   costs:
     'M12 2v20M17 6.5C16 5 14.2 4.5 12 4.5c-2.8 0-4.5 1.3-4.5 3.2 0 4.6 9 2.2 9 7 0 2-1.8 3.3-4.5 3.3-2.3 0-4.2-.7-5.2-2.3',
   audit: 'M9 4h6l1 2h3v15H5V6h3zM9 13l2 2 4-4',
+  smart:
+    'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
   settings:
     'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
 };
@@ -66,6 +70,8 @@ interface AppShellProps {
   readonly subtitle?: string;
   /** Navigation is only shown to signed-in administrators. */
   readonly showNavigation: boolean;
+  /** Workspace of the signed-in administrator; enables Smart (docs/10-smart.md). */
+  readonly workspaceId?: string | undefined;
   readonly children: ReactNode;
 }
 
@@ -73,7 +79,14 @@ interface AppShellProps {
  * Shared RTL/LTR layout: skip link, landmarks, primary navigation and a language switch
  * that keeps the current page and session (FR-LOC-001..002, NFR-UX-003..004).
  */
-export function AppShell({ locale, title, subtitle, showNavigation, children }: AppShellProps) {
+export function AppShell({
+  locale,
+  title,
+  subtitle,
+  showNavigation,
+  workspaceId,
+  children,
+}: AppShellProps) {
   const content = messagesFor(locale);
   const alternate: Locale = locale === 'fa' ? 'en' : 'fa';
   const pathname = usePathname() || `/${locale}`;
@@ -128,7 +141,12 @@ export function AppShell({ locale, title, subtitle, showNavigation, children }: 
                       <Link
                         className="nav-item"
                         href={href}
-                        aria-current={pathname === href ? 'page' : undefined}
+                        aria-current={
+                          pathname === href ||
+                          (key === 'smart' && pathname.startsWith(`/${locale}/smart`))
+                            ? 'page'
+                            : undefined
+                        }
                       >
                         <NavIcon name={key} />
                         <span className="nav-label">{content.nav[key]}</span>
@@ -148,21 +166,27 @@ export function AppShell({ locale, title, subtitle, showNavigation, children }: 
               </h1>
               {subtitle && <p>{subtitle}</p>}
             </div>
-            <a
-              className="locale-link"
-              href={localizedPath(pathname, alternate)}
-              hrefLang={alternate}
-              lang={alternate}
-              aria-label={content.switchLanguageLabel}
-            >
-              {content.switchLanguage}
-            </a>
+            <div className="topbar-actions">
+              {showNavigation && workspaceId && (
+                <SmartToggle locale={locale} workspaceId={workspaceId} />
+              )}
+              <a
+                className="locale-link"
+                href={localizedPath(pathname, alternate)}
+                hrefLang={alternate}
+                lang={alternate}
+                aria-label={content.switchLanguageLabel}
+              >
+                {content.switchLanguage}
+              </a>
+            </div>
           </header>
           <main id="main-content" tabIndex={-1}>
             {children}
           </main>
         </div>
       </div>
+      {showNavigation && workspaceId && <SmartRoot locale={locale} workspaceId={workspaceId} />}
     </>
   );
 }

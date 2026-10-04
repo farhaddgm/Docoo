@@ -123,6 +123,7 @@ export function AuthShell({ locale }: { locale: Locale }) {
       title={authenticated ? content.dashboardTitle : content.loginTitle}
       subtitle={authenticated ? content.dashboardSubtitle : content.loginSubtitle}
       showNavigation={authenticated}
+      workspaceId={view.kind === 'authenticated' ? view.identity.workspaces[0]?.id : undefined}
     >
       {view.kind === 'loading' && <p role="status">{content.checkingSession}</p>}
       {view.kind === 'unavailable' && (
