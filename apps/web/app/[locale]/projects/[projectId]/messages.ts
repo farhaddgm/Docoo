@@ -9,6 +9,7 @@ const messages = {
     sections: 'بخش‌های پروژه',
     tabs: {
       overview: 'نمای کلی',
+      problem: 'مسئله',
       workflow: 'گردش‌کار',
       solutions: 'راه‌حل‌ها',
       documents: 'اسناد',
@@ -109,6 +110,7 @@ const messages = {
     sections: 'Project sections',
     tabs: {
       overview: 'Overview',
+      problem: 'Problem',
       workflow: 'Workflow',
       solutions: 'Solutions',
       documents: 'Documents',

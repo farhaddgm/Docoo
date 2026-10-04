@@ -2,9 +2,9 @@
 doc_id: DOCOO-SECURITY-THREAT-MODEL
 title: معماری امنیت، حریم خصوصی و مدل تهدید
 status: approved-baseline
-version: 1.0.1
+version: 1.0.2
 owner: Security
-last_updated: 2026-09-24
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -139,7 +139,7 @@ Debug content capture فقط با feature flag کوتاه‌عمر، محیط م
 - گردش‌کار **Security** روی هر PR و push: SAST رایگان Semgrep با قواعد باز JavaScript/TypeScript در commit ثابت (روی مخزن خصوصی هم کار می‌کند)، `pnpm audit --audit-level=high`، Trivy روی مخزن (آسیب‌پذیری، secret و misconfiguration) و Trivy روی image هر سرویس؛ هر یافتهٔ high/critical قابل‌اصلاح گیت را قرمز می‌کند. CodeQL پس از فعال‌شدن Code Security توسط مالک اجرا می‌شود.
 - imageها فقط وابستگی production دارند (`pnpm deploy --prod`) و npm/corepack از image اجرا حذف شده‌اند.
 - گردش‌کار **Hardening**: ZAP baseline وب، ZAP API scan با نشست واقعی در workspace ادمین و گیت روی هشدار High (استثنا فقط با شناسهٔ قاعده، الگوی URL و دلیل در `scripts/security/zap-accepted.json`)، و `scripts/security/auth-probe.mjs` (عدم افشای کاربر، پرچم‌های cookie، session fixation، دست‌کاری token، CSRF، CORS، ورودی تزریقی، نشت خطا، brute force و جعل `X-Forwarded-For`).
-- صفحه‌های وب Content-Security-Policy با منبع فقط same-origin دارند.
+- صفحه‌های وب Content-Security-Policy با منبع فقط same-origin دارند. سیاست در هر درخواست از `apps/web/proxy.ts` ساخته می‌شود (نه در زمان build) و تنها مبدأ بیرونیِ مجاز برای `connect-src` میزبان فایل (`S3_PUBLIC_ENDPOINT`، فقط http/https) است تا مرورگر فایل پاسخ را مستقیم با URL امضاشده بفرستد.
 
 ## ۱۱. incident response
 

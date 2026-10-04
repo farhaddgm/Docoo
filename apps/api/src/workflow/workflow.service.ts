@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { HttpException, Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { projectWorkflowId, STAGES } from '@docoo/orchestration';
 import type { PoolClient, QueryResultRow } from 'pg';
 
@@ -9,7 +9,7 @@ import { isoColumn } from '../common/pagination.js';
 import { badRequest, conflict, notFound } from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
-import { canonicalJson } from '../config/setting-value.js';
+import { CommandRunner, engineUnavailable, type PendingSignal } from './command-runner.js';
 import {
   WORKFLOW_ENGINE,
   WorkflowEngineUnavailableError,
@@ -51,28 +51,11 @@ const stageColumns = `id, run_id, stage, sequence, status, gate_mode, attempt_li
 
 const LIVE = ['starting', 'running', 'paused', 'waiting_for_human'];
 
-function unavailable(): HttpException {
-  return new HttpException(
-    {
-      status: 503,
-      title: 'Service Unavailable',
-      code: 'WORKFLOW_ENGINE_UNAVAILABLE',
-      detail:
-        'The change is saved; the workflow engine could not be reached. Use workflow/sync to retry.',
-    },
-    503,
-  );
-}
-
 export interface ReviewResult {
   stageRunId: string;
   outputId: string;
   action: string;
   gate: string | null;
-}
-
-function requestHash(value: unknown): string {
-  return createHash('sha256').update(canonicalJson(value)).digest('hex');
 }
 
 /** Human control of project workflows (WF-001..006). */
@@ -83,6 +66,7 @@ export class WorkflowService {
   constructor(
     private readonly database: WorkspaceDatabase,
     @Inject(WORKFLOW_ENGINE) private readonly engine: WorkflowEngine,
+    private readonly commands: CommandRunner,
   ) {}
 
   // ------------------------------------------------------------------ lifecycle
@@ -146,7 +130,7 @@ export class WorkflowService {
         runId: run.id,
       });
     } catch (error) {
-      if (error instanceof WorkflowEngineUnavailableError) throw unavailable();
+      if (error instanceof WorkflowEngineUnavailableError) throw engineUnavailable();
       throw error;
     }
     return this.overview(context, projectId);
@@ -217,11 +201,40 @@ export class WorkflowService {
         status === 'paused' ? 'pause' : status === 'active' ? 'resume' : 'cancel',
         status === 'active' || status === 'paused' ? undefined : { reason: `project ${status}` },
       );
+      await this.resendAnswers(context, live);
     } catch (error) {
-      if (error instanceof WorkflowEngineUnavailableError) throw unavailable();
+      if (error instanceof WorkflowEngineUnavailableError) throw engineUnavailable();
       throw error;
     }
     return this.overview(context, projectId);
+  }
+
+  /**
+   * A fully answered batch the analyst has not read yet means the "answers" signal was lost
+   * (engine outage after the commit); sending it again is harmless because the workflow
+   * re-checks the batch before going on.
+   */
+  private async resendAnswers(context: WorkspaceRequestContext, live: RunRow): Promise<void> {
+    const pending = await this.database.run(
+      context,
+      async (client) =>
+        (
+          await client.query<{ id: string; stage_run_id: string }>(
+            `select b.id, b.stage_run_id from question_batches b
+               join stage_runs sr on sr.id = b.stage_run_id
+              where sr.run_id = $1 and b.status = 'submitted'
+                and not exists (select 1 from analysis_rounds r where r.based_on_batch_id = b.id)
+              order by b.batch_no desc limit 1`,
+            [live.id],
+          )
+        ).rows[0],
+    );
+    if (pending) {
+      await this.engine.signal(live.temporal_workflow_id, 'answers', {
+        stageRunId: pending.stage_run_id,
+        batchId: pending.id,
+      });
+    }
   }
 
   async cancel(context: WorkspaceRequestContext, projectId: string, reason: string) {
@@ -437,6 +450,16 @@ export class WorkflowService {
           await client.query(`update stage_runs set status = 'rejected' where id = $1`, [
             stageRunId,
           ]);
+          if (stage.stage === 'analysis') {
+            // A rejected definition sends the analysis back to the analyst, who may ask more
+            // questions: an earlier "finish" request no longer applies.
+            await client.query(
+              `update analysis_sessions
+                  set finish_requested_at = null, finish_requested_by = null, finish_reason = null
+                where stage_run_id = $1`,
+              [stageRunId],
+            );
+          }
           await client.query<Record<string, unknown>>(
             `update stage_attempts set feedback = $2 where stage_run_id = $1 and output_id = $3`,
             [stageRunId, input.comment ?? null, outputId],
@@ -628,65 +651,18 @@ export class WorkflowService {
 
   // ------------------------------------------------------------------ internals
 
-  /**
-   * Runs a command once per Idempotency-Key (WF-002): a repeat returns the stored response
-   * without touching state or signalling again; the same key with a different body is 409.
-   */
-  private async idempotent<T>(
+  private idempotent<T>(
     context: WorkspaceRequestContext,
     key: string | undefined,
     command: string,
     request: unknown,
-    work: (client: PoolClient) => Promise<{
-      signal: { workflowId: string; name: WorkflowSignal; payload: unknown } | null;
-      result: T;
-    }>,
+    work: (client: PoolClient) => Promise<{ signal: PendingSignal | null; result: T }>,
   ): Promise<T & { replayed: boolean }> {
-    const hash = requestHash({ command, request });
-    if (key) {
-      const stored = await this.database.run(
-        context,
-        async (client) =>
-          (
-            await client.query<{ request_hash: string; response: T }>(
-              'select request_hash, response from command_receipts where idempotency_key = $1',
-              [key],
-            )
-          ).rows[0],
-      );
-      if (stored) {
-        if (stored.request_hash !== hash) {
-          throw conflict(
-            'IDEMPOTENCY_KEY_REUSED',
-            'This Idempotency-Key was used for a different request.',
-          );
-        }
-        return { ...stored.response, replayed: true };
-      }
-    }
-    const outcome = await this.database.run(context, async (client) => {
-      const done = await work(client);
-      if (key) {
-        await client.query<Record<string, unknown>>(
-          `insert into command_receipts (workspace_id, idempotency_key, command, request_hash, response, created_by)
-           values ($1, $2, $3, $4, $5::jsonb, $6)`,
-          [context.workspaceId, key, command, hash, JSON.stringify(done.result), context.actorId],
-        );
-      }
-      return done;
-    });
-    if (outcome.signal)
-      await this.send(outcome.signal.workflowId, outcome.signal.name, outcome.signal.payload);
-    return { ...outcome.result, replayed: false };
+    return this.commands.run(context, key, command, request, work);
   }
 
-  private async send(workflowId: string, name: WorkflowSignal, payload?: unknown): Promise<void> {
-    try {
-      await this.engine.signal(workflowId, name, payload);
-    } catch (error) {
-      if (error instanceof WorkflowEngineUnavailableError) throw unavailable();
-      throw error;
-    }
+  private send(workflowId: string, name: WorkflowSignal, payload?: unknown): Promise<void> {
+    return this.commands.send(workflowId, name, payload);
   }
 
   private async liveRun(

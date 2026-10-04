@@ -53,6 +53,7 @@ export const WORKSPACE_PERMISSIONS = [
   'provider.configure',
   'provider.test',
   'provider.rotate_secret',
+  'analysis.answer',
   'workflow.approve',
   'workflow.reject',
   'workflow.override',

@@ -59,3 +59,12 @@ try {
 } finally {
   await client.end();
 }
+
+// With an object store configured the API can take uploads; make sure its bucket exists.
+if (process.env.S3_ENDPOINT) {
+  const { S3ObjectStore, s3ConfigFromEnv } = await import(
+    new URL('../../../packages/ingestion/dist/index.js', import.meta.url).href
+  );
+  await new S3ObjectStore(s3ConfigFromEnv(process.env)).ensureBucket();
+  console.log(`E2E object store ready: ${process.env.S3_BUCKET}`);
+}

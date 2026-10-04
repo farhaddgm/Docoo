@@ -6,6 +6,7 @@ import { Reflector } from '@nestjs/core';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AnalysisController } from '../src/analysis/analysis.controller.js';
 import { AuditController } from '../src/audit/audit.controller.js';
 import {
   permissionMetadataKey,
@@ -123,6 +124,11 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/attempt-decision':
     'workflow.override',
   'GET workspaces/:workspaceId/human-tasks': 'workspace.read',
+  'GET workspaces/:workspaceId/projects/:projectId/analysis': 'project.read',
+  'GET workspaces/:workspaceId/projects/:projectId/analysis/question-batches': 'project.read',
+  'GET workspaces/:workspaceId/projects/:projectId/problem-definitions': 'project.read',
+  'POST workspaces/:workspaceId/question-batches/:batchId/answers': 'analysis.answer',
+  'POST workspaces/:workspaceId/projects/:projectId/analysis/finish': 'workflow.approve',
   'GET workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.read',
   'PUT workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/solutions/generate': 'project.run',
@@ -186,6 +192,7 @@ const controllers = [
   KnowledgeController,
   ProvidersController,
   WorkflowController,
+  AnalysisController,
   DocumentsController,
   ReportsController,
   SmartController,

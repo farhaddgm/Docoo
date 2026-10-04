@@ -59,6 +59,8 @@ export interface Project {
   readonly topics: readonly ProjectTopicLink[];
   readonly configSnapshotId: string | null;
   readonly clonedFromId: string | null;
+  /** The approved analysis output that serves as the problem definition (FR-ANL-005). */
+  readonly approvedProblemVersionId: string | null;
   readonly version: number;
   readonly deletedAt: string | null;
   readonly purgeAfter: string | null;
@@ -132,6 +134,7 @@ interface ProjectRow extends QueryResultRow {
   pause_reason: string | null;
   config_snapshot_id: string | null;
   cloned_from_id: string | null;
+  approved_problem_version_id: string | null;
   version: number;
   deleted_at: string | null;
   purge_after: string | null;
@@ -153,7 +156,8 @@ interface LinkRow extends QueryResultRow {
 
 const projectColumns = `
   id, workspace_id, code, title, description, initial_problem, output_language, status,
-  previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id, version,
+  previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id,
+  approved_problem_version_id, version,
   ${isoColumn('deleted_at', 'deleted_at')},
   ${isoColumn('purge_after', 'purge_after')},
   coalesce(purge_after <= now(), false) as purge_expired,
@@ -744,6 +748,7 @@ export class ProjectsService {
       ),
       topics,
       configSnapshotId: row.config_snapshot_id,
+      approvedProblemVersionId: row.approved_problem_version_id,
       clonedFromId: row.cloned_from_id,
       version: row.version,
       deletedAt: row.deleted_at,

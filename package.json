@@ -1,6 +1,6 @@
 {
   "name": "docoo",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "description": "Docoo product and engineering monorepo",
   "license": "UNLICENSED",
@@ -23,6 +23,7 @@
     "docs:validate": "node scripts/validate-notion-manifest.mjs",
     "qa:corpus": "node scripts/validate-corpus.mjs qa/acceptance-corpus/v0",
     "docs:test": "node --test \"scripts/notion/*.test.mjs\"",
+    "deploy:test": "bash scripts/deploy/install.test.sh",
     "docs:sync": "node scripts/notion/sync.mjs",
     "docs:sync:plan": "node scripts/notion/sync.mjs --dry-run",
     "admin:create": "pnpm --filter @docoo/api admin:create",

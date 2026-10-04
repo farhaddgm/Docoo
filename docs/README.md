@@ -93,6 +93,7 @@ notion_sync: true
 48. [ADR-0011: داشبورد، گزارش هزینه و گزارش Brain](adr/0011-reporting-and-brain-reports.md)
 49. [ADR-0012: استقرار تک‌سرور با نصب یک‌فرمانه](adr/0012-single-server-production-deployment.md)
 50. [ADR-0013: صفحه‌های اصلی بک‌آفیس](adr/0013-backoffice-core-screens.md)
+51. [ADR-0014: پرسش‌وپاسخ تحلیلگر و تعریف نهایی مسئله](adr/0014-analyst-questions-and-answers.md)
 
 ## وضعیت اسناد
 

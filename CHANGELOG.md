@@ -2,6 +2,28 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.12.0] — 2026-10-04
+
+The analyst's questions and answers: the project's problem is now defined through a conversation, not one model call ([ADR-0014](docs/adr/0014-analyst-questions-and-answers.md)). Releases also reach the server by themselves.
+
+### Added
+
+- **Questions in batches (ANL-001, ANL-002):** the analysis stage asks in rounds of at most 40 questions, 30 to 300 in total; the limits are enforced by code, repeated questions are dropped, and a round that adds nothing below 30 pauses the project with a human task instead of looping.
+- **Answers (ANL-003):** per question, text, up to 5 files (uploaded straight to the object store and read by the analyst after the normal ingestion checks), or one of "unanswered", "irrelevant" and "later". An answer set is saved all or nothing, with an `Idempotency-Key`, and partial saves are allowed; "later" questions stay answerable until the definition is written.
+- **Coverage (ANL-004):** goals, constraints, context, stakeholders, time, budget, data and success criteria (plus risk and out of scope) are computed from the recorded questions and answers, with the gaps named; contradictions between two answers are recorded and shown.
+- **Problem definition (ANL-005):** versioned like any stage output (edit, reject with feedback, approve); the analysis gate is always manual, and approval sets `approvedProblemVersionId` on the project. The administrator can ask for the definition early once 30 questions are answered.
+- **Unresolved and assumptions (ANL-006):** shown in a warning frame in the definition and listed from the records (open "later"/"unanswered" questions and contradictions), even if the model forgot them.
+- A **Problem** tab on the project page with open batches, the later queue, history, coverage, finish-early and the definition; the offline `fake` provider plays the analyst so CI and end-to-end tests run the whole path without a key.
+- API: `GET /analysis`, `GET /analysis/question-batches`, `POST /question-batches/{id}/answers`, `POST /analysis/finish`, `GET /problem-definitions`; permission `analysis.answer`; migrations `0017_analyst_qa` and `0018_analyst_qa_security` (RLS, append-only answers, rounds and contradictions).
+- **Nightly automatic update:** the installer sets up a systemd timer (about 03:30, with a random delay up to 30 minutes, catching up after downtime) that installs a newer release when there is one and does nothing otherwise. A release that does not become healthy is rolled back to the previous one automatically; the log is in `journalctl -u docoo-update`. `install.sh auto-update on|off|status` controls it, manual `install.sh update` is unchanged (it always runs and waits for a running nightly update), and servers installed earlier get the timer the next time `install.sh update` is run by hand. Shell tests of the update logic (`pnpm deploy:test`, in CI) and Deploy smoke checks cover the timer.
+
+### Changed
+
+- The web app's Content-Security-Policy is built per request in `proxy.ts` and lets pages call the files host (`S3_PUBLIC_ENDPOINT`) so answer files can be uploaded from the browser; everything else stays same-origin.
+- Deploy smoke checks that the files host answers the browser's CORS preflight.
+- Reads that assemble a view from several queries (analysis overview, batches, definitions) use one snapshot so a concurrent commit cannot show a mixed state.
+- The install guide (§6), ADR-0012 and runbook §9 describe both ways to update and what the automatic rollback does.
+
 ## [0.11.0] — 2026-10-04
 
 Smart: guided walker, AI chat, error tracker and issue ledger ([docs](docs/01-product/06-smart.md)).

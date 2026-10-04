@@ -60,6 +60,7 @@ jobs:
       - run: pnpm docs:validate
       - run: pnpm qa:corpus
       - run: pnpm docs:test
+      - run: pnpm deploy:test
       - run: pnpm docs:sync:plan
       - run: pnpm db:migrate
         env:
@@ -102,6 +103,12 @@ jobs:
       - name: Prepare end-to-end data
         env:
           DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+          S3_ENDPOINT: http://localhost:8333
+          S3_REGION: us-east-1
+          S3_BUCKET: docoo-ci
+          S3_ACCESS_KEY_ID: docoo-ci
+          S3_SECRET_ACCESS_KEY: docoo-ci-secret
+          S3_FORCE_PATH_STYLE: 'true'
         run: |
           # A non-superuser runtime role so the API runs under RLS exactly as in production.
           psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c \
@@ -115,6 +122,15 @@ jobs:
           WEB_ORIGIN: http://localhost:3000
           # The whole suite comes from one address; the production limit (120/min) would ban it.
           API_RATE_LIMIT_PER_MINUTE: '5000'
+          # File answers are uploaded straight from the browser to the object store.
+          S3_ENDPOINT: http://localhost:8333
+          # The files host the web app's Content-Security-Policy lets the browser call.
+          S3_PUBLIC_ENDPOINT: http://localhost:8333
+          S3_REGION: us-east-1
+          S3_BUCKET: docoo-ci
+          S3_ACCESS_KEY_ID: docoo-ci
+          S3_SECRET_ACCESS_KEY: docoo-ci-secret
+          S3_FORCE_PATH_STYLE: 'true'
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7

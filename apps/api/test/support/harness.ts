@@ -26,6 +26,7 @@ import {
 import {
   AGENT_TASK_QUEUE,
   createOrchestrationActivities,
+  fakeAnalystResponder,
   ProviderRuntime,
   type RunRef,
 } from '@docoo/orchestration';
@@ -141,13 +142,16 @@ export class TemporalTestRuntime implements WorkflowEngine {
   readonly taskQueue = `${AGENT_TASK_QUEUE}-test-${randomBytes(4).toString('hex')}`;
   fakeScript: FakeScript = () => null;
   readonly fake = new FakeAdapter((request, call) => this.fakeScript(request, call));
+
+  constructor(private readonly pool: Pool) {
+    // The same analyst the stack uses for provider kind `fake`; tests may script their own.
+    this.fake.responder = fakeAnalystResponder;
+  }
   private worker: Worker | null = null;
   private running: Promise<void> | null = null;
   private native: NativeConnection | null = null;
   private connection: TemporalConnection | null = null;
   client!: TemporalClient;
-
-  constructor(private readonly pool: Pool) {}
 
   async connect(): Promise<void> {
     this.connection = await TemporalConnection.connect({ address: temporalAddress! });

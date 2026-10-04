@@ -7,7 +7,7 @@ import {
   sleep,
 } from '@temporalio/workflow';
 
-import type { OrchestrationActivities, RunRef } from './activities.js';
+import type { OrchestrationActivities, RunRef, StageRef } from './activities.js';
 import { STAGES, type Stage } from './stages.js';
 
 export interface GateSignal {
@@ -20,11 +20,22 @@ export interface AttemptDecisionSignal {
   readonly decision: 'extend' | 'pass';
 }
 
+/** A batch of analyst questions was fully answered (sent by the API after the commit). */
+export interface AnswersSignal {
+  readonly stageRunId: string;
+  readonly batchId: string;
+}
+
+/** Answer attachments are polled every 15 s for up to 10 minutes before the round goes on without. */
+const ATTACHMENT_POLL_SECONDS = 15;
+const ATTACHMENT_POLL_LIMIT = 40;
+
 export const pauseSignal = defineSignal('pause');
 export const resumeSignal = defineSignal('resume');
 export const cancelSignal = defineSignal<[{ reason: string | null }]>('cancel');
 export const gateSignal = defineSignal<[GateSignal]>('gate');
 export const attemptDecisionSignal = defineSignal<[AttemptDecisionSignal]>('attemptDecision');
+export const answersSignal = defineSignal<[AnswersSignal]>('answers');
 export const stateQuery = defineQuery<{
   stage: Stage | null;
   paused: boolean;
@@ -55,6 +66,7 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
   let cancelled: { reason: string | null } | null = null;
   let gate: GateSignal | null = null;
   let decision: AttemptDecisionSignal | null = null;
+  const answered = new Set<string>();
   let currentStage: Stage | null = null;
   let waiting: string | null = null;
   let currentAttempt = 0;
@@ -73,6 +85,9 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
   });
   setHandler(attemptDecisionSignal, (input) => {
     decision = input;
+  });
+  setHandler(answersSignal, (input) => {
+    answered.add(input.batchId);
   });
   setHandler(stateQuery, () => ({
     stage: currentStage,
@@ -102,6 +117,70 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
     return cancelled === null;
   };
 
+  /**
+   * The analyst's question-and-answer phase (ANL-*): rounds of questions, each followed by the
+   * administrator's answers, until the analyst can define the problem. Returns false when the
+   * run was cancelled. `state.roundNo` is the next round to run and survives a rejected
+   * definition, which sends the analysis back here.
+   */
+  const analysisPhase = async (
+    stageRef: StageRef,
+    state: { roundNo: number },
+  ): Promise<boolean> => {
+    for (;;) {
+      if (!(await whileActive())) return false;
+      let retryNo = 0;
+      let attachmentPolls = 0;
+      let result = await activities.runAnalysisRound({
+        ...stageRef,
+        roundNo: state.roundNo,
+        retryNo,
+        attachmentWaitExhausted: false,
+      });
+      while (
+        result.status === 'retry' ||
+        result.status === 'blocked' ||
+        result.status === 'waiting_attachments'
+      ) {
+        if (result.status === 'retry') {
+          retryNo += 1;
+          await sleep(result.delaySeconds * 1000);
+        } else if (result.status === 'blocked') {
+          await activities.blockRun({
+            ...ref,
+            stageRunId: stageRef.stageRunId,
+            code: result.code,
+            reason: result.reason,
+          });
+          paused = true;
+          retryNo = 0;
+        } else {
+          attachmentPolls += 1;
+          await sleep(ATTACHMENT_POLL_SECONDS * 1000);
+        }
+        if (!(await whileActive())) return false;
+        result = await activities.runAnalysisRound({
+          ...stageRef,
+          roundNo: state.roundNo,
+          retryNo,
+          attachmentWaitExhausted: attachmentPolls >= ATTACHMENT_POLL_LIMIT,
+        });
+      }
+      if (result.status === 'definition') {
+        state.roundNo += 1;
+        return true;
+      }
+      if (result.status === 'batch') state.roundNo += 1;
+      // `batch`: waiting for the first answers · `waiting_answers`: a batch was already open
+      // (restart, or a signal ahead of the commit). The activity re-checks before going on.
+      waiting = 'answers';
+      await condition(() => answered.has(result.batchId) || cancelled !== null);
+      waiting = null;
+      if (cancelled) return false;
+      answered.delete(result.batchId);
+    }
+  };
+
   const started = await activities.startRun(ref);
   if (started.paused) paused = true;
 
@@ -113,10 +192,18 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
     let attemptLimit = stageStart.attemptLimit;
     let attemptNo = Math.max(1, stageStart.attemptsUsed);
     let resumeIntoGate = stageStart.pendingGate;
+    const analysisState = { roundNo: stageStart.roundsUsed + 1 };
+    // A definition already attempted means the questions are over (restart after the phase).
+    let questionsOver = stageStart.attemptsUsed > 0;
 
     for (;;) {
       if (!resumeIntoGate) {
         if (!(await whileActive())) return cancel();
+        if (stage === 'analysis' && !questionsOver) {
+          if (!(await analysisPhase(stageRef, analysisState))) return cancel();
+        }
+        // A rejected definition goes back to the analyst, who may ask more or redefine.
+        questionsOver = false;
         currentAttempt = attemptNo;
         let retryNo = 0;
         let outputReady = false;

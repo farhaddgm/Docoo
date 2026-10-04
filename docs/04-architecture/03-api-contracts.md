@@ -2,9 +2,9 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.3.0
+version: 1.4.0
 owner: API Architecture
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -77,7 +77,7 @@ notion_sync: true
 
 - `GET/POST /projects` (فیلتر `status`، پیش‌فرض همهٔ وضعیت‌ها جز deleted)
 - هر پروژه `availableCommands` دارد: فرمان‌هایی که ماشین حالت در وضعیت فعلی می‌پذیرد (پس از مهلت ۳۰روزه `restore` حذف می‌شود)؛ بک‌آفیس دقیقاً همین‌ها را پیشنهاد می‌دهد.
-- `GET/PATCH /projects/{id}`
+- `GET/PATCH /projects/{id}` (پاسخ `approvedProblemVersionId` دارد: خروجی تأییدشدهٔ مرحلهٔ تحلیل؛ بخش ۷)
 - `POST /projects/{id}/activate|pause|resume|complete|reopen|archive|unarchive|restore`
 - `DELETE /projects/{id}` (۳۰ روز قابل بازیابی)
 - `POST /projects/{id}/clone`
@@ -89,7 +89,7 @@ notion_sync: true
 
 - activate و reopen پروژه یک اجرای Temporal `projectWorkflow` (شناسهٔ `project-{id}-run-{n}`) با ترتیب ثابت تحلیل → تحقیق → ایده‌پردازی → مستندسازی → ارزیابی می‌سازند؛ pause/resume/archive/delete سیگنال متناظر را می‌فرستند.
 - `GET /projects/{id}/workflow` — اجرای جاری، مراحل، gate در انتظار و human taskها.
-- `POST /projects/{id}/workflow/start` و `POST /projects/{id}/workflow/sync` — شروع یا هم‌ترازکردن دوباره پس از قطع موتور (idempotent)؛ قطع موتور `503 WORKFLOW_ENGINE_UNAVAILABLE`.
+- `POST /projects/{id}/workflow/start` و `POST /projects/{id}/workflow/sync` — شروع یا هم‌ترازکردن دوباره پس از قطع موتور (idempotent)؛ sync سیگنال `answers` گم‌شدهٔ یک batch کامل را هم دوباره می‌فرستد؛ قطع موتور `503 WORKFLOW_ENGINE_UNAVAILABLE`.
 - `POST /projects/{id}/workflow/cancel` — لغو با دلیل؛ خروجی‌ها می‌مانند ولی downstream مصرف نمی‌شوند.
 - `GET /projects/{id}/stages/{stageRunId}` — همهٔ نسخه‌های خروجی، بازبینی‌ها، gateها و attemptها.
 - `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/approve|reject|comment|edit` — reject بازخورد لازم دارد و attempt بعدی را می‌سازد؛ edit نسخهٔ جدید می‌سازد و approval/gate نسخهٔ قبلی را `expired` می‌کند؛ بازبینی نسخهٔ جایگزین‌شده `409 WORKFLOW_OUTPUT_SUPERSEDED`.
@@ -98,14 +98,16 @@ notion_sync: true
 - commandهای بازبینی و تصمیم سرآیند `Idempotency-Key` می‌پذیرند؛ تکرار همان کلید پاسخ ذخیره‌شده را با `replayed: true` برمی‌گرداند و کلید تکراری با بدنهٔ متفاوت `409 IDEMPOTENCY_KEY_REUSED` است.
 - gate پیش‌فرض دستی است (`workflow.require_human_approval`)؛ در gate خودکار مرحله بدون human task جلو می‌رود.
 
-## ۷. تحلیل
+## ۷. تحلیل (پیاده‌شده در 0.12.0، [ADR-0014](../adr/0014-analyst-questions-and-answers.md))
 
-- `GET /projects/{id}/analysis/question-batches`
-- `POST /question-batches/{id}/answers`
-- `GET /projects/{id}/problem-definitions`
-- `POST /problem-definitions/{id}:approve|reject`
+- `GET /projects/{id}/analysis` — وضعیت (`phase`: `not_started|answering|analysing|awaiting_approval|approved|cancelled`)، حدها (`minimum` ۳۰، `maximum` ۳۰۰، `batchSize` ۴۰)، `progress` (پرسیده، پاسخ‌داده، بی‌پاسخ، نامربوط، بعداً، منتظر)، `coverage` ده بُعد با سطح (`none|pending|not_applicable|gap|partial|covered`) و `coverageGaps`، `openBatchId`، `understanding` («آنچه فهمیدم» و «ابهام بعدی» آخرین دور)، `contradictions`، صف `followUps` («بعداً») و `definition` جاری با `unresolvedQuestions`. همهٔ بخش‌ها از یک snapshot خوانده می‌شوند.
+- `GET /projects/{id}/analysis/question-batches` — batchهای اجرای جاری با سؤال‌ها (شماره، بُعد، دلیل پرسش، ادامهٔ کدام سؤال)، پاسخ جاری هر سؤال و تعداد بازنگری‌ها.
+- `POST /question-batches/{id}/answers` با `{answers: [{questionId, status: answered|unanswered|irrelevant|later, text?, attachments?: [{sourceId}]}]}` (۱ تا ۴۰ پاسخ) و `Idempotency-Key` اختیاری → 200 با `{saved, counts, remainingOpen, batchStatus, replayed}`. همه یا هیچ: یک پاسخ نامعتبر چیزی ذخیره نمی‌کند. `answered` متن یا فایل می‌خواهد (`ANSWER_EMPTY`)، متن تا ۸۰۰۰ نویسه (`ANSWER_TOO_LONG`)، تا ۵ فایل (`ANSWER_TOO_MANY_ATTACHMENTS`)، سه وضعیت دیگر فایل ندارند (`ANSWER_STATUS_HAS_ATTACHMENTS`) → 422. فایل باید source همین پروژه باشد (404 `ANALYSIS_ATTACHMENT_NOT_FOUND`، 409 `ANALYSIS_ATTACHMENT_NOT_READY` پیش از finalize، 409 `ANALYSIS_ATTACHMENT_UNUSABLE` برای ردشده/ناموفق). بعد از بسته‌شدن batch فقط سؤال‌های `later` پاسخ می‌گیرند (409 `ANALYSIS_QUESTION_CLOSED`)؛ تعریف منتظر تصمیم (409 `ANALYSIS_AWAITING_APPROVAL`) یا مرحلهٔ بسته (409 `ANALYSIS_CLOSED`) پاسخ نمی‌پذیرد. با کامل‌شدن batch (هیچ سؤال `open` نماند) سیگنال `answers` به workflow می‌رود.
+- `POST /projects/{id}/analysis/finish` با `{reason}` (حداقل ۳ نویسه) → درخواست تعریف مسئله به‌جای پرسش بیشتر؛ فقط از ۳۰ سؤال به بعد (409 `ANALYSIS_MINIMUM_NOT_REACHED`) و بدون سؤال باز (409 `ANALYSIS_ANSWERS_PENDING`).
+- `GET /projects/{id}/problem-definitions` — نسخه‌های تعریف مسئله (خروجی‌های مرحلهٔ تحلیل در همهٔ اجراها) با `status` (`draft|awaiting_approval|approved|rejected|superseded`)، `approved` و `approvedOutputId`.
+- تأیید و رد تعریف همان فرمان‌های بازبینی مرحله است (`POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/approve|reject`، بخش ۶)؛ ویرایش دستی آن `…/edit` است. gate تحلیل همیشه دستی است. رد، تحلیل را با بازخورد به تحلیلگر برمی‌گرداند.
 
-Answer submission batch atomic و idempotent است.
+مجوزها: خواندن `project.read`، پاسخ `analysis.answer`، پایان زودهنگام `workflow.approve` ([ماتریس](../05-security/03-authorization-matrix.md)).
 
 ## ۸. منابع و دانش (پیاده‌شده در 0.4.0)
 

@@ -1487,3 +1487,102 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
     height: min(34rem, calc(100vh - 1rem));
   }
 }
+
+/* Analyst questions and answers (ANL-001..006) */
+.question-list {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.question {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+
+.question h4 {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.question-text {
+  margin: 0;
+  font-weight: 700;
+}
+
+.history .question-text,
+.question-list.history > li {
+  font-weight: 400;
+}
+
+.mode-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.mode-choice .mode {
+  font-weight: 400;
+}
+
+.file-pick {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--color-danger-ink);
+  font-weight: 700;
+}
+
+.progress-meter {
+  width: 100%;
+  height: 0.75rem;
+  accent-color: var(--color-primary);
+}
+
+/* A status is told by its words; the colour only supports them. */
+.answer-answered,
+.level-covered {
+  background: var(--color-ok-bg);
+  color: var(--color-ok-ink);
+}
+
+.answer-later,
+.answer-unanswered,
+.level-partial,
+.level-pending {
+  background: var(--color-warn-bg);
+  color: var(--color-warn-ink);
+}
+
+.level-gap,
+.level-none {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-ink);
+}
+
+/* Assumptions and unresolved points must stand out in the final report (FR-ANL-006). */
+.highlight {
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 0.35rem solid var(--color-warn-ink);
+  border-radius: var(--radius-sm);
+  background: var(--color-warn-bg);
+  color: var(--color-warn-ink);
+}
+
+.highlight h4 {
+  color: inherit;
+}
+
+.highlight .muted {
+  color: inherit;
+  opacity: 0.85;
+}

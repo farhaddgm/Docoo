@@ -6,7 +6,7 @@
     "build": "next build",
     "dev": "next dev --turbopack",
     "start": "next start",
-    "lint": "eslint app e2e/*.ts next.config.ts playwright.config.ts --max-warnings=0",
+    "lint": "eslint app e2e/*.ts next.config.ts playwright.config.ts proxy.ts --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
     "test:e2e": "playwright test",
     "test": "vitest run --exclude 'e2e/**' --exclude '.next/**'",

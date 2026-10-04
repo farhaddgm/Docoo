@@ -1,6 +1,7 @@
 import {
   createAdapter,
   decryptSecret,
+  FakeAdapter,
   estimateCostUsd,
   ProviderError,
   sanitizeError,
@@ -14,6 +15,7 @@ import {
 import type { Pool, PoolClient } from 'pg';
 
 import { inWorkspace } from './db.js';
+import { fakeAnalystResponder } from './fake-analyst.js';
 
 export interface InvocationScope {
   readonly workspaceId: string;
@@ -51,6 +53,17 @@ export type AdapterFactory = (
 ) => ModelProviderAdapter;
 
 /**
+ * Production adapters. The deterministic `fake` provider (never allowed in production) also
+ * plays the analyst, so a stack without provider keys can run a project end to end.
+ */
+export const defaultAdapters: AdapterFactory = (kind, options) => {
+  if (kind !== 'fake') return createAdapter(kind, options);
+  const adapter = new FakeAdapter();
+  adapter.responder = fakeAnalystResponder;
+  return adapter;
+};
+
+/**
  * Resolves a connection, decrypts its current secret only in memory, calls the provider
  * and records every invocation with usage, latency, finish reason and estimated cost
  * (AI-002, AI-005). The model id always comes from configuration or the request.
@@ -59,7 +72,7 @@ export class ProviderRuntime {
   constructor(
     private readonly pool: Pool,
     private readonly masterKey: MasterKey | null,
-    private readonly adapters: AdapterFactory = (kind, options) => createAdapter(kind, options),
+    private readonly adapters: AdapterFactory = defaultAdapters,
   ) {}
 
   async adapterFor(
