@@ -2,6 +2,21 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.12.1] — 2026-10-04
+
+A full server disk no longer breaks an update.
+
+### Fixed
+
+- `install.sh update` ran out of space in the middle of the image build on a server whose disk held the images and build cache of earlier releases, leaving the checkout on the new release while the old one kept running. It now checks the free space where Docker keeps its data first (about 10 GB, `DOCOO_MIN_FREE_GB`), clears images of other releases and the build cache when it is short, and stops before changing anything if that is not enough (exit code 75, with the numbers and the next step in English and Persian).
+- The nightly update treats that stop as "nothing changed" instead of trying to roll back (a rollback needs the same space), and says why in `journalctl -u docoo-update`.
+- After a good update the installer removes images of releases older than the last two and build cache older than 24 hours, so the disk does not fill up again. Volumes are never touched.
+- Deploy smoke frees the runner's disk before building (the edge variant had run out of it).
+
+### Changed
+
+- The install guide (§1, §6, §8), runbook §9 and ADR-0012 describe the disk requirement and what to do when an update stops for lack of space.
+
 ## [0.12.0] — 2026-10-04
 
 The analyst's questions and answers: the project's problem is now defined through a conversation, not one model call ([ADR-0014](docs/adr/0014-analyst-questions-and-answers.md)). Releases also reach the server by themselves.

@@ -230,18 +230,76 @@ create_admin() {
   fi
 }
 
+# ---- disk space ---------------------------------------------------------------------------
+# Building the images needs several GB, and every release leaves its images and build cache
+# behind. A full disk used to stop an update in the middle of the build (after the checkout
+# had already moved to the new release). Now the space is checked first, old images and build
+# cache are cleared, and an update that still cannot fit stops before changing anything.
+min_free_gb=${DOCOO_MIN_FREE_GB:-10}
+exit_no_space=75 # `update` exits with this when nothing was changed for lack of disk space
+
+docker_free_gb() { # whole GB free where Docker keeps its data
+  local dir
+  dir=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null) || dir=/var/lib/docker
+  [ -d "$dir" ] || dir=/
+  df -Pk "$dir" | awk 'NR == 2 { printf "%d", $4 / 1048576 }'
+}
+
+# Removes docoo-* images of releases other than the ones named; an image a container still
+# uses is refused by Docker and stays.
+remove_old_images() { # remove_old_images KEEP_VERSION...
+  local image keep
+  while read -r image; do
+    for keep in "$@"; do [ "${image##*:}" = "$keep" ] && continue 2; done
+    docker rmi "$image" >/dev/null 2>&1 || true
+  done < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^docoo-' || true)
+}
+
+# light: after a good update, drop leftovers (the build cache of the last day stays for a fast
+# rollback). deep: before an update that does not fit, drop all build cache.
+tidy_docker() { # tidy_docker light|deep KEEP_VERSION...
+  local mode=$1
+  shift
+  docker image prune -f >/dev/null 2>&1 || true
+  remove_old_images "$@"
+  if [ "$mode" = deep ]; then
+    docker builder prune -f >/dev/null 2>&1 || true
+  else
+    docker builder prune -f --filter until=24h >/dev/null 2>&1 || true
+  fi
+  return 0
+}
+
+ensure_disk_space() { # ensure_disk_space RUNNING_VERSION: 0 when an update fits
+  local free
+  free=$(docker_free_gb)
+  # Unknown free space is not a reason to refuse the update.
+  [ -z "$free" ] || [ "$free" -ge "$min_free_gb" ] && return 0
+  say "Only ${free} GB free for Docker (an update needs about ${min_free_gb} GB); clearing old images and build cache…"
+  tidy_docker deep "$@"
+  free=$(docker_free_gb)
+  [ -z "$free" ] || [ "$free" -ge "$min_free_gb" ] && return 0
+  printf '\n\033[31mError: only %s GB are free where Docker keeps its data; an update needs about %s GB.\033[0m\n' "$free" "$min_free_gb" >&2
+  printf 'Nothing was changed and Docoo keeps running. Free some disk space (or enlarge the disk), then run:\n  sudo %s/scripts/deploy/install.sh update\n' "$root" >&2
+  printf 'فضای خالی دیسک برای به‌روزرسانی کافی نیست (%s گیگابایت خالی، حدود %s لازم است). چیزی تغییر نکرد و Docoo همچنان کار می‌کند؛ فضا باز کنید و دوباره اجرا کنید.\n' "$free" "$min_free_gb" >&2
+  return 1
+}
+
 update() {
   say "Updating to the latest release…"
   git -C "$root" fetch --tags --quiet
-  local latest
+  local latest running
   # DOCOO_UPDATE_REF pins another commit (used by the Deploy smoke test of a pull request).
   latest=${DOCOO_UPDATE_REF:-$(latest_release)}
+  running=$(env_value DOCOO_VERSION)
+  ensure_disk_space "$running" || exit "$exit_no_space"
   [ -n "$latest" ] && git -C "$root" checkout --quiet "$latest"
   sed -i "s/^DOCOO_VERSION=.*/DOCOO_VERSION=${latest:-local}/" "$deploy/.env"
   set -a; . "$deploy/.env"; set +a
   use_edge
   start
   attach_edge
+  tidy_docker light "${latest:-local}" "$running"
   say "Docoo is now on ${latest:-the current checkout}."
 }
 
@@ -377,9 +435,16 @@ scheduled_update() {
     newer-than-release) say "Running $current, which is newer than the latest release ($latest); nothing to do."; return 0 ;;
   esac
   say "New release $latest found (running ${current:-unknown}); updating."
-  if run_update_child; then
+  local status=0
+  run_update_child || status=$?
+  if [ "$status" = 0 ]; then
     say "Updated to $latest."
     return 0
+  fi
+  if [ "$status" = "$exit_no_space" ]; then
+    # The update stopped before changing anything, so there is nothing to go back from.
+    say "Not enough free disk space to update to $latest; nothing was changed and Docoo keeps running ${current:-the current version}. Free some disk space; tomorrow night tries again."
+    return 1
   fi
   say "The update to $latest failed; going back to ${current:-the previous release}."
   if rollback "$current"; then
