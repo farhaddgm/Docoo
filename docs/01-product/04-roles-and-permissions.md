@@ -23,6 +23,7 @@ notion_sync: true
 - `knowledge.create/read/update/audit/override/delete`
 - `document.read/edit/approve/export/lock/restore`
 - `provider.read/configure/test/rotate_secret`
+- `analysis.answer`
 - `workflow.approve/reject/override/retry/cancel`
 - `audit.read/export`
 - `retention.configure/purge`

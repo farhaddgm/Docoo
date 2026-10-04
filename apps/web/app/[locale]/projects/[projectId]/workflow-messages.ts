@@ -56,6 +56,7 @@ const messages = {
     tasks: 'کارهای منتظر شما',
     tasksEmpty: 'کاری منتظر شما نیست.',
     taskKinds: {
+      analysis_answers: 'پرسش‌های تحلیلگر منتظر پاسخ شماست',
       gate_review: 'بازبینی خروجی یک مرحله',
       attempt_limit: 'سقف تلاش یک مرحله پر شده است',
       provider_failure: 'ارائه‌دهندهٔ AI پاسخ نداد',
@@ -63,6 +64,7 @@ const messages = {
       cost_limit: 'سقف هزینهٔ این پروژه رسیده است',
     } as Record<string, string>,
     taskHelp: {
+      analysis_answers: 'در بخش «مسئله» به پرسش‌ها پاسخ دهید یا برایشان وضعیت بگذارید.',
       gate_review: 'خروجی را در بخش «بازبینی» پایین همین صفحه تأیید یا رد کنید.',
       attempt_limit: 'در بخش «سقف تلاش» تصمیم بگیرید: یک تلاش دیگر یا عبور.',
       provider_failure:
@@ -113,7 +115,18 @@ const messages = {
     // Output labels
     out: {
       problemStatement: 'بیان مسئله',
+      needStatement: 'نیاز واقعی',
+      objectives: 'اهداف',
+      constraints: 'محدودیت‌ها',
+      stakeholders: 'ذی‌نفعان',
+      successCriteria: 'معیار موفقیت',
       assumptions: 'فرض‌ها',
+      unresolved: 'ابهام‌ها و موارد حل‌نشده',
+      glossary: 'واژه‌نامه',
+      term: 'واژه',
+      meaning: 'معنا',
+      recommendedScope: 'دامنهٔ پیشنهادی',
+      outOfScope: 'خارج از دامنه',
       openQuestions: 'پرسش‌های باز',
       findings: 'یافته‌ها',
       source: 'منبع',
@@ -207,6 +220,7 @@ const messages = {
     tasks: 'Waiting for you',
     tasksEmpty: 'Nothing is waiting for you.',
     taskKinds: {
+      analysis_answers: 'The analyst’s questions wait for your answers',
       gate_review: 'A stage output needs review',
       attempt_limit: 'A stage reached its attempt limit',
       provider_failure: 'The AI provider did not answer',
@@ -214,6 +228,7 @@ const messages = {
       cost_limit: "The project's cost ceiling was reached",
     } as Record<string, string>,
     taskHelp: {
+      analysis_answers: 'Answer the questions or give them a status in the "Problem" section.',
       gate_review: 'Approve or reject the output in the "Review" section lower on this page.',
       attempt_limit: 'Decide in the "Attempt limit" section: one more attempt or pass.',
       provider_failure:
@@ -259,7 +274,18 @@ const messages = {
     decisionSubmit: 'Record decision',
     out: {
       problemStatement: 'Problem statement',
+      needStatement: 'The real need',
+      objectives: 'Objectives',
+      constraints: 'Constraints',
+      stakeholders: 'Stakeholders',
+      successCriteria: 'Success criteria',
       assumptions: 'Assumptions',
+      unresolved: 'Unresolved points',
+      glossary: 'Glossary',
+      term: 'Term',
+      meaning: 'Meaning',
+      recommendedScope: 'Recommended scope',
+      outOfScope: 'Out of scope',
       openQuestions: 'Open questions',
       findings: 'Findings',
       source: 'Source',
