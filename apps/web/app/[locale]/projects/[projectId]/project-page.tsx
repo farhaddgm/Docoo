@@ -14,6 +14,7 @@ import { projectMessages } from '../messages';
 import { projectPageMessages } from './messages';
 import { AgentsPanel } from './agents-panel';
 import { DocumentsPanel } from './documents-panel';
+import { KnowledgePanel } from './knowledge-panel';
 import { OverviewPanel } from './overview-panel';
 import { ProblemPanel } from './problem-panel';
 import type { ProjectDetail } from './project-types';
@@ -27,6 +28,7 @@ const tabs = [
   'workflow',
   'solutions',
   'documents',
+  'knowledge',
   'agents',
   'timeline',
 ] as const;
@@ -246,6 +248,14 @@ function ProjectView({
           workspaceId={workspaceId}
           projectId={projectId}
           refreshKey={refreshKey}
+        />
+      )}
+      {tab === 'knowledge' && (
+        <KnowledgePanel
+          locale={locale}
+          workspaceId={workspaceId}
+          projectId={projectId}
+          readOnly={project.status === 'archived' || project.status === 'deleted'}
         />
       )}
       {tab === 'agents' && (

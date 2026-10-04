@@ -96,6 +96,7 @@ notion_sync: true
 | `POST /knowledge/{id}/submit-audit`                                  | `knowledge.audit`           |
 | `GET /audit-reviews`                                                 | `knowledge.read`            |
 | `POST /audit-reviews/{id}/override`                                  | `knowledge.override`        |
+| `GET /knowledge-claims`                                              | `knowledge.read`            |
 | `GET /knowledge-conflicts`                                           | `knowledge.read`            |
 | `POST /knowledge-conflicts/{id}/resolve`                             | `knowledge.audit`           |
 | `GET /retrieval-snapshots/{id}`                                      | `knowledge.read`            |

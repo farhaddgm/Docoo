@@ -2,6 +2,28 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.14.0] — 2026-10-04
+
+Knowledge in the backoffice: sources, audit queue, Brain audit, override and conflicts, all usable without the API ([ADR-0016](docs/adr/0016-knowledge-screens.md)).
+
+### Added
+
+- **Knowledge & audit page** with four sections that survive a reload (`?tab=`): the **audit queue** in two views (documents with status, score, claims and open conflicts; claims with the Brain's verdict, citations and conflicts), **sources**, **conflicts** and a **retrieval test**.
+- **Sources:** add a file, pasted text or a web address; the list follows the pipeline (quarantine, scan, extraction) and refreshes by itself, says in words why a source was rejected or failed, flags partial extractions, retries a quarantined or failed one and uploads a new version of a file. "Build knowledge" makes a draft with the source declaration, confidentiality and scopes (workspace, topic or project, optionally for one role).
+- **Knowledge page:** the Brain audit with the overall score, the six criteria with their weights, the thresholds, critical flaws and the reasons in the reader's language; the claims with their exact place in the file, the verdict on each and their citations; version history and every audit; writing a new version of the text; deleting with a two-step confirmation.
+- **Override (KNO-004, UX §8):** shows the Brain's decision and evidence, spells out what the decision would do (with a warning for knowledge that has critical flaws), asks for a reason (the same rule as the API, with a counter) and how long it applies, and takes two steps to record. The Brain's decision stays next to the human one.
+- **Stale knowledge can be renewed:** when the source file got a new version, "renew" takes the text and located claims from it (`POST /knowledge/{id}/versions` with `sourceVersionId`); before, the only way out was to create new knowledge.
+- **Retrieval test:** what an agent would be given for a question in a scope and role, with audit score, ranks and conflict warnings; every run pins a snapshot like a real call.
+- A **Knowledge** tab on every project (its own sources, queue and retrieval test, scope fixed to the project), links from the dashboard's knowledge card, and the navigation item is enabled.
+- API: `GET /knowledge-claims`; knowledge list fields (`overall`, `decision`, `effectiveDecision`, `scopes` with names, `claimCount`, `openConflicts`, …) and filters (`sourceType`, `scopeType`+`scopeId`, `q`); sources list filters, scope names and the knowledge built from each source; conflicts filter `knowledgeId` and `all`, with the title of both documents.
+
+### Changed
+
+- The conflict list and the dashboard's conflict count now only include conflicts between claims still in use (current version of a knowledge item that is not deleted); a conflict with a replaced version or a deleted item no longer reaches retrieval and is only listed with `all=true`.
+- The dashboard's "expired" count and the `expired` filter use the status a person sees: an approved version whose validity has ended.
+- Cursors of the knowledge, claim and source lists are bound to their filters, so a cursor cannot page through a different filter.
+- The end-to-end run starts the ingestion worker, so uploaded and pasted sources reach "ready" for real.
+
 ## [0.13.0] — 2026-10-04
 
 Agents: every role now has a versioned definition that projects run with, and the administrator can edit it ([ADR-0015](docs/adr/0015-agent-definitions.md)).

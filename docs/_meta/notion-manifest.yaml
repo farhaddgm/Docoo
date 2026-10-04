@@ -167,3 +167,6 @@ documents:
   - path: docs/adr/0015-agent-definitions.md
     doc_id: DOCOO-ADR-0015
     section: ADRs
+  - path: docs/adr/0016-knowledge-screens.md
+    doc_id: DOCOO-ADR-0016
+    section: ADRs

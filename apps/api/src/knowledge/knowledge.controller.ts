@@ -87,14 +87,22 @@ const fromSourceSchema = z
   .strict();
 const versionSchema = z
   .object({
-    content: contentSchema,
+    content: contentSchema.optional(),
+    sourceVersionId: z.uuid().optional(),
+    acceptPartial: z.boolean().default(false),
     provenance: provenanceSchema.optional(),
     validFrom: dateSchema.optional(),
     validUntil: dateSchema.optional(),
     claims: z.array(claimSchema).max(500).optional(),
     reason: z.string().trim().min(1).max(1000),
   })
-  .strict();
+  .strict()
+  .refine(
+    (input) =>
+      // New text, or the text of a newer source version; claims only go with text.
+      (input.content === undefined) !== (input.sourceVersionId === undefined) &&
+      (input.sourceVersionId === undefined || input.claims === undefined),
+  );
 const overrideSchema = z
   .object({
     decision: z.enum(['approve', 'reject']),
@@ -112,21 +120,38 @@ const retrieveSchema = z
     limit: z.number().int().min(1).max(50).default(10),
   })
   .strict();
+const statusSchema = z.enum([
+  'draft',
+  'pending',
+  'in_review',
+  'approved',
+  'rejected',
+  'needs_revision',
+  'expired',
+  'superseded',
+]);
 const listSchema = z
   .object({
     ...pageQuerySchema,
-    status: z
-      .enum([
-        'draft',
-        'pending',
-        'in_review',
-        'approved',
-        'rejected',
-        'needs_revision',
-        'expired',
-        'superseded',
-      ])
+    status: statusSchema.optional(),
+    sourceType: z.enum(['admin_provided', 'clue_guided', 'autonomous_research']).optional(),
+    scopeType: z.enum(['workspace', 'topic', 'project']).optional(),
+    scopeId: z.uuid().optional(),
+    q: z.string().trim().min(1).max(100).optional(),
+  })
+  .strict()
+  .refine((query) => (query.scopeType === undefined) === (query.scopeId === undefined));
+const claimsQuerySchema = z
+  .object({
+    ...pageQuerySchema,
+    status: statusSchema.optional(),
+    supported: z.enum(['yes', 'no', 'unaudited']).optional(),
+    conflicted: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
       .optional(),
+    kind: z.enum(['numeric', 'causal', 'comparative', 'recommendation', 'statement']).optional(),
+    knowledgeId: z.uuid().optional(),
   })
   .strict();
 const reviewsQuerySchema = z
@@ -138,6 +163,11 @@ const reviewsQuerySchema = z
 const conflictsQuerySchema = z
   .object({
     status: z.enum(['open', 'resolved']).optional(),
+    knowledgeId: z.uuid().optional(),
+    all: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50),
   })
   .strict();
@@ -169,6 +199,15 @@ export class KnowledgeController {
   @RequireWorkspacePermission('knowledge.read')
   async list(@Req() request: FastifyRequest, @Query() query: unknown) {
     return this.knowledge.list(workspaceContext(request), parse(listSchema, query));
+  }
+
+  @Get('knowledge-claims')
+  @ApiOperation({
+    summary: 'Claim view of the audit queue: claims of current versions with verdict and conflicts',
+  })
+  @RequireWorkspacePermission('knowledge.read')
+  async claims(@Req() request: FastifyRequest, @Query() query: unknown) {
+    return this.knowledge.listClaims(workspaceContext(request), parse(claimsQuerySchema, query));
   }
 
   @Post('knowledge')

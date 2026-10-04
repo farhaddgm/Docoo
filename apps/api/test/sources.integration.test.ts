@@ -467,6 +467,249 @@ describe.skipIf(!adminUrl)('sources: upload, quarantine, extraction and lineage 
     ).not.toContain(knowledgeId);
   });
 
+  it('KNW-001: the source list names its scope, filters by scope and title, and links the knowledge built from each source', async () => {
+    const workspace = `/v1/workspaces/${h.ids.workspaceA}`;
+    const topic = await h.request('POST', `${workspace}/topics`, {
+      cookie,
+      payload: { code: 'src-topic', title: 'Source topic', description: 'Topic for sources' },
+    });
+    const topicId = topic.json<{ topic: { id: string } }>().topic.id;
+    const project = await h.request('POST', `${workspace}/projects`, {
+      cookie,
+      payload: {
+        code: 'src-project',
+        title: 'Source project',
+        initialProblem: 'Problem',
+        topics: [{ topicId }],
+      },
+    });
+    const projectId = project.json<{ project: { id: string } }>().project.id;
+    const addText = async (title: string, scope: { type: string; id: string }) => {
+      const response = await h.request('POST', sources('/text'), {
+        cookie,
+        payload: { title, text: `${title} says that churn is measured monthly.`, scope },
+      });
+      expect(response.statusCode, response.body).toBe(202);
+      return response.json<{ source: { id: string }; version: Version }>();
+    };
+    const one = await addText('Scoped note one', { type: 'project', id: projectId });
+    await addText('Scoped note two', { type: 'project', id: projectId });
+    await addText('Topic note', { type: 'topic', id: topicId });
+
+    type Row = {
+      id: string;
+      title: string;
+      scope: { type: string; id: string; title: string | null };
+      knowledge: { id: string; title: string; status: string; stale: boolean }[];
+    };
+    const list = async (query: string) => {
+      const response = await h.request('GET', sources(query), { cookie });
+      expect(response.statusCode, response.body).toBe(200);
+      return response.json<{ items: Row[]; nextCursor: string | null }>();
+    };
+
+    const inProject = await list(`?scopeType=project&scopeId=${projectId}&limit=100`);
+    expect(inProject.items.map((row) => row.title).sort()).toEqual([
+      'Scoped note one',
+      'Scoped note two',
+    ]);
+    expect(inProject.items[0]!.scope).toEqual({
+      type: 'project',
+      id: projectId,
+      title: 'Source project',
+    });
+    expect((await list(`?scopeType=topic&scopeId=${topicId}`)).items[0]!.scope.title).toBe(
+      'Source topic',
+    );
+    expect((await list('?q=NOTE%20ONE')).items.map((row) => row.id)).toEqual([one.source.id]);
+    expect((await list(`?q=${encodeURIComponent('%')}`)).items).toEqual([]);
+
+    const page = await list(`?scopeType=project&scopeId=${projectId}&limit=1`);
+    expect(page.nextCursor).not.toBeNull();
+    const foreign = await h.request(
+      'GET',
+      sources(`?scopeType=topic&scopeId=${topicId}&limit=1&cursor=${page.nextCursor}`),
+      { cookie },
+    );
+    expect(foreign.statusCode).toBe(400);
+    expect(foreign.json<{ code: string }>().code).toBe('SOURCE_CURSOR_INVALID');
+    const half = await h.request('GET', sources('?scopeType=project'), { cookie });
+    expect(half.statusCode).toBe(400);
+
+    expect((await list(`?q=Scoped%20note%20one`)).items[0]!.knowledge).toEqual([]);
+    const built = await h.request('POST', `${workspace}/knowledge/from-source`, {
+      cookie,
+      payload: {
+        sourceId: one.source.id,
+        versionId: one.version.id,
+        title: 'Built from note one',
+        scopes: [{ type: 'project', id: projectId }],
+        declaration: 'Written by the analytics team',
+      },
+    });
+    expect(built.statusCode, built.body).toBe(201);
+    const builtId = built.json<{ knowledge: { id: string } }>().knowledge.id;
+    expect((await list(`?q=Scoped%20note%20one`)).items[0]!.knowledge).toEqual([
+      { id: builtId, title: 'Built from note one', status: 'draft', stale: false },
+    ]);
+    const single = await h.request('GET', sources(`/${one.source.id}`), { cookie });
+    expect(
+      single.json<{ source: { knowledge: unknown[]; scope: { title: string } } }>().source,
+    ).toMatchObject({
+      scope: { title: 'Source project' },
+      knowledge: [{ id: builtId }],
+    });
+  });
+
+  it('KNW-004: knowledge that went stale is renewed from the newer version of its own source', async () => {
+    const workspace = `/v1/workspaces/${h.ids.workspaceA}`;
+    const { created } = await ingest(
+      docx(['Margin rule v1: floors stay at 20%.']),
+      'margin.docx',
+      DOCX,
+    );
+    const built = await h.request('POST', `${workspace}/knowledge/from-source`, {
+      cookie,
+      payload: {
+        sourceId: created.source.id,
+        versionId: created.version.id,
+        title: 'Margin rule',
+        scopes: [{ type: 'workspace', id: h.ids.workspaceA }],
+        declaration: 'Approved pricing committee rule',
+      },
+    });
+    const knowledgeId = built.json<{ knowledge: { id: string } }>().knowledge.id;
+    const audit = (id: string) =>
+      h.request('POST', `${workspace}/knowledge/${id}/submit-audit`, { cookie });
+    expect(
+      (await audit(knowledgeId)).json<{ review: { decision: string } }>().review.decision,
+    ).toBe('approved');
+
+    const current = await h.request('GET', sources(`/${created.source.id}`), { cookie });
+    const second = docx(['Margin rule v2: floors stay at 25%.']);
+    const next = await h.request('POST', sources(`/${created.source.id}/versions`), {
+      cookie,
+      headers: { 'if-match': String(current.headers['etag']) },
+      payload: { filename: 'margin.docx', mime: DOCX, size: second.length, sha256: sha(second) },
+    });
+    const nextVersion = next.json<Upload>().version;
+    await put(created.source.id, nextVersion.id, second, DOCX);
+    expect((await finalize(created.source.id, nextVersion.id)).status).toBe('indexed');
+
+    const stale = await h.request('GET', `${workspace}/knowledge/${knowledgeId}`, { cookie });
+    type Detail = {
+      knowledge: {
+        version: number;
+        currentVersion: {
+          versionNo: number;
+          status: string;
+          staleReason: string | null;
+          sourceVersionId: string;
+          provenance: Record<string, unknown>;
+          claims: {
+            text: string;
+            locator: Record<string, unknown>;
+            sourceSegmentId: string | null;
+          }[];
+        };
+      };
+    };
+    expect(stale.json<Detail>().knowledge.currentVersion.staleReason).toBe(
+      'source_version_superseded',
+    );
+    const staleAudit = await audit(knowledgeId);
+    expect(staleAudit.statusCode).toBe(409);
+    expect(staleAudit.json<{ code: string }>().code).toBe('KNOWLEDGE_STALE');
+
+    const renew = (
+      payload: Record<string, unknown>,
+      version = stale.json<Detail>().knowledge.version,
+    ) =>
+      h.request('POST', `${workspace}/knowledge/${knowledgeId}/versions`, {
+        cookie,
+        headers: { 'if-match': `"${version}"` },
+        payload,
+      });
+    // Exactly one of new text or a source version; claims only go with text.
+    expect((await renew({ reason: 'Nothing given' })).statusCode).toBe(400);
+    expect(
+      (await renew({ content: 'x', sourceVersionId: nextVersion.id, reason: 'Both' })).statusCode,
+    ).toBe(400);
+    expect(
+      (
+        await renew({
+          sourceVersionId: nextVersion.id,
+          claims: [{ text: 'x' }],
+          reason: 'Claims with a source',
+        })
+      ).statusCode,
+    ).toBe(400);
+    // Only a version of the item's own source qualifies.
+    const other = await ingest(docx(['Another document entirely.']), 'other.docx', DOCX);
+    const foreign = await renew({
+      sourceVersionId: other.created.version.id,
+      reason: 'Wrong source',
+    });
+    expect(foreign.statusCode).toBe(404);
+    expect(foreign.json<{ code: string }>().code).toBe('SOURCE_VERSION_NOT_FOUND');
+
+    const renewed = await renew({
+      sourceVersionId: nextVersion.id,
+      reason: 'Source updated to v2',
+    });
+    expect(renewed.statusCode, renewed.body).toBe(201);
+    const detail = renewed.json<Detail>().knowledge.currentVersion;
+    expect(detail).toMatchObject({
+      versionNo: 2,
+      status: 'pending',
+      staleReason: null,
+      sourceVersionId: nextVersion.id,
+      provenance: {
+        sourceId: created.source.id,
+        sourceVersionId: nextVersion.id,
+        reason: 'Source updated to v2',
+        partial: false,
+      },
+    });
+    expect(detail.claims.map((claim) => claim.text)).toEqual([
+      'Margin rule v2: floors stay at 25%.',
+    ]);
+    expect(detail.claims[0]!.locator).toMatchObject({ sourceVersionId: nextVersion.id });
+    expect(detail.claims[0]!.sourceSegmentId).not.toBeNull();
+
+    expect(
+      (await audit(knowledgeId)).json<{ review: { decision: string } }>().review.decision,
+    ).toBe('approved');
+    const retrieval = await h.request('POST', `${workspace}/knowledge/retrieve`, {
+      cookie,
+      payload: { query: 'margin rule floors' },
+    });
+    const found = retrieval
+      .json<{ results: { knowledgeId: string; text: string }[] }>()
+      .results.find((result) => result.knowledgeId === knowledgeId);
+    expect(found?.text).toContain('25%');
+
+    // Knowledge that was not built from a source has no newer source version to take.
+    const manual = await h.request('POST', `${workspace}/knowledge`, {
+      cookie,
+      payload: {
+        title: 'Typed by hand',
+        sourceType: 'admin_provided',
+        provenance: { declaration: 'Typed in by the administrator' },
+        scopes: [{ type: 'workspace', id: h.ids.workspaceA }],
+        content: 'Handwritten rule that stands on its own.',
+      },
+    });
+    const handwritten = manual.json<{ knowledge: { id: string; version: number } }>().knowledge;
+    const noSource = await h.request('POST', `${workspace}/knowledge/${handwritten.id}/versions`, {
+      cookie,
+      headers: { 'if-match': `"${handwritten.version}"` },
+      payload: { sourceVersionId: nextVersion.id, reason: 'No source' },
+    });
+    expect(noSource.statusCode).toBe(409);
+    expect(noSource.json<{ code: string }>().code).toBe('KNOWLEDGE_NO_SOURCE');
+  });
+
   it('keeps sources inside their workspace', async () => {
     const { created } = await ingest(strToU8('Tenant A only.'), 'a.txt', 'text/plain');
     const cookieB = await h.login(h.emails.b);

@@ -5,12 +5,13 @@ const apiUrl = process.env['E2E_API_URL'] ?? 'http://127.0.0.1:4000';
 const chromiumPath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'];
 // The agent worker has no HTTP port; its Prometheus endpoint tells Playwright it is up.
 const workerMetricsPort = 9464;
+const ingestionMetricsPort = 9465;
 
 /**
  * End-to-end tests of the main path (UX-001, AUTH-001) and of the project workflow in the
  * backoffice (WF-003). Expects built API, web and agent worker, a migrated database and a
- * Temporal server (TEMPORAL_ADDRESS, default localhost:7233); `e2e/prepare.mjs` seeds the
- * administrator.
+ * Temporal server (TEMPORAL_ADDRESS, default localhost:7233), plus the ingestion worker's
+ * object store and scanner (S3_*, CLAMD_HOST); `e2e/prepare.mjs` seeds the administrator.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -43,6 +44,14 @@ export default defineConfig({
       command: 'node ../worker-agent/dist/main.js',
       port: workerMetricsPort,
       env: { TEMPORAL_METRICS_ADDRESS: `127.0.0.1:${workerMetricsPort}` },
+      reuseExistingServer: !process.env['CI'],
+      timeout: 90_000,
+    },
+    {
+      // Scans and reads the sources the knowledge screens add (needs CLAMD_HOST and S3_*).
+      command: 'node ../worker-ingestion/dist/main.js',
+      port: ingestionMetricsPort,
+      env: { TEMPORAL_METRICS_ADDRESS: `127.0.0.1:${ingestionMetricsPort}` },
       reuseExistingServer: !process.env['CI'],
       timeout: 90_000,
     },

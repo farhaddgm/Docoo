@@ -14,9 +14,17 @@ import {
 import type { PoolClient, QueryResultRow } from 'pg';
 
 import { writeAudit } from '../common/audit.js';
-import { decodeCursor, encodeCursor, isoColumn } from '../common/pagination.js';
+import { visibleStatusSql } from '../common/knowledge-status.js';
+import {
+  containsPattern,
+  decodeCursor,
+  encodeCursor,
+  isoColumn,
+  listScope,
+} from '../common/pagination.js';
 import { badRequest, conflict, notFound, preconditionFailed } from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
+import { scopeKey, scopeTitles } from '../common/scope-titles.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { ConfigService, type ConfigScope } from '../config/config.service.js';
 import {
@@ -31,6 +39,16 @@ export type SourceKind = 'file' | 'url' | 'text';
 export interface SourceScope {
   readonly type: ConfigScope;
   readonly id: string;
+  /** Title of the topic or project; a workspace has none. Present on reads only. */
+  readonly title?: string | null;
+}
+
+/** Knowledge built from a version of a source, so a screen can link to it. */
+export interface DerivedKnowledge {
+  readonly id: string;
+  readonly title: string;
+  readonly status: string;
+  readonly stale: boolean;
 }
 
 export interface SourceVersion {
@@ -61,6 +79,7 @@ export interface Source {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly currentVersion?: SourceVersion | null;
+  readonly knowledge?: readonly DerivedKnowledge[];
 }
 
 export interface UploadTicket {
@@ -162,9 +181,21 @@ export class SourcesService {
 
   async list(
     context: WorkspaceRequestContext,
-    input: { limit: number; cursor?: string | undefined; status?: string | undefined },
+    input: {
+      limit: number;
+      cursor?: string | undefined;
+      status?: string | undefined;
+      scopeType?: ConfigScope | undefined;
+      scopeId?: string | undefined;
+      q?: string | undefined;
+    },
   ): Promise<{ items: Source[]; nextCursor: string | null }> {
-    const scope = `${context.workspaceId}:sources:${input.status ?? 'all'}`;
+    const scope = listScope(`${context.workspaceId}:sources`, {
+      status: input.status,
+      scopeType: input.scopeType,
+      scopeId: input.scopeId,
+      q: input.q,
+    });
     const cursor = input.cursor ? decodeCursor(input.cursor, scope, 'SOURCE_CURSOR_INVALID') : null;
     return this.database.run(context, async (client) => {
       const result = await client.query<SourceRow & { current: VersionRow | null }>(
@@ -172,7 +203,9 @@ export class SourcesService {
                 (select row_to_json(v) from (select ${versionColumns} from source_versions sv
                    where sv.id = a.current_version_id) v) as current
            from (select ${sourceColumns}, created_at as sort_at from source_assets
-                  where workspace_id = $1 and deleted_at is null) a
+                  where workspace_id = $1 and deleted_at is null
+                    and ($6::text is null or (scope_type::text = $6 and scope_id = $7::uuid))
+                    and ($8::text is null or title ilike $8)) a
            left join source_versions cv on cv.id = a.current_version_id
           where ($2::text is null or cv.status::text = $2)
             and ($3::timestamptz is null or (a.sort_at, a.id) < ($3::timestamptz, $4::uuid))
@@ -184,14 +217,26 @@ export class SourcesService {
           cursor?.at ?? null,
           cursor?.id ?? null,
           input.limit + 1,
+          input.scopeType ?? null,
+          input.scopeId ?? null,
+          input.q ? containsPattern(input.q) : null,
         ],
       );
       const rows = result.rows.slice(0, input.limit);
       const last = rows.at(-1);
+      const titles = await scopeTitles(
+        client,
+        rows.map((row) => ({ type: row.scope_type, id: row.scope_id })),
+      );
+      const derived = await this.derivedKnowledge(
+        client,
+        rows.map((row) => row.id),
+      );
       return {
         items: rows.map((row) => ({
-          ...this.toSource(row),
+          ...this.toSource(row, titles),
           currentVersion: row.current ? this.toVersion(row.current) : null,
+          knowledge: derived.get(row.id) ?? [],
         })),
         nextCursor:
           result.rows.length > input.limit && last
@@ -199,6 +244,37 @@ export class SourcesService {
             : null,
       };
     });
+  }
+
+  /** The current version of each knowledge item that was built from one of these sources. */
+  private async derivedKnowledge(
+    client: PoolClient,
+    sourceIds: readonly string[],
+  ): Promise<Map<string, DerivedKnowledge[]>> {
+    const map = new Map<string, DerivedKnowledge[]>();
+    if (sourceIds.length === 0) return map;
+    const result = await client.query<{
+      asset_id: string;
+      id: string;
+      title: string;
+      status: string;
+      stale: boolean;
+    }>(
+      `select sv.asset_id, i.id, i.title, ${visibleStatusSql('v')} as status,
+              v.stale_reason is not null as stale
+         from knowledge_items i
+         join knowledge_versions v on v.id = i.current_version_id
+         join source_versions sv on sv.id = v.source_version_id
+        where sv.asset_id = any($1::uuid[]) and i.deleted_at is null
+        order by i.created_at, i.id`,
+      [sourceIds],
+    );
+    for (const row of result.rows) {
+      const list = map.get(row.asset_id) ?? [];
+      list.push({ id: row.id, title: row.title, status: row.status, stale: row.stale });
+      map.set(row.asset_id, list);
+    }
+    return map;
   }
 
   async get(
@@ -211,9 +287,11 @@ export class SourcesService {
         `select ${versionColumns} from source_versions where asset_id = $1 order by version_no desc`,
         [sourceId],
       );
+      const titles = await scopeTitles(client, [{ type: source.scope_type, id: source.scope_id }]);
       return {
-        ...this.toSource(source),
+        ...this.toSource(source, titles),
         versions: versions.rows.map((row) => this.toVersion(row)),
+        knowledge: (await this.derivedKnowledge(client, [sourceId])).get(sourceId) ?? [],
       };
     });
   }
@@ -777,12 +855,17 @@ export class SourcesService {
     return row;
   }
 
-  private toSource(row: SourceRow): Source {
+  private toSource(row: SourceRow, titles?: ReadonlyMap<string, string>): Source {
+    const title = titles?.get(scopeKey({ type: row.scope_type, id: row.scope_id }));
     return {
       id: row.id,
       kind: row.kind,
       title: row.title,
-      scope: { type: row.scope_type, id: row.scope_id },
+      scope: {
+        type: row.scope_type,
+        id: row.scope_id,
+        ...(titles ? { title: title ?? null } : {}),
+      },
       currentVersionId: row.current_version_id,
       version: row.version,
       createdAt: row.created_at,

@@ -95,6 +95,7 @@ notion_sync: true
 50. [ADR-0013: صفحه‌های اصلی بک‌آفیس](adr/0013-backoffice-core-screens.md)
 51. [ADR-0014: پرسش‌وپاسخ تحلیلگر و تعریف نهایی مسئله](adr/0014-analyst-questions-and-answers.md)
 52. [ADR-0015: تعریف نسخه‌دار ایجنت‌ها و سنجاق‌شدن به پروژه](adr/0015-agent-definitions.md)
+53. [ADR-0016: صفحه‌های دانش و ممیزی در بک‌آفیس](adr/0016-knowledge-screens.md)
 
 ## وضعیت اسناد
 

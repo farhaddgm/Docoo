@@ -57,18 +57,23 @@ test.describe('Smart in Persian and English (SMT-001..004)', () => {
     await page.evaluate(() => window.localStorage.removeItem('docoo.smart.ui'));
     // Letters only: the tracker groups errors after normalising numbers, so a digit-free random
     // text keeps every run a new group.
-    const token = Array.from({ length: 14 }, () =>
-      String.fromCharCode(97 + Math.floor(Math.random() * 26)),
-    ).join('');
-    const message = `E2E smart error ${token}`;
-    await page.evaluate((text) => {
-      setTimeout(() => {
-        throw new Error(text);
-      }, 0);
-    }, message);
-
+    const randomToken = () =>
+      Array.from({ length: 14 }, () =>
+        String.fromCharCode(97 + Math.floor(Math.random() * 26)),
+      ).join('');
     const toast = page.getByRole('region', { name: 'اعلان‌های اسمارت' });
-    await expect(toast.getByText(message)).toBeVisible();
+    // The tracker listens once the page has hydrated; on a busy machine the first throw can come
+    // earlier, so each attempt uses a new text until one is caught.
+    let message = '';
+    await expect(async () => {
+      message = `E2E smart error ${randomToken()}`;
+      await page.evaluate((text) => {
+        setTimeout(() => {
+          throw new Error(text);
+        }, 0);
+      }, message);
+      await expect(toast.getByText(message)).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 30_000 });
     await toast.getByRole('button', { name: 'جزئیات' }).click();
 
     const panel = page.getByRole('complementary', { name: 'پنجرهٔ اسمارت' });
