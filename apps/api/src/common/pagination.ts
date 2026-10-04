@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { z } from 'zod';
 
 import { badRequest } from './problems.js';
@@ -37,4 +39,21 @@ export function decodeCursor(raw: string, scope: string, code: string): Cursor {
   } catch {
     throw badRequest(code, 'The page cursor is invalid.');
   }
+}
+
+/**
+ * Cursor scope of a filtered list. The filters are hashed so the cursor stays short however
+ * long a search text is, and a cursor from one filter can never page through another.
+ */
+export function listScope(base: string, filters: Record<string, string | undefined>): string {
+  const entries = Object.entries(filters)
+    .filter((entry): entry is [string, string] => entry[1] !== undefined)
+    .sort(([a], [b]) => (a < b ? -1 : 1));
+  const digest = createHash('sha256').update(JSON.stringify(entries)).digest('hex').slice(0, 16);
+  return `${base}:${digest}`;
+}
+
+/** A `like` pattern that matches text containing `text` literally. */
+export function containsPattern(text: string): string {
+  return `%${text.replace(/[\\%_]/gu, '\\$&')}%`;
 }

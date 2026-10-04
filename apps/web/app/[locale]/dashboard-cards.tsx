@@ -78,11 +78,11 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
   if (!data) return <p role="status">{content.loading}</p>;
 
   const number = (value: number) => formatNumber(locale, value);
-  const counts = (items: [string, number][]) => (
+  const counts = (items: [string, number, string?][]) => (
     <dl className="counts">
-      {items.map(([label, value]) => (
+      {items.map(([label, value, href]) => (
         <div key={label}>
-          <dt>{label}</dt>
+          <dt>{href ? <Link href={href as Route}>{label}</Link> : label}</dt>
           <dd>{number(value)}</dd>
         </div>
       ))}
@@ -126,12 +126,18 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
       </section>
 
       <section className="card" aria-labelledby="knowledge-title">
-        <h2 id="knowledge-title">{text.knowledge}</h2>
+        <h2 id="knowledge-title">
+          <Link href={`/${locale}/knowledge` as Route}>{text.knowledge}</Link>
+        </h2>
         {counts([
-          [text.pending, data.knowledge.pending],
-          [text.expired, data.knowledge.expired],
-          [text.needsRevision, data.knowledge.needsRevision],
-          [text.conflicted, data.knowledge.conflicted],
+          [text.pending, data.knowledge.pending, `/${locale}/knowledge?status=pending`],
+          [text.expired, data.knowledge.expired, `/${locale}/knowledge?status=expired`],
+          [
+            text.needsRevision,
+            data.knowledge.needsRevision,
+            `/${locale}/knowledge?status=needs_revision`,
+          ],
+          [text.conflicted, data.knowledge.conflicted, `/${locale}/knowledge?tab=conflicts`],
         ])}
       </section>
 

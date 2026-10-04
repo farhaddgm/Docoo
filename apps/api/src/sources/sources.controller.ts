@@ -62,8 +62,12 @@ const listSchema = z
         'partial',
       ])
       .optional(),
+    scopeType: z.enum(['workspace', 'topic', 'project']).optional(),
+    scopeId: z.uuid().optional(),
+    q: z.string().trim().min(1).max(100).optional(),
   })
-  .strict();
+  .strict()
+  .refine((query) => (query.scopeType === undefined) === (query.scopeId === undefined));
 const segmentQuerySchema = z
   .object({
     limit: z.coerce.number().int().min(1).max(500).default(100),

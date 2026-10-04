@@ -91,6 +91,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/knowledge/:knowledgeId/submit-audit': 'knowledge.audit',
   'GET workspaces/:workspaceId/audit-reviews': 'knowledge.read',
   'POST workspaces/:workspaceId/audit-reviews/:reviewId/override': 'knowledge.override',
+  'GET workspaces/:workspaceId/knowledge-claims': 'knowledge.read',
   'GET workspaces/:workspaceId/knowledge-conflicts': 'knowledge.read',
   'POST workspaces/:workspaceId/knowledge-conflicts/:conflictId/resolve': 'knowledge.audit',
   'GET workspaces/:workspaceId/retrieval-snapshots/:snapshotId': 'knowledge.read',

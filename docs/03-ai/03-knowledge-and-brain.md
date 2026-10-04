@@ -2,9 +2,9 @@
 doc_id: DOCOO-KNOWLEDGE-BRAIN
 title: حاکمیت دانش و ممیزی Brain
 status: approved-baseline
-version: 1.0.1
+version: 1.1.0
 owner: AI Governance
-last_updated: 2026-09-24
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -100,6 +100,8 @@ Conflict record شامل claim A/B، نوع تعارض، severity، scope، تح
 فرم override باید decision Brain، score، reason و اثر را نشان دهد. دلیل حداقل ۲۰ کاراکتر معنادار، actor، زمان و validity لازم است. override دائمی پیش‌فرض نیست؛ ادمین باید «تا تغییر نسخه» یا تاریخ انقضا را انتخاب کند. تغییر محتوا override را نیز stale می‌کند.
 
 ## ۱۱. گزارش Brain
+
+> رابط این بخش‌ها (صف ممیزی، override، تعارض، آزمون بازیابی) در [ADR-0016](../adr/0016-knowledge-screens.md) آمده است.
 
 Brain گزارش می‌دهد:
 

@@ -122,6 +122,9 @@ jobs:
           WEB_ORIGIN: http://localhost:3000
           # The whole suite comes from one address; the production limit (120/min) would ban it.
           API_RATE_LIMIT_PER_MINUTE: '5000'
+          # Sources are scanned by the ingestion worker the end-to-end run starts.
+          CLAMD_HOST: localhost
+          TEMPORAL_ADDRESS: localhost:7233
           # File answers are uploaded straight from the browser to the object store.
           S3_ENDPOINT: http://localhost:8333
           # The files host the web app's Content-Security-Policy lets the browser call.

@@ -65,9 +65,19 @@ export class ReportsService {
           conflicted: number;
         }>(
           `select count(*) filter (where v.status in ('pending', 'in_review'))::int as pending,
-                  count(*) filter (where v.status = 'expired' or (v.valid_until is not null and v.valid_until < now()))::int as expired,
+                  count(*) filter (where v.status = 'expired' or (v.status = 'approved' and v.valid_until is not null and v.valid_until <= now()))::int as expired,
                   count(*) filter (where v.status = 'needs_revision')::int as needs_revision,
-                  (select count(*) from knowledge_conflicts where status = 'open')::int as conflicted
+                  -- only conflicts between claims still in use, as the conflicts screen lists them
+                  (select count(*) from knowledge_conflicts k
+                     join claims ca on ca.id = k.claim_a_id
+                     join knowledge_versions va on va.id = ca.knowledge_version_id
+                     join knowledge_items ia on ia.id = va.item_id
+                     join claims cb on cb.id = k.claim_b_id
+                     join knowledge_versions vb on vb.id = cb.knowledge_version_id
+                     join knowledge_items ib on ib.id = vb.item_id
+                    where k.status = 'open'
+                      and ia.deleted_at is null and ia.current_version_id = va.id
+                      and ib.deleted_at is null and ib.current_version_id = vb.id)::int as conflicted
              from knowledge_items i join knowledge_versions v on v.id = i.current_version_id
             where i.deleted_at is null`,
         )

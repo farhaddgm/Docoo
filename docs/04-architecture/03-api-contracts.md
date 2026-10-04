@@ -2,7 +2,7 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.5.0
+version: 1.6.0
 owner: API Architecture
 last_updated: 2026-10-04
 notion_sync: true
@@ -109,7 +109,7 @@ notion_sync: true
 
 مجوزها: خواندن `project.read`، پاسخ `analysis.answer`، پایان زودهنگام `workflow.approve` ([ماتریس](../05-security/03-authorization-matrix.md)).
 
-## ۸. منابع و دانش (پیاده‌شده در 0.4.0)
+## ۸. منابع و دانش (پیاده‌شده در 0.4.0؛ افزوده‌های رابط در 0.14.0، [ADR-0016](../adr/0016-knowledge-screens.md))
 
 ### منابع (ING-*)
 
@@ -118,19 +118,22 @@ notion_sync: true
 - `POST /sources/text` و `POST /sources/url` — متن یا URL وارد همان خط لوله می‌شوند؛ URL پیش از ثبت با سیاست `ingestion.url_policy`/`ingestion.url_allowlist` و SSRF guard بررسی و رد آن `400 SOURCE_URL_REJECTED` و رویداد امنیتی است.
 - `POST /sources/{id}/versions` — نسخهٔ جدید فایل با `If-Match`؛ lineage با `supersedesVersionId` حفظ و دانش وابسته به نسخهٔ قبلی پس از finalize، `stale` می‌شود.
 - `POST /sources/{id}/versions/{versionId}/retry`، `GET /sources`، `GET /sources/{id}`، `GET /sources/{id}/versions/{versionId}/segments` (هر segment، locator صفحه/اسلاید/سلول/خط/بازهٔ زمانی دارد).
+- `GET /sources` علاوه بر `status` فیلتر `scopeType`+`scopeId` (هر دو یا هیچ) و `q` (عنوان؛ wildcardها داده‌اند نه الگو) دارد. هر منبع `scope.title` (حوزه یا پروژه) و `knowledge` (دانش ساخته‌شده از آن: `id`، `title`، `status`، `stale`) را می‌دهد؛ `GET /sources/{id}` نیز.
 - اگر workflow engine در دسترس نباشد فایل در quarantine می‌ماند و پاسخ `503 SOURCE_INGESTION_UNAVAILABLE` است.
 
 وضعیت نسخه: `uploaded → quarantined → scanning → accepted → extracting → indexed | partial`؛ رد در quarantine با `rejected` و `failureCode` (`malware_detected`, `mime_mismatch`, `extension_mismatch`, `unsupported_type`, `checksum_mismatch`, `size_mismatch`, `archive_*`, `url_*`). در نبود حکم «clean» از اسکنر، نسخه `quarantined` با `scan_unavailable` می‌ماند (fail closed).
 
 ### دانش (KNO-*)
 
-- `GET/POST /knowledge` — item با `sourceType`، `confidentiality`، `scopes` (workspace/topic/project و نقش اختیاری)، `provenance`، اعتبار زمانی و claim/citation.
+- `GET/POST /knowledge` — item با `sourceType`، `confidentiality`، `scopes` (workspace/topic/project و نقش اختیاری)، `provenance`، اعتبار زمانی و claim/citation. فهرست علاوه بر `status` (وضعیت دیده‌شده؛ `expired` برای تأییدشدهٔ دارای اعتبار تمام‌شده) فیلتر `sourceType`، `scopeType`+`scopeId` و `q` دارد و هر ردیف `versionNo`، `overall`، `decision`، `effectiveDecision`، `scopes` (با `title`)، `claimCount`، `openConflicts`، `validUntil` و `staleReason` می‌دهد.
 - `POST /knowledge/from-source` — دانش کاندید از منبع indexed با claimهای پیشنهادی و locator دقیق (`ING-008`)؛ منبع `partial` فقط با `acceptPartial`.
 - `GET /knowledge/{id}`، `GET /knowledge/{id}/versions`، `GET /knowledge/{id}/versions/{versionId}`، `DELETE /knowledge/{id}`.
-- `POST /knowledge/{id}/versions` — محتوای جدید با `If-Match`؛ نسخهٔ جدید `pending` و نسخهٔ قبلی `superseded` و ممیزی قبلی stale می‌شود.
+- `GET /knowledge-claims` — نمای ادعای صف ممیزی: ادعای نسخه‌های جاری با `supported`/`supportReason` (نتیجهٔ Brain؛ `null` پیش از ممیزی)، `citations` (`total`، `complete`)، `openConflicts` و `effectiveDecision`؛ فیلتر `status`، `supported` (`yes|no|unaudited`)، `conflicted`، `kind`، `knowledgeId`.
+- `POST /knowledge/{id}/versions` — محتوای جدید با `If-Match`؛ نسخهٔ جدید `pending` و نسخهٔ قبلی `superseded` و ممیزی قبلی stale می‌شود. به‌جای `content` می‌توان `sourceVersionId` (و `acceptPartial`) داد تا متن و ادعاها از نسخهٔ جدید همان منبع بیایند (تازه‌سازی دانش `stale`)؛ دقیقاً یکی از این دو، و `claims` فقط با `content`. دانشی که از منبع نیامده `409 KNOWLEDGE_NO_SOURCE` و نسخهٔ منبعی دیگر `404 SOURCE_VERSION_NOT_FOUND` می‌گیرد.
 - `POST /knowledge/{id}/submit-audit` — ممیزی Brain با rubric `brain-rubric-v1` (شش معیار وزن‌دار) و ثبت score، reason، نسخهٔ rubric و نتیجهٔ claimها.
 - `GET /audit-reviews` و `POST /audit-reviews/{id}/override` — override با دلیل حداقل ۲۰ نویسهٔ معنادار، انقضای اختیاری، نشان `humanOverride` و رویداد audit با شدت `critical`.
-- `GET /knowledge-conflicts` و `POST /knowledge-conflicts/{id}/resolve`.
+- `GET /knowledge-conflicts` و `POST /knowledge-conflicts/{id}/resolve`. فهرست فقط تعارض میان ادعاهای در حال استفاده (نسخهٔ جاری دانش حذف‌نشده) را می‌دهد، مگر `all=true`؛ فیلتر `status` و `knowledgeId`؛ هر طرف `title` سندش را دارد.
+- هر فهرست دانش، ادعا و منبع cursor بسته به فیلترهایش دارد؛ cursor یک فیلتر با فیلتر دیگر `400 *_CURSOR_INVALID` می‌گیرد.
 - `POST /knowledge/retrieve` — بازیابی ترکیبی lexical (FTS) و vector (`hash-ngram-v1`، pgvector) فقط روی دانش approved، جاری، معتبر و داخل scope/نقش؛ هر نتیجه `conflictWarnings` دارد و کل پاسخ در `retrieval_snapshots` با hash ثابت pin می‌شود. `GET /retrieval-snapshots/{id}` همان نتیجه را برمی‌گرداند.
 
 ## ۹. راه‌حل و ارزیابی (پیاده‌شده در 0.6.0)

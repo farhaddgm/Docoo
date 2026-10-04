@@ -22,9 +22,17 @@ import {
 import type { PoolClient, QueryResultRow } from 'pg';
 
 import { writeAudit } from '../common/audit.js';
-import { decodeCursor, encodeCursor, isoColumn } from '../common/pagination.js';
+import { visibleStatusSql } from '../common/knowledge-status.js';
+import {
+  containsPattern,
+  decodeCursor,
+  encodeCursor,
+  isoColumn,
+  listScope,
+} from '../common/pagination.js';
 import { badRequest, conflict, notFound, preconditionFailed } from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
+import { scopeKey, scopeTitles } from '../common/scope-titles.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { canonicalJson } from '../config/setting-value.js';
 import { SourcesService } from '../sources/sources.service.js';
@@ -61,7 +69,10 @@ export interface CreateKnowledgeInput {
 }
 
 export interface NewVersionInput {
-  readonly content: string;
+  /** New text; or `sourceVersionId` to take the text from a newer version of the same source. */
+  readonly content?: string | undefined;
+  readonly sourceVersionId?: string | undefined;
+  readonly acceptPartial?: boolean | undefined;
   readonly provenance?: Record<string, unknown> | undefined;
   readonly validFrom?: string | undefined;
   readonly validUntil?: string | undefined;
@@ -176,21 +187,70 @@ export class KnowledgeService {
 
   async list(
     context: WorkspaceRequestContext,
-    input: { limit: number; cursor?: string | undefined; status?: string | undefined },
+    input: {
+      limit: number;
+      cursor?: string | undefined;
+      status?: string | undefined;
+      sourceType?: KnowledgeSourceType | undefined;
+      scopeType?: ScopeType | undefined;
+      scopeId?: string | undefined;
+      q?: string | undefined;
+    },
   ) {
-    const scope = `${context.workspaceId}:knowledge:${input.status ?? 'all'}`;
+    const scope = listScope(`${context.workspaceId}:knowledge`, {
+      status: input.status,
+      sourceType: input.sourceType,
+      scopeType: input.scopeType,
+      scopeId: input.scopeId,
+      q: input.q,
+    });
     const cursor = input.cursor
       ? decodeCursor(input.cursor, scope, 'KNOWLEDGE_CURSOR_INVALID')
       : null;
     return this.database.run(context, async (client) => {
       const result = await client.query<
-        ItemRow & { status: string | null; stale_reason: string | null; sort_at: string }
+        ItemRow & {
+          sort_at: string;
+          version_no: number | null;
+          status: string | null;
+          stale_reason: string | null;
+          valid_until: string | null;
+          source_version_id: string | null;
+          overall: number | null;
+          review_decision: 'approved' | 'needs_revision' | 'rejected' | null;
+          override_decision: 'approve' | 'reject' | null;
+          override_expires_at: string | null;
+          claim_count: number | null;
+          open_conflicts: number | null;
+          scopes: { type: ScopeType; id: string; role: string | null }[];
+        }
       >(
-        `select i.*, v.status, v.stale_reason
-           from (select ${itemColumns}, created_at as sort_at from knowledge_items
-                  where workspace_id = $1 and deleted_at is null) i
+        `select i.*, v.version_no, ${visibleStatusSql('v')} as status, v.stale_reason,
+                ${isoColumn('v.valid_until', 'valid_until')}, v.source_version_id,
+                r.overall, r.decision as review_decision,
+                o.decision as override_decision, ${isoColumn('o.expires_at', 'override_expires_at')},
+                (select count(*)::int from claims c where c.knowledge_version_id = v.id) as claim_count,
+                (select count(distinct k.id)::int from knowledge_conflicts k
+                   join claims c on c.id in (k.claim_a_id, k.claim_b_id)
+                  where k.status = 'open' and c.knowledge_version_id = v.id) as open_conflicts,
+                (select coalesce(json_agg(json_build_object('type', s.scope_type, 'id', s.scope_id, 'role', s.role)
+                                          order by s.scope_type, s.scope_id, coalesce(s.role, '')), '[]'::json)
+                   from knowledge_scopes s where s.item_id = i.id) as scopes
+           from (select ${itemColumns}, created_at as sort_at from knowledge_items k
+                  where workspace_id = $1 and deleted_at is null
+                    and ($6::text is null or source_type::text = $6)
+                    and ($7::text is null or exists (
+                          select 1 from knowledge_scopes s
+                           where s.item_id = k.id and s.scope_type::text = $7 and s.scope_id = $8::uuid))
+                    and ($9::text is null or title ilike $9)) i
            left join knowledge_versions v on v.id = i.current_version_id
-          where ($2::text is null or v.status::text = $2)
+           left join lateral (select decision, overall from audit_reviews
+                               where knowledge_version_id = v.id
+                               order by created_at desc, id desc limit 1) r on true
+           left join lateral (select decision, expires_at from audit_overrides
+                               where knowledge_version_id = v.id and (expires_at is null or expires_at > now())
+                               order by created_at desc, id desc limit 1) o on true
+          where ($2::text is null or ${visibleStatusSql('v')} = $2)
             and ($3::timestamptz is null or (i.sort_at, i.id) < ($3::timestamptz, $4::uuid))
           order by i.sort_at desc, i.id desc
           limit $5`,
@@ -200,15 +260,176 @@ export class KnowledgeService {
           cursor?.at ?? null,
           cursor?.id ?? null,
           input.limit + 1,
+          input.sourceType ?? null,
+          input.scopeType ?? null,
+          input.scopeId ?? null,
+          input.q ? containsPattern(input.q) : null,
         ],
       );
       const rows = result.rows.slice(0, input.limit);
       const last = rows.at(-1);
+      const titles = await scopeTitles(
+        client,
+        rows.flatMap((row) => row.scopes),
+      );
+      const now = new Date();
       return {
         items: rows.map((row) => ({
           ...this.toItem(row),
+          versionNo: row.version_no,
           status: row.status,
           staleReason: row.stale_reason,
+          validUntil: row.valid_until,
+          sourceVersionId: row.source_version_id,
+          overall: row.overall,
+          decision: row.review_decision,
+          effectiveDecision: row.stale_reason
+            ? 'stale'
+            : effectiveDecision(
+                row.review_decision,
+                row.override_decision
+                  ? { decision: row.override_decision, expiresAt: row.override_expires_at }
+                  : null,
+                now,
+              ),
+          claimCount: row.claim_count ?? 0,
+          openConflicts: row.open_conflicts ?? 0,
+          scopes: row.scopes.map((entry) => ({
+            ...entry,
+            title: titles.get(scopeKey(entry)) ?? null,
+          })),
+        })),
+        nextCursor:
+          result.rows.length > input.limit && last
+            ? encodeCursor(scope, last.created_at, last.id)
+            : null,
+      };
+    });
+  }
+
+  /**
+   * The claim view of the audit queue: the claims of every current version, each with the
+   * Brain's verdict on it, its citations and the open conflicts it is part of.
+   */
+  async listClaims(
+    context: WorkspaceRequestContext,
+    input: {
+      limit: number;
+      cursor?: string | undefined;
+      status?: string | undefined;
+      supported?: 'yes' | 'no' | 'unaudited' | undefined;
+      conflicted?: boolean | undefined;
+      kind?: string | undefined;
+      knowledgeId?: string | undefined;
+    },
+  ) {
+    const scope = listScope(`${context.workspaceId}:claims`, {
+      status: input.status,
+      supported: input.supported,
+      conflicted: input.conflicted ? 'yes' : undefined,
+      kind: input.kind,
+      knowledgeId: input.knowledgeId,
+    });
+    const cursor = input.cursor
+      ? decodeCursor(input.cursor, scope, 'KNOWLEDGE_CURSOR_INVALID')
+      : null;
+    return this.database.run(context, async (client) => {
+      const result = await client.query<{
+        id: string;
+        ordinal: number;
+        text: string;
+        kind: string;
+        created_at: string;
+        item_id: string;
+        title: string;
+        version_id: string;
+        version_no: number;
+        status: string;
+        stale_reason: string | null;
+        review_decision: 'approved' | 'needs_revision' | 'rejected' | null;
+        override_decision: 'approve' | 'reject' | null;
+        override_expires_at: string | null;
+        supported: boolean | null;
+        support_reason: string | null;
+        citation_count: number;
+        complete_citations: number;
+        open_conflicts: number;
+      }>(
+        `select c.id, c.ordinal, c.text, c.kind, ${isoColumn('c.created_at', 'created_at')},
+                i.id as item_id, i.title, v.id as version_id, v.version_no,
+                ${visibleStatusSql('v')} as status, v.stale_reason,
+                r.decision as review_decision, o.decision as override_decision,
+                ${isoColumn('o.expires_at', 'override_expires_at')},
+                sup.supported, sup.reason as support_reason,
+                (select count(*)::int from citations ct where ct.claim_id = c.id) as citation_count,
+                (select count(*)::int from citations ct where ct.claim_id = c.id and ct.complete) as complete_citations,
+                (select count(distinct k.id)::int from knowledge_conflicts k
+                  where k.status = 'open' and c.id in (k.claim_a_id, k.claim_b_id)) as open_conflicts
+           from claims c
+           join knowledge_versions v on v.id = c.knowledge_version_id
+           join knowledge_items i on i.id = v.item_id and i.current_version_id = v.id
+                                 and i.deleted_at is null and i.workspace_id = $1
+           left join lateral (select decision, claim_results from audit_reviews
+                               where knowledge_version_id = v.id
+                               order by created_at desc, id desc limit 1) r on true
+           left join lateral (select decision, expires_at from audit_overrides
+                               where knowledge_version_id = v.id and (expires_at is null or expires_at > now())
+                               order by created_at desc, id desc limit 1) o on true
+           left join lateral (select (e->>'supported')::boolean as supported, e->>'reason' as reason
+                                from jsonb_array_elements(r.claim_results) e
+                               where e->>'claimId' = c.id::text limit 1) sup on true
+          where ($2::text is null or ${visibleStatusSql('v')} = $2)
+            and ($6::text is null or c.kind = $6)
+            and ($7::uuid is null or i.id = $7)
+            and ($8::text is null
+                 or ($8 = 'yes' and sup.supported is true)
+                 or ($8 = 'no' and sup.supported is false)
+                 or ($8 = 'unaudited' and sup.supported is null))
+            and (not $9::boolean or exists (
+                   select 1 from knowledge_conflicts k
+                    where k.status = 'open' and c.id in (k.claim_a_id, k.claim_b_id)))
+            and ($3::timestamptz is null or (c.created_at, c.id) < ($3::timestamptz, $4::uuid))
+          order by c.created_at desc, c.id desc
+          limit $5`,
+        [
+          context.workspaceId,
+          input.status ?? null,
+          cursor?.at ?? null,
+          cursor?.id ?? null,
+          input.limit + 1,
+          input.kind ?? null,
+          input.knowledgeId ?? null,
+          input.supported ?? null,
+          input.conflicted ?? false,
+        ],
+      );
+      const rows = result.rows.slice(0, input.limit);
+      const last = rows.at(-1);
+      const now = new Date();
+      return {
+        items: rows.map((row) => ({
+          id: row.id,
+          ordinal: row.ordinal,
+          text: row.text,
+          kind: row.kind,
+          knowledgeId: row.item_id,
+          title: row.title,
+          versionId: row.version_id,
+          versionNo: row.version_no,
+          status: row.status,
+          effectiveDecision: row.stale_reason
+            ? 'stale'
+            : effectiveDecision(
+                row.review_decision,
+                row.override_decision
+                  ? { decision: row.override_decision, expiresAt: row.override_expires_at }
+                  : null,
+                now,
+              ),
+          supported: row.supported,
+          supportReason: row.support_reason,
+          citations: { total: row.citation_count, complete: row.complete_citations },
+          openConflicts: row.open_conflicts,
         })),
         nextCursor:
           result.rows.length > input.limit && last
@@ -266,39 +487,24 @@ export class KnowledgeService {
   /** ING-008: knowledge candidate from an extracted source with located claim candidates. */
   async createFromSource(context: WorkspaceRequestContext, input: FromSourceInput) {
     return this.database.run(context, async (client) => {
-      const version = await client.query<{ id: string; status: string; sha256: string | null }>(
-        `select id, status, sha256 from source_versions where id = $1 and asset_id = $2`,
-        [input.versionId, input.sourceId],
+      const material = await this.sourceMaterial(
+        client,
+        input.versionId,
+        input.sourceId,
+        input.acceptPartial,
       );
-      const source = version.rows[0];
-      if (!source) throw notFound('SOURCE_VERSION_NOT_FOUND', 'The source version was not found.');
-      if (source.status !== 'indexed' && !(source.status === 'partial' && input.acceptPartial)) {
-        throw conflict(
-          'KNOWLEDGE_SOURCE_NOT_READY',
-          source.status === 'partial'
-            ? 'The source was only partly extracted; confirm with acceptPartial to use it.'
-            : 'Only an indexed source can become knowledge.',
-        );
-      }
       await this.assertScopes(client, context, input.scopes);
-      const segments = await client.query<{
-        id: string;
-        ordinal: number;
-        locator: Record<string, string | number>;
-        text: string;
-      }>(
-        `select id, ordinal, locator, text from source_segments where source_version_id = $1 order by ordinal`,
-        [input.versionId],
-      );
-      if (segments.rowCount === 0)
-        throw conflict('KNOWLEDGE_SOURCE_EMPTY', 'The source has no extracted text.');
-      const content = segments.rows.map((segment) => segment.text).join('\n\n');
-      const language = /[؀-ۿ]/u.test(content) ? 'fa' : 'en';
       const item = (
         await client.query<ItemRow>(
           `insert into knowledge_items (workspace_id, title, source_type, confidentiality, language, created_by)
            values ($1, $2, 'admin_provided', $3, $4, $5) returning ${itemColumns}`,
-          [context.workspaceId, input.title, input.confidentiality, language, context.actorId],
+          [
+            context.workspaceId,
+            input.title,
+            input.confidentiality,
+            material.language,
+            context.actorId,
+          ],
         )
       ).rows[0]!;
       await this.insertScopes(client, context, item.id, input.scopes);
@@ -306,41 +512,24 @@ export class KnowledgeService {
         declaration: input.declaration,
         sourceId: input.sourceId,
         sourceVersionId: input.versionId,
-        sourceSha256: source.sha256,
-        partial: source.status === 'partial',
+        sourceSha256: material.sha256,
+        partial: material.partial,
       });
       const knowledgeVersion = await this.insertVersion(client, context, item, 1, 'draft', {
-        content,
-        language,
+        content: material.content,
+        language: material.language,
         provenance,
         validFrom: undefined,
         validUntil: undefined,
         sourceVersionId: input.versionId,
       });
-      const candidates = extractClaimCandidates(
-        segments.rows.map((segment) => ({
-          ordinal: segment.ordinal,
-          locator: segment.locator,
-          text: segment.text,
-        })),
+      await this.insertSourceClaims(
+        client,
+        context,
+        knowledgeVersion.id,
+        input.versionId,
+        material,
       );
-      const segmentIds = new Map(segments.rows.map((segment) => [segment.ordinal, segment.id]));
-      for (const candidate of candidates) {
-        await client.query(
-          `insert into claims (workspace_id, knowledge_version_id, ordinal, text, normalized_text, kind, locator, source_segment_id)
-           values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
-          [
-            context.workspaceId,
-            knowledgeVersion.id,
-            candidate.ordinal,
-            candidate.text,
-            candidate.normalizedText,
-            candidate.kind,
-            JSON.stringify({ ...candidate.locator, sourceVersionId: input.versionId }),
-            segmentIds.get(candidate.locator.segment) ?? null,
-          ],
-        );
-      }
       const updated = await this.setCurrent(client, item.id, knowledgeVersion.id);
       await writeAudit(client, context, {
         action: 'knowledge.create_from_source',
@@ -349,11 +538,89 @@ export class KnowledgeService {
         after: {
           versionId: knowledgeVersion.id,
           sourceVersionId: input.versionId,
-          claimCandidates: candidates.length,
+          claimCandidates: material.candidates.length,
         },
       });
       return this.detail(client, updated);
     });
+  }
+
+  /**
+   * The text of an extracted source version and the claim candidates located in it. Only an
+   * indexed version qualifies; a partly extracted one needs the caller to accept that.
+   */
+  private async sourceMaterial(
+    client: PoolClient,
+    versionId: string,
+    sourceId: string,
+    acceptPartial: boolean,
+  ) {
+    const version = await client.query<{ id: string; status: string; sha256: string | null }>(
+      `select id, status, sha256 from source_versions where id = $1 and asset_id = $2`,
+      [versionId, sourceId],
+    );
+    const source = version.rows[0];
+    if (!source) throw notFound('SOURCE_VERSION_NOT_FOUND', 'The source version was not found.');
+    if (source.status !== 'indexed' && !(source.status === 'partial' && acceptPartial)) {
+      throw conflict(
+        'KNOWLEDGE_SOURCE_NOT_READY',
+        source.status === 'partial'
+          ? 'The source was only partly extracted; confirm with acceptPartial to use it.'
+          : 'Only an indexed source can become knowledge.',
+      );
+    }
+    const segments = await client.query<{
+      id: string;
+      ordinal: number;
+      locator: Record<string, string | number>;
+      text: string;
+    }>(
+      `select id, ordinal, locator, text from source_segments where source_version_id = $1 order by ordinal`,
+      [versionId],
+    );
+    if (segments.rowCount === 0)
+      throw conflict('KNOWLEDGE_SOURCE_EMPTY', 'The source has no extracted text.');
+    const content = segments.rows.map((segment) => segment.text).join('\n\n');
+    const language: 'fa' | 'en' = /[؀-ۿ]/u.test(content) ? 'fa' : 'en';
+    return {
+      content,
+      language,
+      sha256: source.sha256,
+      partial: source.status === 'partial',
+      candidates: extractClaimCandidates(
+        segments.rows.map((segment) => ({
+          ordinal: segment.ordinal,
+          locator: segment.locator,
+          text: segment.text,
+        })),
+      ),
+      segmentIds: new Map(segments.rows.map((segment) => [segment.ordinal, segment.id])),
+    };
+  }
+
+  private async insertSourceClaims(
+    client: PoolClient,
+    context: WorkspaceRequestContext,
+    knowledgeVersionId: string,
+    sourceVersionId: string,
+    material: Awaited<ReturnType<KnowledgeService['sourceMaterial']>>,
+  ): Promise<void> {
+    for (const candidate of material.candidates) {
+      await client.query(
+        `insert into claims (workspace_id, knowledge_version_id, ordinal, text, normalized_text, kind, locator, source_segment_id)
+         values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+        [
+          context.workspaceId,
+          knowledgeVersionId,
+          candidate.ordinal,
+          candidate.text,
+          candidate.normalizedText,
+          candidate.kind,
+          JSON.stringify({ ...candidate.locator, sourceVersionId }),
+          material.segmentIds.get(candidate.locator.segment) ?? null,
+        ],
+      );
+    }
   }
 
   async get(context: WorkspaceRequestContext, itemId: string) {
@@ -406,6 +673,21 @@ export class KnowledgeService {
       const previous = item.current_version_id
         ? await this.loadVersion(client, itemId, item.current_version_id)
         : null;
+      if ((input.content === undefined) === (input.sourceVersionId === undefined)) {
+        throw badRequest(
+          'KNOWLEDGE_INVALID_REQUEST',
+          'Give either new content or a newer source version, not both.',
+        );
+      }
+      const material = input.sourceVersionId
+        ? await this.newSourceMaterial(
+            client,
+            previous,
+            input.sourceVersionId,
+            !!input.acceptPartial,
+          )
+        : null;
+      const content = material ? material.content : input.content!;
       const next = (
         await client.query<{ next: number }>(
           'select coalesce(max(version_no), 0) + 1 as next from knowledge_versions where item_id = $1',
@@ -415,18 +697,29 @@ export class KnowledgeService {
       const provenance = this.provenance(context, item.source_type, {
         ...(previous?.provenance ?? {}),
         ...(input.provenance ?? {}),
+        ...(material && input.sourceVersionId
+          ? {
+              sourceVersionId: input.sourceVersionId,
+              sourceSha256: material.sha256,
+              partial: material.partial,
+            }
+          : {}),
         previousVersionId: previous?.id ?? null,
         reason: input.reason,
       });
       const version = await this.insertVersion(client, context, item, next, 'pending', {
-        content: input.content,
+        content,
         language: item.language,
         provenance,
         validFrom: input.validFrom ?? previous?.valid_from ?? undefined,
         validUntil: input.validUntil ?? previous?.valid_until ?? undefined,
-        sourceVersionId: previous?.source_version_id ?? null,
+        sourceVersionId: input.sourceVersionId ?? previous?.source_version_id ?? null,
       });
-      await this.insertClaims(client, context, version.id, input.content, input.claims);
+      if (material && input.sourceVersionId) {
+        await this.insertSourceClaims(client, context, version.id, input.sourceVersionId, material);
+      } else {
+        await this.insertClaims(client, context, version.id, content, input.claims);
+      }
       if (previous && previous.status !== 'superseded') {
         await client.query(`update knowledge_versions set status = 'superseded' where id = $1`, [
           previous.id,
@@ -449,11 +742,36 @@ export class KnowledgeService {
           versionId: version.id,
           status: 'pending',
           contentSha256: version.content_sha256,
+          sourceVersionId: input.sourceVersionId ?? null,
           previousReview: 'stale',
         },
       });
       return this.detail(client, updated);
     });
+  }
+
+  /** A new version of a knowledge item may only come from a newer version of its own source. */
+  private async newSourceMaterial(
+    client: PoolClient,
+    previous: VersionRow | null,
+    sourceVersionId: string,
+    acceptPartial: boolean,
+  ) {
+    const origin = previous?.source_version_id
+      ? (
+          await client.query<{ asset_id: string }>(
+            'select asset_id from source_versions where id = $1',
+            [previous.source_version_id],
+          )
+        ).rows[0]
+      : undefined;
+    if (!origin) {
+      throw conflict(
+        'KNOWLEDGE_NO_SOURCE',
+        'This knowledge was not built from a source, so it has no newer source version.',
+      );
+    }
+    return this.sourceMaterial(client, sourceVersionId, origin.asset_id, acceptPartial);
   }
 
   async delete(context: WorkspaceRequestContext, itemId: string, reason: string | undefined) {
@@ -652,22 +970,40 @@ export class KnowledgeService {
 
   // ---------------------------------------------------------------- conflicts (KNO-005)
 
+  /**
+   * Conflicts between claims that are still in use. A conflict whose claim belongs to a
+   * superseded version or a deleted item no longer reaches retrieval, so it is not listed
+   * unless `all` is asked for.
+   */
   async listConflicts(
     context: WorkspaceRequestContext,
-    input: { status?: 'open' | 'resolved' | undefined; limit: number },
+    input: {
+      status?: 'open' | 'resolved' | undefined;
+      knowledgeId?: string | undefined;
+      all?: boolean | undefined;
+      limit: number;
+    },
   ) {
     return this.database.run(context, async (client) => {
       const result = await client.query<Record<string, unknown>>(
         `select c.id, c.conflict_type as "conflictType", c.severity, c.analysis, c.status, c.resolution,
                 ${isoColumn('c.created_at', '"createdAt"')}, ${isoColumn('c.resolved_at', '"resolvedAt"')},
-                json_build_object('id', a.id, 'text', a.text, 'knowledgeId', va.item_id, 'versionId', va.id) as "claimA",
-                json_build_object('id', b.id, 'text', b.text, 'knowledgeId', vb.item_id, 'versionId', vb.id) as "claimB"
+                json_build_object('id', a.id, 'text', a.text, 'knowledgeId', va.item_id, 'versionId', va.id,
+                                  'title', ia.title) as "claimA",
+                json_build_object('id', b.id, 'text', b.text, 'knowledgeId', vb.item_id, 'versionId', vb.id,
+                                  'title', ib.title) as "claimB"
            from knowledge_conflicts c
            join claims a on a.id = c.claim_a_id join knowledge_versions va on va.id = a.knowledge_version_id
+           join knowledge_items ia on ia.id = va.item_id
            join claims b on b.id = c.claim_b_id join knowledge_versions vb on vb.id = b.knowledge_version_id
+           join knowledge_items ib on ib.id = vb.item_id
           where ($1::text is null or c.status::text = $1)
+            and ($3::uuid is null or va.item_id = $3 or vb.item_id = $3)
+            and ($4::boolean
+                 or (ia.deleted_at is null and ia.current_version_id = va.id
+                     and ib.deleted_at is null and ib.current_version_id = vb.id))
           order by c.created_at desc, c.id desc limit $2`,
-        [input.status ?? null, input.limit],
+        [input.status ?? null, input.limit, input.knowledgeId ?? null, input.all ?? false],
       );
       return result.rows;
     });
@@ -1439,6 +1775,10 @@ export class KnowledgeService {
         order by scope_type, scope_id, coalesce(role, '')`,
       [item.id],
     );
+    const titles = await scopeTitles(
+      client,
+      scopes.rows.map((scope) => ({ type: scope.scope_type, id: scope.scope_id })),
+    );
     const version = item.current_version_id
       ? await this.loadVersion(client, item.id, item.current_version_id)
       : null;
@@ -1462,6 +1802,7 @@ export class KnowledgeService {
         type: scope.scope_type,
         id: scope.scope_id,
         role: scope.role,
+        title: titles.get(scopeKey({ type: scope.scope_type, id: scope.scope_id })) ?? null,
       })),
       currentVersion: version
         ? {
