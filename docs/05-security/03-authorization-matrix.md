@@ -155,6 +155,23 @@ notion_sync: true
 | `POST /brain-reports`                                                | `knowledge.audit`        |
 | `GET /brain-reports`                                                 | `knowledge.read`         |
 | `GET /brain-reports/{id}`                                            | `knowledge.read`         |
+| `GET /smart/summary`                                                 | `smart.read`             |
+| `GET /smart/walker/progress`                                         | `smart.read`             |
+| `POST /smart/errors`                                                 | `workspace.read`         |
+| `GET /smart/errors`                                                  | `smart.read`             |
+| `GET /smart/errors/feed`                                             | `smart.read`             |
+| `GET /smart/errors/{id}`                                             | `smart.read`             |
+| `PATCH /smart/errors/{id}`                                           | `smart.manage`           |
+| `GET /smart/conversations`                                           | `smart.read`             |
+| `POST /smart/conversations`                                          | `smart.chat`             |
+| `GET /smart/conversations/{id}`                                      | `smart.read`             |
+| `DELETE /smart/conversations/{id}`                                   | `smart.chat`             |
+| `POST /smart/conversations/{id}/messages`                            | `smart.chat`             |
+| `GET /smart/issues`                                                  | `smart.read`             |
+| `POST /smart/issues`                                                 | `smart.manage`           |
+| `GET /smart/issues/{id}`                                             | `smart.read`             |
+| `PATCH /smart/issues/{id}`                                           | `smart.manage`           |
+| `DELETE /smart/issues/{id}`                                          | `smart.manage`           |
 
 ## endpointهای هویت
 

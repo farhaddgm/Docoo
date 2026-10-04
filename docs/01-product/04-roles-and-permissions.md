@@ -26,6 +26,7 @@ notion_sync: true
 - `workflow.approve/reject/override/retry/cancel`
 - `audit.read/export`
 - `retention.configure/purge`
+- `smart.read/chat/manage` ([اسمارت](06-smart.md))؛ گزارش خطای مرورگر فقط به `workspace.read` نیاز دارد
 
 ## قواعد حساس
 
