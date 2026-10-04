@@ -190,9 +190,48 @@ open_firewall() {
   fi
 }
 
+# Whole GiB available on the filesystem that holds Docker's data (empty if unknown).
+free_gb() {
+  local dir
+  dir=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || true)
+  df -Pk "${dir:-/var/lib/docker}" 2>/dev/null | awk 'NR == 2 { printf "%d", $4 / 1048576 }'
+}
+
+# A full disk stops PostgreSQL (the site goes down) and breaks the build half-way, so stop
+# *before* anything running is touched. Build cache unused for a week is dropped first; images,
+# containers and volumes are never removed here.
+require_free_gb() { # require_free_gb GiB "what needs the room"
+  local need=$1 free
+  free=$(free_gb)
+  [ -n "$free" ] || return 0
+  if [ "$free" -lt "$need" ]; then
+    say "Only ${free} GiB free for Docker; removing build cache older than 7 days…"
+    docker builder prune -f --filter until=168h >/dev/null 2>&1 || true
+    free=$(free_gb)
+  fi
+  [ "$free" -ge "$need" ] || fail "Only ${free} GiB free for Docker; $2 needs ${need} GiB. Free some space (docs/06-delivery/11-production-install.md, section 8) and run this again. The running site was not touched. DOCOO_MIN_FREE_GB changes the limit."
+}
+
+# Every update leaves the previous release's images and a pile of build cache behind.
+tidy() {
+  local ref repo
+  for ref in $("${compose[@]}" config --images 2>/dev/null | sort -u); do
+    repo=${ref%%:*}
+    case $repo in docoo-*) ;; *) continue ;; esac
+    # Images still used by a container are refused by docker, so nothing running is removed.
+    docker image ls --format '{{.Repository}}:{{.Tag}}' "$repo" | grep -vxF "$ref" \
+      | xargs -r docker rmi >/dev/null 2>&1 || true
+  done
+  docker builder prune -f --filter until=168h >/dev/null 2>&1 || true
+}
+
 start() {
+  local min=${DOCOO_MIN_FREE_GB:-5}
+  require_free_gb "$min" "building the images"
   say "Building and starting Docoo (the first time takes 10–20 minutes)…"
   "${compose[@]}" build
+  # Recreating the services needs room for PostgreSQL and the new containers.
+  require_free_gb $((min < 2 ? min : 2)) "restarting the services"
   "${compose[@]}" up -d
   for _ in $(seq 1 120); do
     [ "$("${compose[@]}" ps --format '{{.Health}}' api 2>/dev/null)" = healthy ] && return
@@ -233,6 +272,7 @@ update() {
   use_edge
   start
   attach_edge
+  tidy
   say "Docoo is now on ${latest:-the current checkout}."
 }
 

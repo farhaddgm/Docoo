@@ -2,9 +2,9 @@
 doc_id: DOCOO-PRODUCTION-INSTALL
 title: راهنمای سادهٔ نصب Docoo روی سرور
 status: active
-version: 1.1.0
+version: 1.2.0
 owner: Platform & Operations
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -77,6 +77,8 @@ sudo /opt/docoo/scripts/deploy/install.sh update
 
 آخرین نسخهٔ **منتشرشده** (تگ `vX.Y.Z`) نصب می‌شود، نه آخرین کامیت `main`؛ هر تغییر وقتی به سرور می‌رسد که شمارهٔ نسخه در `package.json` بالا رفته باشد (انتشار پس از مرج خودکار است). تغییرات پایگاه‌داده خودکار اعمال می‌شود و داده‌ها حفظ می‌شوند.
 
+پیش از ساخت imageها، اسکریپت فضای خالی دیسکِ Docker را بررسی می‌کند (دست‌کم ۵ گیگابایت؛ با متغیر `DOCOO_MIN_FREE_GB` قابل تغییر). اگر کم بود، اول cacheٔ build قدیمی‌تر از ۷ روز را پاک می‌کند و اگر باز هم کم بود، **پیش از دست‌زدن به سرویس‌های در حال اجرا** با یک پیام روشن متوقف می‌شود؛ سایت همچنان بالا می‌ماند. بعد از به‌روزرسانی موفق، imageهای نسخه‌های قبلی Docoo و cacheٔ بلااستفادهٔ بیش از ۷ روز پاک می‌شوند. volumeها و داده‌ها هرگز پاک نمی‌شوند.
+
 ## ۷. پشتیبان‌گیری
 
 اگر محل S3 را داده باشید، پایگاه‌داده **به‌طور پیوسته** (هر ۵ دقیقه) و یک نسخهٔ کامل هر ۲۴ ساعت، و فایل‌ها هر ۲۴ ساعت به آنجا فرستاده می‌شوند (۷ نسخهٔ کامل نگه داشته می‌شود). بازگردانی تا هر ثانیه از این بازه ممکن است؛ مراحلش در [runbook](10-runbooks.md#backup-restore) است. اگر S3 را بعداً تهیه کردید، مقادیر `BACKUP_S3_*` را در `/opt/docoo/deploy/.env` پر کنید و `install.sh update` را بزنید.
@@ -86,3 +88,10 @@ sudo /opt/docoo/scripts/deploy/install.sh update
 - وضعیت سرویس‌ها: `sudo docker compose --project-directory /opt/docoo/deploy -f /opt/docoo/deploy/compose.production.yaml ps`
 - گزارش خطا: همان فرمان با `logs --tail 100` به‌جای `ps`
 - اگر گواهی HTTPS ساخته نشد، معمولاً رکوردهای DNS هنوز فعال نشده‌اند؛ چند دقیقه بعد `install.sh update` را دوباره بزنید.
+- اگر دیسک پر شده باشد (نشانه: PostgreSQL مدام دوباره راه می‌افتد و در لاگش `No space left on device` است، یا `df -h /` ستون `Avail` را صفر نشان می‌دهد):
+  1. ببینید فضا را چه چیزی گرفته: `sudo docker system df`
+  2. cacheٔ build قدیمی را پاک کنید (بی‌خطر است؛ فقط build بعدی کندتر می‌شود): `sudo docker builder prune -f --filter until=24h`
+  3. imageهای نسخه‌های قدیمی Docoo را پاک کنید؛ imageِ در حال استفاده پاک نمی‌شود: `sudo docker image ls --filter 'reference=docoo-*'` و سپس `sudo docker rmi docoo-api:vX.Y.Z` برای هر نسخهٔ قدیمی.
+  4. PostgreSQL پس از آزادشدن جا خودش برمی‌گردد؛ سپس `install.sh update` را بزنید.
+
+  **هرگز** `docker volume prune`، `docker system prune --volumes` یا حذف دستی فایل‌های `pg_wal` را نزنید؛ این‌ها داده را از بین می‌برند.

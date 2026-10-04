@@ -2,9 +2,9 @@
 doc_id: DOCOO-RUNBOOKS
 title: runbook عملیات، حادثه و private beta
 status: active
-version: 1.0.0
+version: 1.0.1
 owner: SRE
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -82,7 +82,7 @@ notion_sync: true
 
 ## ۹. rollback release
 
-1. نسخهٔ قبلی را از GitHub Release (`vX.Y.Z`) انتخاب کن؛ imageها با همان tag ساخته می‌شوند.
+1. نسخهٔ قبلی را از GitHub Release (`vX.Y.Z`) انتخاب کن؛ imageها با همان tag ساخته می‌شوند (`install.sh update` بعد از هر به‌روزرسانی imageهای نسخه‌های قبلی را پاک می‌کند، پس بازگشت یک build تازه می‌سازد؛ cacheٔ ۷ روز اخیر آن را سریع می‌کند).
 2. migrationها فقط افزایشی‌اند؛ rollback کد بدون rollback پایگاه‌داده امن است. اگر migration جدید داده را تغییر داده، به‌جای down migration، restore نقطه‌ای (بخش ۸) به زمان پیش از deploy انجام بده.
 3. سرویس‌ها را به ترتیب worker، API و web به نسخهٔ قبلی برگردان؛ workflowهای در حال اجرا در Temporal ادامه می‌یابند چون نسخهٔ workflow deterministic است (آزمون replay در CI).
 4. داشبورد SLO را ۳۰ دقیقه پایش کن و نتیجه را در Issue حادثه ثبت کن.

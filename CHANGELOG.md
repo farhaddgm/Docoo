@@ -2,6 +2,16 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.11.1] — 2026-10-04
+
+The installer no longer fills the server's disk: an update that ran out of space left PostgreSQL unable to start and the site down.
+
+### Changed
+
+- `install.sh update` checks the free space of Docker's disk before building (default 5 GiB, `DOCOO_MIN_FREE_GB`) and again before restarting the services. It first removes build cache older than 7 days; if there is still not enough room it stops with a clear message **before** touching the running site.
+- After a successful update the images of the previous Docoo releases and build cache unused for 7 days are removed. Volumes, containers in use and other projects' images are never touched.
+- Production install guide: a "disk is full" recovery list; runbook: rollback now says the previous images are rebuilt.
+
 ## [0.11.0] — 2026-10-04
 
 Smart: guided walker, AI chat, error tracker and issue ledger ([docs](docs/01-product/06-smart.md)).
