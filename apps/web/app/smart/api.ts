@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost, query } from '../api-client';
+import { apiGet, apiPost, apiSend, query } from '../api-client';
 
 export type ErrorStatus = 'new' | 'seen' | 'fixed' | 'ignored';
 export type ErrorSource = 'server' | 'client';
@@ -133,7 +133,7 @@ export const smartApi = {
     apiGet<{ error: SmartError }>(`${base(workspaceId)}/errors/${id}`, signal),
 
   setErrorStatus: (workspaceId: string, id: string, status: ErrorStatus) =>
-    apiPatch<{ error: SmartError }>(`${base(workspaceId)}/errors/${id}`, { status }),
+    apiSend<{ error: SmartError }>('PATCH', `${base(workspaceId)}/errors/${id}`, { status }),
 
   conversations: (workspaceId: string, signal?: AbortSignal) =>
     apiGet<{ items: Conversation[] }>(`${base(workspaceId)}/conversations`, signal),
@@ -155,7 +155,7 @@ export const smartApi = {
     ).conversation,
 
   deleteConversation: (workspaceId: string, id: string) =>
-    apiDelete(`${base(workspaceId)}/conversations/${id}`),
+    apiSend('DELETE', `${base(workspaceId)}/conversations/${id}`).then(() => undefined),
 
   sendMessage: async (
     workspaceId: string,
@@ -192,7 +192,8 @@ export const smartApi = {
     workspaceId: string,
     id: string,
     patch: { status?: IssueStatus; title?: string; note?: string },
-  ) => apiPatch<{ issue: Issue }>(`${base(workspaceId)}/issues/${id}`, patch),
+  ) => apiSend<{ issue: Issue }>('PATCH', `${base(workspaceId)}/issues/${id}`, patch),
 
-  deleteIssue: (workspaceId: string, id: string) => apiDelete(`${base(workspaceId)}/issues/${id}`),
+  deleteIssue: (workspaceId: string, id: string) =>
+    apiSend('DELETE', `${base(workspaceId)}/issues/${id}`).then(() => undefined),
 };

@@ -17,7 +17,32 @@ Smart: guided walker, AI chat, error tracker and issue ledger ([docs](docs/01-pr
 
 ### Changed
 
-- The web `api-client` reports 5xx and network failures to Smart and gained `apiPatch`/`apiDelete`.
+- The web `api-client` reports 5xx and network failures to Smart.
+
+## [0.10.0] — 2026-10-04
+
+Core backoffice screens: the owner can now run a project from topic to signed document without the API.
+
+### Added
+
+- Topics page (TOP-001): list by status, create, edit with versions and a reason, archive, restore and delete; archive and delete show the projects that still use the topic first.
+- Projects (PRJ-001): list with status filter and paging, a create form with prioritized topics and conflict instructions, and the project page with status bar, next step, edit (problem locked after draft) and lifecycle actions. Pause, complete and reopen need a reason, archive and delete show their effect first, and "not ready" names what is missing.
+- Workflow review (WF-003..006): stage list with attempts and gate mode, human tasks with what to do, readable stage output, approve, reject with feedback, comment, edit as a new version, the attempt-limit decision with a reason, start, sync and cancel; the page follows a live run every 5 seconds while a stage runs and every 15 seconds while it waits for you.
+- Solutions (SOL-001..003): generate, tune weighted criteria (enabled weights must add up to 100) and select by priority with every score explained.
+- Documents (DOC-101..103, EVA-001..002): status, official character count and bounds, submit, evaluate, approve or reject, accept an exception (the badge stays visible), lock and reopen, DOCX/PDF/PPTX export with signed download, versions, diff and restore.
+- Dashboard quick actions to create a project or topic, and waiting tasks that open the project's workflow.
+- `availableCommands` on every project: the lifecycle commands its state accepts (and no `restore` after the 30-day window); the pages offer exactly these.
+- ADR-0013, the next-steps list in the roadmap and the implementation status in the backoffice UX document.
+
+### Changed
+
+- The language switch keeps the current section (`?tab=`) of a page.
+- Reads in the backoffice are repeated once after a network or gateway failure, and a rate-limited request shows a clear message.
+- The Playwright suite starts the agent worker and covers the whole flow (topics, projects, stage review, solutions, documents) in Persian and English with axe checks.
+
+### Fixed
+
+- AI providers page: a slow earlier load could bring back the previous default connection after a save had replaced it.
 
 ## [0.9.2] — 2026-10-03
 

@@ -2,17 +2,30 @@ import type { Locale } from '../i18n';
 import type { WalkerProgress, WalkerStep } from './api';
 
 /**
- * Pages that exist for a walker step. Steps without a page yet are shown as guidance only;
- * set the route here when the page ships (docs/01-product/05-backoffice-ux.md).
+ * Pages that serve a walker step; `null` means the page does not exist yet, so the step shows
+ * guidance only. Steps of a project open that project's section (`?tab=`).
  */
-const STEP_ROUTES: Readonly<Record<string, string | undefined>> = {
-  connect_provider: '/providers',
-  review_brain: '/brain',
+const STEP_TARGETS: Readonly<
+  Record<string, ((projectId: string | null) => string | null) | undefined>
+> = {
+  connect_provider: () => '/providers',
+  create_topic: () => '/topics',
+  create_project: () => '/projects/new',
+  activate_project: (projectId) => (projectId ? `/projects/${projectId}` : '/projects'),
+  complete_stages: (projectId) => (projectId ? `/projects/${projectId}?tab=workflow` : null),
+  choose_solution: (projectId) => (projectId ? `/projects/${projectId}?tab=solutions` : null),
+  evaluate_document: (projectId) => (projectId ? `/projects/${projectId}?tab=documents` : null),
+  approve_document: (projectId) => (projectId ? `/projects/${projectId}?tab=documents` : null),
+  review_brain: () => '/brain',
 };
 
 /** Localized path of the page that serves a step, or null while that page does not exist. */
-export function stepHref(locale: Locale, key: string): string | null {
-  const route = STEP_ROUTES[key];
+export function stepHref(
+  locale: Locale,
+  key: string,
+  projectId: string | null = null,
+): string | null {
+  const route = STEP_TARGETS[key]?.(projectId);
   return route ? `/${locale}${route}` : null;
 }
 

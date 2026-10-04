@@ -76,6 +76,7 @@ notion_sync: true
 ## ۵. پروژه‌ها
 
 - `GET/POST /projects` (فیلتر `status`، پیش‌فرض همهٔ وضعیت‌ها جز deleted)
+- هر پروژه `availableCommands` دارد: فرمان‌هایی که ماشین حالت در وضعیت فعلی می‌پذیرد (پس از مهلت ۳۰روزه `restore` حذف می‌شود)؛ بک‌آفیس دقیقاً همین‌ها را پیشنهاد می‌دهد.
 - `GET/PATCH /projects/{id}`
 - `POST /projects/{id}/activate|pause|resume|complete|reopen|archive|unarchive|restore`
 - `DELETE /projects/{id}` (۳۰ روز قابل بازیابی)

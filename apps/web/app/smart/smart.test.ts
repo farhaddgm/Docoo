@@ -164,10 +164,21 @@ describe('walker helpers', () => {
     expect(neighbourKey(progress('two'), 'one', -1)).toBe('one');
   });
 
-  it('links only to pages that exist, with the locale', () => {
+  it('links only to pages that exist, with the locale and the selected project', () => {
+    const id = '3f2b7c1e-6a0e-4a39-9d52-0a5a1c3b9f10';
     expect(stepHref('fa', 'connect_provider')).toBe('/fa/providers');
     expect(stepHref('en', 'review_brain')).toBe('/en/brain');
-    expect(stepHref('en', 'create_topic')).toBeNull();
+    expect(stepHref('en', 'create_topic')).toBe('/en/topics');
+    expect(stepHref('en', 'create_project')).toBe('/en/projects/new');
+    expect(stepHref('fa', 'activate_project')).toBe('/fa/projects');
+    expect(stepHref('fa', 'activate_project', id)).toBe(`/fa/projects/${id}`);
+    expect(stepHref('en', 'complete_stages', id)).toBe(`/en/projects/${id}?tab=workflow`);
+    expect(stepHref('en', 'choose_solution', id)).toBe(`/en/projects/${id}?tab=solutions`);
+    expect(stepHref('en', 'approve_document', id)).toBe(`/en/projects/${id}?tab=documents`);
+    // A project step without a selected project has nowhere to go; so do steps without a page.
+    expect(stepHref('en', 'complete_stages')).toBeNull();
+    expect(stepHref('en', 'add_sources')).toBeNull();
+    expect(stepHref('en', 'configure_ai')).toBeNull();
   });
 
   it('follows the project of the current page', () => {

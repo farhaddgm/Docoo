@@ -77,6 +77,11 @@ export function projectCommandRequiresReason(command: ProjectCommand): boolean {
   return reasonRequired.has(command);
 }
 
+/** Commands the project accepts in `status`, in the order the backoffice offers them. */
+export function availableProjectCommands(status: ProjectStatus): readonly ProjectCommand[] {
+  return projectCommands.filter((command) => commandSources[command].includes(status));
+}
+
 /** Target status of `command`, or null when the project already holds it (idempotent). */
 export function planProjectCommand(
   state: ProjectState,

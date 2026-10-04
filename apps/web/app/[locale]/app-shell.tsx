@@ -18,6 +18,8 @@ import { SmartRoot, SmartToggle } from '../smart/smart-root';
 /** Pages that exist; the others stay visible but disabled until their slice ships. */
 const implemented: Partial<Record<NavigationKey, string>> = {
   dashboard: '',
+  projects: '/projects',
+  topics: '/topics',
   brain: '/brain',
   providers: '/providers',
   costs: '/costs',
@@ -136,17 +138,18 @@ export function AppShell({
                     );
                   }
                   const href = `/${locale}${route}` as Route;
+                  // A page below a section (a project of /projects) keeps its section marked.
+                  const current =
+                    pathname === href ||
+                    (route !== '' && pathname.startsWith(`${href}/`)) ||
+                    // The two Smart pages share one navigation entry.
+                    (key === 'smart' && pathname.startsWith(`/${locale}/smart`));
                   return (
                     <li key={key}>
                       <Link
                         className="nav-item"
                         href={href}
-                        aria-current={
-                          pathname === href ||
-                          (key === 'smart' && pathname.startsWith(`/${locale}/smart`))
-                            ? 'page'
-                            : undefined
-                        }
+                        aria-current={current ? 'page' : undefined}
                       >
                         <NavIcon name={key} />
                         <span className="nav-label">{content.nav[key]}</span>
@@ -173,6 +176,10 @@ export function AppShell({
               <a
                 className="locale-link"
                 href={localizedPath(pathname, alternate)}
+                // Keep the section the page is showing (`?tab=…`); the hash may hold a secret.
+                onClick={(event) => {
+                  event.currentTarget.href = `${localizedPath(location.pathname, alternate)}${location.search}`;
+                }}
                 hrefLang={alternate}
                 lang={alternate}
                 aria-label={content.switchLanguageLabel}

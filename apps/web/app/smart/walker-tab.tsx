@@ -93,7 +93,7 @@ export function WalkerTab({
     onStep(currentKey);
   }, [currentKey, onStep]);
 
-  const href = step ? stepHref(locale, step.key) : null;
+  const href = step ? stepHref(locale, step.key, progress?.projectId ?? null) : null;
   const blockedLabel =
     step?.blockedBy === 'project'
       ? text.walker.status.blockedProject
@@ -197,7 +197,9 @@ export function WalkerTab({
                   </ul>
                 </>
               )}
-              {!href && <p className="muted">{text.walker.noPage}</p>}
+              {!href && step?.blockedBy !== 'project' && (
+                <p className="muted">{text.walker.noPage}</p>
+              )}
               <div className="toolbar">
                 {href && (
                   <Link className="primary-button link-button" href={href as Route}>
