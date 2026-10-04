@@ -1,0 +1,12 @@
+[Unit]
+Description=Update Docoo to the latest release
+Documentation=https://github.com/farhaddgm/Docoo/blob/main/docs/06-delivery/11-production-install.md
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# @ROOT@ is the install directory; scripts/deploy/install.sh fills it in.
+ExecStart=@ROOT@/scripts/deploy/install.sh update --scheduled
+# A release that needs new images takes a while to build.
+TimeoutStartSec=3h

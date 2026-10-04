@@ -2,9 +2,9 @@
 doc_id: DOCOO-RUNBOOKS
 title: runbook عملیات، حادثه و private beta
 status: active
-version: 1.0.0
+version: 1.1.0
 owner: SRE
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -80,7 +80,11 @@ notion_sync: true
   3. objectها را از manifest بازگردان و SHA-256 هر کدام را بسنج.
   4. `pnpm db:test:rls` و `ops:backup-drill` را روی محیط بازیابی‌شده اجرا کن، بعد سرویس‌ها را با `DATABASE_URL` جدید بالا بیاور.
 
+<a id="rollback-release"></a>
+
 ## ۹. rollback release
+
+اگر به‌روزرسانی شبانهٔ خودکار شکست خورده باشد، خودش به نسخهٔ قبلی برگشته است: `sudo journalctl -u docoo-update -n 80` را بخوان، علت را برطرف کن و با `sudo /opt/docoo/scripts/deploy/install.sh update` دستی بزن. برای جلوگیری از به‌روزرسانی تا رفع علت: `install.sh auto-update off`. در حالت دستی:
 
 1. نسخهٔ قبلی را از GitHub Release (`vX.Y.Z`) انتخاب کن؛ imageها با همان tag ساخته می‌شوند.
 2. migrationها فقط افزایشی‌اند؛ rollback کد بدون rollback پایگاه‌داده امن است. اگر migration جدید داده را تغییر داده، به‌جای down migration، restore نقطه‌ای (بخش ۸) به زمان پیش از deploy انجام بده.

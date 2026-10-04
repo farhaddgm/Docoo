@@ -2,6 +2,21 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.10.1] — 2026-10-04
+
+Releases now reach the server by themselves.
+
+### Added
+
+- Nightly automatic update: the installer sets up a systemd timer (about 03:30, with a random delay up to 30 minutes, catching up after downtime) that installs a newer release when there is one and does nothing otherwise. A release that does not become healthy is rolled back to the previous one automatically; the log is in `journalctl -u docoo-update`.
+- `install.sh auto-update on|off|status` to control it. Manual `install.sh update` is unchanged, always runs and waits for a running nightly update.
+- Servers installed earlier get the timer the next time `install.sh update` is run by hand.
+- Shell tests of the update logic (`pnpm deploy:test`, in CI) and Deploy smoke checks that the timer is installed, valid, switchable and that a night with nothing new changes nothing.
+
+### Changed
+
+- The install guide (§6), ADR-0012 and runbook §9 describe both ways to update and what the automatic rollback does.
+
 ## [0.10.0] — 2026-10-04
 
 Core backoffice screens: the owner can now run a project from topic to signed document without the API.

@@ -60,6 +60,7 @@ jobs:
       - run: pnpm docs:validate
       - run: pnpm qa:corpus
       - run: pnpm docs:test
+      - run: pnpm deploy:test
       - run: pnpm docs:sync:plan
       - run: pnpm db:migrate
         env:

@@ -2,7 +2,13 @@
 # Docoo installer for one Ubuntu/Debian server (docs/06-delivery/11-production-install.md).
 #
 #   sudo ./scripts/deploy/install.sh            # first install: asks a few questions
-#   sudo ./scripts/deploy/install.sh update     # pull the latest release and restart
+#   sudo ./scripts/deploy/install.sh update     # pull the latest release and restart, now
+#   sudo ./scripts/deploy/install.sh auto-update on|off|status
+#                                               # the nightly update (on by default)
+#
+# A systemd timer runs `update --scheduled` every night: it installs a newer release when one
+# exists, does nothing otherwise, and goes back to the previous release if the new one does
+# not become healthy. Manual `update` keeps working and always runs.
 #
 # Unattended: set DOCOO_UNATTENDED=1 and DOMAIN, ACME_EMAIL, ADMIN_EMAIL (+ optional values
 # below) in the environment. Secrets are generated once into deploy/.env and
@@ -14,8 +20,6 @@ deploy="$root/deploy"
 compose=(docker compose --project-directory "$deploy" -f "$deploy/compose.production.yaml")
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 fail() { printf '\n\033[31mError: %s\033[0m\n' "$*" >&2; exit 1; }
-
-[ "$(id -u)" -eq 0 ] || fail "Run with sudo (as root)."
 
 ask() { # ask VAR "question" "default"
   local name=$1 question=$2 default=${3:-} value=${!1:-}
@@ -190,14 +194,19 @@ open_firewall() {
   fi
 }
 
+wait_healthy() { # 0 when the API reports healthy within ten minutes
+  for _ in $(seq 1 120); do
+    [ "$("${compose[@]}" ps --format '{{.Health}}' api 2>/dev/null)" = healthy ] && return 0
+    sleep 5
+  done
+  return 1
+}
+
 start() {
   say "Building and starting Docoo (the first time takes 10–20 minutes)…"
   "${compose[@]}" build
   "${compose[@]}" up -d
-  for _ in $(seq 1 120); do
-    [ "$("${compose[@]}" ps --format '{{.Health}}' api 2>/dev/null)" = healthy ] && return
-    sleep 5
-  done
+  wait_healthy && return
   "${compose[@]}" logs --tail 50 migrate api
   fail "The API did not become healthy; see the logs above."
 }
@@ -226,7 +235,7 @@ update() {
   git -C "$root" fetch --tags --quiet
   local latest
   # DOCOO_UPDATE_REF pins another commit (used by the Deploy smoke test of a pull request).
-  latest=${DOCOO_UPDATE_REF:-$(git -C "$root" tag --list 'v*' --sort=-v:refname | head -1)}
+  latest=${DOCOO_UPDATE_REF:-$(latest_release)}
   [ -n "$latest" ] && git -C "$root" checkout --quiet "$latest"
   sed -i "s/^DOCOO_VERSION=.*/DOCOO_VERSION=${latest:-local}/" "$deploy/.env"
   set -a; . "$deploy/.env"; set +a
@@ -236,26 +245,201 @@ update() {
   say "Docoo is now on ${latest:-the current checkout}."
 }
 
-if [ "${1:-install}" = update ]; then
+# ---- nightly update ----------------------------------------------------------------------
+
+units=${DOCOO_SYSTEMD_DIR:-/etc/systemd/system}
+lock=/run/docoo-update.lock
+release_tag='^v[0-9]+\.[0-9]+\.[0-9]+$'
+
+env_value() { # env_value KEY: the value in deploy/.env (empty when missing)
+  [ -f "$deploy/.env" ] || return 0
+  sed -n "s/^$1=//p" "$deploy/.env" | tail -1
+}
+
+latest_release() { git -C "$root" tag --list 'v*' --sort=-v:refname | head -1; }
+fetch_releases() { git -C "$root" fetch --tags --quiet; }
+
+has_systemd() { command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; }
+
+render_unit() { sed "s|@ROOT@|$root|g" "$deploy/systemd/$1"; }
+
+install_auto_update() {
+  if ! has_systemd; then
+    printf 'systemd was not found, so Docoo will not update itself. Update with: sudo %s/scripts/deploy/install.sh update\n' "$root"
+    return 0
+  fi
+  local unit
+  for unit in docoo-update.service docoo-update.timer; do
+    render_unit "$unit" >"$units/$unit"
+  done
+  systemctl daemon-reload
+  systemctl enable --now docoo-update.timer >/dev/null
+}
+
+remove_auto_update() {
+  has_systemd || return 0
+  systemctl disable --now docoo-update.timer >/dev/null 2>&1 || true
+}
+
+auto_update_on() { [ "$(env_value AUTO_UPDATE)" != off ]; }
+
+announce_auto_update() {
+  auto_update_on || return 0
+  has_systemd || return 0
+  printf 'Docoo checks for a new release every night (about 03:30) and updates itself. Turn it off: sudo %s/scripts/deploy/install.sh auto-update off\n' "$root"
+  printf 'Docoo هر شب (حدود ساعت ۰۳:۳۰) نسخهٔ تازه را بررسی و خودکار نصب می‌کند. خاموش‌کردن: sudo %s/scripts/deploy/install.sh auto-update off\n' "$root"
+}
+
+auto_update_command() {
+  case "${1:-status}" in
+    on)
+      set_env AUTO_UPDATE on
+      install_auto_update
+      say "Automatic nightly updates are on. / به‌روزرسانی شبانه روشن شد."
+      ;;
+    off)
+      set_env AUTO_UPDATE off
+      remove_auto_update
+      say "Automatic nightly updates are off; update by hand with: sudo $root/scripts/deploy/install.sh update
+به‌روزرسانی شبانه خاموش شد."
+      ;;
+    status)
+      local setting
+      setting=$(env_value AUTO_UPDATE)
+      printf 'Setting:    AUTO_UPDATE=%s\n' "${setting:-on (default)}"
+      printf 'Version:    %s\n' "$(env_value DOCOO_VERSION)"
+      if has_systemd; then
+        printf 'Timer:      %s\n' "$(systemctl is-enabled docoo-update.timer 2>&1 || true)"
+        systemctl list-timers docoo-update.timer --no-pager 2>/dev/null | sed -n '1,2p' || true
+      else
+        printf 'Timer:      systemd not available\n'
+      fi
+      ;;
+    *) fail "Use: install.sh auto-update on|off|status" ;;
+  esac
+}
+
+# What the nightly run should do: off | no-release | up-to-date | newer-than-release | update.
+# A server that runs a release newer than the newest tag is never moved back; a server on any
+# other checkout (the first install is a clone of main) is brought onto the newest release.
+scheduled_plan() { # scheduled_plan AUTO CURRENT LATEST
+  local auto=$1 current=$2 latest=$3
+  if [ "$auto" = off ]; then echo off; return; fi
+  if [ -z "$latest" ]; then echo no-release; return; fi
+  if [ "$current" = "$latest" ]; then echo up-to-date; return; fi
+  if [[ $current =~ $release_tag ]] &&
+    [ "$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -1)" = "$current" ]; then
+    echo newer-than-release
+    return
+  fi
+  echo update
+}
+
+take_lock_now() { exec 9>"$lock"; flock -n 9; }
+take_lock_wait() { exec 9>"$lock"; flock -w 1800 9; }
+
+run_update_child() { DOCOO_UPDATE_LOCKED=1 "$root/scripts/deploy/install.sh" update; }
+
+# Puts the previous release back. Migrations only add, so the old code runs on the new schema
+# (runbook §9); the data is not touched.
+rollback() { # rollback VERSION
+  local previous=$1
+  if [ -z "$previous" ] || [ "$previous" = local ]; then return 1; fi
+  git -C "$root" checkout --quiet "$previous" || return 1
+  set_env DOCOO_VERSION "$previous"
+  set -a; . "$deploy/.env"; set +a
+  detect_edge
+  use_edge
+  "${compose[@]}" build && "${compose[@]}" up -d && wait_healthy
+}
+
+scheduled_update() {
+  if ! take_lock_now; then
+    say "Another update is running; skipping tonight's check."
+    return 0
+  fi
+  local current latest plan
+  current=$(env_value DOCOO_VERSION)
+  if ! fetch_releases; then
+    say "Could not reach GitHub; staying on ${current:-the current version}. Trying again tomorrow."
+    return 0
+  fi
+  latest=${DOCOO_UPDATE_REF:-$(latest_release)}
+  plan=$(scheduled_plan "$(env_value AUTO_UPDATE)" "$current" "$latest")
+  case "$plan" in
+    update) ;;
+    off) say "Automatic updates are off; nothing to do."; return 0 ;;
+    no-release) say "No release was found; nothing to do."; return 0 ;;
+    up-to-date) say "Already on the latest release ($current); nothing to do."; return 0 ;;
+    newer-than-release) say "Running $current, which is newer than the latest release ($latest); nothing to do."; return 0 ;;
+  esac
+  say "New release $latest found (running ${current:-unknown}); updating."
+  if run_update_child; then
+    say "Updated to $latest."
+    return 0
+  fi
+  say "The update to $latest failed; going back to ${current:-the previous release}."
+  if rollback "$current"; then
+    say "Back on $current and healthy. Look at the log above, then update by hand when the cause is fixed."
+  else
+    say "Going back did not work either. Run by hand: sudo $root/scripts/deploy/install.sh update"
+  fi
+  return 1
+}
+
+# ---- entry points -------------------------------------------------------------------------
+
+install_main() {
   install_docker
   detect_edge
-  update
-  exit 0
-fi
+  configure
+  set -a; . "$deploy/.env"; set +a
+  use_edge
+  open_firewall
+  start
+  attach_edge
+  ADMIN_LINK=""
+  create_admin
+  install_auto_update
+  say "Docoo is running at https://$DOMAIN"
+  if [ -n "$ADMIN_LINK" ]; then
+    printf 'Open this link once to choose your password (valid 24 hours):\n%s\n' "$ADMIN_LINK"
+    printf 'برای انتخاب گذرواژه این پیوند را یک بار باز کنید (۲۴ ساعت اعتبار دارد).\n'
+  fi
+  announce_auto_update
+}
 
-install_docker
-detect_edge
-configure
-set -a; . "$deploy/.env"; set +a
-use_edge
-open_firewall
-start
-attach_edge
-ADMIN_LINK=""
-create_admin
-say "Docoo is running at https://$DOMAIN"
-if [ -n "$ADMIN_LINK" ]; then
-  printf 'Open this link once to choose your password (valid 24 hours):\n%s\n' "$ADMIN_LINK"
-  printf 'برای انتخاب گذرواژه این پیوند را یک بار باز کنید (۲۴ ساعت اعتبار دارد).\n'
+main() {
+  [ "$(id -u)" -eq 0 ] || fail "Run with sudo (as root)."
+  case "${1:-install}" in
+    update)
+      if [ "${2:-}" = --scheduled ]; then
+        scheduled_update
+        return
+      fi
+      # A manual update waits for a running one; the scheduled child already holds the lock.
+      if [ -z "${DOCOO_UPDATE_LOCKED:-}" ]; then
+        take_lock_wait || fail "Another update is still running."
+      fi
+      install_docker
+      detect_edge
+      update
+      # Servers installed before the nightly update existed get the timer with their next update.
+      if auto_update_on; then
+        install_auto_update
+        announce_auto_update
+      fi
+      ;;
+    auto-update) auto_update_command "${2:-status}" ;;
+    install) install_main ;;
+    *) fail "Use: install.sh [update | auto-update on|off|status]" ;;
+  esac
+}
+
+# Sourcing the file (the shell tests do) defines the functions without running anything.
+# The `exit` matters: an update replaces this very file while it runs, and bash must not go on
+# reading the new contents after `main` returns.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main "$@"
+  exit "$?"
 fi
-[ -n "${BACKUP_S3_PREFIX:-}" ] || printf '\nWarning: off-host backups are not configured yet (BACKUP_S3_* in deploy/.env).\n'
