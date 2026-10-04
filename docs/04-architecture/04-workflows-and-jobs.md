@@ -26,7 +26,7 @@ for stage in [analysis, research, ideation, documentation, evaluation]:
 complete only when final selection documents approved
 ```
 
-## ۲. AnalysisWorkflow (پیاده‌شده در 0.11.0)
+## ۲. AnalysisWorkflow (پیاده‌شده در 0.12.0)
 
 تحلیل بخشی از `projectWorkflow` است ([ADR-0014](../adr/0014-analyst-questions-and-answers.md)): پیش از هر تلاش تولید تعریف، `analysisPhase` دورها را می‌گرداند تا approval:
 

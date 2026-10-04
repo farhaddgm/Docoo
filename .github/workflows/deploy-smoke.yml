@@ -99,6 +99,9 @@ jobs:
             -H 'Origin: https://localhost' -H 'Access-Control-Request-Method: PUT' \
             -H 'Access-Control-Request-Headers: content-type' |
             grep -i '^access-control-allow-origin: https://localhost'
+          # The page's Content-Security-Policy is built at run time and must allow that host.
+          curl -skI https://localhost/fa |
+            grep -i "^content-security-policy:.*connect-src 'self' https://files.localhost;"
           "${c[@]}" ps
       - name: Off-host backup (WAL-G base backup + WAL archive, object mirror)
         run: |

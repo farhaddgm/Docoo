@@ -32,6 +32,9 @@ documents:
   - path: docs/01-product/05-backoffice-ux.md
     doc_id: DOCOO-BACKOFFICE-UX
     section: 01 Product
+  - path: docs/01-product/06-smart.md
+    doc_id: DOCOO-SMART
+    section: 01 Product
   - path: docs/02-domain/01-domain-model.md
     doc_id: DOCOO-DOMAIN-MODEL
     section: 02 Domain

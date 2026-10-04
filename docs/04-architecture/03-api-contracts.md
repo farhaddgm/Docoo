@@ -98,7 +98,7 @@ notion_sync: true
 - commandهای بازبینی و تصمیم سرآیند `Idempotency-Key` می‌پذیرند؛ تکرار همان کلید پاسخ ذخیره‌شده را با `replayed: true` برمی‌گرداند و کلید تکراری با بدنهٔ متفاوت `409 IDEMPOTENCY_KEY_REUSED` است.
 - gate پیش‌فرض دستی است (`workflow.require_human_approval`)؛ در gate خودکار مرحله بدون human task جلو می‌رود.
 
-## ۷. تحلیل (پیاده‌شده در 0.11.0، [ADR-0014](../adr/0014-analyst-questions-and-answers.md))
+## ۷. تحلیل (پیاده‌شده در 0.12.0، [ADR-0014](../adr/0014-analyst-questions-and-answers.md))
 
 - `GET /projects/{id}/analysis` — وضعیت (`phase`: `not_started|answering|analysing|awaiting_approval|approved|cancelled`)، حدها (`minimum` ۳۰، `maximum` ۳۰۰، `batchSize` ۴۰)، `progress` (پرسیده، پاسخ‌داده، بی‌پاسخ، نامربوط، بعداً، منتظر)، `coverage` ده بُعد با سطح (`none|pending|not_applicable|gap|partial|covered`) و `coverageGaps`، `openBatchId`، `understanding` («آنچه فهمیدم» و «ابهام بعدی» آخرین دور)، `contradictions`، صف `followUps` («بعداً») و `definition` جاری با `unresolvedQuestions`. همهٔ بخش‌ها از یک snapshot خوانده می‌شوند.
 - `GET /projects/{id}/analysis/question-batches` — batchهای اجرای جاری با سؤال‌ها (شماره، بُعد، دلیل پرسش، ادامهٔ کدام سؤال)، پاسخ جاری هر سؤال و تعداد بازنگری‌ها.
@@ -215,3 +215,13 @@ Cursor opaque، `limit` سقف ۱۰۰، sort allowlist. filter fieldها schema-
 - mass assignment ممنوع؛ DTO allowlist؛
 - audit برای commandهای حساس؛
 - no secret/stack/raw provider response در error.
+
+## ۱۷. اسمارت (Unreleased)
+
+مسیرها زیر `/smart` هستند؛ شرح کامل، مجوزها و کد خطاها در [اسمارت](../01-product/06-smart.md).
+
+- `GET /smart/summary`، `GET /smart/walker/progress?projectId=`
+- `POST /smart/errors`، `GET /smart/errors`، `GET /smart/errors/feed?since=`، `GET|PATCH /smart/errors/{id}`
+- `GET|POST /smart/conversations`، `GET|DELETE /smart/conversations/{id}`، `POST /smart/conversations/{id}/messages` (۲۰۱؛ مدل همان لحظه و فقط‌خواندنی پاسخ می‌دهد؛ بدون تنظیم مدل `409 AI_NOT_CONFIGURED`)
+- `GET|POST /smart/issues`، `GET|PATCH|DELETE /smart/issues/{id}`
+- خطای 5xx پاسخ Nest را بدون تغییر می‌فرستد و پس از آن در خطایاب ثبت می‌شود؛ 4xx ثبت نمی‌شود.

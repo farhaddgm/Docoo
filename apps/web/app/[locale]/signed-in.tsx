@@ -59,6 +59,7 @@ export function SignedIn({
       title={title}
       subtitle={subtitle}
       showNavigation={state.kind === 'ready'}
+      workspaceId={state.kind === 'ready' ? state.identity.workspaces[0]?.id : undefined}
     >
       {state.kind === 'loading' && <p role="status">{shell.checkingSession}</p>}
       {state.kind === 'unavailable' && <p className="notice error">{shell.unavailable}</p>}

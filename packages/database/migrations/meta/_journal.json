@@ -110,15 +110,29 @@
     {
       "idx": 15,
       "version": "7",
-      "when": 1791105277775,
-      "tag": "0015_analyst_qa",
+      "when": 1791086807063,
+      "tag": "0015_smart",
       "breakpoints": true
     },
     {
       "idx": 16,
       "version": "7",
-      "when": 1791105282651,
-      "tag": "0016_analyst_qa_security",
+      "when": 1791086810443,
+      "tag": "0016_smart_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791108367607,
+      "tag": "0017_analyst_qa",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791108372516,
+      "tag": "0018_analyst_qa_security",
       "breakpoints": true
     }
   ]

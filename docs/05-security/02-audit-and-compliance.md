@@ -40,6 +40,10 @@ ingest، extraction result، audit، score، decision، override، conflict، ex
 
 create version، edit، validation، evaluation، approval، lock، restore، export و download حساس.
 
+### اسمارت
+
+تغییر وضعیت خطا (`smart.error_status_changed`)، ذخیره/ویرایش/حذف مورد دفتر (`smart.issue_saved/updated/deleted`) و حذف گفتگو (`smart.conversation_deleted`). فقط شناسه، وضعیت و نام فیلدهای تغییرکرده ثبت می‌شود؛ متن پیام و یادداشت هرگز.
+
 ### provider و secret
 
 configure، test، health، model refresh، rotate و disable؛ هیچ value ثبت نمی‌شود.
