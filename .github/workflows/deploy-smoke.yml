@@ -28,6 +28,13 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: Free disk space on the runner
+        # Six images, the object store and the databases fill the stock runner; SeaweedFS then
+        # refuses new volumes below 1% free and the off-host backup step fails for that reason.
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
       - name: An existing Caddy already serves another site on ports 80/443
         if: matrix.mode == 'edge'
         run: |
