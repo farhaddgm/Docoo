@@ -218,6 +218,8 @@ export const projects = pgTable(
     pauseReason: text('pause_reason'),
     configSnapshotId: uuid('config_snapshot_id'),
     clonedFromId: uuid('cloned_from_id'),
+    /** The analysis stage output the administrator approved as the problem definition (FR-ANL-005). */
+    approvedProblemVersionId: uuid('approved_problem_version_id'),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     purgeAfter: timestamp('purge_after', { withTimezone: true }),
@@ -1411,4 +1413,175 @@ export const brainReports = pgTable(
     index('brain_reports_latest_idx').on(table.workspaceId, table.scope, table.createdAt),
     index('brain_reports_project_idx').on(table.projectId, table.createdAt),
   ],
+);
+
+// Phase 7: analyst questions and answers, coverage and contradictions (ANL-*).
+
+/** One analysis per analysis stage run; keeps the limits it ran under and a finish request. */
+export const analysisSessions = pgTable(
+  'analysis_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    stageRunId: uuid('stage_run_id')
+      .notNull()
+      .references(() => stageRuns.id, { onDelete: 'cascade' }),
+    minimumQuestions: integer('minimum_questions').notNull().default(30),
+    maximumQuestions: integer('maximum_questions').notNull().default(300),
+    batchSize: integer('batch_size').notNull().default(40),
+    finishRequestedAt: timestamp('finish_requested_at', { withTimezone: true }),
+    finishRequestedBy: uuid('finish_requested_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    finishReason: text('finish_reason'),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('analysis_sessions_stage_uq').on(table.stageRunId),
+    index('analysis_sessions_project_idx').on(table.workspaceId, table.projectId),
+  ],
+);
+
+/** One model call of the analyst: reads the answers so far and opens a batch or hands over. */
+export const analysisRounds = pgTable(
+  'analysis_rounds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => analysisSessions.id, { onDelete: 'cascade' }),
+    roundNo: integer('round_no').notNull(),
+    basedOnBatchId: uuid('based_on_batch_id'),
+    outcome: text('outcome').notNull(),
+    reason: text('reason').notNull(),
+    understood: text('understood'),
+    nextAmbiguity: text('next_ambiguity'),
+    sufficient: boolean('sufficient'),
+    sufficiencyReason: text('sufficiency_reason'),
+    categoryNotes: jsonb('category_notes').notNull().default({}),
+    invocationId: uuid('invocation_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('analysis_rounds_number_uq').on(table.sessionId, table.roundNo)],
+);
+
+export const questionBatches = pgTable(
+  'question_batches',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => analysisSessions.id, { onDelete: 'cascade' }),
+    stageRunId: uuid('stage_run_id')
+      .notNull()
+      .references(() => stageRuns.id, { onDelete: 'cascade' }),
+    roundId: uuid('round_id')
+      .notNull()
+      .references(() => analysisRounds.id, { onDelete: 'cascade' }),
+    batchNo: integer('batch_no').notNull(),
+    status: text('status').notNull().default('open'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('question_batches_number_uq').on(table.sessionId, table.batchNo),
+    uniqueIndex('question_batches_round_uq').on(table.roundId),
+    index('question_batches_project_idx').on(table.workspaceId, table.projectId),
+  ],
+);
+
+export const analysisQuestions = pgTable(
+  'analysis_questions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => analysisSessions.id, { onDelete: 'cascade' }),
+    batchId: uuid('batch_id')
+      .notNull()
+      .references(() => questionBatches.id, { onDelete: 'cascade' }),
+    /** Position in the whole analysis, 1-based: the number the administrator sees. */
+    ordinal: integer('ordinal').notNull(),
+    category: text('category').notNull(),
+    text: text('text').notNull(),
+    rationale: text('rationale').notNull().default(''),
+    followUpOfId: uuid('follow_up_of_id'),
+    status: text('status').notNull().default('open'),
+    currentAnswerId: uuid('current_answer_id'),
+    answeredAt: timestamp('answered_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('analysis_questions_ordinal_uq').on(table.sessionId, table.ordinal),
+    index('analysis_questions_batch_idx').on(table.batchId),
+    index('analysis_questions_status_idx').on(table.sessionId, table.status),
+  ],
+);
+
+/** Every answer revision is kept; the question points at the current one. */
+export const analysisAnswers = pgTable(
+  'analysis_answers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    questionId: uuid('question_id')
+      .notNull()
+      .references(() => analysisQuestions.id, { onDelete: 'cascade' }),
+    revisionNo: integer('revision_no').notNull(),
+    status: text('status').notNull(),
+    text: text('text'),
+    attachments: jsonb('attachments').notNull().default([]),
+    submissionId: uuid('submission_id').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('analysis_answers_revision_uq').on(table.questionId, table.revisionNo),
+    index('analysis_answers_submission_idx').on(table.submissionId),
+  ],
+);
+
+export const analysisContradictions = pgTable(
+  'analysis_contradictions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => analysisSessions.id, { onDelete: 'cascade' }),
+    questionAId: uuid('question_a_id')
+      .notNull()
+      .references(() => analysisQuestions.id, { onDelete: 'cascade' }),
+    questionBId: uuid('question_b_id')
+      .notNull()
+      .references(() => analysisQuestions.id, { onDelete: 'cascade' }),
+    key: text('key').notNull(),
+    description: text('description').notNull(),
+    status: text('status').notNull().default('open'),
+    detectedRoundId: uuid('detected_round_id').notNull(),
+    resolvedRoundId: uuid('resolved_round_id'),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex('analysis_contradictions_key_uq').on(table.sessionId, table.key)],
 );
