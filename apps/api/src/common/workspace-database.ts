@@ -10,13 +10,20 @@ import type { WorkspaceRequestContext } from './request-context.js';
 export class WorkspaceDatabase {
   constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
 
+  /**
+   * `snapshot` reads everything from one point in time, so a view assembled from several
+   * queries cannot mix the states before and after a concurrent commit.
+   */
   async run<T>(
     context: WorkspaceRequestContext,
     operation: (client: PoolClient) => Promise<T>,
+    options: { snapshot?: boolean } = {},
   ): Promise<T> {
     const client = await this.pool.connect();
     try {
-      await client.query('begin');
+      await client.query(
+        options.snapshot ? 'begin isolation level repeatable read read only' : 'begin',
+      );
       await setDatabaseRequestContext(client, context);
       const result = await operation(client);
       await client.query('commit');

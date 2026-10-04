@@ -7,7 +7,7 @@ import { API_CONFIG } from '../tokens.js';
 
 export const WORKFLOW_ENGINE = Symbol('WORKFLOW_ENGINE');
 
-export type WorkflowSignal = 'pause' | 'resume' | 'cancel' | 'gate' | 'attemptDecision';
+export type WorkflowSignal = 'pause' | 'resume' | 'cancel' | 'gate' | 'attemptDecision' | 'answers';
 
 /** Starts and signals project workflows. */
 export interface WorkflowEngine {

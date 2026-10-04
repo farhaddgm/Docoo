@@ -3,19 +3,15 @@ import { createHash } from 'node:crypto';
 import { checkCostLimit, ProviderError, retryDelaySeconds } from '@docoo/providers';
 import type { Pool, PoolClient } from 'pg';
 
+import { createAnalysisActivities, loadDefinitionContext } from './analysis-activities.js';
+import type { AnalysisActivities } from './analysis-activities.js';
 import { audit, inWorkspace } from './db.js';
+import type { RunRef, StageRef } from './refs.js';
 import type { ProviderRuntime } from './runtime.js';
-import { MAX_ATTEMPTS, STAGE_SCHEMAS, stagePrompt, STAGES, type Stage } from './stages.js';
+import { loadSettings } from './settings.js';
+import { STAGE_SCHEMAS, stagePrompt, STAGES, type Stage } from './stages.js';
 
-export interface RunRef {
-  readonly workspaceId: string;
-  readonly projectId: string;
-  readonly runId: string;
-}
-
-export interface StageRef extends RunRef {
-  readonly stageRunId: string;
-}
+export type { RunRef, StageRef } from './refs.js';
 
 export interface StageStart {
   readonly stageRunId: string;
@@ -24,6 +20,8 @@ export interface StageStart {
   readonly attemptLimit: number;
   /** A gate already waiting for a decision (the workflow resumes into it after a restart). */
   readonly pendingGate: boolean;
+  /** Analyst rounds already stored for this stage (analysis only), so a restart numbers on. */
+  readonly roundsUsed: number;
 }
 
 export type AttemptResult =
@@ -35,7 +33,7 @@ export type AttemptResult =
       readonly reason: 'provider_failure' | 'configuration' | 'cost_limit';
     };
 
-export interface OrchestrationActivities {
+export interface OrchestrationActivities extends AnalysisActivities {
   startRun(ref: RunRef): Promise<{ paused: boolean }>;
   startStage(ref: RunRef & { stage: Stage }): Promise<StageStart>;
   runAttempt(ref: StageRef & { attemptNo: number; retryNo: number }): Promise<AttemptResult>;
@@ -49,37 +47,8 @@ export interface OrchestrationActivities {
   cancelRun(ref: RunRef & { reason: string | null }): Promise<void>;
 }
 
-interface Settings {
-  connectionId: string;
-  model: string;
-  manualGate: boolean;
-  attemptLimit: number;
-  costLimitUsd: number;
-}
-
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
-}
-
-async function settings(client: PoolClient, runId: string): Promise<Settings> {
-  const row = (
-    await client.query<{ resolved: Record<string, unknown> | null }>(
-      `select s.resolved from workflow_runs r left join config_snapshots s on s.id = r.config_snapshot_id where r.id = $1`,
-      [runId],
-    )
-  ).rows[0];
-  const values = row?.resolved ?? {};
-  const limit = Number(values['workflow.max_attempts_per_stage'] ?? MAX_ATTEMPTS);
-  return {
-    connectionId: typeof values['ai.connection_id'] === 'string' ? values['ai.connection_id'] : '',
-    model: typeof values['ai.model'] === 'string' ? values['ai.model'] : '',
-    manualGate: values['workflow.require_human_approval'] !== false,
-    attemptLimit: Math.max(
-      1,
-      Math.min(MAX_ATTEMPTS, Number.isFinite(limit) ? limit : MAX_ATTEMPTS),
-    ),
-    costLimitUsd: Number(values['ai.max_cost_usd_per_run'] ?? 20),
-  };
 }
 
 /**
@@ -98,6 +67,8 @@ export function createOrchestrationActivities(
     inWorkspace(pool, { workspaceId }, work);
 
   return {
+    ...createAnalysisActivities(pool, runtime, options),
+
     startRun: (ref) =>
       run(ref.workspaceId, async (client) => {
         const updated = await client.query<{ status: string }>(
@@ -123,7 +94,7 @@ export function createOrchestrationActivities(
 
     startStage: (ref) =>
       run(ref.workspaceId, async (client) => {
-        const config = await settings(client, ref.runId);
+        const config = await loadSettings(client, ref.runId);
         const sequence = STAGES.indexOf(ref.stage) + 1;
         await client.query(
           `insert into stage_runs (workspace_id, run_id, project_id, stage, sequence, status, gate_mode, attempt_limit, started_at)
@@ -135,7 +106,9 @@ export function createOrchestrationActivities(
             ref.projectId,
             ref.stage,
             sequence,
-            config.manualGate ? 'manual' : 'automatic',
+            // The administrator must approve the problem definition whatever the gate setting
+            // says: only approval closes the analysis (FR-ANL-005).
+            config.manualGate || ref.stage === 'analysis' ? 'manual' : 'automatic',
             config.attemptLimit,
           ],
         );
@@ -171,12 +144,17 @@ export function createOrchestrationActivities(
             after: { stage: ref.stage, sequence },
           });
         }
+        const rounds = await client.query<{ count: string }>(
+          `select count(*) as count from analysis_rounds r join analysis_sessions s on s.id = r.session_id where s.stage_run_id = $1`,
+          [stage.id],
+        );
         return {
           stageRunId: stage.id,
           status: stage.status,
           attemptsUsed: stage.attempts_used,
           attemptLimit: stage.attempt_limit,
           pendingGate: Boolean(pending.rowCount),
+          roundsUsed: Number(rounds.rows[0]?.count ?? 0),
         };
       }),
 
@@ -191,7 +169,7 @@ export function createOrchestrationActivities(
         ).rows[0];
         // A repeated command after success returns the stored output; no second provider call.
         if (existing?.output_id) return { reuse: existing.output_id } as const;
-        const config = await settings(client, ref.runId);
+        const config = await loadSettings(client, ref.runId);
         const spent =
           (
             await client.query<{ total: number | null }>(
@@ -229,6 +207,10 @@ export function createOrchestrationActivities(
           `select comment from stage_reviews where stage_run_id = $1 and action = 'reject' and comment is not null order by created_at`,
           [ref.stageRunId],
         );
+        const analysis =
+          stage.stage === 'analysis'
+            ? await loadDefinitionContext(client, ref.stageRunId, ref.projectId)
+            : null;
         let attemptId = existing?.id;
         if (!attemptId) {
           attemptId = (
@@ -270,6 +252,7 @@ export function createOrchestrationActivities(
             topics: topics.rows.map((row) => row.title),
             previous: previous.rows,
             feedback: feedback.rows.map((row) => row.comment),
+            analysis: analysis ?? undefined,
           }),
           stage: stage.stage,
         } as const;
@@ -436,6 +419,22 @@ export function createOrchestrationActivities(
             where stage_run_id = $1 and status = 'pending'`,
           [ref.stageRunId],
         );
+        if (updated.rowCount && updated.rows[0]!.stage === 'analysis') {
+          // The approved analysis output is the project's problem definition (FR-ANL-005).
+          await client.query(
+            `update projects set approved_problem_version_id =
+                    (select latest_output_id from stage_runs where id = $1)
+              where id = $2`,
+            [ref.stageRunId, ref.projectId],
+          );
+          await audit(client, ref.workspaceId, {
+            action: 'analysis.definition_approved',
+            targetType: 'stage_run',
+            targetId: ref.stageRunId,
+            projectId: ref.projectId,
+            after: { passedByDecision: ref.passedByDecision },
+          });
+        }
         if (updated.rowCount) {
           await audit(client, ref.workspaceId, {
             action: 'workflow.stage_completed',

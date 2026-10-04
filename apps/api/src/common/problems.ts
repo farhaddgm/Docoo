@@ -42,6 +42,13 @@ export function preconditionRequired(code: string, detail: string): HttpExceptio
   return new HttpException({ status: 428, title: 'Precondition Required', code, detail }, 428);
 }
 
+export function unprocessable(code: string, detail: string, extra?: object): HttpException {
+  return new HttpException(
+    { status: 422, title: 'Unprocessable Content', code, detail, ...extra },
+    422,
+  );
+}
+
 export function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
 }
