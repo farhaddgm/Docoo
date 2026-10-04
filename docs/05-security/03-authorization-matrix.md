@@ -2,9 +2,9 @@
 doc_id: DOCOO-AUTHORIZATION-MATRIX
 title: ماتریس مجوز endpointهای control plane
 status: active
-version: 1.2.0
+version: 1.3.0
 owner: Security & Engineering
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -123,6 +123,11 @@ notion_sync: true
 | `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/edit`    | `project.update`         |
 | `POST /projects/{id}/stages/{stageRunId}/attempt-decision`           | `workflow.override`      |
 | `GET /human-tasks`                                                   | `workspace.read`         |
+| `GET /projects/{id}/analysis`                                        | `project.read`           |
+| `GET /projects/{id}/analysis/question-batches`                       | `project.read`           |
+| `GET /projects/{id}/problem-definitions`                             | `project.read`           |
+| `POST /question-batches/{id}/answers`                                | `analysis.answer`        |
+| `POST /projects/{id}/analysis/finish`                                | `workflow.approve`       |
 | `GET /projects/{id}/solution-criteria`                               | `project.read`           |
 | `PUT /projects/{id}/solution-criteria`                               | `project.update`         |
 | `POST /projects/{id}/solutions/generate`                             | `project.run`            |
@@ -155,6 +160,23 @@ notion_sync: true
 | `POST /brain-reports`                                                | `knowledge.audit`        |
 | `GET /brain-reports`                                                 | `knowledge.read`         |
 | `GET /brain-reports/{id}`                                            | `knowledge.read`         |
+| `GET /smart/summary`                                                 | `smart.read`             |
+| `GET /smart/walker/progress`                                         | `smart.read`             |
+| `POST /smart/errors`                                                 | `workspace.read`         |
+| `GET /smart/errors`                                                  | `smart.read`             |
+| `GET /smart/errors/feed`                                             | `smart.read`             |
+| `GET /smart/errors/{id}`                                             | `smart.read`             |
+| `PATCH /smart/errors/{id}`                                           | `smart.manage`           |
+| `GET /smart/conversations`                                           | `smart.read`             |
+| `POST /smart/conversations`                                          | `smart.chat`             |
+| `GET /smart/conversations/{id}`                                      | `smart.read`             |
+| `DELETE /smart/conversations/{id}`                                   | `smart.chat`             |
+| `POST /smart/conversations/{id}/messages`                            | `smart.chat`             |
+| `GET /smart/issues`                                                  | `smart.read`             |
+| `POST /smart/issues`                                                 | `smart.manage`           |
+| `GET /smart/issues/{id}`                                             | `smart.read`             |
+| `PATCH /smart/issues/{id}`                                           | `smart.manage`           |
+| `DELETE /smart/issues/{id}`                                          | `smart.manage`           |
 
 ## endpointهای هویت
 

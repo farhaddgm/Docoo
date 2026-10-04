@@ -1,5 +1,7 @@
 import type { JsonSchema } from '@docoo/providers';
 
+import type { AnalysisContext } from './analysis.js';
+
 /** Fixed stage order (FR-WF-001). */
 export const STAGES = ['analysis', 'research', 'ideation', 'documentation', 'evaluation'] as const;
 export type Stage = (typeof STAGES)[number];
@@ -12,10 +14,44 @@ const textList = { type: 'array', items: text } as const;
 
 /** Structured output of each stage; every provider returns exactly this shape. */
 export const STAGE_SCHEMAS: Record<Stage, JsonSchema> = {
+  // The problem definition the administrator approves (FR-ANL-005). `assumptions` and
+  // `unresolved` are shown prominently in the final report (FR-ANL-006).
   analysis: {
     type: 'object',
-    properties: { problemStatement: text, assumptions: textList, openQuestions: textList },
-    required: ['problemStatement', 'assumptions', 'openQuestions'],
+    properties: {
+      problemStatement: text,
+      needStatement: text,
+      objectives: textList,
+      constraints: textList,
+      stakeholders: textList,
+      successCriteria: textList,
+      assumptions: textList,
+      unresolved: textList,
+      glossary: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: { term: text, meaning: text },
+          required: ['term', 'meaning'],
+          additionalProperties: false,
+        },
+      },
+      recommendedScope: text,
+      outOfScope: textList,
+    },
+    required: [
+      'problemStatement',
+      'needStatement',
+      'objectives',
+      'constraints',
+      'stakeholders',
+      'successCriteria',
+      'assumptions',
+      'unresolved',
+      'glossary',
+      'recommendedScope',
+      'outOfScope',
+    ],
     additionalProperties: false,
   },
   research: {
@@ -92,7 +128,7 @@ export const STAGE_SCHEMAS: Record<Stage, JsonSchema> = {
 
 const PURPOSE: Record<Stage, string> = {
   analysis:
-    'Analyse the problem: restate it precisely, list assumptions and the open questions for the administrator.',
+    "Write the problem definition from the administrator's answers: the problem and the real need, objectives, constraints, stakeholders, success criteria, a glossary, the assumptions you had to make, everything that stays unresolved (questions left for later or unanswered, open contradictions, dimensions never covered) and the recommended scope with what is out of it. Never turn an unanswered question into a fact and mark every assumption as an assumption.",
   research:
     'List the findings that matter for the problem, each with its source, and the remaining gaps.',
   ideation: 'Propose distinct solution ideas with a short description each.',
@@ -112,6 +148,8 @@ export interface StageContext {
   readonly previous: readonly { readonly stage: Stage; readonly content: unknown }[];
   /** Reviewer feedback from rejected earlier attempts of this stage. */
   readonly feedback: readonly string[];
+  /** The analyst's questions and answers; present when the analysis stage writes its definition. */
+  readonly analysis?: AnalysisContext | undefined;
 }
 
 /**
@@ -132,6 +170,16 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
     topics: context.topics,
     previousStages: context.previous,
     reviewerFeedback: context.feedback,
+    ...(context.analysis
+      ? {
+          questionsAndAnswers: context.analysis.transcript,
+          coverage: context.analysis.coverage,
+          coverageGaps: context.analysis.coverageGaps,
+          openContradictions: context.analysis.openContradictions,
+          earlierUnderstanding: context.analysis.summaries,
+          approvedDefinitionOfEarlierRun: context.analysis.priorDefinition,
+        }
+      : {}),
   };
   return { instructions, message: `<data>${JSON.stringify(data)}</data>` };
 }

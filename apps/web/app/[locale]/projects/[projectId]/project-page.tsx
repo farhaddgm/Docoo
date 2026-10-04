@@ -14,12 +14,13 @@ import { projectMessages } from '../messages';
 import { projectPageMessages } from './messages';
 import { DocumentsPanel } from './documents-panel';
 import { OverviewPanel } from './overview-panel';
+import { ProblemPanel } from './problem-panel';
 import type { ProjectDetail } from './project-types';
 import { SolutionsPanel } from './solutions-panel';
 import { TimelinePanel } from './timeline-panel';
 import { WorkflowPanel } from './workflow-panel';
 
-const tabs = ['overview', 'workflow', 'solutions', 'documents', 'timeline'] as const;
+const tabs = ['overview', 'problem', 'workflow', 'solutions', 'documents', 'timeline'] as const;
 type Tab = (typeof tabs)[number];
 
 const isTab = (value: string | null): value is Tab => tabs.some((tab) => tab === value);
@@ -199,6 +200,16 @@ function ProjectView({
             setProject(next);
             setRefreshKey((key) => key + 1);
           }}
+        />
+      )}
+      {tab === 'problem' && (
+        <ProblemPanel
+          locale={locale}
+          workspaceId={workspaceId}
+          projectId={projectId}
+          projectStatus={project.status}
+          refreshKey={refreshKey}
+          onChanged={changed}
         />
       )}
       {tab === 'workflow' && (

@@ -6,6 +6,7 @@ import { Reflector } from '@nestjs/core';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AnalysisController } from '../src/analysis/analysis.controller.js';
 import { AuditController } from '../src/audit/audit.controller.js';
 import {
   permissionMetadataKey,
@@ -21,6 +22,7 @@ import { ConfigController } from '../src/config/config.controller.js';
 import { KnowledgeController } from '../src/knowledge/knowledge.controller.js';
 import { ProjectsController } from '../src/projects/projects.controller.js';
 import { ProvidersController } from '../src/providers/providers.controller.js';
+import { SmartController } from '../src/smart/smart.controller.js';
 import { SourcesController } from '../src/sources/sources.controller.js';
 import { TopicsController } from '../src/topics/topics.controller.js';
 import { WorkflowController } from '../src/workflow/workflow.controller.js';
@@ -122,6 +124,11 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/attempt-decision':
     'workflow.override',
   'GET workspaces/:workspaceId/human-tasks': 'workspace.read',
+  'GET workspaces/:workspaceId/projects/:projectId/analysis': 'project.read',
+  'GET workspaces/:workspaceId/projects/:projectId/analysis/question-batches': 'project.read',
+  'GET workspaces/:workspaceId/projects/:projectId/problem-definitions': 'project.read',
+  'POST workspaces/:workspaceId/question-batches/:batchId/answers': 'analysis.answer',
+  'POST workspaces/:workspaceId/projects/:projectId/analysis/finish': 'workflow.approve',
   'GET workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.read',
   'PUT workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/solutions/generate': 'project.run',
@@ -156,6 +163,23 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/brain-reports': 'knowledge.audit',
   'GET workspaces/:workspaceId/brain-reports': 'knowledge.read',
   'GET workspaces/:workspaceId/brain-reports/:reportId': 'knowledge.read',
+  'GET workspaces/:workspaceId/smart/summary': 'smart.read',
+  'GET workspaces/:workspaceId/smart/walker/progress': 'smart.read',
+  'POST workspaces/:workspaceId/smart/errors': 'workspace.read',
+  'GET workspaces/:workspaceId/smart/errors': 'smart.read',
+  'GET workspaces/:workspaceId/smart/errors/feed': 'smart.read',
+  'GET workspaces/:workspaceId/smart/errors/:errorId': 'smart.read',
+  'PATCH workspaces/:workspaceId/smart/errors/:errorId': 'smart.manage',
+  'GET workspaces/:workspaceId/smart/conversations': 'smart.read',
+  'POST workspaces/:workspaceId/smart/conversations': 'smart.chat',
+  'GET workspaces/:workspaceId/smart/conversations/:conversationId': 'smart.read',
+  'DELETE workspaces/:workspaceId/smart/conversations/:conversationId': 'smart.chat',
+  'POST workspaces/:workspaceId/smart/conversations/:conversationId/messages': 'smart.chat',
+  'GET workspaces/:workspaceId/smart/issues': 'smart.read',
+  'POST workspaces/:workspaceId/smart/issues': 'smart.manage',
+  'GET workspaces/:workspaceId/smart/issues/:issueId': 'smart.read',
+  'PATCH workspaces/:workspaceId/smart/issues/:issueId': 'smart.manage',
+  'DELETE workspaces/:workspaceId/smart/issues/:issueId': 'smart.manage',
 };
 
 const controllers = [
@@ -168,8 +192,10 @@ const controllers = [
   KnowledgeController,
   ProvidersController,
   WorkflowController,
+  AnalysisController,
   DocumentsController,
   ReportsController,
+  SmartController,
 ];
 
 function routeTable(): Record<string, string | undefined> {

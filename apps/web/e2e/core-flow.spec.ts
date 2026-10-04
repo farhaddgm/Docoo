@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { documentMessages } from '../app/[locale]/projects/[projectId]/document-messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
+import { problemMessages } from '../app/[locale]/projects/[projectId]/problem-messages';
 import { solutionMessages } from '../app/[locale]/projects/[projectId]/solution-messages';
 import { workflowMessages } from '../app/[locale]/projects/[projectId]/workflow-messages';
 import { projectMessages } from '../app/[locale]/projects/messages';
@@ -22,6 +23,7 @@ const detail = projectPageMessages('fa');
 const flow = workflowMessages('fa');
 const solutionText = solutionMessages('fa');
 const documentText = documentMessages('fa');
+const problemText = problemMessages('fa');
 const stamp = Date.now().toString(36);
 const titles = {
   market: `بازار هدف ${stamp}`,
@@ -30,7 +32,35 @@ const titles = {
   second: `حوزهٔ دوم ${stamp}`,
   flow: `حوزهٔ جریان ${stamp}`,
   solutions: `حوزهٔ راه‌حل ${stamp}`,
+  analysis: `حوزهٔ تحلیل ${stamp}`,
 };
+
+/** Persian digits, as the pages show numbers. */
+const digits = (value: number) => new Intl.NumberFormat('fa').format(value);
+
+/**
+ * Plays the administrator in the Problem tab until the problem definition waits for a decision:
+ * one real answer per batch and the rest marked with the bulk button.
+ */
+async function completeAnalysis(page: Page) {
+  const wait = { timeout: 60_000 };
+  await page.getByRole('button', { name: detail.tabs.problem }).click();
+  const heading = page.locator('#batch-heading');
+  const definition = page.locator('#definition-heading');
+  for (let guard = 0; guard < 6; guard += 1) {
+    await expect(heading.or(definition)).toBeVisible(wait);
+    if (await definition.isVisible()) return;
+    const label = (await heading.innerText()).trim();
+    await page.locator('form[aria-labelledby="batch-heading"] textarea').first().fill('پاسخ آزمون');
+    await page.getByRole('button', { name: problemText.bulk.irrelevant }).click();
+    await page.getByRole('button', { name: problemText.save, exact: true }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: problemText.saved.complete }),
+    ).toBeVisible();
+    await expect(heading.filter({ hasText: label })).toHaveCount(0, wait);
+  }
+  throw new Error('The analysis did not reach a problem definition.');
+}
 
 const mainNavigation = (page: Page) => page.getByRole('navigation', { name: 'ناوبری اصلی' });
 const failureNotice = (page: Page) => page.locator('.notice.error[role="alert"]');
@@ -217,6 +247,8 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.goto(`/fa/projects/${created.project.id}`);
     await page.getByRole('button', { name: detail.commands['activate']! }).click();
     await expect(statusBadge(page)).toHaveText(detail.statuses['active']!);
+    // The analyst asks first; the problem definition reaches the review once it is answered.
+    await completeAnalysis(page);
     await page.getByRole('button', { name: detail.tabs.workflow }).click();
     await expect(page).toHaveURL(/[?&]tab=workflow/u);
 
@@ -268,6 +300,241 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('link', { name: 'Switch to English' }).click();
     await expect(page).toHaveURL(/\/en\/projects\/[0-9a-f-]{36}\?tab=timeline$/u);
     await expect(page.getByRole('heading', { level: 1, name: 'Project' })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('analysis: questions in batches, statuses, the later queue and the problem definition (ANL-001..006)', async ({
+    page,
+  }) => {
+    test.setTimeout(240_000);
+    await signInWithKeyboard(page);
+    await useFakeProvider(page);
+    const topic = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
+      code: `an-${stamp}`,
+      title: titles.analysis,
+    });
+    const created = await createViaApi<{ project: { id: string } }>(page, '/projects', {
+      code: `anl-${stamp}`,
+      title: 'تحلیل مسئله',
+      initialProblem: 'فروش آنلاین کند شده و علت آن را نمی‌دانیم.',
+      topics: [{ topicId: topic.topic.id }],
+    });
+    await page.goto(`/fa/projects/${created.project.id}`);
+    await page.getByRole('button', { name: detail.commands['activate']! }).click();
+    await expect(statusBadge(page)).toHaveText(detail.statuses['active']!);
+    await page.getByRole('button', { name: detail.tabs.problem }).click();
+    await expect(page).toHaveURL(/[?&]tab=problem/u);
+
+    const wait = { timeout: 60_000 };
+    const form = page.locator('form[aria-labelledby="batch-heading"]');
+    const question = (n: number) => page.locator(`#batch-question-${n}`);
+    const save = page.getByRole('button', { name: problemText.save, exact: true });
+    const heading = page.locator('#batch-heading');
+    const status = (text: string) => page.getByRole('status').filter({ hasText: text });
+
+    // The first batch: twenty questions, the limits, the coverage and the analyst's reading.
+    await expect(heading).toContainText(digits(1), wait);
+    await expect(form.locator('.question')).toHaveCount(20);
+    await expect(
+      page.getByText(
+        problemText.progressSummary
+          .replace('{asked}', digits(20))
+          .replace('{max}', digits(300))
+          .replace('{answered}', digits(0))
+          .replace('{min}', digits(30)),
+      ),
+    ).toBeVisible();
+    await expect(
+      page.locator('#coverage-heading').locator('xpath=..').locator('tbody tr'),
+    ).toHaveCount(10);
+    await expect(page.locator('#understanding-heading')).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    // "I answer" needs text or a file: nothing is saved and the problem is named.
+    await question(1).getByRole('radio', { name: problemText.modes['answered']! }).check();
+    await save.click();
+    await expect(question(1).locator('.field-error')).toHaveText(problemText.needAnswer);
+    await expectNoSeriousA11yViolations(page);
+
+    // Three answers, one "later" and one "irrelevant" are saved; the batch stays open.
+    await question(1).getByRole('textbox').fill('بودجهٔ ما ۵۰۰ میلیون تومان است');
+    await question(2).getByRole('textbox').fill('تیم پنج‌نفره است');
+    await question(3).getByRole('textbox').fill('مهلت تا پایان سه‌ماههٔ جاری است');
+    await question(4).getByRole('radio', { name: problemText.modes['later']! }).check();
+    await question(5).getByRole('radio', { name: problemText.modes['irrelevant']! }).check();
+    await save.click();
+    await expect(
+      status(problemText.saved.partial.replace('{saved}', digits(5)).replace('{left}', digits(15))),
+    ).toBeVisible();
+    await expect(question(1)).toContainText(
+      problemText.savedAs.replace('{mode}', problemText.modes['answered']!),
+    );
+    await expect(question(4)).toContainText(
+      problemText.savedAs.replace('{mode}', problemText.modes['later']!),
+    );
+
+    // A saved answer can be changed while its batch is open.
+    await question(1).getByRole('button', { name: problemText.editAnswer }).click();
+    await question(1).getByRole('textbox').fill('بودجهٔ ما ۶۰۰ میلیون تومان است');
+    await save.click();
+    await expect(
+      status(problemText.saved.partial.replace('{saved}', digits(1)).replace('{left}', digits(15))),
+    ).toBeVisible();
+    await expect(question(1)).toContainText('۶۰۰ میلیون');
+
+    // The rest goes to the "later" queue in one click; the batch is then complete.
+    await page.getByRole('button', { name: problemText.bulk.later }).click();
+    await expect(page.getByText(problemText.allSet)).toBeVisible();
+    await save.click();
+    await expect(status(problemText.saved.complete)).toBeVisible();
+
+    // The analyst reads the answers and asks the second batch: thirty questions are now asked.
+    await expect(heading).toContainText(digits(2), wait);
+    await expect(
+      page.getByText(
+        problemText.progressSummary
+          .replace('{asked}', digits(40))
+          .replace('{max}', digits(300))
+          .replace('{answered}', digits(3))
+          .replace('{min}', digits(30)),
+      ),
+    ).toBeVisible();
+    await expect(page.getByText(problemText.minimumReached)).toBeVisible();
+
+    // The "later" queue keeps sixteen questions; one of them is answered now.
+    const queue = page.locator('#followups-heading').locator('xpath=..').locator('ol > li');
+    await expect(queue).toHaveCount(16);
+    await page
+      .locator('#later-question-4')
+      .getByRole('button', { name: problemText.editAnswer })
+      .click();
+    await page
+      .locator('#later-question-4')
+      .getByRole('textbox')
+      .fill('گروه مالی مبلغ را تأیید کرد');
+    await page
+      .locator('#later-question-4')
+      .getByRole('button', { name: problemText.saveOne })
+      .click();
+    await expect(status(problemText.saved.single)).toBeVisible();
+    await expect(queue).toHaveCount(15);
+
+    // Second batch: one answer, the rest irrelevant.
+    await form.getByRole('textbox').first().fill('معیار موفقیت رشد ۲۰ درصدی فروش است');
+    await page.getByRole('button', { name: problemText.bulk.irrelevant }).click();
+    await save.click();
+    await expect(status(problemText.saved.complete)).toBeVisible();
+
+    // The problem definition: assumptions and unresolved points are set apart.
+    const definitionHeading = page.locator('#definition-heading');
+    await expect(definitionHeading).toBeVisible(wait);
+    await expect(definitionHeading).toContainText(
+      problemText.definitionStatuses['awaiting_approval']!,
+    );
+    await expect(page.locator('.highlight').first()).toBeVisible();
+    await expect(
+      page.locator('#unresolved-questions-heading').locator('xpath=..').locator('li'),
+    ).toHaveCount(15);
+    await expect(page.getByText(problemText.phases['awaiting_approval']!)).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    // Rejecting with feedback sends the analysis back; version 2 arrives.
+    await page.getByRole('button', { name: problemText.reject, exact: true }).click();
+    await page.locator('#definition-feedback').fill('بودجه و مهلت را صریح‌تر بنویسید');
+    await page.getByRole('button', { name: problemText.confirmReject }).click();
+    await expect(status(problemText.done.rejected)).toBeVisible();
+    await expect(definitionHeading).toContainText(
+      problemText.versionLabel.replace('{n}', digits(2)),
+      wait,
+    );
+
+    // Approval closes the analysis; the workflow goes on to research.
+    await page.getByRole('button', { name: problemText.approve }).click();
+    await expect(status(problemText.done.approved)).toBeVisible();
+    await expect(definitionHeading).toContainText(
+      problemText.definitionStatuses['approved']!,
+      wait,
+    );
+    await expect(page.getByText(problemText.phases['approved']!)).toBeVisible();
+    await page.getByRole('button', { name: detail.tabs.workflow }).click();
+    await expect(page.locator('.stage-list .badge.state-completed')).toHaveCount(1, wait);
+
+    // The same tab in English keeps the section and the state.
+    await page.getByRole('link', { name: 'Switch to English' }).click();
+    await expect(page).toHaveURL(/\/en\/projects\/[0-9a-f-]{36}\?tab=workflow$/u);
+    await page.getByRole('button', { name: projectPageMessages('en').tabs.problem }).click();
+    await expect(
+      page.getByRole('heading', { level: 3, name: problemMessages('en').title }),
+    ).toBeVisible();
+    await expect(page.getByText(problemMessages('en').phases['approved']!)).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('analysis: a file answer goes straight to the object store and stays attached (ANL-003, ING-001)', async ({
+    page,
+  }) => {
+    test.skip(!process.env['S3_ENDPOINT'], 'needs the object store (S3_ENDPOINT)');
+    test.setTimeout(120_000);
+    await signInWithKeyboard(page);
+    await useFakeProvider(page);
+    const topic = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
+      code: `fl-${stamp}`,
+      title: `حوزهٔ فایل ${stamp}`,
+    });
+    const created = await createViaApi<{ project: { id: string } }>(page, '/projects', {
+      code: `fil-${stamp}`,
+      title: 'پاسخ فایلی',
+      initialProblem: 'ریزش مشتریان را بررسی کنید.',
+      topics: [{ topicId: topic.topic.id }],
+    });
+    await page.goto(`/fa/projects/${created.project.id}`);
+    await page.getByRole('button', { name: detail.commands['activate']! }).click();
+    await expect(statusBadge(page)).toHaveText(detail.statuses['active']!);
+    await page.getByRole('button', { name: detail.tabs.problem }).click();
+    await expect(page.locator('#batch-heading')).toBeVisible({ timeout: 60_000 });
+
+    const first = page.locator('#batch-question-1');
+    await first.locator('input[type="file"]').setInputFiles({
+      name: 'survey.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('ریزش مشتریان در سه‌ماههٔ گذشته ۱۴ درصد بود.'),
+    });
+    await expect(first.getByRole('listitem').filter({ hasText: 'survey.txt' })).toBeVisible({
+      timeout: 30_000,
+    });
+    await page.getByRole('button', { name: problemText.save, exact: true }).click();
+    await expect(
+      page.getByRole('status').filter({
+        hasText: problemText.saved.partial
+          .replace('{saved}', digits(1))
+          .replace('{left}', digits(19)),
+      }),
+    ).toBeVisible();
+    await expect(first).toContainText(`${problemText.attachmentLabel}: survey.txt`);
+
+    // The record keeps the file as the answer to that question.
+    const { workspaceId } = await apiSession(page);
+    const listed = (await (
+      await page.request.get(
+        `/api/workspaces/${workspaceId}/projects/${created.project.id}/analysis/question-batches`,
+      )
+    ).json()) as {
+      batches: {
+        questions: { number: number; answer: { attachments: { title: string }[] } | null }[];
+      }[];
+    };
+    const answer = listed.batches[0]!.questions.find((item) => item.number === 1)!.answer;
+    expect(answer?.attachments.map((file) => file.title)).toEqual(['survey.txt']);
+
+    // A type the pipeline does not accept is refused with a clear message and attaches nothing.
+    const second = page.locator('#batch-question-2');
+    await second.locator('input[type="file"]').setInputFiles({
+      name: 'program.exe',
+      mimeType: 'application/octet-stream',
+      buffer: Buffer.from('MZ'),
+    });
+    await expect(failureNotice(page)).toBeVisible();
+    await expect(second.getByRole('listitem').filter({ hasText: 'program.exe' })).toHaveCount(0);
     await expectNoSeriousA11yViolations(page);
   });
 

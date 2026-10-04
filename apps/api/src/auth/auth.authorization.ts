@@ -53,6 +53,7 @@ export const WORKSPACE_PERMISSIONS = [
   'provider.configure',
   'provider.test',
   'provider.rotate_secret',
+  'analysis.answer',
   'workflow.approve',
   'workflow.reject',
   'workflow.override',
@@ -62,6 +63,9 @@ export const WORKSPACE_PERMISSIONS = [
   'audit.export',
   'retention.configure',
   'retention.purge',
+  'smart.read',
+  'smart.chat',
+  'smart.manage',
 ] as const;
 
 export type WorkspacePermission = (typeof WORKSPACE_PERMISSIONS)[number];

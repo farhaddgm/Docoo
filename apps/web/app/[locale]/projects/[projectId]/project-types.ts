@@ -19,6 +19,7 @@ export interface ProjectDetail {
     conflictInstruction: string | null;
     topicStatus: string;
   }[];
+  approvedProblemVersionId: string | null;
   version: number;
   deletedAt: string | null;
   purgeAfter: string | null;

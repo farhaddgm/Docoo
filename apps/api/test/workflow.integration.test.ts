@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { Worker } from '@temporalio/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { AnalysisDriver } from './support/analysis.js';
 import type { TemporalTestRuntime } from './support/harness.js';
 import { adminUrl, createHarness, temporalAddress, type Harness } from './support/harness.js';
 
@@ -27,6 +28,7 @@ let cookie: string;
 let temporal: TemporalTestRuntime;
 let topicId: string;
 let connectionId: string;
+let analysis: AnalysisDriver;
 const api = (suffix: string) => `/v1/workspaces/${h.ids.workspaceA}${suffix}`;
 
 async function setting(key: string, value: unknown, scopeType = 'workspace', scopeId?: string) {
@@ -88,6 +90,12 @@ const waiting = (stage: string) => (view: Overview) =>
   stageOf(view, stage).status === 'waiting_for_human' &&
   Boolean(stageOf(view, stage).pendingGateOutputId);
 
+/** The administrator answers the analyst's questions until the definition waits for a decision. */
+async function analysisGate(projectId: string): Promise<Overview> {
+  await analysis.reachDefinition(projectId);
+  return waitFor(projectId, waiting('analysis'), 'analysis gate');
+}
+
 async function decide(
   projectId: string,
   stage: StageView,
@@ -119,6 +127,7 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       h = await createHarness('workflow', { workflow: true });
       temporal = h.engine as TemporalTestRuntime;
       cookie = await h.login(h.emails.a);
+      analysis = new AnalysisDriver(h, cookie, h.ids.workspaceA);
       const topic = await h.request('POST', api('/topics'), {
         cookie,
         payload: { code: 'retail', title: 'Retail' },
@@ -140,8 +149,10 @@ describe.skipIf(!adminUrl || !temporalAddress)(
 
     it('WF-001/003: activation starts the fixed stages; each manual gate waits for a human and updates the timeline', async () => {
       const projectId = await project('ordered');
-      let view = await waitFor(projectId, waiting('analysis'), 'analysis gate');
+      await analysis.waitFor(projectId, (state) => state.phase === 'answering', 'first questions');
+      let view = await overview(projectId);
       expect(view.run).toMatchObject({ status: 'waiting_for_human', currentStage: 'analysis' });
+      expect(view.humanTasks).toEqual([expect.objectContaining({ kind: 'analysis_answers' })]);
       expect(view.stages.map((stage) => stage.stage)).toEqual([
         'analysis',
         'research',
@@ -150,6 +161,7 @@ describe.skipIf(!adminUrl || !temporalAddress)(
         'evaluation',
       ]);
       expect(view.stages.slice(1).every((stage) => stage.status === 'pending')).toBe(true);
+      view = await analysisGate(projectId);
       expect(view.humanTasks).toEqual([expect.objectContaining({ kind: 'gate_review' })]);
 
       const timeline = await h.request('GET', api(`/projects/${projectId}/timeline`), { cookie });
@@ -162,6 +174,7 @@ describe.skipIf(!adminUrl || !temporalAddress)(
           'workflow.run_created',
           'workflow.started',
           'workflow.stage_started',
+          'analysis.batch_opened',
           'workflow.waiting_for_human',
         ]),
       );
@@ -193,6 +206,9 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       const projectId = await project('automatic', (id) =>
         setting('workflow.require_human_approval', false, 'project', id),
       );
+      // Only approval of the problem definition closes the analysis, whatever the gate setting.
+      const gate = await analysisGate(projectId);
+      expect((await decide(projectId, stageOf(gate, 'analysis'), 'approve')).statusCode).toBe(200);
       const view = await waitFor(
         projectId,
         (current) => current.run?.status === 'completed',
@@ -204,14 +220,14 @@ describe.skipIf(!adminUrl || !temporalAddress)(
         [projectId],
       );
       expect(gates.rows).toHaveLength(5);
-      expect(
-        gates.rows.every((gate) => gate.mode === 'automatic' && gate.status === 'approved'),
-      ).toBe(true);
+      expect(gates.rows.every((gate) => gate.status === 'approved')).toBe(true);
+      expect(gates.rows.filter((gate) => gate.mode === 'manual')).toHaveLength(1);
+      expect(gates.rows.filter((gate) => gate.mode === 'automatic')).toHaveLength(4);
     }, 60_000);
 
     it('WF-002: a repeated command has no second side effect and the workflow replays deterministically', async () => {
       const projectId = await project('idempotent');
-      const view = await waitFor(projectId, waiting('analysis'), 'analysis gate');
+      const view = await analysisGate(projectId);
       const stage = stageOf(view, 'analysis');
       const first = await decide(projectId, stage, 'approve', undefined, 'approve-analysis-0001');
       const second = await decide(projectId, stage, 'approve', undefined, 'approve-analysis-0001');
@@ -260,7 +276,7 @@ describe.skipIf(!adminUrl || !temporalAddress)(
 
     it('WF-004: pause stops at the next safe boundary, a worker restart loses nothing, resume continues, cancel keeps outputs', async () => {
       const projectId = await project('pausable');
-      let view = await waitFor(projectId, waiting('analysis'), 'analysis gate');
+      let view = await analysisGate(projectId);
       const current = await projectStatus(projectId);
       const paused = await h.request('POST', api(`/projects/${projectId}/pause`), {
         cookie,
@@ -313,7 +329,7 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       const projectId = await project('limited', (id) =>
         setting('workflow.max_attempts_per_stage', 2, 'project', id),
       );
-      let view = await waitFor(projectId, waiting('analysis'), 'attempt 1');
+      let view = await analysisGate(projectId);
       expect(
         (await decide(projectId, stageOf(view, 'analysis'), 'reject', 'Too vague')).statusCode,
       ).toBe(200);
@@ -389,7 +405,7 @@ describe.skipIf(!adminUrl || !temporalAddress)(
 
     it('WF-006: an edit creates a new version and invalidates the earlier approval; comments are kept', async () => {
       const projectId = await project('editable');
-      const view = await waitFor(projectId, waiting('analysis'), 'analysis gate');
+      const view = await analysisGate(projectId);
       const stage = stageOf(view, 'analysis');
       const original = stage.pendingGateOutputId!;
       const comment = await h.request(
@@ -407,7 +423,19 @@ describe.skipIf(!adminUrl || !temporalAddress)(
         {
           cookie,
           payload: {
-            content: { problemStatement: 'Edited statement', assumptions: [], openQuestions: [] },
+            content: {
+              problemStatement: 'Edited statement',
+              needStatement: 'Keep customers',
+              objectives: [],
+              constraints: [],
+              stakeholders: [],
+              successCriteria: [],
+              assumptions: [],
+              unresolved: [],
+              glossary: [],
+              recommendedScope: 'Retail only',
+              outOfScope: [],
+            },
             reason: 'Sharper wording',
           },
         },
@@ -490,7 +518,7 @@ describe.skipIf(!adminUrl || !temporalAddress)(
         payload: { expectedVersion: pausedProject.version },
       });
       expect(resumed.statusCode, resumed.body).toBe(200);
-      const after = await waitFor(projectId, waiting('analysis'), 'analysis after resume');
+      const after = await analysisGate(projectId);
       expect(after.humanTasks.map((task) => task.kind)).toEqual(['gate_review']);
     }, 90_000);
 
@@ -506,7 +534,7 @@ describe.skipIf(!adminUrl || !temporalAddress)(
         },
       });
       const projectId = await project('costly');
-      await waitFor(projectId, waiting('analysis'), 'analysis gate');
+      await analysisGate(projectId);
       const invocations = await h.request('GET', api(`/model-invocations?projectId=${projectId}`), {
         cookie,
       });
@@ -532,7 +560,8 @@ describe.skipIf(!adminUrl || !temporalAddress)(
           };
         }>().usage,
       ).toMatchObject({
-        totals: { invocations: 1 },
+        // Three analyst rounds (two batches, then "enough") and the definition itself.
+        totals: { invocations: 4 },
         byStage: [expect.objectContaining({ stage: 'analysis' })],
         costLimit: { status: 'ok', limitUsd: 20 },
       });

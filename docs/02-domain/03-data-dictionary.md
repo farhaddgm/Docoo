@@ -2,9 +2,9 @@
 doc_id: DOCOO-DATA-DICTIONARY
 title: فرهنگ داده هسته Docoo
 status: approved-baseline
-version: 1.0.1
+version: 1.1.0
 owner: Data Architecture
-last_updated: 2026-09-24
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -43,17 +43,17 @@ notion_sync: true
 
 ## project
 
-| فیلد                          | نوع                  | توضیح                           |
-| ----------------------------- | -------------------- | ------------------------------- |
-| `code`                        | citext               | یکتا در workspace               |
-| `title`                       | text                 | عنوان مدیرپسند                  |
-| `status`                      | enum                 | state machine رسمی              |
-| `initial_problem`             | text                 | ورودی اصلی، immutable versioned |
-| `approved_problem_version_id` | uuid nullable        | تعریف نهایی                     |
-| `output_language`             | enum                 | fa یا en                        |
-| `current_stage`               | enum                 | analysis..evaluation            |
-| `workflow_id`                 | uuid                 | workflow فعال                   |
-| `purge_at`                    | timestamptz nullable | حذف دائمی برنامه‌ریزی‌شده       |
+| فیلد                          | نوع                  | توضیح                                         |
+| ----------------------------- | -------------------- | --------------------------------------------- |
+| `code`                        | citext               | یکتا در workspace                             |
+| `title`                       | text                 | عنوان مدیرپسند                                |
+| `status`                      | enum                 | state machine رسمی                            |
+| `initial_problem`             | text                 | ورودی اصلی، immutable versioned               |
+| `approved_problem_version_id` | uuid nullable        | خروجی تأییدشدهٔ مرحلهٔ تحلیل (`stage_output`) |
+| `output_language`             | enum                 | fa یا en                                      |
+| `current_stage`               | enum                 | analysis..evaluation                          |
+| `workflow_id`                 | uuid                 | workflow فعال                                 |
+| `purge_at`                    | timestamptz nullable | حذف دائمی برنامه‌ریزی‌شده                     |
 
 ## project_topic
 
@@ -96,6 +96,17 @@ notion_sync: true
 ### human_task
 
 `stage_run_id`, `task_type`, `payload`, `status`, `due_at nullable`, `resolved_by/at`, `decision`, `reason`.
+
+## analysis (ANL)
+
+همهٔ جدول‌ها tenant-scoped با RLS و کلید ترکیبی `(id, workspace_id)` هستند؛ `analysis_rounds` و `analysis_answers` append-only‌اند.
+
+- `analysis_sessions`: یک ردیف برای هر مرحلهٔ تحلیل (`stage_run_id` یکتا)؛ `minimum_questions` (۳۰)، `maximum_questions` (۳۰۰)، `batch_size` (۴۰)، `finish_requested_at/by/reason`.
+- `analysis_rounds`: یک فراخوانی تحلیلگر؛ `round_no` یکتا در session، `based_on_batch_id`، `outcome` (`batch|definition`)، `reason` (`minimum|coverage|analyst|sufficient|nothing_new|finish_requested|maximum_reached`)، `understood`، `next_ambiguity`، `sufficient`، `sufficiency_reason`، `category_notes`، `invocation_id` (خالی وقتی دور بدون مدل به تعریف رسید).
+- `question_batches`: `batch_no`، `status` (`open|submitted`)، `round_id` یکتا؛ حداکثر یک batch باز برای هر session.
+- `analysis_questions`: `ordinal` (۱ تا ۳۰۰، شمارهٔ نمایش‌داده‌شده)، `category` (ده بُعد)، `text`، `rationale`، `follow_up_of_id`، `status` (`open|answered|unanswered|irrelevant|later`)، `current_answer_id`.
+- `analysis_answers`: بازنگری‌های پاسخ؛ `revision_no`، `status`، `text`، `attachments` (`[{sourceId, versionId, title}]`)، `submission_id` (یک ارسال اتمیک).
+- `analysis_contradictions`: `key` مرتب دو شمارهٔ سؤال، `description`، `status` (`open|resolved`)، دور کشف و دور برطرف‌شدن.
 
 ## source و knowledge
 
@@ -191,6 +202,20 @@ notion_sync: true
 ### usage_record
 
 `invocation_id`, `input_tokens`, `cached_tokens`, `output_tokens`, `reasoning_tokens`, `tool_calls`, `estimated_cost`, `currency`, `price_snapshot_id`.
+
+## smart
+
+### app_error
+
+`source` (`server`/`client`)، `category`، `fingerprint` (یکتا در workspace)، `message`، `status` (`new/seen/fixed/ignored`)، `occurrences`، `first_seen_at`، `last_seen_at`، `http_method`، `route`، `http_status`، `page`، `project_id nullable`، `correlation_id`، `stack`، `context` (scrub‌شده). بدنهٔ درخواست ذخیره نمی‌شود.
+
+### smart_conversation و smart_message
+
+گفتگوی یک ادمین: `user_id`، `kind` (`walker`/`error`)، `project_id nullable`، `error_id nullable`، `route`، `title`. پیام: `role`، `content`، `status` (`done`/`failed`)، `context`، `invocation_id nullable`. پیام تغییرناپذیر است.
+
+### walker_issue
+
+`title`، `body` (عین پاسخ ذخیره‌شده)، `status` (`open/in_progress/fixed/wont_fix`)، `note`، `context`، `source_message_id nullable` (یکتا در workspace)، `created_by`.
 
 ## audit_event
 

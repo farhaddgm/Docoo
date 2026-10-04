@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { Locale } from '../../../i18n';
+import { DefinitionView } from './definition-view';
 import { workflowMessages } from './workflow-messages';
 
 const asText = (value: unknown): string => (typeof value === 'string' ? value : '');
@@ -62,19 +63,7 @@ export function StageOutput({
 
   switch (stage) {
     case 'analysis':
-      return (
-        <div className="output-view">
-          <Block title={text.problemStatement}>
-            <p dir="auto">{asText(data['problemStatement'])}</p>
-          </Block>
-          <Block title={text.assumptions}>
-            <Bullets items={textList(data['assumptions'])} empty={text.none} />
-          </Block>
-          <Block title={text.openQuestions}>
-            <Bullets items={textList(data['openQuestions'])} empty={text.none} />
-          </Block>
-        </div>
-      );
+      return <DefinitionView locale={locale} content={data} />;
     case 'research':
       return (
         <div className="output-view">

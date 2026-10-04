@@ -117,6 +117,14 @@ jobs:
           "${c[@]}" exec -T api /usr/bin/chromium --version
           "${c[@]}" exec -T worker-ingestion tesseract --list-langs | grep -x fas
           curl -sk -o /dev/null -w 'files host %{http_code}\n' https://files.localhost/
+          # The browser uploads answer files straight to this host from the app's own origin.
+          curl -sk -i -X OPTIONS https://files.localhost/docoo/preflight-probe \
+            -H 'Origin: https://localhost' -H 'Access-Control-Request-Method: PUT' \
+            -H 'Access-Control-Request-Headers: content-type' |
+            grep -i '^access-control-allow-origin: https://localhost'
+          # The page's Content-Security-Policy is built at run time and must allow that host.
+          curl -skI https://localhost/fa |
+            grep -i "^content-security-policy:.*connect-src 'self' https://files.localhost;"
           "${c[@]}" ps
       - name: Off-host backup (WAL-G base backup + WAL archive, object mirror)
         run: |
