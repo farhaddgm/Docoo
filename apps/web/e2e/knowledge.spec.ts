@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { fill } from '../app/[locale]/agents/agent-messages';
 import { knowledgeMessages } from '../app/[locale]/knowledge/knowledge-messages';
+import { manualMessages } from '../app/[locale]/knowledge/manual-messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
 import {
   apiSession,
@@ -12,6 +13,7 @@ import {
 
 const text = knowledgeMessages('fa');
 const english = knowledgeMessages('en');
+const manual = manualMessages('fa');
 const project = projectPageMessages('fa');
 const stamp = Date.now().toString(36);
 
@@ -70,7 +72,7 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await page.context().close();
   });
 
-  test('opens from the navigation with its four sections, accessible', async () => {
+  test('opens from the navigation with its five sections, accessible', async () => {
     await page.goto('/fa');
     await page
       .getByRole('navigation', { name: 'ناوبری اصلی' })
@@ -391,6 +393,58 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     );
   });
 
+  test('manual knowledge: claims with citations, an incomplete citation is named, the draft keeps them', async () => {
+    await page.goto('/fa/knowledge?tab=manual');
+    await expect(tab(page, text.tabs.manual)).toHaveAttribute('aria-current', 'page');
+    const form = page.getByRole('form', { name: manual.heading });
+    const submit = form.getByRole('button', { name: manual.submit });
+    await expect(submit).toBeDisabled();
+    await expect(form.getByText(manual.needTitleAndText)).toBeVisible();
+
+    const claim = 'نرخ بازگشت مشتریان در سه‌ماههٔ نخست ۱۸ درصد بود.';
+    await form.getByLabel(manual.title, { exact: true }).fill(`دانش دستی ${stamp}`);
+    await form
+      .getByLabel(manual.content, { exact: true })
+      .fill(`${claim} برنامهٔ وفاداری این نرخ را بالا برد. (${stamp})`);
+    await form.getByRole('button', { name: manual.addClaim }).click();
+    const claimLabel = fill(manual.claimN, { n: '1' });
+    await form.getByLabel(`${claimLabel}: ${manual.claimText}`, { exact: true }).fill(claim);
+    await expect(submit).toBeEnabled();
+
+    // A citation names exactly what it still lacks.
+    await form.getByRole('button', { name: fill(manual.addCitation, { c: '1' }) }).click();
+    const citation = (caption: string) =>
+      form.getByLabel(`${fill(manual.citationN, { n: '1', c: '1' })}: ${caption}`, { exact: true });
+    await citation(manual.citationTitle).fill('گزارش سالانهٔ وفاداری');
+    await expect(
+      form.getByText(
+        fill(manual.missing, {
+          fields: [
+            manual.fields['sourceRef']!,
+            manual.fields['publisher']!,
+            manual.fields['publishedAt']!,
+            manual.fields['accessedAt']!,
+          ].join('، '),
+        }),
+      ),
+    ).toBeVisible();
+    await citation(manual.sourceRef).fill('https://example.test/loyalty-report');
+    await citation(manual.publisher).fill('انجمن خرده‌فروشان');
+    await citation(manual.publishedAt).fill('2025-03-01');
+    await citation(manual.accessedAt).fill('2025-04-10');
+    await expect(form.getByText(manual.complete)).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    await submit.click();
+    await expect(page.getByRole('status').filter({ hasText: manual.created })).toBeVisible();
+    await page.getByRole('link', { name: manual.open }).click();
+    await expect(page.getByRole('heading', { level: 2, name: `دانش دستی ${stamp}` })).toBeVisible();
+    await expect(page.getByText(text.statuses.draft).first()).toBeVisible();
+    await expect(page.getByText(claim).first()).toBeVisible();
+    await expect(page.getByText(text.citationComplete).first()).toBeVisible();
+    await expect(page.getByText('گزارش سالانهٔ وفاداری')).toBeVisible();
+  });
+
   test('deleting asks for confirmation, then returns to the list', async () => {
     const id = await seed(page, {
       title: `Delete ${stamp}`,
@@ -417,7 +471,7 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
     await expect(
       page.getByRole('navigation', { name: english.sections }).getByRole('button'),
-    ).toHaveCount(4);
+    ).toHaveCount(5);
     await expectNoSeriousA11yViolations(page);
     await page
       .getByRole('navigation', { name: english.sections })

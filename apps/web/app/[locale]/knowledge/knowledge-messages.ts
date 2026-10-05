@@ -20,6 +20,7 @@ const fa = {
   tabs: {
     queue: 'صف ممیزی',
     sources: 'منبع‌ها',
+    manual: 'دانش دستی',
     conflicts: 'تعارض‌ها',
     retrieval: 'آزمون بازیابی',
   },
@@ -612,6 +613,7 @@ const en: Table = {
   tabs: {
     queue: 'Audit queue',
     sources: 'Sources',
+    manual: 'Manual knowledge',
     conflicts: 'Conflicts',
     retrieval: 'Retrieval test',
   },
