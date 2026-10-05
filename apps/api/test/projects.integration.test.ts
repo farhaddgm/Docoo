@@ -324,6 +324,83 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
     expect(JSON.stringify(audit.rows)).not.toContain('Confidential problem');
   });
 
+  it('filters the list by topic, language, last change, waiting and text, and shows the owner (UX §4)', async () => {
+    const solo = await createTopic('solo-filter');
+    const mine = await createProject('flt-alpha', [solo]);
+    const other = await createProject('flt-beta');
+    const list = async (query: string) => {
+      const response = await h.request('GET', projects(h.ids.workspaceA, `?${query}`), {
+        cookie: cookieA,
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      return response.json<{
+        items: {
+          id: string;
+          code: string;
+          owner: { displayName: string } | null;
+          waiting: { kind: string } | null;
+        }[];
+        nextCursor: string | null;
+      }>();
+    };
+    const codes = async (query: string) => (await list(query)).items.map((item) => item.code);
+
+    // Topic: only the project that uses it.
+    expect(await codes(`topicId=${solo}`)).toEqual(['flt-alpha']);
+    expect(await codes(`topicId=${topicIds[0]}`)).toContain('flt-beta');
+    expect(await codes(`topicId=${topicIds[0]}`)).not.toContain('flt-alpha');
+
+    // Text: part of the code or the title, case-insensitively; wildcards are plain characters.
+    expect(await codes('q=FLT-BETA')).toEqual(['flt-beta']);
+    expect(await codes('q=Project%20flt-alpha')).toEqual(['flt-alpha']);
+    expect(await codes('q=%25')).toEqual([]);
+
+    // Language and last change.
+    expect((await codes('language=fa')).length).toBeGreaterThan(0);
+    expect(await codes('language=en&q=flt-')).toEqual([]);
+    const today = new Date().toISOString().slice(0, 10);
+    expect(await codes(`updatedFrom=${today}&q=flt-`)).toEqual(
+      expect.arrayContaining(['flt-alpha', 'flt-beta']),
+    );
+    expect(await codes('updatedTo=2000-01-01&q=flt-')).toEqual([]);
+
+    // Waiting: a person has something to decide.
+    expect(await codes('waiting=true&q=flt-')).toEqual([]);
+    await h.admin.query(
+      `insert into human_tasks (workspace_id, project_id, kind, title, payload)
+       values ($1, $2, 'gate_review', 'Review', '{}'::jsonb)`,
+      [h.ids.workspaceA, other.id],
+    );
+    const waiting = await list('waiting=true&q=flt-');
+    expect(waiting.items.map((item) => item.code)).toEqual(['flt-beta']);
+    expect(waiting.items[0]!.waiting).toMatchObject({ kind: 'gate_review' });
+
+    // Owner: who created the project.
+    const everything = await list('q=flt-alpha');
+    expect(everything.items[0]!.owner?.displayName).toBe('Admin A');
+    expect(everything.items[0]!.waiting).toBeNull();
+    expect(mine.id).toBe(everything.items[0]!.id);
+
+    // A cursor belongs to its filters: reusing it for another filter is refused.
+    const page = await list('limit=1&q=flt-');
+    expect(page.nextCursor).not.toBeNull();
+    const reused = await h.request(
+      'GET',
+      projects(h.ids.workspaceA, `?limit=1&q=alpha&cursor=${page.nextCursor}`),
+      { cookie: cookieA },
+    );
+    expect(reused.statusCode).toBe(400);
+    expect(reused.json<{ code: string }>().code).toBe('PROJECT_CURSOR_INVALID');
+
+    // Bad filters are refused.
+    for (const bad of ['language=de', 'updatedFrom=yesterday', 'topicId=nope', 'waiting=maybe']) {
+      expect(
+        (await h.request('GET', projects(h.ids.workspaceA, `?${bad}`), { cookie: cookieA }))
+          .statusCode,
+      ).toBe(400);
+    }
+  });
+
   it('isolates projects between workspaces', async () => {
     const project = await createProject('isolated');
     const foreignWorkspace = await h.request('GET', projects(h.ids.workspaceA, `/${project.id}`), {

@@ -66,6 +66,7 @@ export async function prepareResearch(
       passages: assignReferences(
         rows.map((row) => ({ snapshotId: row.id, results: row.results })),
         config.researchKnowledgeLimit,
+        config.researchMaxSources,
       ),
       queries: rows.map((row) => row.query),
       snapshots: rows.map((row) => ({ id: row.id, query: row.query, results: row.results.length })),
@@ -124,6 +125,7 @@ export async function prepareResearch(
       role: scope.role,
       limit: config.researchKnowledgeLimit,
       excludeConfidentiality: exclude,
+      minAuditScore: config.knowledgeMinAuditScore,
     });
     await recordToolCall(client, scope, {
       tool: 'knowledge_retrieve',
@@ -146,7 +148,11 @@ export async function prepareResearch(
     snapshots.push({ id: retrieval.snapshotId, query, results: retrieval.results.length });
   }
   return {
-    passages: assignReferences(retrievals, config.researchKnowledgeLimit),
+    passages: assignReferences(
+      retrievals,
+      config.researchKnowledgeLimit,
+      config.researchMaxSources,
+    ),
     queries,
     snapshots,
     excludedRestricted,

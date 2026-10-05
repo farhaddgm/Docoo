@@ -7,7 +7,6 @@ import {
   validateDocument,
   walkBlocks,
   type Level,
-  type TemplateKey,
 } from '@docoo/documents';
 import {
   documentWritingWorkflowId,
@@ -167,7 +166,7 @@ export class WritingsService {
         input.template === undefined
           ? templateFor(effective.values['document.default_template'])
           : isTemplateKey(input.template)
-            ? templateFor(input.template as TemplateKey)
+            ? templateFor(input.template)
             : null;
       if (!template)
         throw badRequest('DOCUMENT_TEMPLATE_UNKNOWN', 'Choose brief, standard or detailed.');

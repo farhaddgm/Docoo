@@ -50,7 +50,8 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
       await expect(page.getByRole('heading', { level: 2, name: group.title })).toBeVisible();
     }
     // Honest about what has no effect yet, and where the model is chosen.
-    await expect(row(page, 'research.max_sources').getByText(settings.notEnforced)).toBeVisible();
+    // Both settings that used to be recorded only are applied now, so no row carries the note.
+    await expect(page.getByText(settings.notEnforced)).toHaveCount(0);
     await expect(
       row(page, 'ai.model').getByRole('link', { name: settings.openProviders }),
     ).toHaveAttribute('href', '/fa/providers');

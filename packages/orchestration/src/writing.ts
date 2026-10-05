@@ -425,9 +425,16 @@ export interface WritingSettings {
   /** Rounds of expanding or condensing subsections after writing; 0 turns fitting off. */
   readonly fitRounds: number;
   readonly allowRestricted: boolean;
+  /** `knowledge.min_audit_score`: the audit floor for knowledge the Brain approved (0 to 1). */
+  readonly minAuditScore: number;
 }
 
 export const WRITING_DEFAULTS = { knowledgeLimit: 12, fitRounds: 3, costLimitUsd: 20 } as const;
+
+const fraction = (value: unknown): number => {
+  const number = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.min(1, number)) : 0.7;
+};
 
 const bounded = (value: unknown, fallback: number, min: number, max: number): number => {
   const number = typeof value === 'number' ? value : Number(value);
@@ -449,6 +456,7 @@ export function resolveWritingSettings(values: Readonly<Record<string, unknown>>
     ),
     fitRounds: bounded(values['document.writing.fit_rounds'], WRITING_DEFAULTS.fitRounds, 0, 3),
     allowRestricted: values['research.allow_restricted_knowledge'] === true,
+    minAuditScore: fraction(values['knowledge.min_audit_score']),
   };
 }
 
@@ -465,5 +473,6 @@ export function writingSettingsFromRow(value: unknown): WritingSettings {
     knowledgeLimit: bounded(raw['knowledgeLimit'], WRITING_DEFAULTS.knowledgeLimit, 0, 30),
     fitRounds: bounded(raw['fitRounds'], WRITING_DEFAULTS.fitRounds, 0, 3),
     allowRestricted: raw['allowRestricted'] === true,
+    minAuditScore: fraction(raw['minAuditScore']),
   };
 }

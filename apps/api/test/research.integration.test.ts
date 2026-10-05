@@ -595,6 +595,57 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       expect(invalid.statusCode).toBe(400);
     }, 180_000);
 
+    it('RSC-008: research.max_sources caps the distinct knowledge items the stage may use', async () => {
+      await setting('research.allow_restricted_knowledge', true);
+      await setting('research.max_sources', 1);
+      try {
+        const projectId = await reachResearch('one-source');
+        const offered = (await researchOutput(projectId)).knowledge.offered;
+        // Two sources match; only the best one is used, and the output says which.
+        expect(new Set(offered.map((item) => item.knowledgeId)).size).toBe(1);
+        const [request] = researchRequests();
+        expect((dataOf(request!)['approvedKnowledge'] as unknown[]).length).toBe(1);
+      } finally {
+        await setting('research.max_sources', 30);
+        await setting('research.allow_restricted_knowledge', false);
+      }
+      const invalid = await h.request('PUT', api('/settings/assignments'), {
+        cookie,
+        payload: {
+          key: 'research.max_sources',
+          scopeType: 'workspace',
+          scopeId: h.ids.workspaceA,
+          value: 0,
+          reason: 'none at all',
+        },
+      });
+      expect(invalid.statusCode).toBe(400);
+    }, 120_000);
+
+    it('RSC-009: knowledge.min_audit_score keeps weakly audited knowledge out of retrieval and research', async () => {
+      const ask = async () =>
+        (
+          await post<{ results: { knowledgeId: string }[] }>(
+            '/knowledge/retrieve',
+            { query: CHURN, limit: 10 },
+            200,
+          )
+        ).results.map((item) => item.knowledgeId);
+      expect(await ask()).toContain(churnId);
+      await setting('knowledge.min_audit_score', 1);
+      try {
+        // No audit reaches a perfect score, so nothing approved by the Brain passes the floor.
+        expect(await ask()).not.toContain(churnId);
+        captured.length = 0;
+        const projectId = await reachResearch('floor');
+        expect(dataOf(researchRequests()[0]!)).not.toHaveProperty('approvedKnowledge');
+        expect((await researchOutput(projectId)).knowledge.offered).toEqual([]);
+      } finally {
+        await setting('knowledge.min_audit_score', 0.7);
+      }
+      expect(await ask()).toContain(churnId);
+    }, 120_000);
+
     it('RSC-005: a quote the model made up is kept, shown as failed, and never counts as support', async () => {
       temporal.fake.responder = (request) => {
         captured.push(request);

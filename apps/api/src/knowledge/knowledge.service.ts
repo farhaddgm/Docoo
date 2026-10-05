@@ -34,6 +34,7 @@ import { badRequest, conflict, notFound, preconditionFailed } from '../common/pr
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { scopeKey, scopeTitles } from '../common/scope-titles.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
+import { ConfigService } from '../config/config.service.js';
 import { retrieveKnowledge, RetrievalScopeError } from '@docoo/orchestration';
 import { SourcesService } from '../sources/sources.service.js';
 
@@ -180,6 +181,7 @@ export class KnowledgeService {
     private readonly database: WorkspaceDatabase,
     private readonly sources: SourcesService,
     @Inject(KNOWLEDGE_AUDITOR) private readonly auditor: KnowledgeAuditor,
+    private readonly config: ConfigService,
   ) {}
 
   // ---------------------------------------------------------------- items and versions (KNO-001)
@@ -1085,6 +1087,13 @@ export class KnowledgeService {
    */
   async retrieve(context: WorkspaceRequestContext, input: RetrieveInput) {
     return this.database.run(context, async (client) => {
+      // The audit-score floor is the effective `knowledge.min_audit_score` of the scope asked for.
+      const effective = input.projectId
+        ? await this.config.resolve(client, context, 'project', input.projectId)
+        : input.topicId
+          ? await this.config.resolve(client, context, 'topic', input.topicId)
+          : await this.config.resolve(client, context, 'workspace', context.workspaceId);
+      const floor = Number(effective.values['knowledge.min_audit_score']);
       try {
         return await retrieveKnowledge(client, {
           workspaceId: context.workspaceId,
@@ -1094,6 +1103,7 @@ export class KnowledgeService {
           topicId: input.topicId,
           role: input.role,
           limit: input.limit,
+          minAuditScore: Number.isFinite(floor) ? floor : undefined,
         });
       } catch (error) {
         if (error instanceof RetrievalScopeError)

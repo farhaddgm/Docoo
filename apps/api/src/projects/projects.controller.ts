@@ -50,6 +50,18 @@ const listQuerySchema = z
   .object({
     ...pageQuerySchema,
     status: z.enum([...projectStatuses, 'current', 'all']).default('current'),
+    topicId: z
+      .uuid()
+      .transform((value) => value.toLowerCase())
+      .optional(),
+    language: z.enum(['fa', 'en']).optional(),
+    updatedFrom: z.iso.date().optional(),
+    updatedTo: z.iso.date().optional(),
+    waiting: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
+    q: z.string().trim().min(1).max(100).optional(),
   })
   .strict();
 const pageSchema = z.object(pageQuerySchema).strict();

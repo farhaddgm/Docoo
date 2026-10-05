@@ -80,11 +80,11 @@ export const SETTING_GROUPS = [
 ] as const;
 export type GroupId = (typeof SETTING_GROUPS)[number]['id'];
 
-/** Recorded but not applied by any stage yet; the page says so instead of implying an effect. */
-export const NOT_ENFORCED: ReadonlySet<string> = new Set([
-  'research.max_sources',
-  'knowledge.min_audit_score',
-]);
+/**
+ * Recorded but not applied by any stage yet; the page says so instead of implying an effect.
+ * Empty since 0.17.0: `research.max_sources` and `knowledge.min_audit_score` are enforced now.
+ */
+export const NOT_ENFORCED: ReadonlySet<string> = new Set<string>();
 
 /** Edited on a page of their own (a list of ten numbers is not a form field). */
 export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set(['document.level_bounds']);

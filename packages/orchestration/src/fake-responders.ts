@@ -6,9 +6,11 @@ import { fakeAnalystResponder } from './fake-analyst.js';
 
 function dataOf(request: NormalizedModelRequest): Record<string, unknown> {
   const content = request.messages[0]?.content ?? '';
-  const match = /<data>([\s\S]*)<\/data>/u.exec(content);
+  const start = content.indexOf('<data>');
+  const end = content.lastIndexOf('</data>');
+  if (start < 0 || end < start) return {};
   try {
-    return match ? (JSON.parse(match[1]!) as Record<string, unknown>) : {};
+    return JSON.parse(content.slice(start + '<data>'.length, end)) as Record<string, unknown>;
   } catch {
     return {};
   }
@@ -208,7 +210,7 @@ export function fakeDocumenterResponder(request: NormalizedModelRequest): unknow
   const goal = target;
   const paragraphs: string[] = [];
   let letters = 0;
-  let index = call === 'expand' ? 0 : 0;
+  let index = 0;
   let current: string[] = [];
   while (letters < goal && index < 4000) {
     const next = sentence(index);

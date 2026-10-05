@@ -15,12 +15,21 @@ export interface Settings {
   researchKnowledgeLimit: number;
   /** Whether `restricted` knowledge may reach the research prompt (`research.allow_restricted_knowledge`). */
   researchAllowRestricted: boolean;
+  /** Distinct knowledge items (sources) the research may use (`research.max_sources`). */
+  researchMaxSources: number;
+  /** Audit score floor, 0 to 1, for knowledge the Brain approved (`knowledge.min_audit_score`). */
+  knowledgeMinAuditScore: number;
 }
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
   const number = typeof value === 'number' ? value : Number(value);
   if (!Number.isInteger(number)) return fallback;
   return Math.max(min, Math.min(max, number));
+}
+
+function boundedFraction(value: unknown, fallback: number): number {
+  const number = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.min(1, number)) : fallback;
 }
 
 /** The effective configuration the run was started with (FR-CFG-005). */
@@ -55,5 +64,15 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
       30,
     ),
     researchAllowRestricted: values['research.allow_restricted_knowledge'] === true,
+    researchMaxSources: boundedInteger(
+      values['research.max_sources'],
+      RESEARCH_DEFAULTS.maxSources,
+      1,
+      200,
+    ),
+    knowledgeMinAuditScore: boundedFraction(
+      values['knowledge.min_audit_score'],
+      RESEARCH_DEFAULTS.minAuditScore,
+    ),
   };
 }

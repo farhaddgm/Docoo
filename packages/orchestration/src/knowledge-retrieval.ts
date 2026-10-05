@@ -17,6 +17,12 @@ export interface RetrievalRequest {
   readonly limit: number;
   /** Confidentiality levels left out before ranking (the research stage drops `restricted`). */
   readonly excludeConfidentiality?: readonly string[] | undefined;
+  /**
+   * `knowledge.min_audit_score` (0 to 1): a version approved by the Brain counts only when its
+   * overall audit score (0 to 100) reaches this share. An administrator's override stands as the
+   * human decision and is not held to it. `undefined` or 0 leaves every approved version in.
+   */
+  readonly minAuditScore?: number | undefined;
 }
 
 export interface ConflictWarning {
@@ -165,7 +171,7 @@ export async function retrieveKnowledge(
              (select o.decision = 'approve' from audit_overrides o
                where o.knowledge_version_id = v.id and (o.expires_at is null or o.expires_at > now())
                order by o.created_at desc, o.id desc limit 1),
-             (select r.decision = 'approved' from audit_reviews r
+             (select r.decision = 'approved' and r.overall >= $6::real from audit_reviews r
                where r.knowledge_version_id = v.id order by r.created_at desc, r.id desc limit 1),
              false)
        and exists (
@@ -181,6 +187,7 @@ export async function retrieveKnowledge(
     [...topicIds],
     input.projectId ?? null,
     [...(input.excludeConfidentiality ?? [])],
+    Math.max(0, Math.min(1, input.minAuditScore ?? 0)) * 100,
   ];
   const words = [...new Set(normalizeForSearch(input.query).match(/[\p{L}\p{M}\p{N}]+/gu) ?? [])]
     .filter((word) => word.length > 1)
@@ -189,9 +196,9 @@ export async function retrieveKnowledge(
   const lexicalRows = lexical
     ? (
         await client.query<{ chunk_id: string; rank: number }>(
-          `select chunk_id, ts_rank_cd(tsv, to_tsquery('simple', $6)) as rank
+          `select chunk_id, ts_rank_cd(tsv, to_tsquery('simple', $7)) as rank
              from (${eligible}) e
-            where tsv @@ to_tsquery('simple', $6)
+            where tsv @@ to_tsquery('simple', $7)
             order by rank desc, chunk_id limit 50`,
           [...params, lexical],
         )
@@ -200,9 +207,9 @@ export async function retrieveKnowledge(
   const vector = vectorLiteral(embed(input.query));
   const vectorRows = (
     await client.query<{ chunk_id: string; similarity: number }>(
-      `select chunk_id, 1 - (embedding <=> $6::vector) as similarity
+      `select chunk_id, 1 - (embedding <=> $7::vector) as similarity
          from (${eligible}) e
-        order by embedding <=> $6::vector, chunk_id limit 50`,
+        order by embedding <=> $7::vector, chunk_id limit 50`,
       [...params, vector],
     )
   ).rows;
@@ -256,7 +263,7 @@ export async function retrieveKnowledge(
           version_no: number;
         }>(
           `select chunk_id, text, ordinal, version_id, item_id, title, confidentiality, version_no
-             from (${eligible}) e where chunk_id = any($6::uuid[])`,
+             from (${eligible}) e where chunk_id = any($7::uuid[])`,
           [...params, chunkIds],
         )
       ).rows
@@ -321,6 +328,7 @@ export async function retrieveKnowledge(
     topicIds: [...topicIds].sort(),
     role: input.role ?? null,
     limit: input.limit,
+    ...(input.minAuditScore ? { minAuditScore: input.minAuditScore } : {}),
   };
   const hash = sha256(
     canonicalJson({ query: input.query, filters, results, model: EMBEDDING_MODEL }),

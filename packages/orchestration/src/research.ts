@@ -30,6 +30,8 @@ export const RESEARCH_DEFAULTS = {
   maxQueries: 5,
   knowledgeLimit: 12,
   allowRestricted: false,
+  maxSources: 30,
+  minAuditScore: 0.7,
 } as const;
 
 const asText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
@@ -111,6 +113,8 @@ export function assignReferences(
     readonly results: readonly RetrievedPassage[];
   }[],
   limit: number,
+  /** `research.max_sources`: at most this many distinct knowledge items (sources) are used. */
+  maxSources: number = Number.POSITIVE_INFINITY,
 ): KnowledgePassage[] {
   const best = new Map<string, { passage: RetrievedPassage; snapshotId: string }>();
   for (const retrieval of retrievals) {
@@ -121,16 +125,20 @@ export function assignReferences(
       }
     }
   }
-  return [...best.values()]
-    .sort(
-      (a, b) =>
-        b.passage.score - a.passage.score ||
-        (a.passage.chunkId < b.passage.chunkId
-          ? -1
-          : a.passage.chunkId > b.passage.chunkId
-            ? 1
-            : 0),
-    )
+  const ranked = [...best.values()].sort(
+    (a, b) =>
+      b.passage.score - a.passage.score ||
+      (a.passage.chunkId < b.passage.chunkId ? -1 : a.passage.chunkId > b.passage.chunkId ? 1 : 0),
+  );
+  // The best passages decide which sources stay: a source ranks by its best passage.
+  const sources = new Set<string>();
+  return ranked
+    .filter(({ passage }) => {
+      if (sources.has(passage.knowledgeId)) return true;
+      if (sources.size >= maxSources) return false;
+      sources.add(passage.knowledgeId);
+      return true;
+    })
     .slice(0, Math.max(0, limit))
     .map(({ passage, snapshotId }, index) => ({
       ref: `K${index + 1}`,

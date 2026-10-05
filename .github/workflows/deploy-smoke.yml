@@ -162,7 +162,9 @@ jobs:
           sudo -E ./scripts/deploy/acceptance.sh | tee acceptance.md
           grep -F '| Containers | PASS |' acceptance.md
           grep -F '| API ready | PASS |' acceptance.md
-          grep -F '| HTTPS (localhost) | PASS |' acceptance.md
+          # Caddy's local CA signs a certificate that lives about 12 hours, so the expiry check
+          # honestly says WARN here; what matters is that HTTPS answers (a FAIL row would exit 1 above).
+          grep -E '^\| HTTPS \(localhost\) \| (PASS|WARN) \|' acceptance.md
           grep -F '| Administrator | PASS |' acceptance.md
           grep -F '| Backups | PASS |' acceptance.md
           grep -F '| Nightly update | PASS |' acceptance.md
