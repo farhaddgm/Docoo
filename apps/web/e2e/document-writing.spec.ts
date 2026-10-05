@@ -62,6 +62,13 @@ test.describe('the documenter writes and the structured editor changes a documen
     await openFirstDocument(page, projectId);
     await expect(page.locator('.document-view')).toBeVisible();
 
+    // The export format from the project's settings is offered first and as the main action.
+    const exportButtons = page.locator('section[aria-labelledby="exports-title"] .toolbar button');
+    await expect(exportButtons.first()).toHaveText(
+      documentText.exportAs.replace('{format}', 'DOCX'),
+    );
+    await expect(exportButtons.first()).toHaveClass(/primary-button/u);
+
     const versionRows = page
       .locator('#versions-title')
       .locator('xpath=following-sibling::div//tbody/tr');

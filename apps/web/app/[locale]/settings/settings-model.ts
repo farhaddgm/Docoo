@@ -71,7 +71,14 @@ export const SETTING_GROUPS = [
   { id: 'solutions', keys: ['solution.count'] },
   {
     id: 'documents',
-    keys: ['document.level', 'document.default_template', 'document.level_bounds'],
+    keys: [
+      'document.level',
+      'document.default_template',
+      'document.default_export_format',
+      'document.writing.knowledge_limit',
+      'document.writing.fit_rounds',
+      'document.level_bounds',
+    ],
   },
   {
     id: 'ingestion',

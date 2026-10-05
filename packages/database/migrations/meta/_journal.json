@@ -176,6 +176,13 @@
       "when": 1791155099120,
       "tag": "0024_document_writing_security",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791175417323,
+      "tag": "0025_export_default_setting",
+      "breakpoints": true
     }
   ]
 }

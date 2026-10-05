@@ -86,6 +86,11 @@ const messages = {
         standard: 'استاندارد',
         detailed: 'تفصیلی',
       },
+      'document.default_export_format': {
+        docx: 'DOCX',
+        pdf: 'PDF',
+        pptx: 'PPTX',
+      },
     } as Record<string, Record<string, string>>,
     problems: {
       required: 'مقدار لازم است.',
@@ -200,6 +205,11 @@ const messages = {
         brief: 'Brief',
         standard: 'Standard',
         detailed: 'Detailed',
+      },
+      'document.default_export_format': {
+        docx: 'DOCX',
+        pdf: 'PDF',
+        pptx: 'PPTX',
       },
     } as Record<string, Record<string, string>>,
     problems: {

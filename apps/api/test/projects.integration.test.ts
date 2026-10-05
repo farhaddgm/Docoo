@@ -401,6 +401,72 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
     }
   });
 
+  it('saves the wizard criteria with the project as version 1 and refuses bad weights without creating it', async () => {
+    const defaults = await h.request(
+      'GET',
+      `/v1/workspaces/${h.ids.workspaceA}/solution-criteria/defaults`,
+      {
+        cookie: cookieA,
+      },
+    );
+    expect(defaults.statusCode).toBe(200);
+    const base = defaults.json<{
+      criteria: { key: string; label: string; weight: number; enabled: boolean }[];
+    }>().criteria;
+    expect(base.map((item) => item.weight).reduce((a, b) => a + b, 0)).toBe(100);
+
+    // 100 in total again after turning "time" off and giving its weight to "impact".
+    const chosen = base.map((item) =>
+      item.key === 'time'
+        ? { ...item, enabled: false }
+        : item.key === 'impact'
+          ? { ...item, weight: item.weight + 10 }
+          : item,
+    );
+    const created = await h.request('POST', projects(h.ids.workspaceA), {
+      cookie: cookieA,
+      payload: {
+        code: 'wiz-criteria',
+        title: 'Criteria from the wizard',
+        initialProblem: 'A problem to solve',
+        topics: topicIds.map((topicId) => ({ topicId })),
+        solutionCriteria: chosen,
+      },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const projectId = created.json<{ project: { id: string } }>().project.id;
+    const stored = await h.request(
+      'GET',
+      `/v1/workspaces/${h.ids.workspaceA}/projects/${projectId}/solution-criteria`,
+      { cookie: cookieA },
+    );
+    const current = stored.json<{
+      criteria: {
+        versionNo: number;
+        criteria: { key: string; weight: number; enabled: boolean }[];
+      };
+    }>().criteria;
+    expect(current.versionNo).toBe(1);
+    expect(current.criteria.find((item) => item.key === 'time')?.enabled).toBe(false);
+    expect(current.criteria.find((item) => item.key === 'impact')?.weight).toBe(35);
+
+    const bad = await h.request('POST', projects(h.ids.workspaceA), {
+      cookie: cookieA,
+      payload: {
+        code: 'wiz-criteria-bad',
+        title: 'Bad weights',
+        initialProblem: 'A problem to solve',
+        solutionCriteria: base.map((item) => ({ ...item, weight: 1 })),
+      },
+    });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json<{ code: string }>().code).toBe('SOLUTION_CRITERIA_INVALID');
+    const missing = await h.request('GET', `${projects(h.ids.workspaceA)}?q=wiz-criteria-bad`, {
+      cookie: cookieA,
+    });
+    expect(missing.json<{ items: unknown[] }>().items).toHaveLength(0);
+  });
+
   it('isolates projects between workspaces', async () => {
     const project = await createProject('isolated');
     const foreignWorkspace = await h.request('GET', projects(h.ids.workspaceA, `/${project.id}`), {

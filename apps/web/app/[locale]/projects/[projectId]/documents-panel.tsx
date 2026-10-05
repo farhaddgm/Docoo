@@ -53,11 +53,15 @@ interface Evaluation {
   exception: { reason: string; badge: string } | null;
 }
 
+const formats = ['docx', 'pdf', 'pptx'] as const;
+
 interface DocumentDetail extends DocumentSummary {
   /** The optimistic-concurrency version the API expects in `If-Match`. */
   version: number;
   currentVersion: (VersionSummary & { content: DocContent }) | null;
   latestEvaluation: Evaluation | null;
+  /** From `document.default_export_format`: the export button shown first and as primary. */
+  defaultExportFormat: (typeof formats)[number];
 }
 
 interface Artifact {
@@ -79,8 +83,6 @@ interface Diff {
 type Pending =
   | { kind: 'reject' | 'lock' | 'supersede' | 'exception'; reason: string }
   | { kind: 'restore'; versionId: string; versionNo: number; reason: string };
-
-const formats = ['docx', 'pdf', 'pptx'] as const;
 
 /** DOC-101..103, EVA-001..002: documents of the project, their review, evaluation and exports. */
 export function DocumentsPanel({
@@ -626,10 +628,13 @@ function DocumentView({
         <h2 id="exports-title">{text.exports}</h2>
         <p className="muted">{text.exportHelp}</p>
         <div className="toolbar">
-          {formats.map((format) => (
+          {[
+            doc.defaultExportFormat,
+            ...formats.filter((item) => item !== doc.defaultExportFormat),
+          ].map((format) => (
             <button
               key={format}
-              className="secondary-button"
+              className={format === doc.defaultExportFormat ? 'primary-button' : 'secondary-button'}
               type="button"
               disabled={busy || !canExport}
               onClick={() =>

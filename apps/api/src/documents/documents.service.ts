@@ -162,10 +162,15 @@ export class DocumentsService {
         ? await this.loadVersion(client, documentId, document.current_version_id)
         : null;
       const evaluation = version ? await this.latestEvaluation(client, version.id) : null;
+      const effective = await this.config.resolve(client, context, 'project', document.project_id);
+      const preferred = effective.values['document.default_export_format'];
       return {
         ...this.toDocument(document),
         currentVersion: version ? this.toVersion(version, true) : null,
         latestEvaluation: evaluation,
+        // The format offered first (`document.default_export_format`); any export is still allowed.
+        defaultExportFormat:
+          preferred === 'pdf' || preferred === 'pptx' || preferred === 'docx' ? preferred : 'docx',
       };
     });
   }

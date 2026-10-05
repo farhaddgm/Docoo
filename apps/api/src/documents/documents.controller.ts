@@ -14,6 +14,7 @@ import {
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   COUNT_ALGORITHM,
+  DEFAULT_CRITERIA,
   DEFAULT_LEVEL_BOUNDS,
   DOCUMENT_TEMPLATES,
   TEMPLATE_KEYS,
@@ -149,6 +150,13 @@ export class DocumentsController {
   }
 
   // ------------------------------------------------------------ solutions (SOL-001..003)
+
+  @Get('solution-criteria/defaults')
+  @ApiOperation({ summary: 'The default weighted criteria a new project starts with' })
+  @RequireWorkspacePermission('workspace.read')
+  defaultCriteria() {
+    return { criteria: DEFAULT_CRITERIA };
+  }
 
   @Get('projects/:projectId/solution-criteria')
   @ApiOperation({ summary: 'Current weighted solution criteria of a project' })

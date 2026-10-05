@@ -147,6 +147,7 @@ const expectedMatrix: Record<string, string> = {
   'PATCH workspaces/:workspaceId/projects/:projectId/agents/:role': 'agent_definition.update',
   'POST workspaces/:workspaceId/projects/:projectId/agents/:role/pin': 'agent_definition.update',
   'GET workspaces/:workspaceId/document-templates': 'workspace.read',
+  'GET workspaces/:workspaceId/solution-criteria/defaults': 'workspace.read',
   'GET workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.read',
   'PUT workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/solutions/generate': 'project.run',

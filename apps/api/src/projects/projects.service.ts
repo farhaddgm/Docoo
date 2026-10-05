@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
+import { criteriaProblem, type Criterion } from '@docoo/documents';
 import {
   availableProjectCommands,
   InvalidProjectTransitionError,
@@ -84,6 +85,8 @@ export interface CreateProjectInput {
   readonly topics: readonly TopicLinkInput[];
   /** Project-scope settings saved together with the project (the wizard's choices). */
   readonly settings?: readonly { readonly key: string; readonly value: unknown }[] | undefined;
+  /** The weighted solution criteria chosen in the wizard; version 1, in the same transaction. */
+  readonly solutionCriteria?: readonly Criterion[] | undefined;
 }
 
 export interface UpdateProjectInput {
@@ -304,6 +307,9 @@ export class ProjectsService {
   }
 
   async create(context: WorkspaceRequestContext, input: CreateProjectInput): Promise<Project> {
+    const criteria = input.solutionCriteria;
+    const criteriaIssue = criteria ? criteriaProblem(criteria) : null;
+    if (criteriaIssue) throw badRequest('SOLUTION_CRITERIA_INVALID', criteriaIssue);
     return this.database.run(context, async (client) => {
       await this.assertTopicsUsable(client, context, input.topics);
       let row: ProjectRow | undefined;
@@ -344,6 +350,29 @@ export class ProjectsService {
           'Set while creating the project',
         );
       }
+      if (criteria) {
+        const version = (
+          await client.query<{ id: string }>(
+            `insert into solution_criteria_versions (workspace_id, project_id, version_no, criteria, reason, created_by)
+             values ($1, $2, 1, $3::jsonb, $4, $5) returning id`,
+            [
+              context.workspaceId,
+              row.id,
+              JSON.stringify(criteria),
+              'Set while creating the project',
+              context.actorId,
+            ],
+          )
+        ).rows[0]!;
+        await writeAudit(client, context, {
+          action: 'solution.criteria_set',
+          targetType: 'project',
+          targetId: row.id,
+          projectId: row.id,
+          reason: 'Set while creating the project',
+          after: { versionId: version.id, versionNo: 1, criteria },
+        });
+      }
       await writeAudit(client, context, {
         action: 'project.create',
         targetType: 'project',
@@ -353,6 +382,7 @@ export class ProjectsService {
           ...this.snapshot(row),
           topics: input.topics.map((topic) => topic.topicId),
           settings: settings.map((setting) => setting.key),
+          ...(criteria ? { solutionCriteria: true } : {}),
         },
       });
       return this.read(client, context, row.id);

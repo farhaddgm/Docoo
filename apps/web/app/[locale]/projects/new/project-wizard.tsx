@@ -28,6 +28,7 @@ import {
   emptyProject,
   type ProjectValues,
 } from '../project-fields';
+import { CriteriaEditor, criteriaIssue, sameCriteria, type Criterion } from './criteria-editor';
 import { wizardMessages } from './wizard-messages';
 
 /** The settings each step offers, in the order of UX §5 (steps 3 to 7). */
@@ -44,10 +45,11 @@ const STEP_KEYS: Record<number, readonly string[]> = {
     'knowledge.min_audit_score',
   ],
   5: ['solution.count'],
-  6: ['document.level', 'document.default_template'],
+  6: ['document.level', 'document.default_template', 'document.default_export_format'],
 };
 const STEP_COUNT = 8;
 const MODEL_STEP = 3;
+const SOLUTIONS_STEP = 5;
 const REVIEW_STEP = 7;
 const MAX_CODE = 64;
 
@@ -58,6 +60,8 @@ interface Draft {
   touched: Record<string, string>;
   connectionId: string;
   model: string;
+  /** The criteria the administrator changed; null keeps the defaults. */
+  criteria?: Criterion[] | null;
 }
 
 const draftKey = (workspaceId: string) => `docoo:new-project:${workspaceId}`;
@@ -114,6 +118,8 @@ export function ProjectWizard({
   const [touched, setTouched] = useState<Record<string, string>>({});
   const [connectionId, setConnectionId] = useState('');
   const [model, setModel] = useState('');
+  const [criteria, setCriteria] = useState<Criterion[] | null>(null);
+  const [defaultCriteria, setDefaultCriteria] = useState<Criterion[] | null>(null);
   const [restored, setRestored] = useState(false);
   const [ready, setReady] = useState(false);
   const [definitions, setDefinitions] = useState<Definition[]>([]);
@@ -131,6 +137,7 @@ export function ProjectWizard({
       setTouched(draft.touched ?? {});
       setConnectionId(draft.connectionId ?? '');
       setModel(draft.model ?? '');
+      setCriteria(draft.criteria ?? null);
       setRestored(true);
     }
     setReady(true);
@@ -138,12 +145,18 @@ export function ProjectWizard({
 
   useEffect(() => {
     if (!ready) return;
-    writeDraft(workspaceId, { step, values, touched, connectionId, model });
-  }, [ready, workspaceId, step, values, touched, connectionId, model]);
+    writeDraft(workspaceId, { step, values, touched, connectionId, model, criteria });
+  }, [ready, workspaceId, step, values, touched, connectionId, model, criteria]);
 
   useEffect(() => {
     apiGet<{ items: Definition[] }>(`${base}/settings/definitions`)
       .then((result) => setDefinitions(result.items))
+      .catch(() => undefined);
+  }, [base]);
+
+  useEffect(() => {
+    apiGet<{ criteria: Criterion[] }>(`${base}/solution-criteria/defaults`)
+      .then((result) => setDefaultCriteria(result.criteria))
       .catch(() => undefined);
   }, [base]);
 
@@ -224,8 +237,19 @@ export function ProjectWizard({
     trimmed.code.length <= MAX_CODE &&
     trimmed.title !== '' &&
     trimmed.problem !== '';
+  // Criteria are sent only when they differ from the defaults the server would use anyway.
+  const shownCriteria = criteria ?? defaultCriteria;
+  const customCriteria =
+    criteria !== null && defaultCriteria !== null && !sameCriteria(criteria, defaultCriteria)
+      ? criteria
+      : null;
+  const criteriaProblem = customCriteria ? criteriaIssue(customCriteria) : null;
   const stepProblem = (() => {
     if (step === 0 && !basicsOk) return text.needBasics;
+    if (step === SOLUTIONS_STEP && criteriaProblem !== null)
+      return criteriaProblem === 'none_enabled'
+        ? text.criteriaNoneEnabled
+        : fill(text.criteriaNotHundred, { n: formatNumber(locale, criteriaProblem) });
     const own = STEP_KEYS[step];
     if (own && choices.problem && own.includes(choices.problem.key)) return choices.problem.text;
     return null;
@@ -249,6 +273,14 @@ export function ProjectWizard({
               : {}),
           })),
           settings: choices.overrides,
+          ...(customCriteria
+            ? {
+                solutionCriteria: customCriteria.map((item) => ({
+                  ...item,
+                  label: item.label.trim(),
+                })),
+              }
+            : {}),
         },
       );
       writeDraft(workspaceId, null);
@@ -262,6 +294,7 @@ export function ProjectWizard({
     setTouched({});
     setConnectionId('');
     setModel('');
+    setCriteria(null);
     setStep(0);
     setRestored(false);
   }
@@ -369,6 +402,24 @@ export function ProjectWizard({
             })}
           </ul>
         )}
+        {step === SOLUTIONS_STEP &&
+          (shownCriteria ? (
+            <CriteriaEditor
+              locale={locale}
+              idPrefix={`${id}-criteria`}
+              criteria={shownCriteria}
+              onChange={setCriteria}
+            />
+          ) : (
+            <p role="status">{text.criteriaLoading}</p>
+          ))}
+        {step === SOLUTIONS_STEP && customCriteria && (
+          <div>
+            <button type="button" className="link-like" onClick={() => setCriteria(null)}>
+              {text.criteriaReset}
+            </button>
+          </div>
+        )}
         {step === REVIEW_STEP && (
           <Review
             locale={locale}
@@ -378,6 +429,9 @@ export function ProjectWizard({
             overrides={choices.overrides.length}
             values={values}
             connectionId={connectionId}
+            criteriaCount={
+              customCriteria ? customCriteria.filter((item) => item.enabled).length : null
+            }
           />
         )}
         {stepProblem && (
@@ -409,7 +463,9 @@ export function ProjectWizard({
           <button
             type="button"
             className="primary-button"
-            disabled={!basicsOk || choices.problem !== null || action.busy}
+            disabled={
+              !basicsOk || choices.problem !== null || criteriaProblem !== null || action.busy
+            }
             onClick={submit}
           >
             {action.busy ? text.creating : text.create}
@@ -428,6 +484,7 @@ function Review({
   overrides,
   values,
   connectionId,
+  criteriaCount,
 }: {
   locale: Locale;
   definitions: Definition[];
@@ -436,6 +493,7 @@ function Review({
   overrides: number;
   values: ProjectValues;
   connectionId: string;
+  criteriaCount: number | null;
 }) {
   const text = wizardMessages(locale);
   const settings = settingsMessages(locale);
@@ -480,6 +538,14 @@ function Review({
             <dd>{text.modelInherited}</dd>
           </div>
         )}
+        <div>
+          <dt>{text.criteriaSummary}</dt>
+          <dd>
+            {criteriaCount === null
+              ? text.criteriaDefault
+              : fill(text.criteriaCustom, { n: formatNumber(locale, criteriaCount) })}
+          </dd>
+        </div>
       </dl>
       <p>
         {overrides > 0

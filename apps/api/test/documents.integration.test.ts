@@ -249,6 +249,29 @@ describe.skipIf(!adminUrl)('solutions, documents and evaluation (SOL-*, DOC-*, E
     expect(priorities).toEqual([2, null, 1]);
   });
 
+  it('the default export format comes from the project settings and every format stays allowed', async () => {
+    const { projectId, documents } = await documentsFor('export-default');
+    const first = documents[0]!;
+    const read = async () =>
+      (await h.request('GET', api(`/documents/${first.id}`), { cookie })).json<{
+        document: { defaultExportFormat: string };
+      }>().document.defaultExportFormat;
+    expect(await read()).toBe('docx');
+    await setting('document.default_export_format', 'pdf', 'project', projectId);
+    expect(await read()).toBe('pdf');
+    const bad = await h.request('PUT', api('/settings/assignments'), {
+      cookie,
+      payload: {
+        key: 'document.default_export_format',
+        scopeType: 'project',
+        scopeId: projectId,
+        value: 'odt',
+        reason: 'test an unsupported format',
+      },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+
   it('DOC-102: edits need If-Match, are validated, versioned, diffable and restorable', async () => {
     const { documents } = await documentsFor('versions');
     const target = documents[0]!;

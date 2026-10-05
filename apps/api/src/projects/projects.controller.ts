@@ -87,6 +87,20 @@ const createSchema = z
     outputLanguage: languageSchema.default('fa'),
     topics: topicsSchema.default([]),
     settings: settingsSchema.default([]),
+    solutionCriteria: z
+      .array(
+        z
+          .object({
+            key: z.string().trim().min(1).max(64),
+            label: z.string().trim().min(1).max(200),
+            weight: z.number().int().min(0).max(100),
+            enabled: z.boolean(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(20)
+      .optional(),
   })
   .strict();
 
@@ -159,6 +173,12 @@ export class ProjectsController {
       throw new ForbiddenException(
         'Setting values needs the permission to configure the workspace.',
       );
+    }
+    if (
+      input.solutionCriteria &&
+      (!authorization || !roleHasPermission(authorization.workspace.role, 'project.update'))
+    ) {
+      throw new ForbiddenException('Choosing criteria needs the permission to edit projects.');
     }
     const project = await this.projectsService.create(workspaceContext(request), input);
     setVersionHeader(reply, project.version);

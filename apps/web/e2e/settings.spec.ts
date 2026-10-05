@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { projectMessages } from '../app/[locale]/projects/messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
+import { solutionMessages } from '../app/[locale]/projects/[projectId]/solution-messages';
 import { wizardMessages } from '../app/[locale]/projects/new/wizard-messages';
 import { settingsMessages } from '../app/[locale]/settings/settings-messages';
 import { templatesMessages } from '../app/[locale]/templates/templates-messages';
@@ -17,6 +18,7 @@ const templates = templatesMessages('fa');
 const wizard = wizardMessages('fa');
 const project = projectMessages('fa');
 const detail = projectPageMessages('fa');
+const solutionText = solutionMessages('fa');
 const stamp = Date.now().toString(36);
 const problem = (scope: Page | Locator) => scope.locator('.notice.error[role="alert"]');
 const mainNavigation = (page: Page) => page.getByRole('navigation', { name: 'ناوبری اصلی' });
@@ -243,12 +245,26 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     // Step 5: knowledge.
     await page.getByRole('spinbutton').first().fill('3');
     await next.click();
-    // Step 6: solutions.
+    // Step 6: solutions, and their criteria; the enabled weights must add up to 100.
     await page.getByRole('spinbutton').first().fill('6');
+    const criteria = page.getByRole('region', { name: wizard.criteriaTitle });
+    await expect(criteria).toBeVisible();
+    await expect(next).toBeEnabled(); // the defaults are valid and nothing is sent for them
+    await criteria
+      .getByRole('checkbox', { name: new RegExp(`^${wizard.enabled}: Time`, 'u') })
+      .uncheck();
+    await expect(problem(page).last()).toContainText('۹۰');
+    await expect(next).toBeDisabled();
+    await criteria
+      .getByRole('spinbutton', { name: new RegExp(`^${wizard.weight}: Impact`, 'u') })
+      .fill('35');
+    await expect(next).toBeEnabled();
+    await expectNoSeriousA11yViolations(page);
     await next.click();
     // Step 7: documents.
     await page.getByRole('spinbutton').first().fill('4');
     await page.getByRole('combobox').first().selectOption('brief');
+    await page.getByRole('combobox').nth(1).selectOption('pdf');
     await expectNoSeriousA11yViolations(page);
     await next.click();
 
@@ -261,6 +277,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
       'solution.count',
       'workflow.max_attempts_per_stage',
       'document.default_template',
+      'document.default_export_format',
       'document.level',
       'research.max_queries',
       'workflow.require_human_approval',
@@ -277,7 +294,8 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await expect(
       reviewRow('ai.max_cost_usd_per_run').getByText(settings.sources.system, { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText(wizard.overridesCount.replace('{n}', '۶'))).toBeVisible();
+    await expect(page.getByText(wizard.overridesCount.replace('{n}', '۷'))).toBeVisible();
+    await expect(page.getByText(wizard.criteriaCustom.replace('{n}', '۵'))).toBeVisible();
     await expect(
       page.getByRole('heading', { level: 2, name: new RegExp(wizard.steps[7]!, 'u') }),
     ).toBeVisible();
@@ -296,6 +314,11 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
         .getByText(settings.sources.system, { exact: true })
         .first(),
     ).toBeVisible();
+    // The criteria chosen in the wizard are version 1 of the project's criteria.
+    await page.getByRole('button', { name: detail.tabs.solutions }).click();
+    await expect(page.getByText(solutionText.criteriaVersion.replace('{n}', '۱'))).toBeVisible();
+    await expect(page.getByRole('spinbutton', { name: /Impact/u })).toHaveValue('35');
+    await page.getByRole('button', { name: detail.tabs.settings }).click();
     // Going back to the inherited value is one click with a reason.
     await own.getByLabel(settings.reasonLabel).fill('برگشت');
     await own.getByRole('button', { name: settings.resetProject }).click();

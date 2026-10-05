@@ -143,6 +143,7 @@ notion_sync: true
 | `POST /projects/{id}/agents/{role}/copy-default`                     | `agent_definition.update`   |
 | `PATCH /projects/{id}/agents/{role}`                                 | `agent_definition.update`   |
 | `POST /projects/{id}/agents/{role}/pin`                              | `agent_definition.update`   |
+| `GET /solution-criteria/defaults`                                    | `workspace.read`            |
 | `GET /projects/{id}/solution-criteria`                               | `project.read`              |
 | `PUT /projects/{id}/solution-criteria`                               | `project.update`            |
 | `POST /projects/{id}/solutions/generate`                             | `project.run`               |
