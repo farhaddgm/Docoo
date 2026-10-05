@@ -878,6 +878,12 @@ export const modelPrices = pgTable(
     cachedInputPerMillion: real('cached_input_per_million'),
     reasoningPerMillion: real('reasoning_per_million'),
     effectiveFrom: timestamp('effective_from', { withTimezone: true }).notNull(),
+    /** `manual` (typed by an administrator) or `catalog` (taken from the public price catalog). */
+    source: text('source').notNull().default('manual'),
+    /** For `catalog`: where the price came from, e.g. `litellm:gpt-4o`. */
+    sourceRef: text('source_ref'),
+    /** For `catalog`: sha256 of the catalog content the price was read from. */
+    catalogHash: text('catalog_hash'),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

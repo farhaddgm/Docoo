@@ -2,9 +2,9 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.8.0
+version: 1.9.0
 owner: API Architecture
-last_updated: 2026-10-05
+last_updated: 2026-10-06
 notion_sync: true
 ---
 
@@ -199,7 +199,9 @@ notion_sync: true
 - `POST /provider-connections/{id}/rotate-secret` — نسخهٔ جدید secret؛ نسخهٔ قبلی قابل‌بازگردانی نیست.
 - `POST /provider-connections/{id}/health-check` — بدون دادهٔ مشتری؛ وضعیت healthy/degraded/unavailable/invalid و خطای sanitize‌شده.
 - `POST /provider-connections/{id}/models/refresh` و `GET /provider-connections/{id}/models` — catalog زنده به snapshot تاریخ‌دار؛ هیچ نام مدلی در کد نیست و مدل اجرا از تنظیم `ai.model` می‌آید.
-- `GET/POST /model-prices` — snapshot قیمت تاریخ‌دار برای برآورد هزینه. `GET` علاوه بر `items` این‌ها را دارد: `fallback` (`{inputPerMillion, outputPerMillion}` که برای مدل بی‌قیمت به کار می‌رود تا سقف هزینه خاموش نشود) و `defaultModel: {provider, model, priced} | null` (مدل پیش‌فرض و اینکه قیمت دارد یا نه). `POST` (`provider.configure`) ردیف تازه می‌سازد و ردیف قبلی را نمی‌نویسد ([ADR-0020](../adr/0020-real-provider-readiness.md)).
+- `GET/POST /model-prices` — snapshot قیمت تاریخ‌دار برای برآورد هزینه. `GET` علاوه بر `items` این‌ها را دارد: `fallback` (`{inputPerMillion, outputPerMillion}` که برای مدل بی‌قیمت به کار می‌رود تا سقف هزینه خاموش نشود) و `defaultModel: {provider, model, priced} | null` (مدل پیش‌فرض و اینکه قیمت دارد یا نه). `POST` (`provider.configure`) ردیف تازه می‌سازد و ردیف قبلی را نمی‌نویسد ([ADR-0020](../adr/0020-real-provider-readiness.md)). هر ردیف `source` (`manual` یا `catalog`) و `sourceRef` دارد.
+- `POST /model-prices/catalog-lookup` (`provider.configure`، پاسخ ۲۰۰، چیزی ذخیره نمی‌کند) با `{refresh?: boolean}` → `{catalog: {source, hash, fetchedAt, entryCount}, needsModelList, truncated, items}`. هر آیتم: `provider`، `model`، `isDefault`، `status` (`new|changed|same|none|unusable`)، `match` (`exact|alias|null`)، `reason` (`zero_price|no_price|null`)، `current` (قیمت فعلی با `source` و `effectiveFrom` یا `null`) و `catalog` (`key`، `inputPerMillion`، `outputPerMillion`، `cachedInputPerMillion`، `reasoningPerMillion`، `maxOutputTokens`، `deprecationDate`، `tiered` یا `null`). قیمت‌ها دلار برای هر میلیون توکن‌اند. خطا: `502 PRICE_CATALOG_UNAVAILABLE`.
+- `POST /model-prices/catalog-import` (`provider.configure`، پاسخ ۲۰۰) با `{catalogHash, items: [{provider, model}] (۱ تا ۲۰۰)}` → `{imported, skipped, catalogHash}`. بدنه قیمت نمی‌گیرد؛ سرور از نسخهٔ خودش از کاتالوگ می‌خواند. خطاها: `409 PRICE_CATALOG_CHANGED` (کاتالوگ با `catalogHash` فرق دارد)، `422 PRICE_CATALOG_NO_MATCH` (برای یکی از مدل‌ها قیمت قابل‌اعتماد نیست؛ هیچ ردیفی ثبت نمی‌شود)، `502 PRICE_CATALOG_UNAVAILABLE`. قیمت یکسان با قیمت فعلی `skipped` است. audit: `provider.prices_imported` ([ADR-0022](../adr/0022-model-prices-from-public-catalog.md)).
 - `GET /model-invocations` و `GET /projects/{id}/usage` — token، latency، finish reason و هزینهٔ برآوردی هر invocation و جمع مرحله/پروژه در بازهٔ زمانی، مقایسه با `ai.max_cost_usd_per_run`. هر invocation `priced` (قیمت واقعی یا برآورد با قیمت پیش‌فرض) و در شکست `errorDetail` دارد: دلیلی که provider گفته، sanitize‌شده و حداکثر ۳۰۰ نویسه. جمع مصرف `unpricedInvocations` (شمار تماس‌های بی‌قیمت) را هم می‌دهد.
 - `GET /provider-connections/{id}/self-check` (`provider.read`) → `{steps: [...]}`: نُه گام آزمون خودکار مدل. `POST` (`provider.test`، پاسخ ۲۰۰) با `{model, step, language: 'fa'|'en'}` یک گام را با یک تماس واقعی اجرا می‌کند و `{result}` می‌دهد: `step`، `status` (`passed|failed`)، `problem`، `errorKind`، `errorCode`، `errorDetail`، `finishReason`، `latencyMs`، `inputTokens`، `outputTokens`، `reasoningTokens`، `costUsd`، `priced`. شکست provider ۴xx/۵xx خطای HTTP نیست؛ `status = failed` با دلیلش است. تماس با `purpose = selfcheck:<گام>` و بدون پروژه ثبت می‌شود. گام ناشناخته ۴۰۰ می‌دهد.
 - retry provider طبق جدول ۵،۵،۵،۱۰،۱۵،۲۰،۲۵،۳۰،۳۵،۴۰ ثانیه (یا `Retry-After` بزرگ‌تر) و پس از آن pause پروژه و human task.

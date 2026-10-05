@@ -26,6 +26,27 @@ describe('environment configuration', () => {
     );
   });
 
+  it('takes the price catalog address only as https, and an empty value means the default', () => {
+    const base = { SESSION_PEPPER: 'a-development-only-pepper-with-32-characters' };
+    expect(parseEnvironment(base).MODEL_PRICE_CATALOG_URL).toBeUndefined();
+    expect(parseEnvironment({ ...base, MODEL_PRICE_CATALOG_URL: '' }).MODEL_PRICE_CATALOG_URL).toBe(
+      undefined,
+    );
+    expect(
+      parseEnvironment({ ...base, MODEL_PRICE_CATALOG_URL: 'https://prices.example/c.json' })
+        .MODEL_PRICE_CATALOG_URL,
+    ).toBe('https://prices.example/c.json');
+    expect(
+      parseEnvironment({ ...base, MODEL_PRICE_CATALOG_URL: 'http://127.0.0.1:4010/c.json' })
+        .MODEL_PRICE_CATALOG_URL,
+    ).toBe('http://127.0.0.1:4010/c.json');
+    for (const url of ['http://prices.example/c.json', 'http://localhost.evil.example/c.json']) {
+      expect(() => parseEnvironment({ ...base, MODEL_PRICE_CATALOG_URL: url })).toThrow(
+        'Invalid environment configuration',
+      );
+    }
+  });
+
   it('rejects a short session pepper', () => {
     expect(() => parseEnvironment({ SESSION_PEPPER: 'short' })).toThrow(
       'Invalid environment configuration',

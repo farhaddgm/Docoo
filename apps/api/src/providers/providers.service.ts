@@ -9,22 +9,37 @@ import {
   type SelfCheckStep,
 } from '@docoo/orchestration';
 import {
+  catalogRejection,
   checkCostLimit,
   encryptSecret,
   FALLBACK_PRICE,
+  lookupCatalogPrice,
+  PRICE_CATALOG_SOURCE,
+  PriceCatalogError,
   sanitizeError,
+  samePrice,
+  type CatalogPrice,
+  type CatalogProvider,
   type MasterKey,
+  type PriceValues,
   type ProviderKind,
 } from '@docoo/providers';
 import type { PoolClient, QueryResultRow } from 'pg';
 
 import { writeAudit } from '../common/audit.js';
 import { isoColumn } from '../common/pagination.js';
-import { badRequest, conflict, notFound, preconditionFailed } from '../common/problems.js';
+import {
+  badRequest,
+  conflict,
+  notFound,
+  preconditionFailed,
+  unprocessable,
+} from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { ConfigService } from '../config/config.service.js';
 import { canonicalJson } from '../config/setting-value.js';
+import { PRICE_CATALOG, type PriceCatalogSource } from './price-catalog.source.js';
 
 export const SECRET_MASTER_KEY = Symbol('SECRET_MASTER_KEY');
 export const PROVIDER_RUNTIME = Symbol('PROVIDER_RUNTIME');
@@ -56,6 +71,51 @@ function unavailable(code: string, detail: string): HttpException {
   return new HttpException({ status: 503, title: 'Service Unavailable', code, detail }, 503);
 }
 
+/** The public price catalog could not be read; says why in a few words, never a credential. */
+function catalogUnavailable(error: unknown): HttpException {
+  const kind = error instanceof PriceCatalogError ? error.kind : 'unreachable';
+  const reason = error instanceof Error ? sanitizeError(error.message) : '';
+  return new HttpException(
+    {
+      status: 502,
+      title: 'Bad Gateway',
+      code: 'PRICE_CATALOG_UNAVAILABLE',
+      detail: `The price catalog could not be read (${kind}${reason && reason !== kind ? `: ${reason}` : ''}).`,
+    },
+    502,
+  );
+}
+
+const CATALOG_PROVIDERS: readonly ProviderKind[] = ['openai', 'gemini', 'anthropic'];
+const isCatalogProvider = (kind: string): kind is CatalogProvider =>
+  CATALOG_PROVIDERS.includes(kind as ProviderKind);
+
+export type CatalogSuggestionStatus = 'new' | 'changed' | 'same' | 'none' | 'unusable';
+const STATUS_RANK: Readonly<Record<CatalogSuggestionStatus, number>> = {
+  new: 0,
+  changed: 1,
+  same: 2,
+  none: 3,
+  unusable: 4,
+};
+const MAX_SUGGESTIONS = 500;
+
+export interface CurrentPrice extends PriceValues {
+  effectiveFrom: string;
+  source: string;
+}
+
+const catalogFields = (price: CatalogPrice) => ({
+  key: price.key,
+  inputPerMillion: price.inputPerMillion,
+  outputPerMillion: price.outputPerMillion,
+  cachedInputPerMillion: price.cachedInputPerMillion,
+  reasoningPerMillion: price.reasoningPerMillion,
+  maxOutputTokens: price.maxOutputTokens,
+  deprecationDate: price.deprecationDate,
+  tiered: price.tiered,
+});
+
 /**
  * Provider connections (AI-001..005). Secrets are write-only: they are encrypted on arrival
  * and never returned, logged or audited; responses carry only a short fingerprint.
@@ -67,6 +127,7 @@ export class ProvidersService {
     @Inject(SECRET_MASTER_KEY) private readonly masterKey: MasterKey | null,
     @Inject(PROVIDER_RUNTIME) private readonly runtime: ProviderRuntime,
     private readonly config: ConfigService,
+    @Inject(PRICE_CATALOG) private readonly priceCatalog: PriceCatalogSource,
   ) {}
 
   async list(context: WorkspaceRequestContext) {
@@ -399,6 +460,7 @@ export class ProvidersService {
           await client.query<Record<string, unknown>>(
             `select id, provider, model, input_per_million as "inputPerMillion", output_per_million as "outputPerMillion",
                   cached_input_per_million as "cachedInputPerMillion", reasoning_per_million as "reasoningPerMillion",
+                  source, source_ref as "sourceRef",
                   ${isoColumn('effective_from', '"effectiveFrom"')}, ${isoColumn('created_at', '"createdAt"')}
              from model_prices order by provider, model, effective_from desc`,
           )
@@ -412,46 +474,41 @@ export class ProvidersService {
    */
   async priceStatus(context: WorkspaceRequestContext) {
     return this.database.run(context, async (client) => {
-      const effective = await this.config.resolve(
-        client,
-        context,
-        'workspace',
-        context.workspaceId,
-      );
-      const connectionId = effective.values['ai.connection_id'];
-      const model = effective.values['ai.model'];
       const fallback = {
         inputPerMillion: FALLBACK_PRICE.inputPerMillion,
         outputPerMillion: FALLBACK_PRICE.outputPerMillion,
       };
-      if (
-        typeof connectionId !== 'string' ||
-        typeof model !== 'string' ||
-        !connectionId ||
-        !model
-      ) {
-        return { fallback, defaultModel: null };
-      }
-      const connection = (
-        await client.query<{ provider: ProviderKind }>(
-          `select provider from provider_connections where id = $1`,
-          [connectionId],
-        )
-      ).rows[0];
-      if (!connection) return { fallback, defaultModel: null };
+      const chosen = await this.defaultModel(client, context);
+      if (!chosen) return { fallback, defaultModel: null };
       const priced = await client.query(
         `select 1 from model_prices where provider = $1 and model = $2 and effective_from <= now() limit 1`,
-        [connection.provider, model],
+        [chosen.provider, chosen.model],
       );
       return {
         fallback,
-        defaultModel: {
-          provider: connection.provider,
-          model,
-          priced: (priced.rowCount ?? 0) > 0,
-        },
+        defaultModel: { ...chosen, priced: (priced.rowCount ?? 0) > 0 },
       };
     });
+  }
+
+  /** The provider and model the workspace uses by default, or null when none is chosen yet. */
+  private async defaultModel(
+    client: PoolClient,
+    context: WorkspaceRequestContext,
+  ): Promise<{ provider: ProviderKind; model: string } | null> {
+    const effective = await this.config.resolve(client, context, 'workspace', context.workspaceId);
+    const connectionId = effective.values['ai.connection_id'];
+    const model = effective.values['ai.model'];
+    if (typeof connectionId !== 'string' || typeof model !== 'string' || !connectionId || !model) {
+      return null;
+    }
+    const connection = (
+      await client.query<{ provider: ProviderKind }>(
+        `select provider from provider_connections where id = $1`,
+        [connectionId],
+      )
+    ).rows[0];
+    return connection ? { provider: connection.provider, model } : null;
   }
 
   async addPrice(
@@ -493,6 +550,229 @@ export class ProvidersService {
       });
       return { id: row.id, ...input };
     });
+  }
+
+  /**
+   * Suggestions from the public price catalog for the models this workspace can use: the models in the
+   * connections' catalogs, the default model and every model that already has a price. Nothing is saved;
+   * each suggestion sits next to the current price so the administrator chooses what to take.
+   */
+  async catalogPriceSuggestions(context: WorkspaceRequestContext, input: { refresh: boolean }) {
+    const loaded = await this.loadPriceCatalog(input.refresh);
+    return this.database.run(context, async (client) => {
+      const chosen = await this.defaultModel(client, context);
+      const candidates = new Map<string, { provider: CatalogProvider; model: string }>();
+      const add = (provider: string, model: string) => {
+        if (isCatalogProvider(provider) && model)
+          candidates.set(`${provider}:${model}`, { provider, model });
+      };
+      const models = await client.query<{ provider: string; model: string }>(
+        `select c.provider::text as provider, e.v->>'id' as model
+           from provider_connections c
+           join lateral (select s.models from model_catalog_snapshots s
+                          where s.connection_id = c.id order by s.created_at desc, s.id desc limit 1) s on true
+           cross join lateral jsonb_array_elements(s.models) as e(v)
+          where c.disabled_at is null and c.provider <> 'fake'`,
+      );
+      for (const row of models.rows) add(row.provider, row.model);
+      const priced = await client.query<{ provider: string; model: string }>(
+        `select distinct provider::text as provider, model from model_prices where provider <> 'fake'`,
+      );
+      for (const row of priced.rows) add(row.provider, row.model);
+      if (chosen) add(chosen.provider, chosen.model);
+
+      const currents = new Map<string, CurrentPrice>();
+      const latest = await client.query<{
+        provider: string;
+        model: string;
+        input_per_million: number;
+        output_per_million: number;
+        cached_input_per_million: number | null;
+        reasoning_per_million: number | null;
+        effective_from: string;
+        source: string;
+      }>(
+        `select distinct on (provider, model) provider::text as provider, model, input_per_million,
+                output_per_million, cached_input_per_million, reasoning_per_million, source,
+                ${isoColumn('effective_from', 'effective_from')}
+           from model_prices where effective_from <= now()
+          order by provider, model, effective_from desc, created_at desc`,
+      );
+      for (const row of latest.rows) {
+        currents.set(`${row.provider}:${row.model}`, {
+          inputPerMillion: row.input_per_million,
+          outputPerMillion: row.output_per_million,
+          cachedInputPerMillion: row.cached_input_per_million,
+          reasoningPerMillion: row.reasoning_per_million,
+          effectiveFrom: row.effective_from,
+          source: row.source,
+        });
+      }
+      const withoutModelList = await client.query(
+        `select 1 from provider_connections c
+          where c.disabled_at is null and c.provider <> 'fake'
+            and not exists (select 1 from model_catalog_snapshots s where s.connection_id = c.id) limit 1`,
+      );
+
+      const items = [...candidates.entries()].map(([key, { provider, model }]) => {
+        const lookup = lookupCatalogPrice(loaded.catalog, provider, model);
+        const current = currents.get(key) ?? null;
+        const rejection = lookup ? null : catalogRejection(loaded.catalog, provider, model);
+        const status: CatalogSuggestionStatus = !lookup
+          ? rejection
+            ? 'unusable'
+            : 'none'
+          : !current
+            ? 'new'
+            : samePrice(current, lookup.price)
+              ? 'same'
+              : 'changed';
+        return {
+          provider,
+          model,
+          isDefault: chosen?.provider === provider && chosen.model === model,
+          status,
+          match: lookup?.match ?? null,
+          reason: rejection,
+          current,
+          catalog: lookup ? catalogFields(lookup.price) : null,
+        };
+      });
+      items.sort(
+        (a, b) =>
+          Number(b.isDefault) - Number(a.isDefault) ||
+          STATUS_RANK[a.status] - STATUS_RANK[b.status] ||
+          (a.provider < b.provider ? -1 : a.provider > b.provider ? 1 : 0) ||
+          (a.model < b.model ? -1 : a.model > b.model ? 1 : 0),
+      );
+      return {
+        catalog: {
+          source: PRICE_CATALOG_SOURCE,
+          hash: loaded.catalog.hash,
+          fetchedAt: loaded.fetchedAt,
+          entryCount: loaded.catalog.prices.size,
+        },
+        needsModelList: (withoutModelList.rowCount ?? 0) > 0,
+        truncated: items.length > MAX_SUGGESTIONS,
+        items: items.slice(0, MAX_SUGGESTIONS),
+      };
+    });
+  }
+
+  /**
+   * Saves the chosen catalog prices as dated snapshots. The figures come from the catalog read here,
+   * never from the request, and only if it is still the very catalog the administrator looked at
+   * (`catalogHash`); a price identical to the current one is skipped, so repeating it changes nothing.
+   */
+  async importCatalogPrices(
+    context: WorkspaceRequestContext,
+    input: { catalogHash: string; items: { provider: CatalogProvider; model: string }[] },
+  ) {
+    const loaded = await this.loadPriceCatalog(false);
+    if (loaded.catalog.hash !== input.catalogHash) {
+      throw conflict(
+        'PRICE_CATALOG_CHANGED',
+        'The price catalog changed since the preview. Get the prices again and review them.',
+      );
+    }
+    const wanted = new Map<
+      string,
+      { provider: CatalogProvider; model: string; price: CatalogPrice }
+    >();
+    for (const item of input.items) {
+      const lookup = lookupCatalogPrice(loaded.catalog, item.provider, item.model);
+      if (!lookup) {
+        throw unprocessable(
+          'PRICE_CATALOG_NO_MATCH',
+          'The catalog has no usable price for one of the chosen models.',
+          { provider: item.provider, model: item.model },
+        );
+      }
+      wanted.set(`${item.provider}:${item.model}`, { ...item, price: lookup.price });
+    }
+    return this.database.run(context, async (client) => {
+      const imported: Record<string, unknown>[] = [];
+      const skipped: Record<string, unknown>[] = [];
+      for (const { provider, model, price } of wanted.values()) {
+        const current = (
+          await client.query<{
+            input_per_million: number;
+            output_per_million: number;
+            cached_input_per_million: number | null;
+            reasoning_per_million: number | null;
+          }>(
+            `select input_per_million, output_per_million, cached_input_per_million, reasoning_per_million
+               from model_prices where provider = $1 and model = $2 and effective_from <= now()
+              order by effective_from desc, created_at desc limit 1`,
+            [provider, model],
+          )
+        ).rows[0];
+        const summary = {
+          provider,
+          model,
+          inputPerMillion: price.inputPerMillion,
+          outputPerMillion: price.outputPerMillion,
+          cachedInputPerMillion: price.cachedInputPerMillion,
+          reasoningPerMillion: price.reasoningPerMillion,
+          ref: `${PRICE_CATALOG_SOURCE}:${price.key}`,
+        };
+        if (
+          current &&
+          samePrice(
+            {
+              inputPerMillion: current.input_per_million,
+              outputPerMillion: current.output_per_million,
+              cachedInputPerMillion: current.cached_input_per_million,
+              reasoningPerMillion: current.reasoning_per_million,
+            },
+            price,
+          )
+        ) {
+          skipped.push(summary);
+          continue;
+        }
+        await client.query(
+          `insert into model_prices (workspace_id, provider, model, input_per_million, output_per_million,
+                                     cached_input_per_million, reasoning_per_million, effective_from,
+                                     source, source_ref, catalog_hash, created_by)
+           values ($1, $2, $3, $4, $5, $6, $7, now(), 'catalog', $8, $9, $10)`,
+          [
+            context.workspaceId,
+            provider,
+            model,
+            price.inputPerMillion,
+            price.outputPerMillion,
+            price.cachedInputPerMillion,
+            price.reasoningPerMillion,
+            summary.ref,
+            loaded.catalog.hash,
+            context.actorId,
+          ],
+        );
+        imported.push(summary);
+      }
+      if (imported.length > 0) {
+        await writeAudit(client, context, {
+          action: 'provider.prices_imported',
+          targetType: 'model_price',
+          after: {
+            source: PRICE_CATALOG_SOURCE,
+            catalogHash: loaded.catalog.hash,
+            count: imported.length,
+            imported,
+          },
+        });
+      }
+      return { imported, skipped, catalogHash: loaded.catalog.hash };
+    });
+  }
+
+  private async loadPriceCatalog(refresh: boolean) {
+    try {
+      return await this.priceCatalog.load({ refresh });
+    } catch (error) {
+      throw catalogUnavailable(error);
+    }
   }
 
   async invocations(

@@ -119,6 +119,8 @@ jobs:
           NODE_ENV: test
           DATABASE_URL: postgresql://docoo_e2e:docoo-e2e-runtime@localhost:5432/docoo_ci
           SESSION_PEPPER: docoo-ci-e2e-pepper-with-at-least-32-characters
+          # The price catalog the "get prices" end-to-end test reads: a stand-in, never the internet.
+          MODEL_PRICE_CATALOG_URL: http://127.0.0.1:4010/__prices/catalog.json
           # Seals the Contenter token the business end-to-end test enters (32 bytes, base64).
           SECRET_MASTER_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           WEB_ORIGIN: http://localhost:3000

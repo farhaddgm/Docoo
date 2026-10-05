@@ -2,9 +2,9 @@
 doc_id: DOCOO-PRODUCTION-INSTALL
 title: راهنمای سادهٔ نصب Docoo روی سرور
 status: active
-version: 1.4.0
+version: 1.5.0
 owner: Platform & Operations
-last_updated: 2026-10-04
+last_updated: 2026-10-06
 notion_sync: true
 ---
 
@@ -110,10 +110,10 @@ sudo /opt/docoo/scripts/deploy/install.sh update
 
 ```bash
 cd /opt/docoo
-sudo ./scripts/deploy/acceptance.sh > acceptance-$(date +%F).md
+sudo ./scripts/deploy/acceptance.sh | tee ~/acceptance-$(date +%F).md
 ```
 
-فقط می‌خواند و چیزی را تغییر نمی‌دهد. جدولی از کانتینرها، API، HTTPS و روزهای باقی‌ماندهٔ گواهی، دیسک، نسخه، به‌روزرسانی شبانه، پشتیبان خارج از سرور، ادمین، اتصال AI و ایمیل می‌دهد. `ACTION` یعنی کاری که فقط شما می‌توانید بکنید (مثلاً هنوز کلید AI وارد نشده) و `FAIL` یعنی خراب است. توضیح کامل و محل چسباندن گزارش: [پذیرش private beta](12-private-beta-acceptance.md).
+فقط می‌خواند و چیزی را تغییر نمی‌دهد. خروجی را `tee` هم روی صفحه نشان می‌دهد و هم در پوشهٔ خانگی شما ذخیره می‌کند؛ `> فایل` درون `/opt/docoo` کار نمی‌کند چون آن پوشه مال root است و علامت `>` را پوستهٔ خودتان (نه `sudo`) اجرا می‌کند. جدولی از کانتینرها، API، HTTPS و روزهای باقی‌ماندهٔ گواهی، دیسک، نسخه، به‌روزرسانی شبانه، پشتیبان خارج از سرور، ادمین، اتصال AI و ایمیل می‌دهد. `ACTION` یعنی کاری که فقط شما می‌توانید بکنید (مثلاً هنوز کلید AI وارد نشده) و `FAIL` یعنی خراب است. توضیح کامل و محل چسباندن گزارش: [پذیرش private beta](12-private-beta-acceptance.md).
 
 ## ۹. اگر چیزی کار نکرد
 

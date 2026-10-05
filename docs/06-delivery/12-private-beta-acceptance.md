@@ -2,9 +2,9 @@
 doc_id: DOCOO-PRIVATE-BETA-ACCEPTANCE
 title: پذیرش private beta با شاهد؛ سه ابزار و یک امضا
 status: active
-version: 1.0.0
+version: 1.1.0
 owner: Platform & Operations
-last_updated: 2026-10-04
+last_updated: 2026-10-06
 notion_sync: true
 ---
 
@@ -50,7 +50,7 @@ notion_sync: true
 3. **سرور.** پس از نصب ([راهنمای نصب](11-production-install.md)) و ورود کلید AI در صفحهٔ «ارائه‌دهندگان AI» (و زدن «بررسی سلامت»):
 
    ```bash
-   sudo ./scripts/deploy/acceptance.sh > acceptance-$(date +%F).md
+   sudo ./scripts/deploy/acceptance.sh | tee ~/acceptance-$(date +%F).md
    ```
 
    جدول را در #94 بچسبانید. اگر بخواهید همان ماشین قبل از beta چند روز بماند، این را هفته‌ای یک بار دوباره بگیرید؛ تغییر وضعیت‌ها همان چیزی است که باید دیده شود.

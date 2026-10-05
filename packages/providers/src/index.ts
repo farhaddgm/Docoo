@@ -7,6 +7,7 @@ export * from './contract.js';
 export * from './fake.js';
 export * from './http.js';
 export * from './policy.js';
+export * from './price-catalog.js';
 export * from './secrets.js';
 
 /** Builds the adapter for a stored connection; the fake provider needs no secret. */

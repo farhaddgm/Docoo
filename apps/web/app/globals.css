@@ -843,6 +843,19 @@ button:disabled {
   min-width: 36rem;
 }
 
+/* The catalog price preview: a model id must not break at its hyphens, and the notes need room. */
+.catalog-table {
+  min-width: 56rem;
+}
+
+.catalog-table .model-cell {
+  white-space: nowrap;
+}
+
+.catalog-table .notes-cell {
+  min-width: 14rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

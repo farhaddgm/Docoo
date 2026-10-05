@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend } from '../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, formatPrice, type Locale } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
+import { CatalogPrices } from './catalog-prices';
 import { priceMessages } from './price-messages';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
@@ -18,6 +19,7 @@ interface Price {
   outputPerMillion: number;
   cachedInputPerMillion: number | null;
   reasoningPerMillion: number | null;
+  source: string;
   effectiveFrom: string;
 }
 
@@ -121,13 +123,21 @@ export function ModelPrices({
     }, text.saved);
   }
 
-  const num = (value: number | null) => (value === null ? '—' : formatNumber(locale, value));
+  const num = (value: number | null) => (value === null ? '—' : formatPrice(locale, value));
   const suggestions = modelIds[provider] ?? [];
 
   return (
     <section className="card stack" aria-labelledby="prices-title">
       <h2 id="prices-title">{text.title}</h2>
       <p className="muted">{text.help}</p>
+      <CatalogPrices
+        locale={locale}
+        workspaceId={workspaceId}
+        onSaved={() => {
+          void load().catch(() => undefined);
+          onChanged();
+        }}
+      />
       {view?.defaultModel &&
         (view.defaultModel.priced ? (
           <p className="notice ok" role="status">
@@ -158,6 +168,7 @@ export function ModelPrices({
                 <th scope="col">{text.output}</th>
                 <th scope="col">{text.cached}</th>
                 <th scope="col">{text.reasoning}</th>
+                <th scope="col">{text.source}</th>
                 <th scope="col">{text.since}</th>
               </tr>
             </thead>
@@ -172,6 +183,7 @@ export function ModelPrices({
                   <td>{num(item.outputPerMillion)}</td>
                   <td>{num(item.cachedInputPerMillion)}</td>
                   <td>{num(item.reasoningPerMillion)}</td>
+                  <td>{item.source === 'catalog' ? text.sourceCatalog : text.sourceManual}</td>
                   <td>{formatDateTime(locale, item.effectiveFrom)}</td>
                 </tr>
               ))}

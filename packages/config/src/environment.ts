@@ -39,6 +39,19 @@ export const environmentSchema = z.object({
       .optional(),
   ),
   MAIL_FROM: z.string().min(3).default('Docoo <no-reply@localhost>'),
+  /**
+   * Where the "get prices from the public catalog" button reads from (https only). Empty means
+   * LiteLLM's public price catalog; set it to a mirror when the server may not reach GitHub. https only
+   * (plain http is accepted for this machine alone, as a stand-in in tests).
+   */
+  MODEL_PRICE_CATALOG_URL: z.preprocess(
+    emptyStringToUndefined,
+    z
+      .string()
+      .regex(/^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$))/u)
+      .max(500)
+      .optional(),
+  ),
   OTEL_SERVICE_NAME: z.string().min(1).default('docoo-api'),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.preprocess(emptyStringToUndefined, z.url().optional()),
 });

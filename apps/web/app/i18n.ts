@@ -28,6 +28,11 @@ export function formatNumber(locale: Locale, value: number): string {
   return new Intl.NumberFormat(intlTag[locale]).format(value);
 }
 
+/** A price in USD per million tokens: up to six decimals, so 0.0375 is never shown as 0.038. */
+export function formatPrice(locale: Locale, value: number): string {
+  return new Intl.NumberFormat(intlTag[locale], { maximumFractionDigits: 6 }).format(value);
+}
+
 /** Replaces the locale segment of a path so switching language keeps the page. */
 export function localizedPath(pathname: string, locale: Locale): string {
   const segments = pathname.split('/');

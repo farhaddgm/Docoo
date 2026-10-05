@@ -57,6 +57,23 @@ const priceSchema = z
     effectiveFrom: z.iso.datetime({ offset: true }),
   })
   .strict();
+const catalogLookupSchema = z.object({ refresh: z.boolean().default(false) }).strict();
+const catalogImportSchema = z
+  .object({
+    catalogHash: z.string().regex(/^[0-9a-f]{64}$/u),
+    items: z
+      .array(
+        z
+          .object({
+            provider: z.enum(['openai', 'gemini', 'anthropic']),
+            model: z.string().trim().min(1).max(200),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(200),
+  })
+  .strict();
 const selfCheckSchema = z
   .object({
     model: z.string().trim().min(1).max(200),
@@ -254,6 +271,32 @@ export class ProvidersController {
     return {
       price: await this.providers.addPrice(workspaceContext(request), parse(priceSchema, body)),
     };
+  }
+
+  @Post('model-prices/catalog-lookup')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Look up prices of the models in use in the public price catalog (nothing is saved)',
+  })
+  @RequireWorkspacePermission('provider.configure')
+  async catalogLookup(@Req() request: FastifyRequest, @Body() body: unknown) {
+    return this.providers.catalogPriceSuggestions(
+      workspaceContext(request),
+      parse(catalogLookupSchema, body),
+    );
+  }
+
+  @Post('model-prices/catalog-import')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Save the chosen prices from the public price catalog as dated snapshots',
+  })
+  @RequireWorkspacePermission('provider.configure')
+  async catalogImport(@Req() request: FastifyRequest, @Body() body: unknown) {
+    return this.providers.importCatalogPrices(
+      workspaceContext(request),
+      parse(catalogImportSchema, body),
+    );
   }
 
   @Get('model-invocations')
