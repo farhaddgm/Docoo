@@ -65,7 +65,7 @@ app
     if (sensitiveAuthRoute && methods.includes('POST')) {
       routeOptions.config = {
         ...routeOptions.config,
-        rateLimit: { max: 10, timeWindow: '1 minute' },
+        rateLimit: { max: config.AUTH_RATE_LIMIT_PER_MINUTE, timeWindow: '1 minute' },
       };
     }
   });

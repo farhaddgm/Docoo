@@ -27,6 +27,8 @@ export const environmentSchema = z.object({
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   /** Per-IP request ceiling; raised only for single-source load and DAST runs. */
   API_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).max(1_000_000).default(120),
+  /** Per-IP ceiling for sign-in and password reset; production keeps 10, only the browser tests raise it. */
+  AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(3).max(1_000_000).default(10),
   PASSWORD_RESET_TTL_SECONDS: z.coerce.number().int().min(300).max(86_400).default(1800),
   /** SMTP server for password-reset mail, e.g. smtps://user:pass@smtp.example.com:465. */
   SMTP_URL: z.preprocess(
