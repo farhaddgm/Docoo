@@ -534,4 +534,16 @@ export interface WritingReport {
   readonly discardedBlocks: number;
   /** Notes the administrator should read (a tool the role lacks, a section left short, …). */
   readonly notes: readonly string[];
+  /**
+   * Where the text breaks the brand terminology of the project's business (ADR-0021), found by
+   * code; absent when the project has no business or the report is older than that.
+   */
+  readonly termIssues?:
+    | readonly {
+        readonly kind: 'USE' | 'AVOID';
+        readonly term: string;
+        readonly found: string;
+        readonly count: number;
+      }[]
+    | undefined;
 }

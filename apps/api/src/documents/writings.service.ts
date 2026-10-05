@@ -5,9 +5,11 @@ import {
   isTemplateKey,
   templateFor,
   validateDocument,
+  visibleText,
   walkBlocks,
   type Level,
 } from '@docoo/documents';
+import { checkTerms } from '@docoo/domain';
 import {
   documentWritingWorkflowId,
   resolveAgentProfile,
@@ -15,6 +17,7 @@ import {
 } from '@docoo/orchestration';
 import type { PoolClient, QueryResultRow } from 'pg';
 
+import { BusinessService } from '../business/business.service.js';
 import { writeAudit } from '../common/audit.js';
 import { isoColumn } from '../common/pagination.js';
 import { badRequest, conflict, isUniqueViolation, notFound } from '../common/problems.js';
@@ -87,6 +90,7 @@ export class WritingsService {
     private readonly database: WorkspaceDatabase,
     private readonly config: ConfigService,
     @Inject(WORKFLOW_ENGINE) private readonly engine: WorkflowEngine,
+    private readonly business: BusinessService,
   ) {}
 
   async list(context: WorkspaceRequestContext, documentId: string) {
@@ -108,6 +112,20 @@ export class WritingsService {
   }
 
   async start(context: WorkspaceRequestContext, documentId: string, input: StartWritingInput) {
+    // The documenter reads the project's business as it is when the writing starts: Contenter is
+    // asked first (when the project asks for it) and the snapshot is pinned to the writing.
+    const owner = await this.database.run(
+      context,
+      async (client) =>
+        (
+          await client.query<{ project_id: string }>(
+            'select project_id from documents where id = $1',
+            [documentId],
+          )
+        ).rows[0],
+    );
+    if (!owner) throw notFound('DOCUMENT_NOT_FOUND', 'The document was not found.');
+    const business = await this.business.resolveForUse(context, owner.project_id);
     const created = await this.database.run(context, async (client) => {
       const document = (
         await client.query<{
@@ -174,8 +192,8 @@ export class WritingsService {
       const row = await client
         .query<{ id: string }>(
           `insert into document_writings (workspace_id, project_id, document_id, level, template_version, language, notes,
-                                        base_version_id, temporal_workflow_id, settings, requested_by)
-         values ($1, $2, $3, $4, $5, $6::locale, $7, $8, 'pending', $9::jsonb, $10)
+                                        base_version_id, temporal_workflow_id, settings, requested_by, business_snapshot_id)
+         values ($1, $2, $3, $4, $5, $6::locale, $7, $8, 'pending', $9::jsonb, $10, $11)
          returning id`,
           [
             context.workspaceId,
@@ -188,6 +206,7 @@ export class WritingsService {
             document.current_version_id,
             JSON.stringify({ ...settings, levelBounds: effective.values['document.level_bounds'] }),
             context.actorId,
+            business.snapshotId,
           ],
         )
         .catch((error: unknown) => {
@@ -320,9 +339,15 @@ export class WritingsService {
           if (block.type === 'bibliography')
             for (const entry of block.entries) entries.push({ id: entry.id, text: entry.text });
         }
+        // Brand terminology is checked by code against the project's business, never by the model.
+        const termIssues = checkTerms(
+          visibleText(content),
+          await this.business.termRules(client, document.project_id),
+        );
         return {
           valid: true as const,
           problems: [] as string[],
+          termIssues,
           compliance: {
             level: compliance.level,
             count: compliance.count,

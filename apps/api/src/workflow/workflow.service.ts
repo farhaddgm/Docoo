@@ -4,6 +4,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { projectWorkflowId, STAGES } from '@docoo/orchestration';
 import type { PoolClient, QueryResultRow } from 'pg';
 
+import { BusinessService } from '../business/business.service.js';
 import { writeAudit } from '../common/audit.js';
 import { isoColumn } from '../common/pagination.js';
 import { badRequest, conflict, notFound } from '../common/problems.js';
@@ -67,12 +68,16 @@ export class WorkflowService {
     private readonly database: WorkspaceDatabase,
     @Inject(WORKFLOW_ENGINE) private readonly engine: WorkflowEngine,
     private readonly commands: CommandRunner,
+    private readonly business: BusinessService,
   ) {}
 
   // ------------------------------------------------------------------ lifecycle
 
   /** WF-001: an active project gets exactly one live run of the fixed stage sequence. */
   async start(context: WorkspaceRequestContext, projectId: string) {
+    // The business is read before the run row is made: Contenter is asked first (when the project
+    // asks for it), and the snapshot the agents will read is pinned to the run (ADR-0021).
+    const business = await this.business.resolveForUse(context, projectId);
     const run = await this.database.run(context, async (client) => {
       const project = (
         await client.query<{ status: string; config_snapshot_id: string | null }>(
@@ -102,8 +107,9 @@ export class WorkflowService {
       ).rows[0]!.next;
       const created = (
         await client.query<RunRow>(
-          `insert into workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id, config_snapshot_id, created_by)
-           values ($1, $2, $3, $4, $5, $6) returning ${runColumns}`,
+          `insert into workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id, config_snapshot_id, created_by,
+                                      business_snapshot_id)
+           values ($1, $2, $3, $4, $5, $6, $7) returning ${runColumns}`,
           [
             context.workspaceId,
             projectId,
@@ -111,6 +117,7 @@ export class WorkflowService {
             projectWorkflowId(projectId, runNo),
             project.config_snapshot_id,
             context.actorId,
+            business.snapshotId,
           ],
         )
       ).rows[0]!;
@@ -119,7 +126,14 @@ export class WorkflowService {
         targetType: 'workflow_run',
         targetId: created.id,
         projectId,
-        after: { runNo, stages: STAGES, configSnapshotId: project.config_snapshot_id },
+        after: {
+          runNo,
+          stages: STAGES,
+          configSnapshotId: project.config_snapshot_id,
+          businessSnapshotId: business.snapshotId,
+          // Contenter could not be asked: the run reads the last saved snapshot.
+          ...(business.syncError ? { businessSyncError: business.syncError } : {}),
+        },
       });
       return created;
     });

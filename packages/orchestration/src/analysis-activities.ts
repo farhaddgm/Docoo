@@ -24,6 +24,7 @@ import {
   type TranscriptAttachment,
   type TranscriptQuestion,
 } from './analysis.js';
+import { businessForRole, loadRunBusiness } from './business.js';
 import { audit, inWorkspace } from './db.js';
 import type { StageRef } from './refs.js';
 import type { ProviderRuntime } from './runtime.js';
@@ -419,6 +420,11 @@ export function createAnalysisActivities(
             after: { ...cost },
           });
         }
+        const business = businessForRole(
+          await loadRunBusiness(client, ref.runId),
+          'analyst',
+          config.businessBudgetChars,
+        );
         const prompt = roundPrompt({
           language: project.language,
           projectTitle: project.title,
@@ -427,6 +433,7 @@ export function createAnalysisActivities(
           feedback: feedback.rows.map((row) => row.comment),
           analysis: context,
           definition: profile.definition,
+          business: business?.prompt,
         });
         return {
           sessionId: session.id,
@@ -435,6 +442,7 @@ export function createAnalysisActivities(
           config: { ...config, connectionId, model },
           agentDefinitionVersionId: profile.definition.id,
           promptSha256: promptDigest(prompt),
+          businessSnapshotId: business?.snapshotId ?? null,
           numbers: new Set(loaded.questions.map((question) => question.number)),
           prompt,
         } as const;
@@ -454,6 +462,7 @@ export function createAnalysisActivities(
             retryNo: ref.retryNo,
             agentDefinitionVersionId: prepared.agentDefinitionVersionId,
             promptSha256: prepared.promptSha256,
+            businessSnapshotId: prepared.businessSnapshotId,
           },
           prepared.config.connectionId,
           {

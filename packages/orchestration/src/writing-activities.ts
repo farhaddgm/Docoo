@@ -21,6 +21,7 @@ import {
   SECTION_SCHEMA,
   SECTION_SCHEMA_NAME,
   subsectionVerdict,
+  visibleText,
   WRITING_VERSION,
   type Block,
   type Criterion,
@@ -29,7 +30,7 @@ import {
   type WritingPlan,
   type WritingReport,
 } from '@docoo/documents';
-import { type AgentDefinitionContent } from '@docoo/domain';
+import { checkTerms, type AgentDefinitionContent } from '@docoo/domain';
 import {
   checkCostLimit,
   ProviderError,
@@ -39,6 +40,7 @@ import {
 import type { Pool, PoolClient } from 'pg';
 
 import { loadAgentVersion, resolveAgentProfile } from './agents.js';
+import { businessForRole, loadWritingBusiness } from './business.js';
 import { audit, inWorkspace } from './db.js';
 import { canonicalJson, retrieveKnowledge, type RetrievedPassage } from './knowledge-retrieval.js';
 import { compactResearchForPrompt, assignReferences, type KnowledgePassage } from './research.js';
@@ -204,6 +206,7 @@ export function createWritingActivities(
     solutionSummary: string;
     solutionPlan: string[];
     problem: Record<string, unknown>;
+    businessSnapshotId: string | null;
   } | null> {
     const project = (
       await client.query<{
@@ -294,6 +297,13 @@ export function createWritingActivities(
           .slice(0, 20)
       : [];
 
+    // What the documenter reads of the project's business: the snapshot pinned when the writing
+    // started, cut to this role's sections within the budget pinned with it (ADR-0021).
+    const business = businessForRole(
+      await loadWritingBusiness(client, row.id),
+      'documenter',
+      writingSettingsFromRow(row.settings).businessBudgetChars,
+    );
     const material: WritingMaterial = {
       project: project.title,
       language: row.language,
@@ -319,6 +329,7 @@ export function createWritingActivities(
       stageOutline,
       notes: row.notes,
       knowledge,
+      business: business?.prompt,
     };
     return {
       material,
@@ -327,6 +338,7 @@ export function createWritingActivities(
       solutionSummary: solution.summary,
       solutionPlan: solution.plan,
       problem,
+      businessSnapshotId: business?.snapshotId ?? null,
     };
   }
 
@@ -508,6 +520,7 @@ export function createWritingActivities(
         retryNo,
         agentDefinitionVersionId: prepared.definition.id,
         promptSha256: promptSha256(prompt),
+        businessSnapshotId: prepared.loaded.businessSnapshotId,
       },
       prepared.connectionId,
       {
@@ -1091,6 +1104,11 @@ export function createWritingActivities(
           if (!compliance.withinBounds)
             notes.push(compliance.deviation < 0 ? 'left_short' : 'left_long');
           const fitRounds = Math.max(0, ...Object.values(row.parts).map((part) => part.fitRound));
+          // The brand terminology of the pinned business, checked by code on the finished text.
+          const terms = (await loadWritingBusiness(client, row.id))?.content.terms ?? [];
+          const termIssues = checkTerms(visibleText(document), terms)
+            .slice(0, 20)
+            .map(({ kind, term, found, count }) => ({ kind, term, found, count }));
           const report: WritingReport = {
             version: WRITING_VERSION,
             level,
@@ -1115,6 +1133,7 @@ export function createWritingActivities(
               0,
             ),
             notes,
+            ...(terms.length > 0 ? { termIssues } : {}),
           };
           await client.query(
             `update document_writings set status = 'succeeded', phase = 'done', result_version_id = $2, report = $3::jsonb,

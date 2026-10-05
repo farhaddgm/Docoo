@@ -1,3 +1,4 @@
+import { clampBusinessBudget } from '@docoo/domain';
 import type { PoolClient } from 'pg';
 
 import { RESEARCH_DEFAULTS } from './research.js';
@@ -23,6 +24,8 @@ export interface Settings {
   analysisRequireRisk: boolean;
   /** ... and about what is out of scope (`analysis.require_out_of_scope_dimension`). */
   analysisRequireOutOfScope: boolean;
+  /** Characters of the business profile one call may carry (`business.prompt_budget_chars`). */
+  businessBudgetChars: number;
 }
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
@@ -80,5 +83,6 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
     ),
     analysisRequireRisk: values['analysis.require_risk_dimension'] === true,
     analysisRequireOutOfScope: values['analysis.require_out_of_scope_dimension'] === true,
+    businessBudgetChars: clampBusinessBudget(values['business.prompt_budget_chars']),
   };
 }

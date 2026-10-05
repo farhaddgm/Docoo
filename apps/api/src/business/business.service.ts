@@ -11,7 +11,9 @@ import {
   normalizeBusinessExport,
   type AgentRole,
   type BusinessContent,
+  type BusinessTerm,
 } from '@docoo/domain';
+import { businessForRole, loadSnapshot, type RoleBusiness } from '@docoo/orchestration';
 import { decryptSecret, encryptSecret, type MasterKey } from '@docoo/providers';
 import type { PoolClient, QueryResultRow } from 'pg';
 
@@ -108,6 +110,9 @@ export interface BusinessForUse {
   /** The reason the latest check of Contenter failed, when it did (the saved snapshot was used). */
   readonly syncError: string | null;
 }
+
+/** Asking Contenter before a run or a writing must not hold the start up for long. */
+const START_SYNC_TIMEOUT_MS = 8_000;
 
 function badGateway(code: string, detail: string): HttpException {
   return new HttpException({ status: 502, title: 'Bad Gateway', code, detail }, 502);
@@ -378,8 +383,9 @@ export class BusinessService {
   async fetchBusiness(
     context: WorkspaceRequestContext,
     externalId: string,
+    timeoutMs?: number,
   ): Promise<FetchedBusiness> {
-    const { client } = await this.contenterClient(context);
+    const { client } = await this.contenterClient(context, timeoutMs);
     let answer: unknown;
     try {
       answer = await client.exportBusiness(externalId);
@@ -395,7 +401,7 @@ export class BusinessService {
     }
     const exportedAt =
       typeof answer === 'object' && answer !== null && 'exportedAt' in answer
-        ? String((answer as { exportedAt: unknown }).exportedAt).slice(0, 40)
+        ? String(answer.exportedAt).slice(0, 40)
         : null;
     return { content: normalized.content, sha256: hashOf(normalized.content), exportedAt };
   }
@@ -537,7 +543,11 @@ export class BusinessService {
   }
 
   /** Asks Contenter again; a change becomes a new snapshot and the project reads it from now on. */
-  async sync(context: WorkspaceRequestContext, projectId: string): Promise<SyncOutcome> {
+  async sync(
+    context: WorkspaceRequestContext,
+    projectId: string,
+    timeoutMs?: number,
+  ): Promise<SyncOutcome> {
     const link = await this.database.run(context, async (client) => {
       const row = await this.loadLink(client, projectId);
       if (!row)
@@ -546,7 +556,7 @@ export class BusinessService {
     });
     let fetched: FetchedBusiness;
     try {
-      fetched = await this.fetchBusiness(context, link.external_business_id);
+      fetched = await this.fetchBusiness(context, link.external_business_id, timeoutMs);
     } catch (error) {
       const reason = error instanceof HttpException ? this.codeOf(error) : 'unexpected_error';
       await this.database.run(context, (client) =>
@@ -596,7 +606,7 @@ export class BusinessService {
       return { snapshotId: link.snapshot_id, syncError: link.sync_error };
     }
     try {
-      const outcome = await this.sync(context, projectId);
+      const outcome = await this.sync(context, projectId, START_SYNC_TIMEOUT_MS);
       return { snapshotId: outcome.snapshotId, syncError: null };
     } catch (error) {
       return {
@@ -604,6 +614,33 @@ export class BusinessService {
         syncError: error instanceof HttpException ? this.codeOf(error) : syncErrorOf(error),
       };
     }
+  }
+
+  /**
+   * What one role reads of the project's business now (the snapshot its link points at), for the
+   * calls that run outside a workflow: solutions and document evaluation. Null without a link.
+   */
+  async roleBusiness(
+    client: PoolClient,
+    context: WorkspaceRequestContext,
+    projectId: string,
+    role: AgentRole,
+  ): Promise<RoleBusiness | null> {
+    const link = await this.loadLink(client, projectId);
+    if (!link) return null;
+    const config = await this.configService.resolve(client, context, 'project', projectId);
+    return businessForRole(
+      await loadSnapshot(client, link.snapshot_id),
+      role,
+      config.values['business.prompt_budget_chars'],
+    );
+  }
+
+  /** The brand terminology of the project's business (what the documenter must keep to). */
+  async termRules(client: PoolClient, projectId: string): Promise<readonly BusinessTerm[]> {
+    const link = await this.loadLink(client, projectId);
+    if (!link) return [];
+    return (await loadSnapshot(client, link.snapshot_id))?.content.terms ?? [];
   }
 
   async hasLink(client: PoolClient, projectId: string): Promise<boolean> {
@@ -771,6 +808,7 @@ export class BusinessService {
   /** A ready client: the stored token is opened only here, for the length of one request. */
   private async contenterClient(
     context: WorkspaceRequestContext,
+    timeoutMs?: number,
   ): Promise<{ client: ContenterClient; id: string }> {
     const row = await this.database.run(context, (client) => this.loadConnection(client));
     if (!row || row.secret_version === 0 || !row.ciphertext) {
@@ -794,7 +832,14 @@ export class BusinessService {
       master,
       tokenContext(row.id, row.secret_version),
     );
-    return { client: new ContenterClient({ apiUrl: row.api_url, token }), id: row.id };
+    return {
+      client: new ContenterClient({
+        apiUrl: row.api_url,
+        token,
+        ...(timeoutMs ? { timeoutMs } : {}),
+      }),
+      id: row.id,
+    };
   }
 
   private async loadConnection(
