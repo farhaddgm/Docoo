@@ -2,6 +2,28 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.18.0] — 2026-10-05
+
+Readiness for the first real model: the defaults that would have broken a first real run are fixed, the cost ceiling now really works, and the providers page can test a model with one click. See [ADR-0020](docs/adr/0020-real-provider-readiness.md).
+
+### Added
+
+- **Full model test** on the providers page: one click tries the nine kinds of call the platform makes (analyst questions, the five stage outputs, document outline and one document part, the Brain's role evaluation) against the chosen connection and model, one request at a time, with the production prompts and schemas on tiny sample data. Each step shows its status, time, tokens, cost and, when it fails, what went wrong in plain words together with the provider's own reason. It stops after a rejected key and produces a plain-text report that can be copied. API: `GET` and `POST /provider-connections/{id}/self-check` (`provider.read` and `provider.test`).
+- **Model prices** on the providers page: a table of the entered prices (USD per million tokens), a form to enter one, and a warning when the default model has none. The costs page and the project cost summary count the calls that were priced by estimate (`unpricedInvocations`), and the server acceptance report gains a "Model prices" row.
+- **Project health and milestone** (UX §6): the project header shows how the project is doing (on track, waiting for you, blocked, not running, done) with the reasons and a link to the workflow, and the overview shows how many of the five stages are complete with the status of each.
+- `model_invocations.error_detail` (migration 0027): the reason a provider gave for a refused call, with key-like strings removed and shortened to 300 characters; it is shown with the failed call, in `GET /model-invocations` and, on the project's Workflow tab, next to the "AI provider did not answer" task.
+
+### Changed
+
+- **Output limits** depend on what a call is for (16,000 tokens for analyst rounds, stage outputs and solutions; 8,000 for the rest) and are held under the model's own maximum from the model catalog; the adapters' default was 4,096, which would have cut a long structured answer. The HTTP timeout is 300 seconds (it was 120, shorter than the activity timeouts).
+- **The cost ceiling can no longer be switched off by a missing price.** A call to a model without a price is estimated with a deliberately high default (10 USD input and 40 USD output per million tokens) and marked as an estimate (`price_id` is null); entering the real price makes it exact. Until now such a call had no cost at all, so `ai.max_cost_usd_per_run` never triggered.
+- Reasoning tokens are split from output tokens in every adapter (OpenAI counted them inside `output_tokens`) and are priced at their own price, or the output price when none is set.
+- The model list of OpenAI and Gemini keeps only text models; embedding, audio, image, moderation and similar models can no longer be picked as the default.
+
+### Fixed
+
+- A refused provider call (HTTP 400) used to be stored with only a status code; the reason is now kept, so "this model does not support structured output" is visible instead of a bare failure.
+
 ## [0.17.2] — 2026-10-05
 
 A fix for the Knowledge page and the green CI that 0.17.1 was tagged without.

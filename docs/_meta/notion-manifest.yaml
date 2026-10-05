@@ -182,3 +182,6 @@ documents:
   - path: docs/adr/0019-document-writing-and-structured-editor.md
     doc_id: DOCOO-ADR-0019
     section: ADRs
+  - path: docs/adr/0020-real-provider-readiness.md
+    doc_id: DOCOO-ADR-0020
+    section: ADRs

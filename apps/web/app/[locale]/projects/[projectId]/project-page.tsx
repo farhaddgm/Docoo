@@ -12,6 +12,9 @@ import { WorkspacePage } from '../../workspace-page';
 import { explainProject } from '../explain';
 import { projectMessages } from '../messages';
 import { projectPageMessages } from './messages';
+import { healthMessages } from './health-messages';
+import { HealthBadge, HealthReasons, MilestoneCard } from './health-view';
+import { projectHealth, projectMilestone, type WorkflowFacts } from './project-health';
 import { AgentsPanel } from './agents-panel';
 import { DocumentsPanel } from './documents-panel';
 import { KnowledgePanel } from './knowledge-panel';
@@ -68,11 +71,20 @@ function ProjectView({
   const [load, setLoad] = useState<Load>('loading');
   const [tab, setTab] = useState<Tab>('overview');
   const [refreshKey, setRefreshKey] = useState(0);
+  // What the header's health and the overview's milestone are drawn from; null if unreadable.
+  const [facts, setFacts] = useState<WorkflowFacts | null>(null);
 
   const reload = useCallback(async () => {
     try {
-      const { project: loaded } = await apiGet<{ project: ProjectDetail }>(base);
+      const [{ project: loaded }, flow] = await Promise.all([
+        apiGet<{ project: ProjectDetail }>(base),
+        apiGet<{ workflow: WorkflowFacts }>(`${base}/workflow`).then(
+          (result) => result.workflow,
+          () => null,
+        ),
+      ]);
       setProject(loaded);
+      setFacts(flow);
       setLoad('ready');
     } catch (error) {
       if (error instanceof ApiError && (error.status === 404 || error.status === 400)) {
@@ -127,6 +139,9 @@ function ProjectView({
     );
   }
 
+  const health = projectHealth(project, facts);
+  const milestone = projectMilestone(project.status, facts);
+
   return (
     <div className="stack">
       <p>
@@ -144,6 +159,12 @@ function ProjectView({
               <span className={`badge state-${project.status}`}>
                 {text.statuses[project.status] ?? project.status}
               </span>
+            </dd>
+          </div>
+          <div>
+            <dt>{healthMessages(locale).label}</dt>
+            <dd>
+              <HealthBadge locale={locale} health={health} />
             </dd>
           </div>
           <div>
@@ -177,6 +198,17 @@ function ProjectView({
             <strong>{text.pauseReason}:</strong> <span dir="auto">{project.pauseReason}</span>
           </p>
         )}
+        {health.reasons.some((reason) => reason.code !== 'paused') && (
+          <HealthReasons
+            locale={locale}
+            health={{
+              ...health,
+              // The pause itself is already written out above, with its reason.
+              reasons: health.reasons.filter((reason) => reason.code !== 'paused'),
+            }}
+            onOpenWorkflow={() => choose('workflow')}
+          />
+        )}
         <Lifecycle
           locale={locale}
           base={base}
@@ -204,6 +236,9 @@ function ProjectView({
         </ul>
       </nav>
 
+      {tab === 'overview' && (
+        <MilestoneCard locale={locale} milestone={milestone} stages={facts?.stages ?? []} />
+      )}
       {tab === 'overview' && (
         <OverviewPanel
           locale={locale}

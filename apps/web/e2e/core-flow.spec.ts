@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { documentMessages } from '../app/[locale]/projects/[projectId]/document-messages';
+import { healthMessages } from '../app/[locale]/projects/[projectId]/health-messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
 import { problemMessages } from '../app/[locale]/projects/[projectId]/problem-messages';
 import { solutionMessages } from '../app/[locale]/projects/[projectId]/solution-messages';
@@ -44,6 +45,13 @@ const digits = (value: number) => new Intl.NumberFormat('fa').format(value);
 const mainNavigation = (page: Page) => page.getByRole('navigation', { name: 'ناوبری اصلی' });
 const failureNotice = (page: Page) => page.locator('.notice.error[role="alert"]');
 const statusBadge = (page: Page) => page.locator('.facts .badge').first();
+const health = healthMessages('fa');
+/** The project's health in the header, next to its status. */
+const healthBadge = (page: Page) =>
+  page
+    .locator('.facts > div')
+    .filter({ has: page.getByText(health.label, { exact: true }) })
+    .locator('.badge');
 
 test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001, WF-003)', () => {
   test('topics: create, edit, archive and restore (TOP-001)', async ({ page }) => {
@@ -144,6 +152,10 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       page.getByRole('heading', { level: 2, name: new RegExp(code, 'u') }),
     ).toBeVisible();
     await expect(statusBadge(page)).toHaveText(detail.statuses['draft']!);
+    await expect(healthBadge(page)).toHaveText(health.levels['idle']!);
+    const milestone = page.getByRole('region', { name: health.milestone });
+    await expect(milestone.getByText(health.milestoneNone)).toBeVisible();
+    await expect(milestone.getByRole('listitem')).toHaveCount(5);
     await expect(page.getByRole('button', { name: detail.commands['pause']! })).toHaveCount(0);
     const topicItems = page.locator('#topics-title').locator('xpath=following-sibling::ol/li');
     await expect(topicItems.first()).toContainText(titles.second); // saved in the chosen priority
@@ -163,8 +175,11 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: detail.confirm }).click();
     await expect(statusBadge(page)).toHaveText(detail.statuses['paused']!);
     await expect(page.getByText('نیاز به بازبینی دستی')).toBeVisible();
+    // A paused project is blocked until somebody resumes it.
+    await expect(healthBadge(page)).toHaveText(health.levels['blocked']!);
     await page.getByRole('button', { name: detail.commands['resume']! }).click();
     await expect(statusBadge(page)).toHaveText(detail.statuses['active']!);
+    await expect(healthBadge(page)).not.toHaveText(health.levels['blocked']!);
 
     // The problem is locked once the project left draft; other fields stay editable.
     await page.getByRole('button', { name: detail.edit }).click();
@@ -275,6 +290,20 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       waiting,
     );
     await expect(page.locator('.stage-list .badge.state-completed')).toHaveCount(5);
+    await expectNoSeriousA11yViolations(page);
+
+    // The last approval completes the project: the overview shows the full milestone and the
+    // header reads "done" without any reason to worry about.
+    await page.getByRole('button', { name: detail.tabs.overview }).click();
+    const milestone = page.getByRole('region', { name: health.milestone });
+    await expect(milestone.getByText(health.milestoneAll)).toBeVisible(waiting);
+    await expect(
+      milestone.getByRole('progressbar', { name: health.milestoneProgress }),
+    ).toHaveJSProperty('value', 5);
+    await expect(milestone.locator('.badge.state-completed')).toHaveCount(5);
+    await expect(statusBadge(page)).toHaveText(detail.statuses['completed']!);
+    await expect(healthBadge(page)).toHaveText(health.levels['done']!);
+    await expect(page.getByRole('list', { name: health.label })).toHaveCount(0);
     await expectNoSeriousA11yViolations(page);
 
     // The timeline records the decisions.
