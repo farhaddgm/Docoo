@@ -2,9 +2,9 @@
 doc_id: DOCOO-OWNER-ACTION-GUIDE
 title: راهنمای گام‌به‌گام مالک محصول Docoo
 status: active
-version: 1.0.0
+version: 1.1.0
 owner: Product & Engineering
-last_updated: 2026-09-24
+last_updated: 2026-10-04
 notion_sync: true
 ---
 
@@ -57,6 +57,10 @@ notion_sync: true
 ## قدم ۷ — Notion و GitHub
 
 GitHub منبع حقیقت است و Notion نمایش/پیگیری است. بعد از هر merge، sync معتبر باید document ID، version، commit SHA، checksum و زمان sync را ثبت و محتوای صفحه را با فایل مخزن تطبیق دهد. workflow `Notion documentation sync` این کار را مستقیم با Notion API انجام می‌دهد و state را در `main` commit می‌کند. کار لازم از سمت مالک: ساخت internal integration در Notion، share کردن صفحهٔ ریشهٔ Docoo و `Docoo Document Index` با آن، ذخیرهٔ token به‌عنوان secret مخزن با نام `NOTION_TOKEN` و یک‌بار اجرای دستی workflow با گزینهٔ `force`. تا وقتی secret تنظیم نشده، workflow فقط plan را نشان می‌دهد و «سبز شدن» آن نشانهٔ sync نیست. در Notion محتوا را مستقل از مخزن ویرایش نکنید؛ اگر تغییری لازم است در GitHub Issue/PR ثبت شود.
+
+## قدم ۸ — پذیرش private beta با شاهد
+
+سه چیز فقط از شما برمی‌آید: کلید واقعی provider (و گفتار به متن) به‌عنوان secret مخزن، تنظیم حفاظت شاخه و CodeQL در GitHub، و سرور واقعی با دامنه. بعد از هر کدام، ابزار فقط‌خواندنی مربوط را اجرا کنید و خروجی‌اش را در Issue بچسبانید: `pnpm owner:check` برای GitHub، گردش‌کار **Provider acceptance** برای کلیدها، و `sudo ./scripts/deploy/acceptance.sh` روی سرور. هر خط `ACTION` همان گام لازم را می‌گوید. ترتیب و معنی وضعیت‌ها و بلوک امضا: [پذیرش private beta](12-private-beta-acceptance.md). پیش از آن چیزی «پذیرفته‌شده» نیست؛ فقط آماده است.
 
 ## چه چیزهایی از شما لازم نیست
 

@@ -6,11 +6,12 @@ import type { Locale } from '../../i18n';
 import { WorkspacePage } from '../workspace-page';
 import { ConflictsPanel } from './conflicts-panel';
 import { knowledgeMessages } from './knowledge-messages';
+import { ManualKnowledgePanel } from './manual-panel';
 import { QueuePanel } from './queue-panel';
 import { RetrievalPanel } from './retrieval-panel';
 import { SourcesPanel } from './sources-panel';
 
-const tabs = ['queue', 'sources', 'conflicts', 'retrieval'] as const;
+const tabs = ['queue', 'sources', 'manual', 'conflicts', 'retrieval'] as const;
 type Tab = (typeof tabs)[number];
 
 const isTab = (value: string | null): value is Tab => tabs.some((tab) => tab === value);
@@ -92,6 +93,13 @@ function Sections({ locale, workspaceId }: { locale: Locale; workspaceId: string
           locale={locale}
           workspaceId={workspaceId}
           onChanged={() => setRefreshKey((key) => key + 1)}
+        />
+      )}
+      {tab === 'manual' && (
+        <ManualKnowledgePanel
+          locale={locale}
+          workspaceId={workspaceId}
+          onCreated={() => setRefreshKey((key) => key + 1)}
         />
       )}
       {tab === 'conflicts' && <ConflictsPanel locale={locale} workspaceId={workspaceId} />}

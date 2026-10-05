@@ -18,6 +18,7 @@ import { knowledgeMessages } from './knowledge-messages';
 import type { Conflict, KnowledgeDetail } from './knowledge-types';
 import { OverridePanel } from './override-panel';
 import { ReviewPanel } from './review-panel';
+import { UsesPanel } from './uses-panel';
 
 export function KnowledgeDetailPage({
   locale,
@@ -221,6 +222,13 @@ function Detail({
           </ul>
         )}
       </section>
+
+      <UsesPanel
+        locale={locale}
+        workspaceId={workspaceId}
+        knowledgeId={knowledge.id}
+        refreshKey={`${knowledge.version}`}
+      />
 
       <EditSection
         locale={locale}

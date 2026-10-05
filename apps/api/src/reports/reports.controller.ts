@@ -29,7 +29,7 @@ const usageQuery = z
   .strict()
   .refine(ordered);
 const brainBody = z
-  .object({ ...range, projectId: z.uuid().optional() })
+  .object({ ...range, projectId: z.uuid().optional(), modelEvaluation: z.boolean().default(false) })
   .strict()
   .refine(ordered);
 const brainListQuery = z

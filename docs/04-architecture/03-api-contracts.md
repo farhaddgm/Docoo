@@ -2,7 +2,7 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.6.0
+version: 1.7.0
 owner: API Architecture
 last_updated: 2026-10-04
 notion_sync: true
@@ -75,7 +75,7 @@ notion_sync: true
 
 ## ۵. پروژه‌ها
 
-- `GET/POST /projects` (فیلتر `status`، پیش‌فرض همهٔ وضعیت‌ها جز deleted)
+- `GET/POST /projects` (فیلتر `status`، پیش‌فرض همهٔ وضعیت‌ها جز deleted؛ و از 0.17.0 `topicId`، `language` (`fa|en`)، `updatedFrom`/`updatedTo` (تاریخ ISO، بازهٔ بسته)، `waiting=true` (فقط پروژه‌هایی که تصمیم انسانی منتظرشان است) و `q` (جست‌وجو در کد و عنوان)؛ هر ردیف `owner` (`{id, displayName}`) و `waiting` (`{kind, stage}` قدیمی‌ترین human task باز یا `null`) دارد و cursor به مجموعهٔ فیلترها بسته است، نه صفحه‌ای که با فیلتر دیگر گرفته شده). `POST` فیلد اختیاری `solutionCriteria: [{key, label, weight, enabled}]` (۱ تا ۲۰؛ جمع وزن‌های فعال ۱۰۰ وگرنه `400 SOLUTION_CRITERIA_INVALID` و پروژه‌ای ساخته نمی‌شود) را هم می‌پذیرد که نسخهٔ ۱ معیارهای پروژه در همان تراکنش می‌شود (نیاز به `project.update`)؛ و فیلد اختیاری `settings: [{key, value}]` (حداکثر ۴۰) می‌پذیرد؛ تخصیص‌های سطح پروژه در همان تراکنش ساخت پروژه، با دلیل خودکار، افزوده می‌شوند. هر مقدار مثل `PUT /settings/assignments` اعتبار می‌شود (`400 CONFIG_VALUE_INVALID`، کلید ناشناخته `404 CONFIG_SETTING_NOT_FOUND`، کلیدی که سطح پروژه را نمی‌پذیرد `400 CONFIG_SCOPE_NOT_ALLOWED`، کلید تکراری یا حساس `400 CONFIG_VALUE_INVALID`) و فقط نقش دارای `workspace.configure` می‌تواند `settings` بدهد (`403`). حسابرسی فقط کلیدها را می‌نویسد.
 - هر پروژه `availableCommands` دارد: فرمان‌هایی که ماشین حالت در وضعیت فعلی می‌پذیرد (پس از مهلت ۳۰روزه `restore` حذف می‌شود)؛ بک‌آفیس دقیقاً همین‌ها را پیشنهاد می‌دهد.
 - `GET/PATCH /projects/{id}` (پاسخ `approvedProblemVersionId` دارد: خروجی تأییدشدهٔ مرحلهٔ تحلیل؛ بخش ۷)
 - `POST /projects/{id}/activate|pause|resume|complete|reopen|archive|unarchive|restore`
@@ -127,6 +127,7 @@ notion_sync: true
 
 - `GET/POST /knowledge` — item با `sourceType`، `confidentiality`، `scopes` (workspace/topic/project و نقش اختیاری)، `provenance`، اعتبار زمانی و claim/citation. فهرست علاوه بر `status` (وضعیت دیده‌شده؛ `expired` برای تأییدشدهٔ دارای اعتبار تمام‌شده) فیلتر `sourceType`، `scopeType`+`scopeId` و `q` دارد و هر ردیف `versionNo`، `overall`، `decision`، `effectiveDecision`، `scopes` (با `title`)، `claimCount`، `openConflicts`، `validUntil` و `staleReason` می‌دهد.
 - `POST /knowledge/from-source` — دانش کاندید از منبع indexed با claimهای پیشنهادی و locator دقیق (`ING-008`)؛ منبع `partial` فقط با `acceptPartial`.
+- `GET /knowledge/{id}/uses?limit=` — بازیابی‌هایی که ایجنت‌ها از این دانش کردند: `items[]` با `projectId/projectTitle`، `stage`، `attemptNo`، `role`، `query`، `versionNos`، `snapshotId`، `cited` (ارجاع تأییدشدهٔ همان attempt) و `totals` ({`retrievals`، `cited`}). آزمون بازیابی دستی حساب نمی‌شود ([ADR-0017](../adr/0017-research-with-knowledge-and-role-evaluation.md)).
 - `GET /knowledge/{id}`، `GET /knowledge/{id}/versions`، `GET /knowledge/{id}/versions/{versionId}`، `DELETE /knowledge/{id}`.
 - `GET /knowledge-claims` — نمای ادعای صف ممیزی: ادعای نسخه‌های جاری با `supported`/`supportReason` (نتیجهٔ Brain؛ `null` پیش از ممیزی)، `citations` (`total`، `complete`)، `openConflicts` و `effectiveDecision`؛ فیلتر `status`، `supported` (`yes|no|unaudited`)، `conflicted`، `kind`، `knowledgeId`.
 - `POST /knowledge/{id}/versions` — محتوای جدید با `If-Match`؛ نسخهٔ جدید `pending` و نسخهٔ قبلی `superseded` و ممیزی قبلی stale می‌شود. به‌جای `content` می‌توان `sourceVersionId` (و `acceptPartial`) داد تا متن و ادعاها از نسخهٔ جدید همان منبع بیایند (تازه‌سازی دانش `stale`)؛ دقیقاً یکی از این دو، و `claims` فقط با `content`. دانشی که از منبع نیامده `409 KNOWLEDGE_NO_SOURCE` و نسخهٔ منبعی دیگر `404 SOURCE_VERSION_NOT_FOUND` می‌گیرد.
@@ -138,7 +139,7 @@ notion_sync: true
 
 ## ۹. راه‌حل و ارزیابی (پیاده‌شده در 0.6.0)
 
-- `GET|PUT /projects/{id}/solution-criteria`: معیارهای نسخه‌دار؛ وزن معیارهای فعال باید ۱۰۰ شود (`SOLUTION_CRITERIA_INVALID`).
+- `GET /solution-criteria/defaults` (`workspace.read`): معیارهای پیش‌فرضی که پروژهٔ تازه با آن‌ها شروع می‌کند (برای wizard)؛ `GET|PUT /projects/{id}/solution-criteria`: معیارهای نسخه‌دار؛ وزن معیارهای فعال باید ۱۰۰ شود (`SOLUTION_CRITERIA_INVALID`).
 - `POST /projects/{id}/solutions/generate` با `{count?}` (۲ تا ۲۰، پیش‌فرض `solution.count`) → 201؛ خروجی ناقص 409 `SOLUTION_INCOMPLETE` و بدون ذخیره.
 - `GET /projects/{id}/solutions`: آخرین مجموعه با امتیاز و توضیح هر معیار و اولویت انتخاب.
 - `POST /projects/{id}/solution-selections` با `{solutionIds[], reason?}` به ترتیب اولویت → 201 و یک سند برای هر راه‌حل.
@@ -149,11 +150,13 @@ notion_sync: true
 
 ## ۱۰. سند (پیاده‌شده در 0.6.0)
 
-- `GET /projects/{id}/documents`؛ `GET /documents/{id}` با `ETag`.
+- `GET /projects/{id}/documents`؛ `GET /documents/{id}` با `ETag` و `defaultExportFormat` (از `document.default_export_format`؛ همهٔ قالب‌ها مجازند، فقط اولی پیشنهاد می‌شود).
 - `PUT /documents/{id}/content` با `If-Match` و `{content, reason, level?}`؛ ساختار نامعتبر 422 `DOCUMENT_INVALID` با `problems`، سند locked 409 `DOCUMENT_LOCKED`.
 - `GET /documents/{id}/versions`، `GET /documents/{id}/versions/{versionId}`، `GET /documents/{id}/diff?from=&to=`.
 - `POST /documents/{id}/versions/{versionId}/restore` با `{reason}`.
 - `POST /documents/{id}/submit|approve|reject|lock|supersede` (reject و supersede دلیل لازم دارند). approve بدون ارزیابی 409 `DOCUMENT_NOT_EVALUATED`، با ارزیابی ناموفق 409 `DOCUMENT_EVALUATION_FAILED` و خارج از سطح طول 409 `DOCUMENT_OUT_OF_BOUNDS`.
+- نگارش با مستندساز (از 0.17.0، [ADR-0019](../adr/0019-document-writing-and-structured-editor.md)، `document.edit`): `POST /documents/{id}/writings` با `{level?, template?, notes?}` → 201 با `writing` (`status`: `queued|running|paused|succeeded|failed|cancelled`، `phase`: `preparing|outlining|writing|fitting|saving|done`، `blockCode`، `errorCode`، `plan`، پیشرفت، `report` پس از پایان)؛ فقط یک نگارش زنده برای هر سند (409 `DOCUMENT_WRITING_ACTIVE`)، سند قفل‌شده 409 `DOCUMENT_LOCKED`، سند بدون راه‌حل 409 `DOCUMENT_HAS_NO_SOLUTION`، نبودن اتصال/مدل 409 `AI_NOT_CONFIGURED`، قالب نامعتبر 400 `DOCUMENT_TEMPLATE_UNKNOWN`. `GET /documents/{id}/writings` و `GET …/writings/{writingId}` (`document.read`) برای فهرست و جزئیات؛ `POST …/writings/{writingId}/pause|resume|cancel` سیگنال گردش‌کارند (`409 DOCUMENT_WRITING_FINISHED|DOCUMENT_WRITING_PAUSED|DOCUMENT_WRITING_NOT_PAUSED`). تا پایان نگارش، `PUT content`، restore، فرمان‌های وضعیت و supersede 409 `DOCUMENT_WRITING_ACTIVE` می‌دهند. نتیجه نسخهٔ جدیدی با `origin=model` است.
+- `POST /documents/{id}/check` (`document.edit`، بدون اثر جانبی) با `{content, level?}` → `{check: {valid, problems[], compliance?, references?}}`: همان اعتبارسنجی ساختار و شمارش رسمی و بازهٔ سطح که ذخیره می‌کند، برای ویرایشگر ساختاریافته.
 - `POST /documents/{id}/exports` با `{format: docx|pdf|pptx}` → 201 و manifest امضاشده؛ `GET /documents/{id}/artifacts`.
 - `GET /documents/{id}/artifacts/{artifactId}/download` پس از بررسی دوبارهٔ امضا و authorization؛ بایت دست‌کاری‌شده 409 `DOCUMENT_ARTIFACT_TAMPERED`.
 - `GET /documents/{id}/artifacts/{artifactId}/verify` → `{valid, sha256}`.
@@ -184,6 +187,10 @@ notion_sync: true
 - `GET /settings/definitions`
 - `GET/PUT /settings/assignments`، `GET /settings/assignments/history`، `POST /settings/assignments/restore`
 - `GET /settings/effective?scopeType=&scopeId=` (مقدار مؤثر و منبع هر مقدار)
+- `POST /settings/preview` (`workspace.read`، پاسخ ۲۰۰، بدون اثر جانبی) با `{topicIds: [≤۲۰], settings: [{key, value} ≤۴۰]}` → `{config}`: مقدار مؤثر و منبع هر کلید برای پروژه‌ای که هنوز ساخته نشده است. منبع انتخاب‌های ارسالی `{scope: 'project', pending: true}` است. حوزه‌ها به ترتیب اعمال می‌شوند (اولویت ۱ برنده)؛ مقدار نامعتبر همان `400 CONFIG_VALUE_INVALID` را می‌دهد.
+- قاعدهٔ معنایی علاوه بر schema: `document.level_bounds` باید ده عدد باشد که برای هر سطح کمینه < بیشینه و هر سطح بالاتر از بیشینهٔ سطح قبل شروع شود؛ نقض آن `400 CONFIG_VALUE_INVALID` با شرح مشکل است (قاعدهٔ همان `levelBoundsProblem` در `@docoo/documents`).
+- تنظیم‌های افزوده‌شده در 0.17.0: `document.default_export_format` (`docx|pdf|pptx`)، `document.writing.knowledge_limit` (۰ تا ۳۰)، `document.writing.fit_rounds` (۰ تا ۳)، `analysis.require_risk_dimension` و `analysis.require_out_of_scope_dimension` (بولی؛ هشت بُعد لازم همیشه لازم می‌مانند). `research.max_sources` و `knowledge.min_audit_score` از همین نسخه اعمال می‌شوند.
+- `GET /document-templates` (`workspace.read`) → `{templates: [{key, version, sections}], levelDefaults, countAlgorithm}`. قالب‌ها متن کد و نسخه‌دارند (`brief-v1`، `standard-v1`، `detailed-v1`)؛ `document.default_template` یکی از `brief|standard|detailed` است و شکل پیش‌نویس اول سند راه‌حل را تعیین می‌کند.
 
 ## ۱۲. provider (پیاده‌شده در 0.5.0)
 
@@ -202,7 +209,7 @@ notion_sync: true
 - `POST /retention/purge` (حذف دائمی موارد منقضی با tombstone ممیزی)
 - `GET /dashboard?from=&to=`: کارت‌های داشبورد با دادهٔ زنده (بازهٔ مصرف پیش‌فرض ۳۰ روز).
 - `GET /reports/usage?from=&to=&projectId=&groupBy=project|stage|day|model`: token و هزینهٔ برآوردی؛ بازه حداکثر ۴۰۰ روز.
-- `POST /brain-reports` با `{projectId?, from?, to?}` → 201؛ گزارش پروژه یا workspace با `deviations[]` (rule، clause، role، severity، count، detail، evidence) و `recommendations[]`. هیچ وضعیتی تغییر نمی‌کند.
+- `POST /brain-reports` با `{projectId?, from?, to?, modelEvaluation?}` → 201؛ گزارش پروژه یا workspace با `deviations[]` (rule، clause، role، severity، count، detail، evidence) و `recommendations[]`. هیچ وضعیتی تغییر نمی‌کند. با `modelEvaluation: true` (پیش‌فرض false؛ هر نقش یک فراخوانی مدل) گزارش `evaluations[]` هم دارد: برای هر یک از پنج نقش مرحله `status`، `reason`، `score` ۱ تا ۵، `summary`، `charterVersionId`، `samples[]`، `findings[]` (هر یافته با `clauses[]` و `evidence[]` ‌ـ یافتهٔ بی‌شاهد دور ریخته می‌شود)، `discarded` و `errorCode`؛ `summary.modelEvaluation` شمارهٔ نسخهٔ داور و شمارش‌ها را دارد. نقشی که نمی‌تواند سنجیده شود (`no_samples`، `ai_not_configured`، `provider_failure`، `invalid_output`) گزارش را از بین نمی‌برد ([ADR-0017](../adr/0017-research-with-knowledge-and-role-evaluation.md)).
 - `GET /brain-reports?projectId=&limit=` و `GET /brain-reports/{id}`.
 - `GET /projects/{id}/usage`: مصرف پروژه نسبت به سقف (از 0.5.0).
 

@@ -18,6 +18,7 @@ import {
   questionCategories,
   questionSimilarity,
   reconcileContradictions,
+  requiredCategoriesFor,
   requiredQuestionCategories,
   type QuestionCategory,
   type QuestionStatus,
@@ -181,6 +182,42 @@ describe('progress and coverage (FR-ANL-004, UX §7)', () => {
     expect(isUnresolved('answered')).toBe(false);
     expect(isUnresolved('irrelevant')).toBe(false);
     expect(isUnresolved('open')).toBe(false);
+  });
+});
+
+describe('configurable required dimensions (FR-ANL-004)', () => {
+  it('never drops the eight and adds risk and out of scope only when asked', () => {
+    expect(requiredCategoriesFor({})).toEqual(requiredQuestionCategories);
+    expect(requiredCategoriesFor({ risk: false, outOfScope: false })).toEqual(
+      requiredQuestionCategories,
+    );
+    expect(requiredCategoriesFor({ risk: true })).toEqual([...requiredQuestionCategories, 'risk']);
+    expect(requiredCategoriesFor({ outOfScope: true })).toEqual([
+      ...requiredQuestionCategories,
+      'out_of_scope',
+    ]);
+    expect(requiredCategoriesFor({ risk: true, outOfScope: true })).toHaveLength(10);
+  });
+
+  it('makes a missing optional dimension a gap that blocks "enough"', () => {
+    const asked = requiredQuestionCategories.map((category) => question(category, 'answered'));
+    expect(coverageGaps(coverageReport(asked))).toEqual([]);
+    const strict = coverageReport(asked, requiredCategoriesFor({ risk: true, outOfScope: true }));
+    expect(coverageGaps(strict)).toEqual(['risk', 'out_of_scope']);
+    expect(strict.find((entry) => entry.category === 'risk')?.required).toBe(true);
+    const sufficient = {
+      asked: 45,
+      finishRequested: false,
+      modelSufficient: true,
+      newQuestionCount: 0,
+    };
+    expect(decideRound({ ...sufficient, coverageGaps: coverageGaps(strict) })).toMatchObject({
+      action: 'define',
+      reason: 'nothing_new',
+    });
+    expect(
+      decideRound({ ...sufficient, newQuestionCount: 3, coverageGaps: coverageGaps(strict) }),
+    ).toMatchObject({ action: 'ask', reason: 'coverage' });
   });
 });
 

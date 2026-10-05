@@ -27,6 +27,8 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   costs: '/costs',
   audit: '/audit',
   smart: '/smart/errors',
+  templates: '/templates',
+  settings: '/settings',
 };
 
 /** Stroke icon paths (24x24 grid), decorative only: the text label carries the meaning. */

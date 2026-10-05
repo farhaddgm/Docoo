@@ -745,6 +745,45 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       await analysis.waitFor(projectId, (v) => v.phase === 'awaiting_approval', 'definition');
     }, 90_000);
 
+    it('ANL-004: an administrator may also require the risk and out-of-scope dimensions', async () => {
+      // Questions that avoid both optional dimensions.
+      const plain = (count: number, from: number) =>
+        questions(count, from).map((item, index) => ({
+          ...item,
+          category: questionCategories[index % 8]!,
+        }));
+      const firstRound = (projectId: string) =>
+        analysis.waitFor(projectId, (v) => v.phase === 'answering', 'first batch');
+
+      // Off (the default): the eight required dimensions are all there is to ask about.
+      analyst((data) => (data.asked === 0 ? { questions: plain(10, 0) } : null));
+      const relaxed = await project('dims-off');
+      const relaxedView = await firstRound(relaxed);
+      expect(
+        relaxedView.coverage.filter((entry) => entry.required).map((entry) => entry.category),
+      ).toEqual(questionCategories.slice(0, 8));
+      expect(relaxedView.coverageGaps).not.toContain('risk');
+
+      // On: risk and out of scope are required too, the overview says so and the analyst is told.
+      await setting('analysis.require_risk_dimension', true);
+      await setting('analysis.require_out_of_scope_dimension', true);
+      try {
+        captured.length = 0;
+        const strict = await project('dims-on');
+        const strictView = await firstRound(strict);
+        expect(
+          strictView.coverage.filter((entry) => entry.required).map((entry) => entry.category),
+        ).toEqual([...questionCategories.slice(0, 8), 'risk', 'out_of_scope']);
+        expect(strictView.coverageGaps).toEqual(expect.arrayContaining(['risk', 'out_of_scope']));
+        expect(roundRequests().map(dataOf)[0]!.coverageGaps).toEqual(
+          expect.arrayContaining(['risk', 'out_of_scope']),
+        );
+      } finally {
+        await setting('analysis.require_risk_dimension', false);
+        await setting('analysis.require_out_of_scope_dimension', false);
+      }
+    }, 90_000);
+
     it('ANL-002: the analysis stops at three hundred questions in batches of forty', async () => {
       analyst((data) => ({ questions: questions(data.capacity, data.asked) }));
       const projectId = await project('ceiling');

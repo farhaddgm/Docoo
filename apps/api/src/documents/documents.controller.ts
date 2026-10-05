@@ -12,6 +12,13 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  COUNT_ALGORITHM,
+  DEFAULT_CRITERIA,
+  DEFAULT_LEVEL_BOUNDS,
+  DOCUMENT_TEMPLATES,
+  TEMPLATE_KEYS,
+} from '@docoo/documents';
 import { STAGES } from '@docoo/orchestration';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
@@ -22,6 +29,7 @@ import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { DocumentsService } from './documents.service.js';
 import { SolutionsService } from './solutions.service.js';
+import { WritingsService } from './writings.service.js';
 
 const reason = z.string().trim().min(3).max(1000);
 const optionalReason = z.object({ reason: reason.optional() }).strict();
@@ -54,6 +62,20 @@ const editSchema = z
   .object({
     content: z.record(z.string(), z.unknown()),
     reason,
+    level: z.number().int().min(1).max(5).optional(),
+  })
+  .strict()
+  .refine((value) => JSON.stringify(value.content).length <= 1_000_000);
+const writeSchema = z
+  .object({
+    level: z.number().int().min(1).max(5).optional(),
+    template: z.enum(TEMPLATE_KEYS).optional(),
+    notes: z.string().trim().max(2000).optional(),
+  })
+  .strict();
+const checkSchema = z
+  .object({
+    content: z.record(z.string(), z.unknown()),
     level: z.number().int().min(1).max(5).optional(),
   })
   .strict()
@@ -108,9 +130,33 @@ export class DocumentsController {
   constructor(
     private readonly documents: DocumentsService,
     private readonly solutions: SolutionsService,
+    private readonly writings: WritingsService,
   ) {}
 
+  // ------------------------------------------------------------ templates and levels (ADR-0018)
+
+  @Get('document-templates')
+  @ApiOperation({
+    summary:
+      'The document templates, the default length bounds of the five levels and the count rule',
+  })
+  @RequireWorkspacePermission('workspace.read')
+  documentTemplates() {
+    return {
+      templates: TEMPLATE_KEYS.map((key) => DOCUMENT_TEMPLATES[key]),
+      levelDefaults: DEFAULT_LEVEL_BOUNDS,
+      countAlgorithm: COUNT_ALGORITHM,
+    };
+  }
+
   // ------------------------------------------------------------ solutions (SOL-001..003)
+
+  @Get('solution-criteria/defaults')
+  @ApiOperation({ summary: 'The default weighted criteria a new project starts with' })
+  @RequireWorkspacePermission('workspace.read')
+  defaultCriteria() {
+    return { criteria: DEFAULT_CRITERIA };
+  }
 
   @Get('projects/:projectId/solution-criteria')
   @ApiOperation({ summary: 'Current weighted solution criteria of a project' })
@@ -215,6 +261,124 @@ export class DocumentsController {
     );
     setVersionHeader(reply, document.version);
     return { document };
+  }
+
+  // ------------------------------------------------------------ the documenter writes (ADR-0019)
+
+  @Post('documents/:documentId/writings')
+  @HttpCode(201)
+  @ApiOperation({
+    summary: 'Have the documenter write the whole document as a new version (a durable run)',
+  })
+  @RequireWorkspacePermission('document.edit')
+  async startWriting(
+    @Req() request: FastifyRequest,
+    @Param('documentId') raw: string,
+    @Body() body: unknown,
+  ) {
+    const input = parse(writeSchema, body);
+    return { writing: await this.writings.start(workspaceContext(request), id(raw), input) };
+  }
+
+  @Get('documents/:documentId/writings')
+  @ApiOperation({ summary: 'Writings of a document, newest first' })
+  @RequireWorkspacePermission('document.read')
+  async writingList(@Req() request: FastifyRequest, @Param('documentId') raw: string) {
+    return { items: await this.writings.list(workspaceContext(request), id(raw)) };
+  }
+
+  @Get('documents/:documentId/writings/:writingId')
+  @ApiOperation({ summary: 'One writing with its progress, plan notes, report and cost' })
+  @RequireWorkspacePermission('document.read')
+  async writing(
+    @Req() request: FastifyRequest,
+    @Param('documentId') raw: string,
+    @Param('writingId') writingId: string,
+  ) {
+    return {
+      writing: await this.writings.get(workspaceContext(request), id(raw), id(writingId)),
+    };
+  }
+
+  @Post('documents/:documentId/writings/:writingId/pause')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Pause a writing at its next safe point' })
+  @RequireWorkspacePermission('document.edit')
+  async pauseWriting(
+    @Req() request: FastifyRequest,
+    @Param('documentId') raw: string,
+    @Param('writingId') writingId: string,
+    @Body() body: unknown,
+  ) {
+    const input = parse(optionalReason, body);
+    return {
+      writing: await this.writings.signal(
+        workspaceContext(request),
+        id(raw),
+        id(writingId),
+        'pause',
+        input.reason,
+      ),
+    };
+  }
+
+  @Post('documents/:documentId/writings/:writingId/resume')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Resume a paused writing' })
+  @RequireWorkspacePermission('document.edit')
+  async resumeWriting(
+    @Req() request: FastifyRequest,
+    @Param('documentId') raw: string,
+    @Param('writingId') writingId: string,
+    @Body() body: unknown,
+  ) {
+    const input = parse(optionalReason, body);
+    return {
+      writing: await this.writings.signal(
+        workspaceContext(request),
+        id(raw),
+        id(writingId),
+        'resume',
+        input.reason,
+      ),
+    };
+  }
+
+  @Post('documents/:documentId/writings/:writingId/cancel')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Cancel a writing; nothing it wrote so far becomes a version' })
+  @RequireWorkspacePermission('document.edit')
+  async cancelWriting(
+    @Req() request: FastifyRequest,
+    @Param('documentId') raw: string,
+    @Param('writingId') writingId: string,
+    @Body() body: unknown,
+  ) {
+    const input = parse(optionalReason, body);
+    return {
+      writing: await this.writings.signal(
+        workspaceContext(request),
+        id(raw),
+        id(writingId),
+        'cancel',
+        input.reason,
+      ),
+    };
+  }
+
+  @Post('documents/:documentId/check')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Validate an edited document and count it against its level without saving',
+  })
+  @RequireWorkspacePermission('document.edit')
+  async check(
+    @Req() request: FastifyRequest,
+    @Param('documentId') raw: string,
+    @Body() body: unknown,
+  ) {
+    const input = parse(checkSchema, body);
+    return { check: await this.writings.check(workspaceContext(request), id(raw), input) };
   }
 
   @Get('documents/:documentId/versions')

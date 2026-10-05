@@ -16,9 +16,23 @@ export interface ProjectSummary {
   title: string;
   status: string;
   currentStage: string;
+  outputLanguage: 'fa' | 'en';
   updatedAt: string;
   topics: { topicId: string; title: string; priority: number }[];
+  owner: { id: string; displayName: string } | null;
+  waiting: { kind: string; stage: string | null } | null;
 }
+
+interface Filters {
+  q: string;
+  topicId: string;
+  language: string;
+  from: string;
+  to: string;
+  waiting: boolean;
+}
+
+const noFilters: Filters = { q: '', topicId: '', language: '', from: '', to: '', waiting: false };
 
 const viewOrder = [
   'current',
@@ -47,14 +61,27 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
   const common = reportMessagesFor(locale);
   const base = `/workspaces/${workspaceId}/projects`;
   const [view, setView] = useState<View>('current');
+  const [filters, setFilters] = useState<Filters>(noFilters);
+  const [applied, setApplied] = useState<Filters>(noFilters);
+  const [topics, setTopics] = useState<{ id: string; title: string }[]>([]);
   const [items, setItems] = useState<ProjectSummary[] | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
   const load = useCallback(
-    async (status: View, cursor?: string) => {
+    async (status: View, filter: Filters, cursor?: string) => {
       const page = await apiGet<{ items: ProjectSummary[]; nextCursor: string | null }>(
-        `${base}${query({ status, limit: '50', cursor })}`,
+        `${base}${query({
+          status,
+          limit: '50',
+          cursor,
+          q: filter.q.trim() || undefined,
+          topicId: filter.topicId || undefined,
+          language: filter.language || undefined,
+          updatedFrom: filter.from || undefined,
+          updatedTo: filter.to || undefined,
+          waiting: filter.waiting ? 'true' : undefined,
+        })}`,
       );
       setItems((current) => (cursor && current ? [...current, ...page.items] : page.items));
       setNextCursor(page.nextCursor);
@@ -65,8 +92,24 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
   useEffect(() => {
     setItems(null);
     setFailed(false);
-    load(view).catch(() => setFailed(true));
-  }, [view, load]);
+    load(view, applied).catch(() => setFailed(true));
+  }, [view, applied, load]);
+
+  useEffect(() => {
+    apiGet<{ items: { id: string; title: string }[] }>(
+      `/workspaces/${workspaceId}/topics?limit=100`,
+    )
+      .then((result) => setTopics(result.items))
+      .catch(() => undefined);
+  }, [workspaceId]);
+
+  // Typing in the search box waits for a pause; the other filters apply at once.
+  useEffect(() => {
+    const handle = setTimeout(() => setApplied(filters), filters.q === applied.q ? 0 : 400);
+    return () => clearTimeout(handle);
+  }, [filters, applied.q]);
+
+  const filtered = JSON.stringify(applied) !== JSON.stringify(noFilters);
 
   return (
     <div className="stack">
@@ -91,6 +134,85 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
             </Link>
           </div>
         </div>
+        <form
+          className="filter-grid project-filters"
+          aria-label={text.filters}
+          onSubmit={(event) => event.preventDefault()}
+        >
+          <label htmlFor="project-search">{text.searchLabel}</label>
+          <input
+            id="project-search"
+            type="search"
+            dir="auto"
+            value={filters.q}
+            maxLength={100}
+            onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+          />
+          <label htmlFor="project-topic">{text.topicFilter}</label>
+          <select
+            id="project-topic"
+            value={filters.topicId}
+            onChange={(event) => setFilters({ ...filters, topicId: event.target.value })}
+          >
+            <option value="">{text.anyTopic}</option>
+            {topics.map((topic) => (
+              <option key={topic.id} value={topic.id}>
+                {topic.title}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="project-language">{text.languageFilter}</label>
+          <select
+            id="project-language"
+            value={filters.language}
+            onChange={(event) => setFilters({ ...filters, language: event.target.value })}
+          >
+            <option value="">{text.anyLanguage}</option>
+            <option value="fa">{text.languages.fa}</option>
+            <option value="en">{text.languages.en}</option>
+          </select>
+          <label htmlFor="project-from">{text.fromLabel}</label>
+          <input
+            id="project-from"
+            type="date"
+            value={filters.from}
+            max={filters.to || undefined}
+            onChange={(event) => setFilters({ ...filters, from: event.target.value })}
+          />
+          <label htmlFor="project-to">{text.toLabel}</label>
+          <input
+            id="project-to"
+            type="date"
+            value={filters.to}
+            min={filters.from || undefined}
+            onChange={(event) => setFilters({ ...filters, to: event.target.value })}
+          />
+          <span />
+          <label className="checkbox" htmlFor="project-waiting">
+            <input
+              id="project-waiting"
+              type="checkbox"
+              checked={filters.waiting}
+              onChange={(event) => setFilters({ ...filters, waiting: event.target.checked })}
+            />{' '}
+            {text.waitingOnly}
+          </label>
+          {filtered && (
+            <>
+              <span />
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  setFilters(noFilters);
+                  setApplied(noFilters);
+                }}
+              >
+                {text.clearFilters}
+              </button>
+            </>
+          )}
+        </form>
         {failed ? (
           <p className="notice error" role="alert">
             {common.loadFailed}
@@ -117,6 +239,9 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                   <th scope="col">{text.topics}</th>
                   <th scope="col">{text.status}</th>
                   <th scope="col">{text.stage}</th>
+                  <th scope="col">{text.waiting}</th>
+                  <th scope="col">{text.language}</th>
+                  <th scope="col">{text.owner}</th>
                   <th scope="col">{text.updated}</th>
                 </tr>
               </thead>
@@ -140,6 +265,17 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                       </span>
                     </td>
                     <td>{text.stages[project.currentStage] ?? project.currentStage}</td>
+                    <td>
+                      {project.waiting ? (
+                        <span className="badge state-waiting_for_human">
+                          {text.waitingKinds[project.waiting.kind] ?? text.waitingOther}
+                        </span>
+                      ) : (
+                        text.noneWaiting
+                      )}
+                    </td>
+                    <td>{text.languages[project.outputLanguage]}</td>
+                    <td dir="auto">{project.owner?.displayName ?? '—'}</td>
                     <td>{formatDateTime(locale, project.updatedAt)}</td>
                   </tr>
                 ))}
@@ -152,7 +288,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
             <button
               className="secondary-button"
               type="button"
-              onClick={() => void load(view, nextCursor).catch(() => setFailed(true))}
+              onClick={() => void load(view, applied, nextCursor).catch(() => setFailed(true))}
             >
               {text.loadMore}
             </button>

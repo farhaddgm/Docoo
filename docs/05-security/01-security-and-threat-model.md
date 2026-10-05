@@ -78,6 +78,8 @@ notion_sync: true
 
 کنترل: data minimization، provider allowlist، retention/region review، store=false در اتصال مناسب، outbound network policy، DLP pattern، no cross-tenant context و audit payload digest.
 
+مرحلهٔ research ([ADR-0017](../adr/0017-research-with-knowledge-and-role-evaluation.md)) متن دانش approved را به مدل می‌دهد: بازیابی فقط داخل workspace و scope پروژه و نقش است؛ دانش `restricted` پیش از رتبه‌بندی کنار می‌ماند مگر تنظیم صریح `research.allow_restricted_knowledge` (فقط سطح workspace) آن را باز کند؛ ledger `agent_tool_calls` فقط digest ورودی و ارجاع خروجی دارد، نه متن. ارزیابی مدل‌محور Brain (انتخاب‌شدنی) نمونهٔ خروجی نقش‌ها را برای داوری به همان provider می‌فرستد و فقط با مجوز `knowledge.audit` ساخته می‌شود؛ یافته‌های داور بدون شاهد دور ریخته می‌شود و گزارش هیچ چیز را تغییر نمی‌دهد.
+
 ### poisoned knowledge
 
 کنترل: provenance، Brain audit، claim citation، conflict warning، source reputation، re-audit، admin override label و عدم یادگیری خودکار بی‌دروازه.

@@ -84,7 +84,7 @@ const documentColumns = `id, project_id, solution_id, priority, title, level, la
 const versionColumns = `id, document_id, version_no, content, content_sha256, char_count, count_algorithm, level, bounds,
   within_bounds, origin, restored_from_id, reason, created_by, ${isoColumn('created_at', 'created_at')}`;
 
-const judgeSchema = (rubric: Rubric): JsonSchema => ({
+export const judgeSchema = (rubric: Rubric): JsonSchema => ({
   type: 'object',
   properties: {
     scores: {
@@ -162,10 +162,15 @@ export class DocumentsService {
         ? await this.loadVersion(client, documentId, document.current_version_id)
         : null;
       const evaluation = version ? await this.latestEvaluation(client, version.id) : null;
+      const effective = await this.config.resolve(client, context, 'project', document.project_id);
+      const preferred = effective.values['document.default_export_format'];
       return {
         ...this.toDocument(document),
         currentVersion: version ? this.toVersion(version, true) : null,
         latestEvaluation: evaluation,
+        // The format offered first (`document.default_export_format`); any export is still allowed.
+        defaultExportFormat:
+          preferred === 'pdf' || preferred === 'pptx' || preferred === 'docx' ? preferred : 'docx',
       };
     });
   }
@@ -1082,6 +1087,19 @@ export class DocumentsService {
       )
     ).rows[0];
     if (!row) throw notFound('DOCUMENT_NOT_FOUND', 'The document was not found.');
+    // While the documenter is writing the next version nothing else may change the document:
+    // the writing saves on top of the version it started from (ADR-0019).
+    if (forUpdate) {
+      const writing = await client.query(
+        `select 1 from document_writings where document_id = $1 and status in ('queued', 'running', 'paused') limit 1`,
+        [documentId],
+      );
+      if (writing.rowCount)
+        throw conflict(
+          'DOCUMENT_WRITING_ACTIVE',
+          'The documenter is writing this document; wait for it to finish or cancel the writing.',
+        );
+    }
     return row;
   }
 

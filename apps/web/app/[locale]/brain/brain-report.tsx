@@ -6,6 +6,7 @@ import { apiGet, apiPost } from '../../api-client';
 import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
+import { Evaluations, type ModelEvaluationSummary, type RoleEvaluationView } from './evaluations';
 
 interface ReportSummary {
   id: string;
@@ -27,6 +28,9 @@ interface Report extends ReportSummary {
     evidence: { type: string; id: string }[];
   }[];
   recommendations: { rule: string; target: string; action: string }[];
+  /** Empty unless the report was generated with the model-based evaluation. */
+  evaluations: RoleEvaluationView[];
+  summary: { modelEvaluation?: ModelEvaluationSummary };
 }
 
 export function BrainReport({ locale }: { locale: Locale }) {
@@ -49,6 +53,7 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
   const [items, setItems] = useState<ReportSummary[] | null>(null);
   const [selected, setSelected] = useState<Report | null>(null);
   const [busy, setBusy] = useState(false);
+  const [modelEvaluation, setModelEvaluation] = useState(false);
   const [error, setError] = useState('');
   const detailRef = useRef<HTMLHeadingElement>(null);
   const [focusRequest, setFocusRequest] = useState(0);
@@ -92,7 +97,7 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
     setBusy(true);
     setError('');
     try {
-      const response = await apiPost(base, {});
+      const response = await apiPost(base, { modelEvaluation });
       const report = ((await response.json()) as { report: Report }).report;
       setItems((current) => [{ ...report, totals: null }, ...(current ?? [])]);
       setSelected(report);
@@ -115,6 +120,15 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
         >
           {busy ? text.generating : text.generate}
         </button>
+        <label className="mode">
+          <input
+            type="checkbox"
+            checked={modelEvaluation}
+            disabled={busy}
+            onChange={(event) => setModelEvaluation(event.target.checked)}
+          />{' '}
+          {text.modelEvaluationOption}
+        </label>
       </div>
       {error && (
         <p className="notice error" role="alert">
@@ -202,6 +216,13 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
                   </tbody>
                 </table>
               </div>
+            )}
+            {(selected.evaluations.length > 0 || selected.summary.modelEvaluation) && (
+              <Evaluations
+                locale={locale}
+                evaluations={selected.evaluations}
+                summary={selected.summary.modelEvaluation ?? null}
+              />
             )}
             {selected.recommendations.length > 0 && (
               <>

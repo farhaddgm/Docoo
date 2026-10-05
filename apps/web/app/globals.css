@@ -924,6 +924,12 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   padding-inline-start: var(--space-6);
 }
 
+.output-view blockquote {
+  margin: var(--space-1) 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 3px solid var(--color-border-strong);
+}
+
 .json-block {
   max-height: 24rem;
   margin: 0;
@@ -1830,4 +1836,124 @@ td .badge {
 
 .title-cell a {
   font-weight: 700;
+}
+
+/* Structured document editor and the documenter's writing panel (ADR-0019). */
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 21rem);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.editor-side {
+  position: sticky;
+  top: var(--space-4);
+  display: grid;
+  gap: var(--space-4);
+}
+
+.editor-blocks {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.editor-block {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+
+.editor-block:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.editor-block-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.editor-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.editor-field label {
+  font-weight: 700;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+
+.editor-run,
+.editor-cites {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.editor-cites {
+  background: var(--color-surface);
+}
+
+.editor-points {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.editor-reference {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 2fr) minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.editor-outline li {
+  padding-block: var(--space-1);
+}
+
+.editor-outline .outline-level-2 {
+  padding-inline-start: var(--space-4);
+}
+
+.editor-outline .outline-level-3 {
+  padding-inline-start: var(--space-6);
+}
+
+progress {
+  width: 100%;
+  accent-color: var(--color-primary);
+}
+
+@media (max-width: 60rem) {
+  .editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor-side {
+    position: static;
+  }
+
+  .editor-reference {
+    grid-template-columns: 3rem minmax(0, 1fr);
+  }
 }

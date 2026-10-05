@@ -35,6 +35,7 @@ const scopeSchema = z
   })
   .strict();
 const dateSchema = z.iso.datetime({ offset: true });
+const usesQuery = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) }).strict();
 const citationSchema = z
   .object({
     sourceRef: z.string().trim().max(2048).optional(),
@@ -263,6 +264,17 @@ export class KnowledgeController {
     const knowledge = await this.knowledge.get(workspaceContext(request), id(raw));
     setVersionHeader(reply, knowledge.version);
     return { knowledge };
+  }
+
+  @Get('knowledge/:knowledgeId/uses')
+  @ApiOperation({ summary: 'Where agents used the knowledge: retrievals and verified citations' })
+  @RequireWorkspacePermission('knowledge.read')
+  async uses(
+    @Req() request: FastifyRequest,
+    @Param('knowledgeId') raw: string,
+    @Query() query: unknown,
+  ) {
+    return this.knowledge.uses(workspaceContext(request), id(raw), parse(usesQuery, query).limit);
   }
 
   @Delete('knowledge/:knowledgeId')

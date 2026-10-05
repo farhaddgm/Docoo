@@ -7,6 +7,7 @@ import {
   checkAnswer,
   coverageGaps,
   coverageReport,
+  requiredCategoriesFor,
   isBatchComplete,
   isUnresolved,
   type AnswerStatus,
@@ -144,7 +145,22 @@ export class AnalysisService {
             ).rows.map(toQuestion)
           : [];
         const progress = analysisProgress(questions);
-        const coverage = coverageReport(questions);
+        // The run's own configuration says whether risk and out-of-scope must also be asked.
+        const settings = current?.run_id
+          ? ((
+              await client.query<{ resolved: Record<string, unknown> | null }>(
+                `select c.resolved from workflow_runs r left join config_snapshots c on c.id = r.config_snapshot_id where r.id = $1`,
+                [current.run_id],
+              )
+            ).rows[0]?.resolved ?? {})
+          : {};
+        const coverage = coverageReport(
+          questions,
+          requiredCategoriesFor({
+            risk: settings['analysis.require_risk_dimension'] === true,
+            outOfScope: settings['analysis.require_out_of_scope_dimension'] === true,
+          }),
+        );
 
         let openBatchId: string | null = null;
         let understanding: Record<string, unknown> | null = null;

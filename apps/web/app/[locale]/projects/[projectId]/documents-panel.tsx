@@ -7,7 +7,10 @@ import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { DocumentContent, type DocContent } from './document-content';
+import { DocumentEditor } from './document-editor';
 import { documentMessages } from './document-messages';
+import { DocumentWriter } from './document-writer';
+import { editorMessages } from './editor-messages';
 
 interface DocumentSummary {
   id: string;
@@ -50,9 +53,15 @@ interface Evaluation {
   exception: { reason: string; badge: string } | null;
 }
 
+const formats = ['docx', 'pdf', 'pptx'] as const;
+
 interface DocumentDetail extends DocumentSummary {
+  /** The optimistic-concurrency version the API expects in `If-Match`. */
+  version: number;
   currentVersion: (VersionSummary & { content: DocContent }) | null;
   latestEvaluation: Evaluation | null;
+  /** From `document.default_export_format`: the export button shown first and as primary. */
+  defaultExportFormat: (typeof formats)[number];
 }
 
 interface Artifact {
@@ -74,8 +83,6 @@ interface Diff {
 type Pending =
   | { kind: 'reject' | 'lock' | 'supersede' | 'exception'; reason: string }
   | { kind: 'restore'; versionId: string; versionNo: number; reason: string };
-
-const formats = ['docx', 'pdf', 'pptx'] as const;
 
 /** DOC-101..103, EVA-001..002: documents of the project, their review, evaluation and exports. */
 export function DocumentsPanel({
@@ -112,6 +119,7 @@ export function DocumentsPanel({
         key={openId}
         locale={locale}
         workspaceId={workspaceId}
+        projectId={projectId}
         documentId={openId}
         onBack={() => {
           setOpenId(null);
@@ -187,11 +195,13 @@ export function DocumentsPanel({
 function DocumentView({
   locale,
   workspaceId,
+  projectId,
   documentId,
   onBack,
 }: {
   locale: Locale;
   workspaceId: string;
+  projectId: string;
   documentId: string;
   onBack: () => void;
 }) {
@@ -206,11 +216,14 @@ function DocumentView({
   const [diffFrom, setDiffFrom] = useState('');
   const [diffTo, setDiffTo] = useState('');
   const [diff, setDiff] = useState<Diff | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [live, setLive] = useState(false);
+  const editor = editorMessages(locale);
   const explain = useCallback(
     (error: unknown) => explainError(error, text.errors, text.failed),
     [text],
   );
-  const { busy, notice, run } = useAction(explain);
+  const { busy, notice, setNotice, run } = useAction(explain);
 
   const load = useCallback(async () => {
     const [detail, history, files] = await Promise.all([
@@ -305,6 +318,11 @@ function DocumentView({
         </button>
       </p>
       <Notice notice={notice} />
+      {live && (
+        <p className="notice" role="status">
+          {editor.liveBanner}
+        </p>
+      )}
 
       <section className="card" aria-labelledby="document-heading">
         <h2 id="document-heading" dir="auto">
@@ -363,7 +381,7 @@ function DocumentView({
             <button
               className="primary-button"
               type="button"
-              disabled={busy}
+              disabled={busy || live}
               onClick={() => simple('submit', {}, text.done['submit']!)}
             >
               {text.submit}
@@ -389,7 +407,7 @@ function DocumentView({
               <button
                 className="primary-button"
                 type="button"
-                disabled={busy}
+                disabled={busy || live}
                 onClick={() => simple('approve', {}, text.done['approve']!)}
               >
                 {text.approve}
@@ -397,7 +415,7 @@ function DocumentView({
               <button
                 className="secondary-button danger"
                 type="button"
-                disabled={busy}
+                disabled={busy || live}
                 aria-expanded={pending?.kind === 'reject'}
                 onClick={() => setPending({ kind: 'reject', reason: '' })}
               >
@@ -409,7 +427,7 @@ function DocumentView({
             <button
               className="secondary-button"
               type="button"
-              disabled={busy}
+              disabled={busy || live}
               aria-expanded={pending?.kind === 'lock'}
               onClick={() => setPending({ kind: 'lock', reason: '' })}
             >
@@ -420,11 +438,21 @@ function DocumentView({
             <button
               className="secondary-button"
               type="button"
-              disabled={busy}
+              disabled={busy || live}
               aria-expanded={pending?.kind === 'supersede'}
               onClick={() => setPending({ kind: 'supersede', reason: '' })}
             >
               {text.supersede}
+            </button>
+          )}
+          {!['locked', 'superseded'].includes(status) && current && !editing && (
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={busy || live}
+              onClick={() => setEditing(true)}
+            >
+              {editor.openEditor}
             </button>
           )}
         </div>
@@ -469,14 +497,45 @@ function DocumentView({
         )}
       </section>
 
-      <section className="card" aria-labelledby="content-title">
-        <h2 id="content-title">{text.content}</h2>
-        {current ? (
-          <DocumentContent locale={locale} content={current.content} />
-        ) : (
-          <p className="muted">{text.noContent}</p>
-        )}
-      </section>
+      {editing && current ? (
+        <DocumentEditor
+          locale={locale}
+          workspaceId={workspaceId}
+          documentId={documentId}
+          documentVersion={doc.version}
+          level={doc.level}
+          initial={current.content}
+          onClose={(saved) => {
+            setEditing(false);
+            if (saved) {
+              setNotice({ ok: true, text: editor.saved });
+              void load();
+            }
+          }}
+        />
+      ) : (
+        <section className="card" aria-labelledby="content-title">
+          <h2 id="content-title">{text.content}</h2>
+          {current ? (
+            <DocumentContent locale={locale} content={current.content} />
+          ) : (
+            <p className="muted">{text.noContent}</p>
+          )}
+        </section>
+      )}
+
+      {!editing && (
+        <DocumentWriter
+          locale={locale}
+          workspaceId={workspaceId}
+          projectId={projectId}
+          documentId={documentId}
+          level={doc.level}
+          locked={['locked', 'superseded'].includes(status)}
+          onLive={setLive}
+          onSaved={() => void load()}
+        />
+      )}
 
       <section className="card" aria-labelledby="evaluation-title">
         <h2 id="evaluation-title">{text.evaluation}</h2>
@@ -569,10 +628,13 @@ function DocumentView({
         <h2 id="exports-title">{text.exports}</h2>
         <p className="muted">{text.exportHelp}</p>
         <div className="toolbar">
-          {formats.map((format) => (
+          {[
+            doc.defaultExportFormat,
+            ...formats.filter((item) => item !== doc.defaultExportFormat),
+          ].map((format) => (
             <button
               key={format}
-              className="secondary-button"
+              className={format === doc.defaultExportFormat ? 'primary-button' : 'secondary-button'}
               type="button"
               disabled={busy || !canExport}
               onClick={() =>
@@ -661,7 +723,7 @@ function DocumentView({
                       <button
                         className="secondary-button"
                         type="button"
-                        disabled={busy}
+                        disabled={busy || live}
                         aria-label={`${text.restore}: ${formatNumber(locale, version.versionNo)}`}
                         onClick={() =>
                           setPending({

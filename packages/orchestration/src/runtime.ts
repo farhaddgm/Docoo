@@ -15,7 +15,7 @@ import {
 import type { Pool, PoolClient } from 'pg';
 
 import { inWorkspace } from './db.js';
-import { fakeAnalystResponder } from './fake-analyst.js';
+import { fakeResponder } from './fake-responders.js';
 
 export interface InvocationScope {
   readonly workspaceId: string;
@@ -27,6 +27,8 @@ export interface InvocationScope {
   /** The role definition version the call runs with and the digest of its exact prompt (FR-AGT-003). */
   readonly agentDefinitionVersionId?: string | null;
   readonly promptSha256?: string | null;
+  /** The document writing the call belongs to (ADR-0019). */
+  readonly writingId?: string | null;
 }
 
 interface ConnectionRow {
@@ -57,12 +59,13 @@ export type AdapterFactory = (
 
 /**
  * Production adapters. The deterministic `fake` provider (never allowed in production) also
- * plays the analyst, so a stack without provider keys can run a project end to end.
+ * plays the analyst, the researcher and the Brain judge, so a stack without provider keys can
+ * run a project end to end.
  */
 export const defaultAdapters: AdapterFactory = (kind, options) => {
   if (kind !== 'fake') return createAdapter(kind, options);
   const adapter = new FakeAdapter();
-  adapter.responder = fakeAnalystResponder;
+  adapter.responder = fakeResponder;
   return adapter;
 };
 
@@ -224,8 +227,8 @@ export class ProviderRuntime {
       `insert into model_invocations (workspace_id, connection_id, project_id, stage_run_id, attempt_id, provider, model,
                                       purpose, status, input_tokens, output_tokens, reasoning_tokens, cached_input_tokens,
                                       latency_ms, finish_reason, raw_finish_reason, cost_usd, price_id, provider_request_id,
-                                      error_code, retry_no, agent_definition_version_id, prompt_sha256)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+                                      error_code, retry_no, agent_definition_version_id, prompt_sha256, writing_id)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
        returning id`,
       [
         scope.workspaceId,
@@ -251,6 +254,7 @@ export class ProviderRuntime {
         scope.retryNo,
         scope.agentDefinitionVersionId ?? null,
         scope.promptSha256 ?? null,
+        scope.writingId ?? null,
       ],
     );
     return inserted.rows[0]!.id;

@@ -90,6 +90,29 @@ export const DEFAULT_LEVEL_BOUNDS: Readonly<Record<Level, LevelBounds>> = {
   5: { min: 22000, max: 28000 },
 };
 
+/**
+ * What is wrong with a `document.level_bounds` value (ten whole numbers: min and max of levels 1
+ * to 5), or `null` when it is usable. Each level needs min below max, and a level starts above
+ * the end of the one before so a document belongs to at most one level.
+ */
+export function levelBoundsProblem(value: unknown): string | null {
+  if (!Array.isArray(value) || value.length !== 10)
+    return 'Expected ten numbers: min and max of levels 1 to 5.';
+  if (!value.every((item) => Number.isInteger(item) && (item as number) >= 0)) {
+    return 'Every number must be a whole number of at least 0.';
+  }
+  const numbers = value as number[];
+  for (let level = 1; level <= 5; level += 1) {
+    const min = numbers[(level - 1) * 2]!;
+    const max = numbers[(level - 1) * 2 + 1]!;
+    if (min >= max) return `Level ${level}: the minimum must be below the maximum.`;
+    if (level > 1 && min <= numbers[(level - 1) * 2 - 1]!) {
+      return `Level ${level} must start above the end of level ${level - 1}.`;
+    }
+  }
+  return null;
+}
+
 export interface Compliance {
   readonly level: Level;
   readonly count: number;

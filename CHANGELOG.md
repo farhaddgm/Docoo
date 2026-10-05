@@ -2,6 +2,85 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.17.0] — 2026-10-05
+
+The documenter writes the whole document and a structured block editor changes it ([ADR-0019](docs/adr/0019-document-writing-and-structured-editor.md)), plus the leftovers of the earlier roadmap steps.
+
+### Added
+
+- **The documenter writes a complete document** as a durable workflow (`documentWritingWorkflow`, table `document_writings`): the plan and a letter budget for every subsection come from the level's bounds, each subsection is one model call, then up to `document.writing.fit_rounds` rounds expand or condense subsections to bring the length into the level's bounds (never padding; a document that stays out of bounds is saved with `withinBounds = false` and a plain report). Only one live writing per document; pause, resume and cancel; a provider failure, a missing AI connection, the cost limit or a tool the role lacks pauses it with the reason instead of hiding it.
+- **Citations are checked by code.** The model may cite only `K#` of the approved knowledge it was given, with a verbatim quote that must occur in that passage; citations that cannot be found are discarded and counted, and the references block lists only verified ones. The score table and chart of the `detailed` template are built by code from the solution's weighted scores.
+- **Structured block editor** on the document page: an editor per block (heading, paragraph with citations, list, table, callout, references, chart), an outline, add, move and delete, a live check from the server (`POST /documents/{id}/check`: structure, official count, level bounds, unused references), a required reason and a new `origin = edit` version; leaving with unsaved changes asks first. The writing panel shows level, template, a note for the documenter, live phase, pause/resume/cancel, the reason for a pause and the final report.
+- **Settings:** `document.writing.knowledge_limit`, `document.writing.fit_rounds`, `document.default_export_format` (the format offered first on a document page), `analysis.require_risk_dimension` and `analysis.require_out_of_scope_dimension`. The two writing settings, which the settings page did not list, now appear in the Documents group.
+- **Project list (UX §4):** filters for topic, output language, last-change range, "waiting for my decision" and text; columns for waiting, language and owner; the cursor is bound to the filter set.
+- **Wizard (UX §5):** the solutions step edits the weighted criteria (saved as version 1 together with the project, in one transaction; `GET /solution-criteria/defaults` gives the starting values) and the documents step chooses the default export format.
+- **Manual knowledge in the UI:** a "Manual knowledge" tab on the Knowledge page with text, scopes and roles, validity, claims and structured citations; an incomplete citation names what it still lacks.
+- **Analyst:** the risk and out-of-scope dimensions can be made required (the eight required dimensions of FR-ANL-004 always stay required).
+- Migrations `0023_document_writing`, `0024_document_writing_security`, `0025_export_default_setting`, `0026_analysis_dimension_settings`.
+
+### Changed
+
+- `research.max_sources` (distinct knowledge items a research run may cite) and `knowledge.min_audit_score` (a 0–1 floor on the audit score for retrievable knowledge, in research, writing and the retrieval test; a human override still wins) are enforced and no longer marked "not enforced".
+- While a writing is live, `PUT /documents/{id}/content`, restore, status commands and supersede answer `409 DOCUMENT_WRITING_ACTIVE`.
+- The Deploy smoke accepts `WARN` for the acceptance report's HTTPS row: Caddy's local CA signs a certificate that lives about 12 hours.
+
+### Fixed
+
+- CI findings on the step 4 push: a useless ternary and a backtracking regular expression in the offline documenter, and an unnecessary type assertion.
+
+### Not changed on purpose
+
+- No web tools (`web_search`, `web_fetch`): they need a search service and key that only the owner can provide. The model does not call tools itself; the code runs them before the call and the gate and ledger still apply ([ADR-0017](docs/adr/0017-research-with-knowledge-and-role-evaluation.md)).
+- No custom analyst dimensions: coverage, the prompt and the strict output schema are built on the ten fixed ones.
+- [#53](https://github.com/farhaddgm/Docoo/issues/53), [#89](https://github.com/farhaddgm/Docoo/issues/89) and [#94](https://github.com/farhaddgm/Docoo/issues/94) still need the owner.
+
+## [0.16.0] — 2026-10-04
+
+Settings, document templates and levels in the backoffice, the project creation wizard, and the tooling that shows what is left for the private-beta sign-off ([ADR-0018](docs/adr/0018-settings-templates-wizard-and-acceptance-tooling.md)).
+
+### Added
+
+- **Settings page** (workspace scope) in groups, with a control built from each setting's schema, a required reason for every change, optimistic concurrency, history, restore and reset to the default. Settings that are recorded but not applied by any stage yet (`research.max_sources`, `knowledge.min_audit_score`) say so; the `ai.*` settings link to the AI providers page.
+- **Project Settings tab:** the project's own overrides next to the effective value and where it comes from (workspace, topic or project), with the model picker and a way back to the inherited value.
+- **Templates & document levels page:** the built-in templates (`brief`, `standard`, `detailed`, versioned `-v1`) with their sections, the default template, the default level and an editor for the length bounds of the five levels that checks the same rule as the server (each level has min < max and starts above the previous one). `GET /document-templates`.
+- **Document templates shape the draft.** The first draft of a solution document is built from the effective `document.default_template` (before, the setting had no effect); the version reason records the template version, and the detailed template adds a score table from the stored scoring.
+- **Project creation wizard** (UX §5) in eight steps with an autosaved local draft: basics and problem, topics and priority, workflow and gates, model, knowledge and research, solutions, documents, review. The review shows the effective value and source of every setting from the server (`POST /settings/preview`; choices not yet saved have the source `pending`). The project and its settings are created in one transaction (`POST /projects` takes `settings`, which needs `workspace.configure`).
+- **Strict structured-output compatibility check** (`strictSchemaProblems` in `@docoo/providers`) and tests that run every platform schema (the five stage outputs, the judge verdict, the role evaluation, the solution schema) through it, so a schema OpenAI `strict: true` would reject fails CI.
+- **Acceptance of the platform's own schemas on real providers:** the Provider acceptance workflow now also runs the five stage outputs (research with approved knowledge in the prompt) and the Brain's role evaluation against every provider that has a key. Without a key a part is skipped and the run summary says so.
+- **`pnpm owner:check`:** a read-only report on branch protection, CodeQL, whether Actions can start jobs, the acceptance secrets and the latest acceptance run; every line is PASS, ACTION (with the step), FAIL or UNKNOWN.
+- **`scripts/deploy/acceptance.sh`:** a read-only evidence report for a running server (containers, API, HTTPS and certificate, disk, release, nightly update, off-host backups, administrator, real AI connection, mail) ending with the owner-only checklist and a sign-off block. The Deploy smoke workflow now runs it on every fresh install and checks its stable rows.
+- Docs: [private beta acceptance](docs/06-delivery/12-private-beta-acceptance.md), install guide section on the report.
+
+### Changed
+
+- The project form's field groups moved to shared components (`BasicsFields`, `TopicsSection`) used by the wizard and the project edit form; the core-flow E2E creates its project through the wizard.
+- `POST /projects` accepts an optional `settings` list; setting values are validated like `PUT /settings/assignments` (including the new `document.level_bounds` rule, which answers `400 CONFIG_VALUE_INVALID`).
+- `deploy:test` runs the acceptance script's tests too; `docs:test` also runs the owner script's tests.
+
+### Not changed on purpose
+
+- Closing [#53](https://github.com/farhaddgm/Docoo/issues/53), [#89](https://github.com/farhaddgm/Docoo/issues/89) and [#94](https://github.com/farhaddgm/Docoo/issues/94) still needs the owner (real keys, repository settings, a real server). The tools above show what is missing and record the evidence; they do not accept anything.
+
+## [0.15.0] — 2026-10-04
+
+Research with approved knowledge and model-based role evaluation ([ADR-0017](docs/adr/0017-research-with-knowledge-and-role-evaluation.md)).
+
+### Added
+
+- **The research stage uses approved knowledge.** Before the model call it retrieves knowledge through the tool gate (approved, current, in scope, for the researcher role) with queries from the approved problem definition, hands the passages to the model as `K1…Kn` and asks it to cite by reference and verbatim quote. The code then checks every quote against the text of the passage it points at: a finding with a verified citation is marked **supported by approved knowledge**, any other is **unverified**, and a failed citation stays visible with its reason (`unknown_ref`, `quote_not_found`, …). Later stages see the claims with their support, not the quotes.
+- **Tool ledger (FR-AGT-005).** Every tool use of an agent passes the allowlist of its pinned definition and is recorded in the append-only `agent_tool_calls` table, allowed or denied, with the digest of the input and a reference to the output (never the content). A researcher without `knowledge_retrieve` gets no knowledge and a denied call in the ledger; without `citation_verifier` nothing counts as verified.
+- **Settings:** `research.max_queries` (1–10, default 5), `research.knowledge_limit` (0–30, default 12; 0 turns knowledge off for research) and `research.allow_restricted_knowledge` (default off). Knowledge marked `restricted` never reaches the model unless that setting says so.
+- **Where it was used:** `GET /knowledge/{id}/uses` and a "Where it was used" section on the knowledge page (project, stage, attempt, query, version, and whether the output cited it with a verified quote).
+- **Research output view:** support badge per finding, each citation with its quote and whether it was verified, the approved knowledge given to the model (linked), conflicts, gaps and a verification summary; older outputs still display.
+- **Model-based role evaluation in the Brain report.** `POST /brain-reports` takes `modelEvaluation` (off by default; one model call per role). The Brain reads a few recent outputs of each stage role next to the principles and duties the role ran with and returns a 1–5 score, a summary and findings. A finding is kept only if it names charter clauses and real outputs as evidence; others are discarded and counted. A role that cannot be judged (no outputs, no model configured, provider failure, unusable answer) is reported with the reason and never loses the report. The Brain page has the option and a card per role.
+- Brain reports have an `evaluations` column (append-only like the rest of the report).
+
+### Changed
+
+- The retrieval code moved to `@docoo/orchestration` so the API and the agent worker share one implementation.
+- The offline test provider (`fake`) now also plays the researcher and the Brain judge, by the name of the requested schema.
+- The structured output schema of the research stage gained `evidence` per finding and `conflicts`.
+
 ## [0.14.0] — 2026-10-04
 
 Knowledge in the backoffice: sources, audit queue, Brain audit, override and conflicts, all usable without the API ([ADR-0016](docs/adr/0016-knowledge-screens.md)).

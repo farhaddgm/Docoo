@@ -34,7 +34,8 @@ import { badRequest, conflict, notFound, preconditionFailed } from '../common/pr
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { scopeKey, scopeTitles } from '../common/scope-titles.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
-import { canonicalJson } from '../config/setting-value.js';
+import { ConfigService } from '../config/config.service.js';
+import { retrieveKnowledge, RetrievalScopeError } from '@docoo/orchestration';
 import { SourcesService } from '../sources/sources.service.js';
 
 export const KNOWLEDGE_AUDITOR = Symbol('KNOWLEDGE_AUDITOR');
@@ -169,7 +170,6 @@ const overrideColumns = `id, review_id, decision, reason, ${isoColumn('expires_a
 
 /** Upper bound of existing claims compared during conflict detection. */
 const CONFLICT_COMPARE_LIMIT = 5000;
-const RRF_K = 60;
 
 function sha256(text: string): string {
   return createHash('sha256').update(text).digest('hex');
@@ -181,6 +181,7 @@ export class KnowledgeService {
     private readonly database: WorkspaceDatabase,
     private readonly sources: SourcesService,
     @Inject(KNOWLEDGE_AUDITOR) private readonly auditor: KnowledgeAuditor,
+    private readonly config: ConfigService,
   ) {}
 
   // ---------------------------------------------------------------- items and versions (KNO-001)
@@ -629,6 +630,50 @@ export class KnowledgeService {
     );
   }
 
+  /**
+   * Where the knowledge was used (UX §6, ADR-0017): every retrieval an agent made that returned
+   * it, with the project, stage and attempt, and whether the attempt's output cites it (a
+   * citation the code verified). Retrieval tests an administrator ran by hand are not agent use.
+   */
+  async uses(context: WorkspaceRequestContext, itemId: string, limit: number) {
+    return this.database.run(context, async (client) => {
+      await this.loadItem(client, itemId);
+      const contains = (tool: string, key: string, value: string) =>
+        `c.tool = '${tool}' and c.result @> jsonb_build_object('${key}', jsonb_build_array(${value}))`;
+      const uses = await client.query<Record<string, unknown>>(
+        `select c.id, c.output_ref->>'id' as "snapshotId", c.project_id as "projectId", p.title as "projectTitle",
+                c.stage_run_id as "stageRunId", sr.stage::text as stage, a.attempt_no as "attemptNo", c.role::text as role,
+                snap.query,
+                coalesce((select jsonb_agg(distinct (e->>'versionNo')::int)
+                            from jsonb_array_elements(snap.results) e where e->>'knowledgeId' = $1), '[]'::jsonb) as "versionNos",
+                exists (select 1 from agent_tool_calls v
+                         where v.attempt_id = c.attempt_id and v.tool = 'citation_verifier'
+                           and v.result @> jsonb_build_object('cited', jsonb_build_array(jsonb_build_object('knowledgeId', $1::text)))) as cited,
+                ${isoColumn('c.created_at', '"createdAt"')}
+           from agent_tool_calls c
+           left join projects p on p.id = c.project_id
+           left join stage_runs sr on sr.id = c.stage_run_id
+           left join stage_attempts a on a.id = c.attempt_id
+           left join retrieval_snapshots snap on snap.id = (c.output_ref->>'id')::uuid
+          where c.decision = 'allowed' and ${contains('knowledge_retrieve', 'knowledgeIds', '$1::text')}
+          order by c.created_at desc, c.id desc limit $2`,
+        [itemId, limit],
+      );
+      const totals = (
+        await client.query<{ retrievals: number; cited: number }>(
+          `select count(*)::int as retrievals,
+                  count(*) filter (where exists (select 1 from agent_tool_calls v
+                         where v.attempt_id = c.attempt_id and v.tool = 'citation_verifier'
+                           and v.result @> jsonb_build_object('cited', jsonb_build_array(jsonb_build_object('knowledgeId', $1::text)))))::int as cited
+             from agent_tool_calls c
+            where c.decision = 'allowed' and ${contains('knowledge_retrieve', 'knowledgeIds', '$1::text')}`,
+          [itemId],
+        )
+      ).rows[0]!;
+      return { items: uses.rows, totals };
+    });
+  }
+
   async versions(context: WorkspaceRequestContext, itemId: string) {
     return this.database.run(context, async (client) => {
       await this.loadItem(client, itemId);
@@ -1037,230 +1082,34 @@ export class KnowledgeService {
   // ---------------------------------------------------------------- retrieval (KNO-007)
 
   /**
-   * Hybrid retrieval over approved, current, valid, in-scope knowledge only. Scope and
-   * approval filters run before any lexical or vector ranking; ranks are fused with
-   * reciprocal rank fusion and the exact result is pinned in an append-only snapshot.
+   * Hybrid retrieval over approved, current, valid, in-scope knowledge only; pins a snapshot.
+   * The query itself is shared with the research stage of the workflow (`retrieveKnowledge`).
    */
   async retrieve(context: WorkspaceRequestContext, input: RetrieveInput) {
     return this.database.run(context, async (client) => {
-      const topicIds = new Set<string>();
-      if (input.topicId) topicIds.add(input.topicId);
-      if (input.projectId) {
-        const project = await client.query(
-          'select 1 from projects where id = $1 and deleted_at is null',
-          [input.projectId],
-        );
-        if (!project.rowCount)
+      // The audit-score floor is the effective `knowledge.min_audit_score` of the scope asked for.
+      const effective = input.projectId
+        ? await this.config.resolve(client, context, 'project', input.projectId)
+        : input.topicId
+          ? await this.config.resolve(client, context, 'topic', input.topicId)
+          : await this.config.resolve(client, context, 'workspace', context.workspaceId);
+      const floor = Number(effective.values['knowledge.min_audit_score']);
+      try {
+        return await retrieveKnowledge(client, {
+          workspaceId: context.workspaceId,
+          actorId: context.actorId,
+          query: input.query,
+          projectId: input.projectId,
+          topicId: input.topicId,
+          role: input.role,
+          limit: input.limit,
+          minAuditScore: Number.isFinite(floor) ? floor : undefined,
+        });
+      } catch (error) {
+        if (error instanceof RetrievalScopeError)
           throw notFound('KNOWLEDGE_SCOPE_NOT_FOUND', 'The project was not found.');
-        const topics = await client.query<{ topic_id: string }>(
-          'select topic_id from project_topics where project_id = $1',
-          [input.projectId],
-        );
-        for (const row of topics.rows) topicIds.add(row.topic_id);
+        throw error;
       }
-      const eligible = `
-        select ch.id as chunk_id, ch.text, ch.ordinal, ch.tsv, ch.embedding, v.id as version_id, i.id as item_id, i.title,
-               i.confidentiality, v.version_no
-          from knowledge_chunks ch
-          join knowledge_versions v on v.id = ch.knowledge_version_id
-          join knowledge_items i on i.id = v.item_id and i.current_version_id = v.id
-         where i.workspace_id = $1 and i.deleted_at is null
-           and v.status = 'approved' and v.stale_reason is null
-           and (v.valid_from is null or v.valid_from <= now())
-           and (v.valid_until is null or v.valid_until > now())
-           and coalesce(
-                 (select o.decision = 'approve' from audit_overrides o
-                   where o.knowledge_version_id = v.id and (o.expires_at is null or o.expires_at > now())
-                   order by o.created_at desc, o.id desc limit 1),
-                 (select r.decision = 'approved' from audit_reviews r
-                   where r.knowledge_version_id = v.id order by r.created_at desc, r.id desc limit 1),
-                 false)
-           and exists (
-                 select 1 from knowledge_scopes s
-                  where s.item_id = i.id
-                    and (s.role is null or s.role = $2)
-                    and (s.scope_type = 'workspace'
-                         or (s.scope_type = 'topic' and s.scope_id = any($3::uuid[]))
-                         or (s.scope_type = 'project' and s.scope_id = $4)))`;
-      const params = [
-        context.workspaceId,
-        input.role ?? null,
-        [...topicIds],
-        input.projectId ?? null,
-      ];
-      const lexical = (() => {
-        const words = [
-          ...new Set(normalizeForSearch(input.query).match(/[\p{L}\p{M}\p{N}]+/gu) ?? []),
-        ]
-          .filter((word) => word.length > 1)
-          .slice(0, 32);
-        return words.length ? words.map((word) => `'${word}'`).join(' | ') : null;
-      })();
-      const lexicalRows = lexical
-        ? (
-            await client.query<{ chunk_id: string; rank: number }>(
-              `select chunk_id, ts_rank_cd(tsv, to_tsquery('simple', $5)) as rank
-                 from (${eligible}) e
-                where tsv @@ to_tsquery('simple', $5)
-                order by rank desc, chunk_id limit 50`,
-              [...params, lexical],
-            )
-          ).rows
-        : [];
-      const vector = vectorLiteral(embed(input.query));
-      const vectorRows = (
-        await client.query<{ chunk_id: string; similarity: number }>(
-          `select chunk_id, 1 - (embedding <=> $5::vector) as similarity
-             from (${eligible}) e
-            order by embedding <=> $5::vector, chunk_id limit 50`,
-          [...params, vector],
-        )
-      ).rows;
-      const fused = new Map<
-        string,
-        {
-          score: number;
-          lexicalRank: number | null;
-          vectorRank: number | null;
-          similarity: number | null;
-        }
-      >();
-      lexicalRows.forEach((row, index) => {
-        fused.set(row.chunk_id, {
-          score: 1 / (RRF_K + index + 1),
-          lexicalRank: index + 1,
-          vectorRank: null,
-          similarity: null,
-        });
-      });
-      vectorRows.forEach((row, index) => {
-        const entry = fused.get(row.chunk_id) ?? {
-          score: 0,
-          lexicalRank: null,
-          vectorRank: null,
-          similarity: null,
-        };
-        // Vector-only matches need some real similarity; otherwise every chunk would match.
-        if (entry.lexicalRank === null && Number(row.similarity) < 0.2) return;
-        fused.set(row.chunk_id, {
-          ...entry,
-          score: entry.score + 1 / (RRF_K + index + 1),
-          vectorRank: index + 1,
-          similarity: Math.round(Number(row.similarity) * 10_000) / 10_000,
-        });
-      });
-      const ranked = [...fused.entries()]
-        .sort(([idA, a], [idB, b]) => b.score - a.score || (idA < idB ? -1 : 1))
-        .slice(0, input.limit);
-      const chunkIds = ranked.map(([id]) => id);
-      const details = chunkIds.length
-        ? (
-            await client.query<{
-              chunk_id: string;
-              text: string;
-              ordinal: number;
-              version_id: string;
-              item_id: string;
-              title: string;
-              confidentiality: string;
-              version_no: number;
-            }>(
-              `select chunk_id, text, ordinal, version_id, item_id, title, confidentiality, version_no
-                 from (${eligible}) e where chunk_id = any($5::uuid[])`,
-              [...params, chunkIds],
-            )
-          ).rows
-        : [];
-      const byChunk = new Map(details.map((row) => [row.chunk_id, row]));
-      const versionIds = [...new Set(details.map((row) => row.version_id))];
-      const warnings = await this.conflictWarnings(client, versionIds);
-      const reviews = versionIds.length
-        ? (
-            await client.query<{
-              knowledge_version_id: string;
-              id: string;
-              overall: number;
-              decision: string;
-            }>(
-              `select distinct on (knowledge_version_id) knowledge_version_id, id, overall, decision
-                 from audit_reviews where knowledge_version_id = any($1::uuid[])
-                order by knowledge_version_id, created_at desc, id desc`,
-              [versionIds],
-            )
-          ).rows
-        : [];
-      const overrides = versionIds.length
-        ? (
-            await client.query<{ knowledge_version_id: string; id: string; decision: string }>(
-              `select distinct on (knowledge_version_id) knowledge_version_id, id, decision
-                 from audit_overrides
-                where knowledge_version_id = any($1::uuid[]) and (expires_at is null or expires_at > now())
-                order by knowledge_version_id, created_at desc, id desc`,
-              [versionIds],
-            )
-          ).rows
-        : [];
-      const reviewByVersion = new Map(reviews.map((row) => [row.knowledge_version_id, row]));
-      const overrideByVersion = new Map(overrides.map((row) => [row.knowledge_version_id, row]));
-      const results = ranked
-        .map(([chunkId, rank]) => {
-          const row = byChunk.get(chunkId);
-          if (!row) return null;
-          const override = overrideByVersion.get(row.version_id);
-          return {
-            chunkId,
-            knowledgeId: row.item_id,
-            versionId: row.version_id,
-            versionNo: row.version_no,
-            title: row.title,
-            confidentiality: row.confidentiality,
-            chunkOrdinal: row.ordinal,
-            text: row.text,
-            score: Math.round(rank.score * 1_000_000) / 1_000_000,
-            lexicalRank: rank.lexicalRank,
-            vectorRank: rank.vectorRank,
-            similarity: rank.similarity,
-            reviewId: reviewByVersion.get(row.version_id)?.id ?? null,
-            auditScore: reviewByVersion.get(row.version_id)?.overall ?? null,
-            effectiveDecision: override ? 'approved_by_override' : 'approved',
-            conflictWarnings: warnings.get(row.version_id) ?? [],
-          };
-        })
-        .filter((result) => result !== null);
-      const filters = {
-        projectId: input.projectId ?? null,
-        topicIds: [...topicIds].sort(),
-        role: input.role ?? null,
-        limit: input.limit,
-      };
-      const hash = sha256(
-        canonicalJson({ query: input.query, filters, results, model: EMBEDDING_MODEL }),
-      );
-      const snapshot = (
-        await client.query<{ id: string; created_at: string }>(
-          `insert into retrieval_snapshots (workspace_id, project_id, topic_id, role, query, filters, results, embedding_model, hash, created_by)
-           values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10) returning id, ${isoColumn('created_at', 'created_at')}`,
-          [
-            context.workspaceId,
-            input.projectId ?? null,
-            input.topicId ?? null,
-            input.role ?? null,
-            input.query,
-            JSON.stringify(filters),
-            JSON.stringify(results),
-            EMBEDDING_MODEL,
-            hash,
-            context.actorId,
-          ],
-        )
-      ).rows[0]!;
-      return {
-        snapshotId: snapshot.id,
-        hash,
-        embeddingModel: EMBEDDING_MODEL,
-        createdAt: snapshot.created_at,
-        results,
-      };
     });
   }
 
@@ -1282,49 +1131,6 @@ export class KnowledgeService {
   }
 
   // ---------------------------------------------------------------- internals
-
-  private async conflictWarnings(client: PoolClient, versionIds: readonly string[]) {
-    const warnings = new Map<string, unknown[]>();
-    if (versionIds.length === 0) return warnings;
-    const result = await client.query<{
-      id: string;
-      version_id: string;
-      claim_id: string;
-      claim_text: string;
-      other_claim_id: string;
-      other_text: string;
-      other_knowledge_id: string;
-      conflict_type: string;
-      severity: string;
-    }>(
-      `select c.id, mine.knowledge_version_id as version_id, mine.id as claim_id, mine.text as claim_text,
-              other.id as other_claim_id, other.text as other_text, ov.item_id as other_knowledge_id,
-              c.conflict_type, c.severity
-         from knowledge_conflicts c
-         join claims mine on mine.id in (c.claim_a_id, c.claim_b_id)
-         join claims other on other.id in (c.claim_a_id, c.claim_b_id) and other.id <> mine.id
-         join knowledge_versions ov on ov.id = other.knowledge_version_id
-        where c.status = 'open' and mine.knowledge_version_id = any($1::uuid[])
-        order by c.created_at, c.id`,
-      [versionIds],
-    );
-    for (const row of result.rows) {
-      const list = warnings.get(row.version_id) ?? [];
-      list.push({
-        conflictId: row.id,
-        conflictType: row.conflict_type,
-        severity: row.severity,
-        claim: { id: row.claim_id, text: row.claim_text },
-        conflictingClaim: {
-          id: row.other_claim_id,
-          text: row.other_text,
-          knowledgeId: row.other_knowledge_id,
-        },
-      });
-      warnings.set(row.version_id, list);
-    }
-    return warnings;
-  }
 
   private async detectAndStoreConflicts(
     client: PoolClient,

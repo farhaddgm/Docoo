@@ -2,7 +2,7 @@
 doc_id: DOCOO-PRODUCTION-INSTALL
 title: راهنمای سادهٔ نصب Docoo روی سرور
 status: active
-version: 1.3.0
+version: 1.4.0
 owner: Platform & Operations
 last_updated: 2026-10-04
 notion_sync: true
@@ -104,7 +104,18 @@ sudo /opt/docoo/scripts/deploy/install.sh update
 
 اگر محل S3 را داده باشید، پایگاه‌داده **به‌طور پیوسته** (هر ۵ دقیقه) و یک نسخهٔ کامل هر ۲۴ ساعت، و فایل‌ها هر ۲۴ ساعت به آنجا فرستاده می‌شوند (۷ نسخهٔ کامل نگه داشته می‌شود). بازگردانی تا هر ثانیه از این بازه ممکن است؛ مراحلش در [runbook](10-runbooks.md#backup-restore) است. اگر S3 را بعداً تهیه کردید، مقادیر `BACKUP_S3_*` را در `/opt/docoo/deploy/.env` پر کنید و `install.sh update` را بزنید.
 
-## ۸. اگر چیزی کار نکرد
+## ۸. گزارش پذیرش سرور
+
+برای اینکه ببینید همه‌چیز سر جایش است (و برای امضای private beta)، روی سرور بزنید:
+
+```bash
+cd /opt/docoo
+sudo ./scripts/deploy/acceptance.sh > acceptance-$(date +%F).md
+```
+
+فقط می‌خواند و چیزی را تغییر نمی‌دهد. جدولی از کانتینرها، API، HTTPS و روزهای باقی‌ماندهٔ گواهی، دیسک، نسخه، به‌روزرسانی شبانه، پشتیبان خارج از سرور، ادمین، اتصال AI و ایمیل می‌دهد. `ACTION` یعنی کاری که فقط شما می‌توانید بکنید (مثلاً هنوز کلید AI وارد نشده) و `FAIL` یعنی خراب است. توضیح کامل و محل چسباندن گزارش: [پذیرش private beta](12-private-beta-acceptance.md).
+
+## ۹. اگر چیزی کار نکرد
 
 - وضعیت سرویس‌ها: `sudo docker compose --project-directory /opt/docoo/deploy -f /opt/docoo/deploy/compose.production.yaml ps`
 - گزارش خطا: همان فرمان با `logs --tail 100` به‌جای `ps`

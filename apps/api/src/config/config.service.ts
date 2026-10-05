@@ -13,6 +13,7 @@ import {
 } from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
+import { settingSemanticProblem } from './setting-semantics.js';
 import { canonicalJson, validateSettingValue, type SettingValueSchema } from './setting-value.js';
 
 export type ConfigScope = 'workspace' | 'topic' | 'project';
@@ -41,7 +42,9 @@ export interface ConfigAssignment {
 
 export type ValueSource =
   | { readonly scope: 'system' }
-  | { readonly scope: ConfigScope; readonly scopeId: string; readonly sequence: number };
+  | { readonly scope: ConfigScope; readonly scopeId: string; readonly sequence: number }
+  /** A value chosen in the project wizard that is saved together with the new project. */
+  | { readonly scope: 'project'; readonly pending: true };
 
 export interface EffectiveConfig {
   readonly subjectType: ConfigScope;
@@ -160,7 +163,9 @@ export class ConfigService {
       await this.assertScope(client, context, input.scopeType, input.scopeId, true);
       const cleared = input.value === null;
       if (!cleared) {
-        const problem = validateSettingValue(definition.valueSchema, input.value);
+        const problem =
+          validateSettingValue(definition.valueSchema, input.value) ??
+          settingSemanticProblem(input.key, input.value);
         if (problem) throw badRequest('CONFIG_VALUE_INVALID', `${input.key}: ${problem}`);
       }
       return this.append(client, context, definition, {
@@ -228,7 +233,6 @@ export class ConfigService {
     subjectType: ConfigScope,
     subjectId: string,
   ): Promise<EffectiveConfig> {
-    const definitions = await this.loadDefinitions(client);
     const chain: { scope: ConfigScope; id: string }[] = [
       { scope: 'workspace', id: context.workspaceId },
     ];
@@ -245,6 +249,22 @@ export class ConfigService {
       chain.push({ scope: 'project', id: subjectId });
     }
 
+    return this.resolveChain(client, context, subjectType, subjectId, chain);
+  }
+
+  /**
+   * Resolves the values of a chain of scopes, lowest to highest. `pending` values are applied on
+   * top and marked as not yet saved (the preview of a project that does not exist yet).
+   */
+  private async resolveChain(
+    client: PoolClient,
+    context: WorkspaceRequestContext,
+    subjectType: ConfigScope,
+    subjectId: string,
+    chain: readonly { scope: ConfigScope; id: string }[],
+    pending: Readonly<Record<string, unknown>> = {},
+  ): Promise<EffectiveConfig> {
+    const definitions = await this.loadDefinitions(client);
     const latest = await client.query<AssignmentRow>(
       `select distinct on (setting_key, scope_type, scope_id) ${assignmentColumns}
          from config_assignments
@@ -270,6 +290,10 @@ export class ConfigService {
           value = row.value;
           source = { scope: link.scope, scopeId: link.id, sequence: row.sequence };
         }
+      }
+      if (definition.key in pending) {
+        value = pending[definition.key];
+        source = { scope: 'project', pending: true };
       }
       values[definition.key] = definition.sensitive ? '[REDACTED]' : value;
       sources[definition.key] = source;
@@ -348,6 +372,92 @@ export class ConfigService {
         createdAt: row.created_at,
       }));
     });
+  }
+
+  /**
+   * Checks the values a new project is created with: each key must exist, be allowed at project
+   * scope, not be sensitive, appear once and pass its type, range and semantic rules.
+   */
+  private async checkOverrides(
+    client: PoolClient,
+    settings: readonly { key: string; value: unknown }[],
+  ): Promise<readonly { definition: SettingDefinition; value: unknown }[]> {
+    const seen = new Set<string>();
+    const checked: { definition: SettingDefinition; value: unknown }[] = [];
+    for (const setting of settings) {
+      if (seen.has(setting.key)) {
+        throw badRequest('CONFIG_VALUE_INVALID', `${setting.key}: given more than once.`);
+      }
+      seen.add(setting.key);
+      const definition = await this.requireDefinition(client, setting.key);
+      this.assertAllowedScope(definition, 'project');
+      if (definition.sensitive) {
+        throw badRequest('CONFIG_VALUE_INVALID', `${setting.key}: cannot be set here.`);
+      }
+      const problem =
+        validateSettingValue(definition.valueSchema, setting.value) ??
+        settingSemanticProblem(setting.key, setting.value);
+      if (problem) throw badRequest('CONFIG_VALUE_INVALID', `${setting.key}: ${problem}`);
+      checked.push({ definition, value: setting.value });
+    }
+    return checked;
+  }
+
+  /**
+   * The effective configuration a project would start with, before it exists (project wizard,
+   * UX §5): the workspace, the chosen topics (the first one has priority 1 and wins) and the
+   * values the administrator picked for the project, each with the scope it comes from.
+   */
+  async preview(
+    context: WorkspaceRequestContext,
+    input: {
+      topicIds: readonly string[];
+      settings: readonly { key: string; value: unknown }[];
+    },
+  ): Promise<EffectiveConfig> {
+    return this.database.run(context, async (client) => {
+      const checked = await this.checkOverrides(client, input.settings);
+      for (const topicId of input.topicIds) {
+        await this.assertScope(client, context, 'topic', topicId, false);
+      }
+      const chain: { scope: ConfigScope; id: string }[] = [
+        { scope: 'workspace', id: context.workspaceId },
+        // Lowest priority first so the highest-priority topic overrides the rest.
+        ...[...input.topicIds].reverse().map((id) => ({ scope: 'topic' as const, id })),
+      ];
+      return this.resolveChain(
+        client,
+        context,
+        'workspace',
+        context.workspaceId,
+        chain,
+        Object.fromEntries(checked.map((item) => [item.definition.key, item.value])),
+      );
+    });
+  }
+
+  /** Saves the values a project is created with, in the transaction that creates it. */
+  async applyProjectSettings(
+    client: PoolClient,
+    context: WorkspaceRequestContext,
+    projectId: string,
+    settings: readonly { key: string; value: unknown }[],
+    reason: string,
+  ): Promise<number> {
+    const checked = await this.checkOverrides(client, settings);
+    for (const item of checked) {
+      await this.append(client, context, item.definition, {
+        key: item.definition.key,
+        scopeType: 'project',
+        scopeId: projectId,
+        value: item.value,
+        cleared: false,
+        reason,
+        restoredFromSequence: null,
+        expectedSequence: undefined,
+      });
+    }
+    return checked.length;
   }
 
   /** Copies the latest project-scope values to another project (used by clone). */

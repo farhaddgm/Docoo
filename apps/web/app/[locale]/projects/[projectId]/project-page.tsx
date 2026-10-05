@@ -21,6 +21,7 @@ import type { ProjectDetail } from './project-types';
 import { SolutionsPanel } from './solutions-panel';
 import { TimelinePanel } from './timeline-panel';
 import { WorkflowPanel } from './workflow-panel';
+import { ProjectSettingsPanel } from './settings-panel';
 
 const tabs = [
   'overview',
@@ -30,6 +31,7 @@ const tabs = [
   'documents',
   'knowledge',
   'agents',
+  'settings',
   'timeline',
 ] as const;
 type Tab = (typeof tabs)[number];
@@ -265,6 +267,14 @@ function ProjectView({
           projectId={projectId}
           readOnly={project.status === 'archived' || project.status === 'deleted'}
           refreshKey={refreshKey}
+        />
+      )}
+      {tab === 'settings' && (
+        <ProjectSettingsPanel
+          locale={locale}
+          workspaceId={workspaceId}
+          projectId={projectId}
+          readOnly={project.status === 'archived' || project.status === 'deleted'}
         />
       )}
       {tab === 'timeline' && (

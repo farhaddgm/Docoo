@@ -26,9 +26,10 @@ import {
 import {
   AGENT_TASK_QUEUE,
   createOrchestrationActivities,
-  fakeAnalystResponder,
+  fakeResponder,
   ProviderRuntime,
   type RunRef,
+  type WritingRef,
 } from '@docoo/orchestration';
 import { createAdapter, FakeAdapter, masterKeyFromEnv, type FakeScript } from '@docoo/providers';
 import {
@@ -126,6 +127,10 @@ export class RecordingEngine implements WorkflowEngine {
     this.calls.push({ kind: 'start', workflowId });
     return Promise.resolve();
   }
+  startWriting(workflowId: string): Promise<void> {
+    this.calls.push({ kind: 'start', workflowId });
+    return Promise.resolve();
+  }
   signal(workflowId: string, signal: WorkflowSignal, payload?: unknown): Promise<void> {
     this.calls.push({ kind: 'signal', workflowId, signal, payload });
     return Promise.resolve();
@@ -144,8 +149,8 @@ export class TemporalTestRuntime implements WorkflowEngine {
   readonly fake = new FakeAdapter((request, call) => this.fakeScript(request, call));
 
   constructor(private readonly pool: Pool) {
-    // The same analyst the stack uses for provider kind `fake`; tests may script their own.
-    this.fake.responder = fakeAnalystResponder;
+    // The same analyst, researcher and judge the stack uses for provider kind `fake`; tests may script their own.
+    this.fake.responder = fakeResponder;
   }
   private worker: Worker | null = null;
   private running: Promise<void> | null = null;
@@ -187,6 +192,19 @@ export class TemporalTestRuntime implements WorkflowEngine {
     this.started.push(workflowId);
     try {
       await this.client.workflow.start('projectWorkflow', {
+        taskQueue: this.taskQueue,
+        workflowId,
+        args: [ref],
+      });
+    } catch (error) {
+      if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
+    }
+  }
+
+  async startWriting(workflowId: string, ref: WritingRef): Promise<void> {
+    this.started.push(workflowId);
+    try {
+      await this.client.workflow.start('documentWritingWorkflow', {
         taskQueue: this.taskQueue,
         workflowId,
         args: [ref],
@@ -334,6 +352,7 @@ export async function createHarness(
     engine = new RecordingEngine();
   }
   const fake = engine instanceof TemporalTestRuntime ? engine.fake : new FakeAdapter();
+  if (!(engine instanceof TemporalTestRuntime)) fake.responder = fakeResponder;
   const providerRuntime = new ProviderRuntime(runtimePool, masterKeyFromEnv(), (kind, options) =>
     kind === 'fake' ? fake : createAdapter(kind, options),
   );

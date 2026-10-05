@@ -5,13 +5,17 @@ import { checkCostLimit, ProviderError, retryDelaySeconds } from '@docoo/provide
 import type { Pool, PoolClient } from 'pg';
 
 import { createAnalysisActivities, loadDefinitionContext } from './analysis-activities.js';
+import { createWritingActivities, type WritingActivities } from './writing-activities.js';
 import type { AnalysisActivities } from './analysis-activities.js';
 import { audit, inWorkspace } from './db.js';
 import type { RunRef, StageRef } from './refs.js';
+import { compactResearchForPrompt, knowledgePromptItems } from './research.js';
+import { finishResearch, prepareResearch, type ResearchRun } from './research-activities.js';
 import type { ProviderRuntime } from './runtime.js';
 import { loadSettings } from './settings.js';
 import { loadAgentVersion, promptDigest, resolveAgentProfile } from './agents.js';
 import { STAGE_SCHEMAS, stagePrompt, STAGES, type Stage } from './stages.js';
+import type { ToolCallScope } from './tool-calls.js';
 
 export type { RunRef, StageRef } from './refs.js';
 
@@ -35,7 +39,7 @@ export type AttemptResult =
       readonly reason: 'provider_failure' | 'configuration' | 'cost_limit';
     };
 
-export interface OrchestrationActivities extends AnalysisActivities {
+export interface OrchestrationActivities extends AnalysisActivities, WritingActivities {
   startRun(ref: RunRef): Promise<{ paused: boolean }>;
   startStage(ref: RunRef & { stage: Stage }): Promise<StageStart>;
   runAttempt(ref: StageRef & { attemptNo: number; retryNo: number }): Promise<AttemptResult>;
@@ -70,6 +74,7 @@ export function createOrchestrationActivities(
 
   return {
     ...createAnalysisActivities(pool, runtime, options),
+    ...createWritingActivities(pool, runtime, options),
 
     startRun: (ref) =>
       run(ref.workspaceId, async (client) => {
@@ -274,6 +279,28 @@ export function createOrchestrationActivities(
             after: { ...cost },
           });
         }
+        // Every tool call of the role goes through the allowlist of its pinned definition and is
+        // recorded (FR-AGT-005); only the research stage uses tools so far (ADR-0017).
+        const toolScope: ToolCallScope = {
+          workspaceId: ref.workspaceId,
+          projectId: ref.projectId,
+          stageRunId: ref.stageRunId,
+          attemptId,
+          role: STAGE_ROLE[stage.stage],
+          agentDefinitionVersionId: definition.id,
+          allowed: definition.tools,
+        };
+        const research: ResearchRun | null =
+          stage.stage === 'research'
+            ? await prepareResearch(client, {
+                scope: toolScope,
+                config,
+                projectTitle: stage.project_title,
+                problem: stage.problem,
+                topics: topics.rows.map((row) => row.title),
+                analysis: previous.rows.find((row) => row.stage === 'analysis')?.content ?? null,
+              })
+            : null;
         const prompt = stagePrompt({
           stage: stage.stage,
           definition,
@@ -281,9 +308,15 @@ export function createOrchestrationActivities(
           projectTitle: stage.project_title,
           problem: stage.problem,
           topics: topics.rows.map((row) => row.title),
-          previous: previous.rows,
+          // Later stages see the research as claims with their support, not as raw evidence.
+          previous: previous.rows.map((row) =>
+            row.stage === 'research'
+              ? { stage: row.stage, content: compactResearchForPrompt(row.content) }
+              : row,
+          ),
           feedback: feedback.rows.map((row) => row.comment),
           analysis: analysis ?? undefined,
+          knowledge: research ? knowledgePromptItems(research.passages) : undefined,
         });
         return {
           attemptId,
@@ -292,6 +325,8 @@ export function createOrchestrationActivities(
           promptSha256: promptDigest(prompt),
           prompt,
           stage: stage.stage,
+          toolScope,
+          research,
         } as const;
       });
       if ('reuse' in prepared)
@@ -332,7 +367,13 @@ export function createOrchestrationActivities(
           throw new ProviderError('invalid_output', `output_${response.finishReason}`);
         }
         const outputId = await run(ref.workspaceId, async (client) => {
-          const content = JSON.stringify(response.json);
+          // The research answer is stored with every citation checked against the passages the
+          // model was given (the gated `citation_verifier`); other stages store it as returned.
+          const content = JSON.stringify(
+            prepared.research
+              ? await finishResearch(client, prepared.toolScope, prepared.research, response.json)
+              : response.json,
+          );
           const output = (
             await client.query<{ id: string }>(
               `insert into stage_outputs (workspace_id, stage_run_id, attempt_id, version_no, content, content_sha256, origin)

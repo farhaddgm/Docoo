@@ -1,4 +1,7 @@
+import { createHash } from 'node:crypto';
+
 import { Injectable } from '@nestjs/common';
+import { criteriaProblem, type Criterion } from '@docoo/documents';
 import {
   availableProjectCommands,
   InvalidProjectTransitionError,
@@ -80,6 +83,10 @@ export interface CreateProjectInput {
   readonly initialProblem: string;
   readonly outputLanguage: OutputLanguage;
   readonly topics: readonly TopicLinkInput[];
+  /** Project-scope settings saved together with the project (the wizard's choices). */
+  readonly settings?: readonly { readonly key: string; readonly value: unknown }[] | undefined;
+  /** The weighted solution criteria chosen in the wizard; version 1, in the same transaction. */
+  readonly solutionCriteria?: readonly Criterion[] | undefined;
 }
 
 export interface UpdateProjectInput {
@@ -106,6 +113,22 @@ export interface ListProjectsInput {
   readonly limit: number;
   readonly cursor?: string | undefined;
   readonly status?: ProjectStatus | 'current' | 'all' | undefined;
+  /** Projects that use this topic (UX §4). */
+  readonly topicId?: string | undefined;
+  readonly language?: OutputLanguage | undefined;
+  /** Last change on or after / on or before this day (`YYYY-MM-DD`). */
+  readonly updatedFrom?: string | undefined;
+  readonly updatedTo?: string | undefined;
+  /** Only projects with a human decision waiting (a gate, an attempt limit, a blocked run). */
+  readonly waiting?: boolean | undefined;
+  /** Part of the code or title. */
+  readonly q?: string | undefined;
+}
+
+/** What the list adds to a project: who made it and what, if anything, waits for a person. */
+export interface ProjectListItem extends Project {
+  readonly owner: { readonly id: string; readonly displayName: string } | null;
+  readonly waiting: { readonly kind: string; readonly stage: string | null } | null;
 }
 
 export interface TimelineEntry {
@@ -183,14 +206,22 @@ export class ProjectsService {
   async list(
     context: WorkspaceRequestContext,
     input: ListProjectsInput,
-  ): Promise<{ items: readonly Project[]; nextCursor: string | null }> {
+  ): Promise<{ items: readonly ProjectListItem[]; nextCursor: string | null }> {
     const status = input.status ?? 'current';
-    const scope = `${context.workspaceId}:projects:${status}`;
+    // A cursor belongs to one set of filters: another filter starts a new list.
+    const filters = [
+      status,
+      input.topicId ?? '',
+      input.language ?? '',
+      input.updatedFrom ?? '',
+      input.updatedTo ?? '',
+      input.waiting ? 'waiting' : '',
+      input.q ?? '',
+    ].join('|');
+    const scope = `${context.workspaceId}:projects:${createHash('sha256').update(filters).digest('hex').slice(0, 16)}`;
     const cursor = input.cursor
       ? decodeCursor(input.cursor, scope, 'PROJECT_CURSOR_INVALID')
       : null;
-    const filter =
-      status === 'all' ? 'true' : status === 'current' ? `status <> 'deleted'` : 'status = $5';
     return this.database.run(context, async (client) => {
       const params: unknown[] = [
         context.workspaceId,
@@ -198,25 +229,71 @@ export class ProjectsService {
         cursor?.id ?? null,
         input.limit + 1,
       ];
-      if (status !== 'all' && status !== 'current') params.push(status);
+      const conditions: string[] = [];
+      const bind = (value: unknown): string => {
+        params.push(value);
+        return `$${params.length}`;
+      };
+      if (status === 'current') conditions.push(`status <> 'deleted'`);
+      else if (status !== 'all') conditions.push(`status = ${bind(status)}`);
+      if (input.topicId)
+        conditions.push(
+          `exists (select 1 from project_topics pt where pt.project_id = projects.id and pt.topic_id = ${bind(input.topicId)}::uuid)`,
+        );
+      if (input.language) conditions.push(`output_language = ${bind(input.language)}::locale`);
+      if (input.updatedFrom) conditions.push(`updated_at >= ${bind(input.updatedFrom)}::date`);
+      if (input.updatedTo)
+        conditions.push(`updated_at < (${bind(input.updatedTo)}::date + interval '1 day')`);
+      if (input.waiting)
+        conditions.push(
+          `exists (select 1 from human_tasks h where h.project_id = projects.id and h.status = 'pending')`,
+        );
+      if (input.q) {
+        const pattern = `%${input.q.replace(/[\\%_]/gu, (char) => `\\${char}`)}%`;
+        const marker = bind(pattern);
+        conditions.push(`(code ilike ${marker} or title ilike ${marker})`);
+      }
       const result = await client.query<ProjectRow>(
         `select ${projectColumns}
            from projects
-          where workspace_id = $1 and ${filter}
+          where workspace_id = $1 ${conditions.map((condition) => `and ${condition}`).join(' ')}
             and ($2::timestamptz is null or (updated_at, id) < ($2::timestamptz, $3::uuid))
           order by updated_at desc, id desc
           limit $4`,
         params,
       );
       const rows = result.rows.slice(0, input.limit);
-      const links = await this.loadLinks(
-        client,
-        context,
-        rows.map((row) => row.id),
+      const ids = rows.map((row) => row.id);
+      const links = await this.loadLinks(client, context, ids);
+      const owners = await client.query<{ id: string; owner_id: string; display_name: string }>(
+        `select p.id, u.id as owner_id, u.display_name
+           from projects p join users u on u.id = p.created_by where p.id = any($1::uuid[])`,
+        [ids],
       );
+      const waiting = await client.query<{
+        project_id: string;
+        kind: string;
+        stage: string | null;
+      }>(
+        `select distinct on (h.project_id) h.project_id, h.kind, s.stage::text as stage
+           from human_tasks h left join stage_runs s on s.id = h.stage_run_id
+          where h.project_id = any($1::uuid[]) and h.status = 'pending'
+          order by h.project_id, h.created_at desc`,
+        [ids],
+      );
+      const ownerOf = new Map(owners.rows.map((row) => [row.id, row]));
+      const waitingOf = new Map(waiting.rows.map((row) => [row.project_id, row]));
       const last = rows.at(-1);
       return {
-        items: rows.map((row) => this.toProject(row, links.get(row.id) ?? [])),
+        items: rows.map((row): ProjectListItem => {
+          const owner = ownerOf.get(row.id);
+          const task = waitingOf.get(row.id);
+          return {
+            ...this.toProject(row, links.get(row.id) ?? []),
+            owner: owner ? { id: owner.owner_id, displayName: owner.display_name } : null,
+            waiting: task ? { kind: task.kind, stage: task.stage } : null,
+          };
+        }),
         nextCursor:
           result.rows.length > input.limit && last
             ? encodeCursor(scope, last.updated_at, last.id)
@@ -230,6 +307,9 @@ export class ProjectsService {
   }
 
   async create(context: WorkspaceRequestContext, input: CreateProjectInput): Promise<Project> {
+    const criteria = input.solutionCriteria;
+    const criteriaIssue = criteria ? criteriaProblem(criteria) : null;
+    if (criteriaIssue) throw badRequest('SOLUTION_CRITERIA_INVALID', criteriaIssue);
     return this.database.run(context, async (client) => {
       await this.assertTopicsUsable(client, context, input.topics);
       let row: ProjectRow | undefined;
@@ -259,12 +339,51 @@ export class ProjectsService {
       }
       if (!row) throw new Error('Project insert did not return a row');
       await this.replaceLinks(client, context, row.id, input.topics);
+      // The wizard's choices are saved in the same transaction: a bad value creates nothing.
+      const settings = input.settings ?? [];
+      if (settings.length > 0) {
+        await this.configService.applyProjectSettings(
+          client,
+          context,
+          row.id,
+          settings,
+          'Set while creating the project',
+        );
+      }
+      if (criteria) {
+        const version = (
+          await client.query<{ id: string }>(
+            `insert into solution_criteria_versions (workspace_id, project_id, version_no, criteria, reason, created_by)
+             values ($1, $2, 1, $3::jsonb, $4, $5) returning id`,
+            [
+              context.workspaceId,
+              row.id,
+              JSON.stringify(criteria),
+              'Set while creating the project',
+              context.actorId,
+            ],
+          )
+        ).rows[0]!;
+        await writeAudit(client, context, {
+          action: 'solution.criteria_set',
+          targetType: 'project',
+          targetId: row.id,
+          projectId: row.id,
+          reason: 'Set while creating the project',
+          after: { versionId: version.id, versionNo: 1, criteria },
+        });
+      }
       await writeAudit(client, context, {
         action: 'project.create',
         targetType: 'project',
         targetId: row.id,
         projectId: row.id,
-        after: { ...this.snapshot(row), topics: input.topics.map((topic) => topic.topicId) },
+        after: {
+          ...this.snapshot(row),
+          topics: input.topics.map((topic) => topic.topicId),
+          settings: settings.map((setting) => setting.key),
+          ...(criteria ? { solutionCriteria: true } : {}),
+        },
       });
       return this.read(client, context, row.id);
     });

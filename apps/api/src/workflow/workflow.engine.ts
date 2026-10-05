@@ -1,6 +1,6 @@
 import { Inject, Injectable, type OnModuleDestroy } from '@nestjs/common';
 import type { Environment } from '@docoo/config';
-import { AGENT_TASK_QUEUE, type RunRef } from '@docoo/orchestration';
+import { AGENT_TASK_QUEUE, type RunRef, type WritingRef } from '@docoo/orchestration';
 import { Client, Connection, WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
 
 import { API_CONFIG } from '../tokens.js';
@@ -12,6 +12,8 @@ export type WorkflowSignal = 'pause' | 'resume' | 'cancel' | 'gate' | 'attemptDe
 /** Starts and signals project workflows. */
 export interface WorkflowEngine {
   start(workflowId: string, ref: RunRef): Promise<void>;
+  /** Starts the documenter's writing of one document (ADR-0019). */
+  startWriting(workflowId: string, ref: WritingRef): Promise<void>;
   signal(workflowId: string, signal: WorkflowSignal, payload?: unknown): Promise<void>;
 }
 
@@ -51,6 +53,20 @@ export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
     const client = await this.client();
     try {
       await client.workflow.start('projectWorkflow', {
+        taskQueue: AGENT_TASK_QUEUE,
+        workflowId,
+        args: [ref],
+      });
+    } catch (error) {
+      if (error instanceof WorkflowExecutionAlreadyStartedError) return;
+      throw new WorkflowEngineUnavailableError('temporal_start_failed');
+    }
+  }
+
+  async startWriting(workflowId: string, ref: WritingRef): Promise<void> {
+    const client = await this.client();
+    try {
+      await client.workflow.start('documentWritingWorkflow', {
         taskQueue: AGENT_TASK_QUEUE,
         workflowId,
         args: [ref],

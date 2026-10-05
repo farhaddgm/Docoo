@@ -1084,6 +1084,8 @@ export const modelInvocations = pgTable(
     projectId: uuid('project_id'),
     stageRunId: uuid('stage_run_id'),
     attemptId: uuid('attempt_id'),
+    /** The document writing the call belongs to (ADR-0019); null for every other purpose. */
+    writingId: uuid('writing_id'),
     provider: providerKind('provider').notNull(),
     model: text('model').notNull(),
     purpose: text('purpose').notNull(),
@@ -1283,6 +1285,8 @@ export const documentVersions = pgTable(
     withinBounds: boolean('within_bounds').notNull(),
     origin: text('origin').notNull(),
     restoredFromId: uuid('restored_from_id'),
+    /** The writing of the documenter that produced this version (ADR-0019). */
+    writingId: uuid('writing_id'),
     reason: text('reason'),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1411,6 +1415,10 @@ export const brainReports = pgTable(
     summary: jsonb('summary').notNull(),
     deviations: jsonb('deviations').notNull(),
     recommendations: jsonb('recommendations').notNull(),
+    /** The model-based evaluation of each role against its charter (ADR-0017); empty if not asked for. */
+    evaluations: jsonb('evaluations')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1796,4 +1804,100 @@ export const projectAgentProfiles = pgTable(
     ...timestamps,
   },
   (table) => [primaryKey({ columns: [table.projectId, table.role] })],
+);
+
+export const agentToolDecision = pgEnum('agent_tool_decision', ['allowed', 'denied']);
+
+/**
+ * Every call of a tool by a role, with the decision of the gate that let it through or stopped
+ * it (FR-AGT-005, docs/03-ai/01-agent-system.md §6). Append-only. Only ids are kept for the
+ * project, run and attempt: the record outlives a purged project, like a model invocation, and
+ * holds no project text (the query lives in the pinned retrieval snapshot).
+ */
+export const agentToolCalls = pgTable(
+  'agent_tool_calls',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id'),
+    stageRunId: uuid('stage_run_id'),
+    attemptId: uuid('attempt_id'),
+    /** The document writing the call belongs to (ADR-0019). */
+    writingId: uuid('writing_id'),
+    role: agentRole('role').notNull(),
+    agentDefinitionVersionId: uuid('agent_definition_version_id'),
+    tool: text('tool').notNull(),
+    decision: agentToolDecision('decision').notNull(),
+    /** Digest of the exact input; the input itself is not stored. */
+    inputSha256: text('input_sha256').notNull(),
+    /** Where the output can be read: for example `{ "type": "retrieval_snapshot", "id": "…" }`. */
+    outputRef: jsonb('output_ref'),
+    /** Counts and ids only (what was found, what was cited), never content. */
+    result: jsonb('result')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    latencyMs: integer('latency_ms'),
+    errorCode: text('error_code'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('agent_tool_calls_attempt_idx').on(table.attemptId, table.createdAt),
+    index('agent_tool_calls_workspace_idx').on(table.workspaceId, table.tool, table.createdAt),
+  ],
+);
+
+/**
+ * One run of the documenter on a document (ADR-0019, FR-AGT-001): the plan with its length
+ * budgets, the subsections written so far, the references it cited and, at the end, the report.
+ * The row is the progress the screen shows and what lets a restarted worker pick up where it
+ * stopped. The result is a normal document version; this table never holds the document itself
+ * except the parts under construction.
+ */
+export const documentWritings = pgTable(
+  'document_writings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id').notNull(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    /** queued, running, paused (waiting for the administrator), succeeded, failed, cancelled. */
+    status: text('status').notNull().default('queued'),
+    /** preparing, outlining, writing, fitting, saving, done. */
+    phase: text('phase').notNull().default('preparing'),
+    level: integer('level').notNull(),
+    templateVersion: text('template_version').notNull(),
+    language: locale('language').notNull(),
+    /** What the administrator asked for beyond the role's own instructions (data, not rules). */
+    notes: text('notes'),
+    /** The effective values of the project the writing runs with, fixed when it starts (FR-CFG-005). */
+    settings: jsonb('settings')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    baseVersionId: uuid('base_version_id'),
+    resultVersionId: uuid('result_version_id'),
+    agentDefinitionVersionId: uuid('agent_definition_version_id'),
+    temporalWorkflowId: text('temporal_workflow_id').notNull(),
+    plan: jsonb('plan'),
+    parts: jsonb('parts')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    /** The references cited so far (id, knowledge version) and how the citations fared. */
+    bibliography: jsonb('bibliography')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    report: jsonb('report'),
+    /** Why the writing is paused: a provider failure, missing configuration or the cost limit. */
+    blockCode: text('block_code'),
+    errorCode: text('error_code'),
+    requestedBy: uuid('requested_by').references(() => users.id, { onDelete: 'set null' }),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    index('document_writings_document_idx').on(table.documentId, table.createdAt),
+    index('document_writings_project_idx').on(table.workspaceId, table.projectId, table.createdAt),
+  ],
 );

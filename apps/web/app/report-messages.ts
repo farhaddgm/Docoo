@@ -66,6 +66,34 @@ const reportMessages = {
       action: 'اقدام پیشنهادی',
       readOnly: 'این گزارش هیچ پروژه، تنظیم یا خروجی‌ای را تغییر نداده است.',
       charter: 'نسخهٔ charter',
+      modelEvaluationOption:
+        'ارزیابی مدل‌محور نقش‌ها (Brain هر نقش را با مدل در برابر منشورش می‌سنجد؛ هر نقش یک فراخوانی مدل هزینه دارد)',
+      evaluationsHeading: 'ارزیابی مدل‌محور نقش‌ها',
+      evaluationsHelp:
+        'Brain چند خروجی اخیر هر نقش را در کنار اصول و وظایفی که نقش با آن‌ها اجرا شد می‌خواند. فقط یافته‌ای می‌ماند که بندهای منشور و خروجی‌های گواهش را نام ببرد؛ بقیه کنار گذاشته می‌شود.',
+      evaluationsSummary:
+        'با نسخهٔ {sequence} ایجنت Brain: {completed} انجام شد، {skipped} انجام نشد، {failed} ناموفق.',
+      evaluationsNone: 'این گزارش ارزیابی مدل‌محور ندارد.',
+      scoreOf: 'امتیاز: {score} از ۵',
+      evalStatuses: { completed: 'انجام شد', skipped: 'انجام نشد', failed: 'ناموفق' } as Record<
+        string,
+        string
+      >,
+      evalReasons: {
+        no_samples: 'در این بازه خروجی مدلیِ این نقش نبود.',
+        ai_not_configured: 'اتصال و مدل هوش مصنوعی تنظیم نشده است.',
+        provider_failure: 'سرویس مدل پاسخ نداد.',
+        invalid_output: 'پاسخ مدل قابل‌استفاده نبود.',
+      } as Record<string, string>,
+      evalCharter: 'منشور: نسخهٔ {n}',
+      evalSamples: '{n} نمونه، {rejected} ردشده',
+      findingsHeading: 'یافته‌ها',
+      findingKinds: { strength: 'نقطهٔ قوت', deviation: 'انحراف' } as Record<string, string>,
+      findingClauses: 'بندهای منشور',
+      findingEvidence: 'شواهد (خروجی‌های مرحله)',
+      findingRecommendation: 'پیشنهاد',
+      noFindings: 'یافته‌ای با شاهد ثبت نشد.',
+      discardedFindings: '{n} یافته به‌خاطر نبود شاهد معتبر کنار گذاشته شد.',
     },
     audit: {
       title: 'Audit Log',
@@ -173,6 +201,34 @@ const reportMessages = {
       action: 'Suggested action',
       readOnly: 'This report did not change any project, setting or output.',
       charter: 'Charter version',
+      modelEvaluationOption:
+        'Model-based role evaluation (Brain judges each role against its charter with the model; each role costs one model call)',
+      evaluationsHeading: 'Model-based role evaluation',
+      evaluationsHelp:
+        'Brain reads a few recent outputs of each role next to the principles and duties the role ran with. Only a finding that names the charter clauses and the outputs that prove it is kept; the rest is discarded.',
+      evaluationsSummary:
+        'With version {sequence} of the Brain agent: {completed} done, {skipped} not done, {failed} failed.',
+      evaluationsNone: 'This report has no model-based evaluation.',
+      scoreOf: 'Score: {score} of 5',
+      evalStatuses: { completed: 'Done', skipped: 'Not done', failed: 'Failed' } as Record<
+        string,
+        string
+      >,
+      evalReasons: {
+        no_samples: 'This role had no model output in the period.',
+        ai_not_configured: 'The AI connection and model are not configured.',
+        provider_failure: 'The model service did not answer.',
+        invalid_output: 'The model’s answer was not usable.',
+      } as Record<string, string>,
+      evalCharter: 'Charter: version {n}',
+      evalSamples: '{n} samples, {rejected} rejected',
+      findingsHeading: 'Findings',
+      findingKinds: { strength: 'Strength', deviation: 'Deviation' } as Record<string, string>,
+      findingClauses: 'Charter clauses',
+      findingEvidence: 'Evidence (stage outputs)',
+      findingRecommendation: 'Recommendation',
+      noFindings: 'No finding with evidence was recorded.',
+      discardedFindings: '{n} finding(s) were discarded for lacking valid evidence.',
     },
     audit: {
       title: 'Audit log',

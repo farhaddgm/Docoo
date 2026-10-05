@@ -148,6 +148,48 @@
       "when": 1791115736087,
       "tag": "0020_agents_security",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791132237775,
+      "tag": "0021_research_knowledge",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791132245213,
+      "tag": "0022_research_knowledge_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791155098338,
+      "tag": "0023_document_writing",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791155099120,
+      "tag": "0024_document_writing_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791175417323,
+      "tag": "0025_export_default_setting",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791176083081,
+      "tag": "0026_analysis_dimension_settings",
+      "breakpoints": true
     }
   ]
 }

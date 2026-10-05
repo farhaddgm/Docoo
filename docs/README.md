@@ -72,30 +72,34 @@ notion_sync: true
 33. [شکست epicها به story](06-delivery/09-epic-breakdown.md) — خروجی spike فازهای ۲ تا ۶ با وابستگی و معیار پذیرش.
 34. [runbook عملیات و private beta](06-delivery/10-runbooks.md) — حادثه، هشدارها، backup/restore، rollback و پذیرش beta.
 35. [راهنمای سادهٔ نصب روی سرور](06-delivery/11-production-install.md) — نصب یک‌فرمانه، HTTPS، کلید AI، به‌روزرسانی و پشتیبان.
+36. [پذیرش private beta با شاهد](06-delivery/12-private-beta-acceptance.md) — سه ابزار فقط‌خواندنی (GitHub، provider، سرور)، وضعیت‌ها و بلوک امضا.
 
 ### ۷. یکپارچه‌سازی‌ها
 
-36. [همگام‌سازی Notion و GitHub](07-integrations/01-notion-and-github.md) — مخزن خصوصی، انتشار یک‌طرفه و کنترل تعارض.
-37. [قرارداد آداپترهای بیرونی](07-integrations/02-external-adapters.md) — AI، وب، ذخیره‌سازی، OCR و export.
+37. [همگام‌سازی Notion و GitHub](07-integrations/01-notion-and-github.md) — مخزن خصوصی، انتشار یک‌طرفه و کنترل تعارض.
+38. [قرارداد آداپترهای بیرونی](07-integrations/02-external-adapters.md) — AI، وب، ذخیره‌سازی، OCR و export.
 
 ### ۸. تصمیم‌های معماری
 
-38. [ADR-0001: modular monolith](adr/0001-modular-monolith.md)
-39. [ADR-0002: اجرای بادوام گردش‌کار](adr/0002-durable-workflows.md)
-40. [ADR-0003: مرز tenant و حوزهٔ موضوعی](adr/0003-tenant-and-topic-boundary.md)
-41. [ADR-0004: تنظیمات نسخه‌بندی‌شده](adr/0004-versioned-configuration.md)
-42. [ADR-0005: ممیزی دو‌سطحی دانش](adr/0005-two-level-knowledge-audit.md)
-43. [ADR-0006: پلتفرم و toolchain](adr/0006-application-platform-and-toolchain.md)
-44. [ADR-0007: نشست و امنیت احراز هویت](adr/0007-authentication-and-session-security.md)
-45. [ADR-0008: اجرای ingestion و حاکمیت دانش](adr/0008-ingestion-and-knowledge-runtime.md)
-46. [ADR-0009: workflow پروژه و runtime ارائه‌دهندهٔ AI](adr/0009-project-workflow-and-provider-runtime.md)
-47. [ADR-0010: راه‌حل، سند، artifact امضاشده و ارزیابی](adr/0010-documents-solutions-and-evaluation.md)
-48. [ADR-0011: داشبورد، گزارش هزینه و گزارش Brain](adr/0011-reporting-and-brain-reports.md)
-49. [ADR-0012: استقرار تک‌سرور با نصب یک‌فرمانه](adr/0012-single-server-production-deployment.md)
-50. [ADR-0013: صفحه‌های اصلی بک‌آفیس](adr/0013-backoffice-core-screens.md)
-51. [ADR-0014: پرسش‌وپاسخ تحلیلگر و تعریف نهایی مسئله](adr/0014-analyst-questions-and-answers.md)
-52. [ADR-0015: تعریف نسخه‌دار ایجنت‌ها و سنجاق‌شدن به پروژه](adr/0015-agent-definitions.md)
-53. [ADR-0016: صفحه‌های دانش و ممیزی در بک‌آفیس](adr/0016-knowledge-screens.md)
+39. [ADR-0001: modular monolith](adr/0001-modular-monolith.md)
+40. [ADR-0002: اجرای بادوام گردش‌کار](adr/0002-durable-workflows.md)
+41. [ADR-0003: مرز tenant و حوزهٔ موضوعی](adr/0003-tenant-and-topic-boundary.md)
+42. [ADR-0004: تنظیمات نسخه‌بندی‌شده](adr/0004-versioned-configuration.md)
+43. [ADR-0005: ممیزی دو‌سطحی دانش](adr/0005-two-level-knowledge-audit.md)
+44. [ADR-0006: پلتفرم و toolchain](adr/0006-application-platform-and-toolchain.md)
+45. [ADR-0007: نشست و امنیت احراز هویت](adr/0007-authentication-and-session-security.md)
+46. [ADR-0008: اجرای ingestion و حاکمیت دانش](adr/0008-ingestion-and-knowledge-runtime.md)
+47. [ADR-0009: workflow پروژه و runtime ارائه‌دهندهٔ AI](adr/0009-project-workflow-and-provider-runtime.md)
+48. [ADR-0010: راه‌حل، سند، artifact امضاشده و ارزیابی](adr/0010-documents-solutions-and-evaluation.md)
+49. [ADR-0011: داشبورد، گزارش هزینه و گزارش Brain](adr/0011-reporting-and-brain-reports.md)
+50. [ADR-0012: استقرار تک‌سرور با نصب یک‌فرمانه](adr/0012-single-server-production-deployment.md)
+51. [ADR-0013: صفحه‌های اصلی بک‌آفیس](adr/0013-backoffice-core-screens.md)
+52. [ADR-0014: پرسش‌وپاسخ تحلیلگر و تعریف نهایی مسئله](adr/0014-analyst-questions-and-answers.md)
+53. [ADR-0015: تعریف نسخه‌دار ایجنت‌ها و سنجاق‌شدن به پروژه](adr/0015-agent-definitions.md)
+54. [ADR-0016: صفحه‌های دانش و ممیزی در بک‌آفیس](adr/0016-knowledge-screens.md)
+55. [ADR-0017: تحقیق با دانش تأییدشده و ارزیابی مدل‌محور نقش‌ها](adr/0017-research-with-knowledge-and-role-evaluation.md)
+56. [ADR-0018: تنظیمات، قالب و سطح سند، wizard ساخت پروژه و ابزار پذیرش](adr/0018-settings-templates-wizard-and-acceptance-tooling.md)
+57. [ADR-0019: نگارش سند توسط مستندساز و ویرایشگر ساختاریافتهٔ بلوک‌ها](adr/0019-document-writing-and-structured-editor.md)
 
 ## وضعیت اسناد
 
