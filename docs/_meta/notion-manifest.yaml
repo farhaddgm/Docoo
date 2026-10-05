@@ -179,3 +179,6 @@ documents:
   - path: docs/adr/0018-settings-templates-wizard-and-acceptance-tooling.md
     doc_id: DOCOO-ADR-0018
     section: ADRs
+  - path: docs/adr/0019-document-writing-and-structured-editor.md
+    doc_id: DOCOO-ADR-0019
+    section: ADRs

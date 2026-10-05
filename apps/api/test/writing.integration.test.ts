@@ -214,8 +214,10 @@ async function documenterTools(projectId: string, tools: string[]): Promise<stri
 
 const ALL_TOOLS = defaultDefinition('documenter').tools as string[];
 
+// Writings run real workflows; with the whole suite running in parallel the default 5 s is too short.
 describe.skipIf(!adminUrl || !temporalAddress)(
   'the documenter writes a document (DOC-W*, ADR-0019)',
+  { timeout: 120_000 },
   () => {
     beforeAll(async () => {
       h = await createHarness('writing', { workflow: true });

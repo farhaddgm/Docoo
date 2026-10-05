@@ -2,19 +2,7 @@ import { OUTLINE_SCHEMA_NAME, SECTION_SCHEMA_NAME } from '@docoo/documents';
 import { ROLE_EVALUATION_SCHEMA_NAME } from '@docoo/domain';
 import type { NormalizedModelRequest } from '@docoo/providers';
 
-import { fakeAnalystResponder } from './fake-analyst.js';
-
-function dataOf(request: NormalizedModelRequest): Record<string, unknown> {
-  const content = request.messages[0]?.content ?? '';
-  const start = content.indexOf('<data>');
-  const end = content.lastIndexOf('</data>');
-  if (start < 0 || end < start) return {};
-  try {
-    return JSON.parse(content.slice(start + '<data>'.length, end)) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
+import { dataOf, fakeAnalystResponder } from './fake-analyst.js';
 
 const records = (value: unknown): Record<string, unknown>[] =>
   Array.isArray(value)

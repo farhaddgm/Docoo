@@ -197,6 +197,10 @@ ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار �
 
 `document_id`, `sequence`, `structured_content`, `plain_text`, `language`, `length_policy_id`, `counted_characters`, `validation_json`, `created_from_run_id`, `status`, `locked_at`.
 
+### document_writings
+
+یک نگارش سند توسط مستندساز ([ADR-0019](../adr/0019-document-writing-and-structured-editor.md)): `workspace_id`، `project_id`، `document_id`، `status` (`queued|running|paused|succeeded|failed|cancelled`)، `phase` (`preparing|outlining|writing|fitting|saving|done`)، `level`، `template_version`، `language`، `notes` (درخواست ادمین؛ داده است، نه قاعده)، `settings` (مقدارهای مؤثر پروژه که در شروع ثابت می‌شوند)، `base_version_id` (نسخه‌ای که نگارش از آن شروع شد)، `result_version_id`، `agent_definition_version_id`، `temporal_workflow_id`، `plan` (بودجه و تمرکز هر زیربخش)، `parts` (زیربخش‌های نوشته‌شده)، `bibliography` (آبجکت ارجاع‌ها: شناسه و نسخهٔ دانش و آمار هر ارجاع)، `report` (طول، انحراف، دور تنظیم، فراخوانی‌ها، ارجاع‌های پیشنهادی/تأییدشده/دورریخته، یادداشت‌ها)، `block_code`، `error_code`، `requested_by`، `started_at`، `ended_at`. فهرست یکتای جزئی روی `(document_id)` برای وضعیت‌های زنده، RLS و trigger رد حذف تاریخچه. `model_invocations.writing_id` و `agent_tool_calls.writing_id` نگارش را به تماس‌هایش وصل می‌کنند.
+
 ### artifact
 
 `document_version_id`, `format`, `storage_key`, `sha256`, `size`, `renderer`, `renderer_version`, `render_status`, `created_at`.

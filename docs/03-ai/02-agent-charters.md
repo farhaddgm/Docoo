@@ -148,6 +148,10 @@ notion_sync: true
 
 `StructuredDocument`, `ValidationReport`, `ArtifactManifest`.
 
+### ابزارها و اجرا
+
+از 0.17.0 این نقش سند کامل را می‌نویسد ([ADR-0019](../adr/0019-document-writing-and-structured-editor.md)): هر زیربخش یک فراخوانی با بودجهٔ حرفیِ خودش، ارجاع فقط به `K#` دانش approved با نقل‌قول عینی که کد با متن قطعه می‌سنجد. allowlist ابزارها `project_documents_read`، `knowledge_retrieve`، `citation_verifier` و `table_chart_spec` است؛ ابزاری که نسخهٔ سنجاق‌شدهٔ نقش مجاز نکرده باشد نگارش را با `tool_not_allowed:<ابزار>` متوقف می‌کند. اصول و وظایف را ادمین ویرایش می‌کند، قاعدهٔ «جعل نکن، تکرار و پر نکن» ثابت کد است.
+
 ### ممنوعیت
 
 تغییر ماهوی راه‌حل بدون ثبت finding؛ اگر شکاف محتوا وجود دارد باید به stage مناسب بازگرداند.

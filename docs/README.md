@@ -99,6 +99,7 @@ notion_sync: true
 54. [ADR-0016: صفحه‌های دانش و ممیزی در بک‌آفیس](adr/0016-knowledge-screens.md)
 55. [ADR-0017: تحقیق با دانش تأییدشده و ارزیابی مدل‌محور نقش‌ها](adr/0017-research-with-knowledge-and-role-evaluation.md)
 56. [ADR-0018: تنظیمات، قالب و سطح سند، wizard ساخت پروژه و ابزار پذیرش](adr/0018-settings-templates-wizard-and-acceptance-tooling.md)
+57. [ADR-0019: نگارش سند توسط مستندساز و ویرایشگر ساختاریافتهٔ بلوک‌ها](adr/0019-document-writing-and-structured-editor.md)
 
 ## وضعیت اسناد
 

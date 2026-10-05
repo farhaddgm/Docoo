@@ -2,6 +2,38 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.17.0] — 2026-10-05
+
+The documenter writes the whole document and a structured block editor changes it ([ADR-0019](docs/adr/0019-document-writing-and-structured-editor.md)), plus the leftovers of the earlier roadmap steps.
+
+### Added
+
+- **The documenter writes a complete document** as a durable workflow (`documentWritingWorkflow`, table `document_writings`): the plan and a letter budget for every subsection come from the level's bounds, each subsection is one model call, then up to `document.writing.fit_rounds` rounds expand or condense subsections to bring the length into the level's bounds (never padding; a document that stays out of bounds is saved with `withinBounds = false` and a plain report). Only one live writing per document; pause, resume and cancel; a provider failure, a missing AI connection, the cost limit or a tool the role lacks pauses it with the reason instead of hiding it.
+- **Citations are checked by code.** The model may cite only `K#` of the approved knowledge it was given, with a verbatim quote that must occur in that passage; citations that cannot be found are discarded and counted, and the references block lists only verified ones. The score table and chart of the `detailed` template are built by code from the solution's weighted scores.
+- **Structured block editor** on the document page: an editor per block (heading, paragraph with citations, list, table, callout, references, chart), an outline, add, move and delete, a live check from the server (`POST /documents/{id}/check`: structure, official count, level bounds, unused references), a required reason and a new `origin = edit` version; leaving with unsaved changes asks first. The writing panel shows level, template, a note for the documenter, live phase, pause/resume/cancel, the reason for a pause and the final report.
+- **Settings:** `document.writing.knowledge_limit`, `document.writing.fit_rounds`, `document.default_export_format` (the format offered first on a document page), `analysis.require_risk_dimension` and `analysis.require_out_of_scope_dimension`. The two writing settings, which the settings page did not list, now appear in the Documents group.
+- **Project list (UX §4):** filters for topic, output language, last-change range, "waiting for my decision" and text; columns for waiting, language and owner; the cursor is bound to the filter set.
+- **Wizard (UX §5):** the solutions step edits the weighted criteria (saved as version 1 together with the project, in one transaction; `GET /solution-criteria/defaults` gives the starting values) and the documents step chooses the default export format.
+- **Manual knowledge in the UI:** a "Manual knowledge" tab on the Knowledge page with text, scopes and roles, validity, claims and structured citations; an incomplete citation names what it still lacks.
+- **Analyst:** the risk and out-of-scope dimensions can be made required (the eight required dimensions of FR-ANL-004 always stay required).
+- Migrations `0023_document_writing`, `0024_document_writing_security`, `0025_export_default_setting`, `0026_analysis_dimension_settings`.
+
+### Changed
+
+- `research.max_sources` (distinct knowledge items a research run may cite) and `knowledge.min_audit_score` (a 0–1 floor on the audit score for retrievable knowledge, in research, writing and the retrieval test; a human override still wins) are enforced and no longer marked "not enforced".
+- While a writing is live, `PUT /documents/{id}/content`, restore, status commands and supersede answer `409 DOCUMENT_WRITING_ACTIVE`.
+- The Deploy smoke accepts `WARN` for the acceptance report's HTTPS row: Caddy's local CA signs a certificate that lives about 12 hours.
+
+### Fixed
+
+- CI findings on the step 4 push: a useless ternary and a backtracking regular expression in the offline documenter, and an unnecessary type assertion.
+
+### Not changed on purpose
+
+- No web tools (`web_search`, `web_fetch`): they need a search service and key that only the owner can provide. The model does not call tools itself; the code runs them before the call and the gate and ledger still apply ([ADR-0017](docs/adr/0017-research-with-knowledge-and-role-evaluation.md)).
+- No custom analyst dimensions: coverage, the prompt and the strict output schema are built on the ten fixed ones.
+- [#53](https://github.com/farhaddgm/Docoo/issues/53), [#89](https://github.com/farhaddgm/Docoo/issues/89) and [#94](https://github.com/farhaddgm/Docoo/issues/94) still need the owner.
+
 ## [0.16.0] — 2026-10-04
 
 Settings, document templates and levels in the backoffice, the project creation wizard, and the tooling that shows what is left for the private-beta sign-off ([ADR-0018](docs/adr/0018-settings-templates-wizard-and-acceptance-tooling.md)).

@@ -63,11 +63,17 @@ const CATEGORY_WORDS: Readonly<Record<QuestionCategory, readonly [string, string
 /** Questions per batch of the fake analyst: two batches reach the thirty-question minimum. */
 const FAKE_BATCH = 20;
 
-function dataOf(request: NormalizedModelRequest): Record<string, unknown> {
+/**
+ * The JSON between `<data>` and `</data>` in the first message. Plain index slicing: a regular
+ * expression over model input can backtrack badly on a crafted string.
+ */
+export function dataOf(request: NormalizedModelRequest): Record<string, unknown> {
   const content = request.messages[0]?.content ?? '';
-  const match = /<data>([\s\S]*)<\/data>/u.exec(content);
+  const start = content.indexOf('<data>');
+  const end = content.lastIndexOf('</data>');
+  if (start < 0 || end < start) return {};
   try {
-    return match ? (JSON.parse(match[1]!) as Record<string, unknown>) : {};
+    return JSON.parse(content.slice(start + '<data>'.length, end)) as Record<string, unknown>;
   } catch {
     return {};
   }
