@@ -2,7 +2,7 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
-## [Unreleased]
+## [0.17.1] — 2026-10-05
 
 A modernised backoffice interface with a light and a dark theme.
 
