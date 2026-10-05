@@ -7,6 +7,7 @@ import { formatDateTime, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
 import { providerMessages } from './messages';
+import { ModelPrices } from './model-prices';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
 
@@ -65,6 +66,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
   });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [priceVersion, setPriceVersion] = useState(0);
 
   const explain = useCallback(
     (error: unknown) =>
@@ -377,6 +379,22 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
           </button>
         </div>
       </form>
+
+      <ModelPrices
+        locale={locale}
+        workspaceId={workspaceId}
+        kinds={[...new Set((connections ?? []).map((item) => item.provider))].filter(
+          (item): item is Kind => item !== 'fake',
+        )}
+        modelIds={Object.fromEntries(
+          (connections ?? []).map((item) => [
+            item.provider,
+            (models[item.id] ?? []).map((model) => model.id),
+          ]),
+        )}
+        refreshKey={priceVersion + current.model.length}
+        onChanged={() => setPriceVersion((value) => value + 1)}
+      />
     </div>
   );
 }

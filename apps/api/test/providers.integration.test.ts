@@ -37,7 +37,12 @@ describe.skipIf(!adminUrl)('provider connections (AI-001, AI-003, AI-004)', () =
         return;
       }
       response.writeHead(200, { 'content-type': 'application/json' });
-      response.end(JSON.stringify({ data: [{ id: 'model-b' }, { id: 'model-a' }] }));
+      // The embedding model must not be offered: it cannot answer a structured text request.
+      response.end(
+        JSON.stringify({
+          data: [{ id: 'gpt-b' }, { id: 'text-embedding-3-small' }, { id: 'gpt-a' }],
+        }),
+      );
     });
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/v1`;
@@ -179,13 +184,67 @@ describe.skipIf(!adminUrl)('provider connections (AI-001, AI-003, AI-004)', () =
     const catalog = refreshed.json<{
       catalog: { snapshotId: string; hash: string; models: { id: string }[] };
     }>().catalog;
-    expect(catalog.models.map((model) => model.id)).toEqual(['model-a', 'model-b']);
+    expect(catalog.models.map((model) => model.id)).toEqual(['gpt-a', 'gpt-b']);
     const latest = await h.request('GET', api(`/provider-connections/${connection.id}/models`), {
       cookie,
     });
     expect(latest.json<{ catalog: { snapshotId: string } }>().catalog.snapshotId).toBe(
       catalog.snapshotId,
     );
+  });
+
+  it('AI-005: the price of the default model is reported, and without one the estimate stays high', async () => {
+    const before = await h.request('GET', api('/model-prices'), { cookie });
+    const first = before.json<{
+      items: unknown[];
+      fallback: { inputPerMillion: number; outputPerMillion: number };
+      defaultModel: { priced: boolean } | null;
+    }>();
+    expect(first.fallback).toEqual({ inputPerMillion: 10, outputPerMillion: 40 });
+    expect(first.defaultModel).toBeNull(); // no default connection and model chosen yet
+
+    const connection = (
+      await h.request('POST', api('/provider-connections'), {
+        cookie,
+        payload: { provider: 'openai', name: 'Priced', baseUrl: base, secret: SECRET_V2 },
+      })
+    ).json<{ connection: Connection }>().connection;
+    for (const [key, value] of [
+      ['ai.connection_id', connection.id],
+      ['ai.model', 'gpt-priced'],
+    ] as const) {
+      const set = await h.request('PUT', api('/settings/assignments'), {
+        cookie,
+        payload: {
+          key,
+          scopeType: 'workspace',
+          scopeId: h.ids.workspaceA,
+          value,
+          reason: 'default model for the price test',
+        },
+      });
+      expect(set.statusCode, set.body).toBe(200);
+    }
+    const unpriced = await h.request('GET', api('/model-prices'), { cookie });
+    expect(unpriced.json<{ defaultModel: unknown }>().defaultModel).toEqual({
+      provider: 'openai',
+      model: 'gpt-priced',
+      priced: false,
+    });
+
+    const added = await h.request('POST', api('/model-prices'), {
+      cookie,
+      payload: {
+        provider: 'openai',
+        model: 'gpt-priced',
+        inputPerMillion: 1.25,
+        outputPerMillion: 10,
+        effectiveFrom: '2026-01-01T00:00:00Z',
+      },
+    });
+    expect(added.statusCode, added.body).toBe(201);
+    const priced = await h.request('GET', api('/model-prices'), { cookie });
+    expect(priced.json<{ defaultModel: unknown }>().defaultModel).toMatchObject({ priced: true });
   });
 
   it('edits need If-Match, connections can be disabled, and other workspaces see nothing', async () => {

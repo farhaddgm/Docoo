@@ -142,6 +142,9 @@ const reportMessages = {
       latency: 'میانگین تأخیر (ms)',
       total: 'جمع',
       estimate: 'هزینه برآوردی از snapshot قیمت تاریخ‌دار است.',
+      unpriced:
+        '{n} فراخوانی قیمت ثبت‌شده نداشت و با یک قیمت پیش‌فرض بالا برآورد شد؛ عددهای هزینه بیشتر از واقعیت‌اند. قیمت مدل را در صفحهٔ «ارائه‌دهندگان AI» ثبت کنید.',
+      setPrices: 'ثبت قیمت مدل‌ها',
     },
   },
   en: {
@@ -284,6 +287,9 @@ const reportMessages = {
       latency: 'Average latency (ms)',
       total: 'Total',
       estimate: 'Costs are estimates from dated price snapshots.',
+      unpriced:
+        '{n} call(s) had no entered price and were estimated with a high default price, so the cost figures are higher than the real cost. Enter the model prices on the “AI providers” page.',
+      setPrices: 'Enter model prices',
     },
   },
 } as const;

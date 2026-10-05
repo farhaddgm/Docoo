@@ -3,11 +3,13 @@ import { ProviderRuntime } from '@docoo/orchestration';
 import { masterKeyFromEnv, type MasterKey } from '@docoo/providers';
 import type { Pool } from 'pg';
 
+import { ConfigModule } from '../config/config.module.js';
 import { DATABASE_POOL } from '../tokens.js';
 import { ProvidersController } from './providers.controller.js';
 import { PROVIDER_RUNTIME, ProvidersService, SECRET_MASTER_KEY } from './providers.service.js';
 
 @Module({
+  imports: [ConfigModule],
   controllers: [ProvidersController],
   providers: [
     ProvidersService,

@@ -10,6 +10,10 @@ import {
   decryptSecret,
   encryptSecret,
   estimateCostUsd,
+  FALLBACK_PRICE,
+  isGeminiTextModel,
+  isOpenAiTextModel,
+  outputBudgetTokens,
   FakeAdapter,
   ProviderError,
   RETRY_SCHEDULE_SECONDS,
@@ -52,7 +56,19 @@ function providerReply(kind: Exclude<ProviderKind, 'fake'>, url: string): unknow
         ],
       };
     }
-    return { data: [{ id: `${kind}-test`, display_name: `${kind} test` }] };
+    // The OpenAI account also lists models that cannot chat; the adapter must leave them out.
+    return {
+      data: [
+        { id: kind === 'openai' ? 'gpt-test' : `${kind}-test`, display_name: `${kind} test` },
+        ...(kind === 'openai'
+          ? [
+              { id: 'text-embedding-3-small' },
+              { id: 'whisper-1' },
+              { id: 'gpt-4o-realtime-preview' },
+            ]
+          : []),
+      ],
+    };
   }
   switch (kind) {
     case 'openai':
@@ -69,7 +85,8 @@ function providerReply(kind: Exclude<ProviderKind, 'fake'>, url: string): unknow
         ],
         usage: {
           input_tokens: 120,
-          output_tokens: 30,
+          // OpenAI counts the 5 reasoning tokens inside output_tokens; the adapter splits them out.
+          output_tokens: 35,
           input_tokens_details: { cached_tokens: 20 },
           output_tokens_details: { reasoning_tokens: 5 },
         },
@@ -200,7 +217,12 @@ describe('provider adapters share one contract (AI-002)', () => {
       failWith = null;
       const adapter = createAdapter(kind, { apiKey: 'k', baseUrl: `${base}/${kind}` });
       const models = await adapter.listModels();
-      expect(models).toEqual([expect.objectContaining({ id: `${kind}-test`, provider: kind })]);
+      expect(models).toEqual([
+        expect.objectContaining({
+          id: kind === 'openai' ? 'gpt-test' : `${kind}-test`,
+          provider: kind,
+        }),
+      ]);
       expect((await adapter.healthCheck()).status).toBe('healthy');
     });
 
@@ -312,6 +334,74 @@ describe('retry schedule and cost (AI-004, AI-005)', () => {
     expect(checkCostLimit(5, 20).status).toBe('ok');
     expect(checkCostLimit(16, 20).status).toBe('warning');
     expect(checkCostLimit(20, 20).status).toBe('exceeded');
+  });
+});
+
+describe('real-provider safety (cost ceiling, output limits, model lists)', () => {
+  it('prices a call that has no entered price with a high fallback instead of free', () => {
+    const usage = {
+      inputTokens: 1_000_000,
+      outputTokens: 100_000,
+      reasoningTokens: null,
+      cachedInputTokens: null,
+    };
+    expect(estimateCostUsd(usage, FALLBACK_PRICE)).toBe(10 + 4);
+    expect(estimateCostUsd(usage, null)).toBeNull();
+  });
+
+  it('bills reasoning like output unless it has its own price', () => {
+    const usage = {
+      inputTokens: 0,
+      outputTokens: 100_000,
+      reasoningTokens: 400_000,
+      cachedInputTokens: null,
+    };
+    const base = {
+      currency: 'USD' as const,
+      inputPerMillion: 1,
+      outputPerMillion: 10,
+      effectiveFrom: 'x',
+    };
+    expect(estimateCostUsd(usage, base)).toBe(1 + 4);
+    expect(estimateCostUsd(usage, { ...base, reasoningPerMillion: 2 })).toBe(1 + 0.8);
+  });
+
+  it('sends an output limit that fits the call and never exceeds what the model can produce', () => {
+    expect(outputBudgetTokens('analysis:round', null)).toBe(16_000);
+    expect(outputBudgetTokens('stage:research', null)).toBe(16_000);
+    expect(outputBudgetTokens('brain:evaluate:analyst', null)).toBe(8_000);
+    expect(outputBudgetTokens('something_else', null)).toBe(8_000);
+    expect(outputBudgetTokens('analysis:round', 4_096)).toBe(4_096);
+    expect(outputBudgetTokens('analysis:round', 128_000)).toBe(16_000);
+    expect(outputBudgetTokens('analysis:round', 100)).toBe(1_024);
+  });
+
+  it('lists only models that can answer a structured text request', () => {
+    for (const id of ['gpt-5', 'gpt-4o-mini', 'o3', 'o4-mini', 'chatgpt-4o-latest', 'gpt-5-codex'])
+      expect(isOpenAiTextModel(id), id).toBe(true);
+    for (const id of [
+      'text-embedding-3-large',
+      'whisper-1',
+      'tts-1',
+      'dall-e-3',
+      'omni-moderation-latest',
+      'gpt-4o-realtime-preview',
+      'gpt-4o-audio-preview',
+      'gpt-image-1',
+      'gpt-4o-search-preview',
+      'gpt-3.5-turbo-instruct',
+      'davinci-002',
+    ])
+      expect(isOpenAiTextModel(id), id).toBe(false);
+    expect(isGeminiTextModel('models/gemini-2.5-pro')).toBe(true);
+    expect(isGeminiTextModel('gemini-2.5-flash')).toBe(true);
+    for (const id of [
+      'models/gemini-2.5-flash-image',
+      'gemini-2.5-flash-preview-tts',
+      'gemma-3-27b-it',
+      'gemini-embedding-001',
+    ])
+      expect(isGeminiTextModel(id), id).toBe(false);
   });
 });
 

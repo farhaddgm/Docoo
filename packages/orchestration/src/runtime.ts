@@ -3,6 +3,8 @@ import {
   decryptSecret,
   FakeAdapter,
   estimateCostUsd,
+  FALLBACK_PRICE,
+  outputBudgetTokens,
   ProviderError,
   sanitizeError,
   type MasterKey,
@@ -139,10 +141,25 @@ export class ProviderRuntime {
       (client) => this.adapterFor(client, connectionId),
     );
     try {
-      const response = await adapter.invoke(request);
+      // Every call carries an output limit that fits what it is for and what the model can give.
+      const sent =
+        request.maxOutputTokens !== undefined
+          ? request
+          : {
+              ...request,
+              maxOutputTokens: outputBudgetTokens(
+                scope.purpose,
+                await inWorkspace(this.pool, { workspaceId: scope.workspaceId }, (client) =>
+                  this.modelMaxOutput(client, connection.id, request.model),
+                ),
+              ),
+            };
+      const response = await adapter.invoke(sent);
       return await inWorkspace(this.pool, { workspaceId: scope.workspaceId }, async (client) => {
         const price = await this.price(client, connection.provider, response.model, request.model);
-        const costUsd = estimateCostUsd(response.usage, price?.snapshot ?? null);
+        // No entered price: estimate with the deliberately high fallback so the ceiling still works;
+        // the row keeps price_id null, which is how the pages tell an estimate from a priced call.
+        const costUsd = estimateCostUsd(response.usage, price?.snapshot ?? FALLBACK_PRICE);
         const invocationId = await this.record(client, scope, connection, request.model, {
           status: 'succeeded',
           response,
@@ -171,6 +188,28 @@ export class ProviderRuntime {
       );
       throw providerError;
     }
+  }
+
+  /** What the latest model list of the connection says the model can generate, if it says. */
+  private async modelMaxOutput(
+    client: PoolClient,
+    connectionId: string,
+    model: string,
+  ): Promise<number | null> {
+    const row = (
+      await client.query<{ models: unknown }>(
+        `select models from model_catalog_snapshots where connection_id = $1 order by created_at desc limit 1`,
+        [connectionId],
+      )
+    ).rows[0];
+    if (!row || !Array.isArray(row.models)) return null;
+    for (const entry of row.models as unknown[]) {
+      if (entry === null || typeof entry !== 'object') continue;
+      const item = entry as { id?: unknown; maxOutputTokens?: unknown };
+      if (item.id === model && typeof item.maxOutputTokens === 'number' && item.maxOutputTokens > 0)
+        return item.maxOutputTokens;
+    }
+    return null;
   }
 
   private async price(

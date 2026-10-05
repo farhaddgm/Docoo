@@ -20,9 +20,10 @@ export interface AdapterOptions {
   readonly degradedAfterMs?: number | undefined;
 }
 
-const DEFAULT_TIMEOUT_MS = 120_000;
+/** A long structured answer from a reasoning model can take minutes; the activity allows ten. */
+const DEFAULT_TIMEOUT_MS = 300_000;
 /** Generation output limit when the request sets none (Anthropic requires one). */
-const DEFAULT_MAX_OUTPUT = 4096;
+const DEFAULT_MAX_OUTPUT = 8192;
 
 /** Provider-level capabilities; model listings do not expose them, so they are the baseline. */
 const BASELINE: Record<Exclude<ProviderKind, 'fake'>, ModelCapabilities> = {
@@ -72,6 +73,21 @@ function asArray(value: unknown): unknown[] {
 
 function num(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** Chat-capable OpenAI models only: the account also lists embeddings, speech, images and more. */
+export function isOpenAiTextModel(id: string): boolean {
+  if (!/^(gpt-|o\d|chatgpt-)/u.test(id)) return false;
+  return !/(embedding|whisper|tts|dall-e|moderation|realtime|audio|transcribe|image|search|instruct|davinci|babbage)/u.test(
+    id,
+  );
+}
+
+/** Gemini text models that take a system instruction and a JSON schema (not Gemma, speech or image ones). */
+export function isGeminiTextModel(name: string): boolean {
+  const id = name.replace(/^models\//u, '');
+  if (!id.startsWith('gemini')) return false;
+  return !/(embedding|image|tts|live|native-audio|robotics|computer-use|aqa)/u.test(id);
 }
 
 abstract class HttpAdapter implements ModelProviderAdapter {
@@ -156,7 +172,7 @@ export class OpenAiAdapter extends HttpAdapter {
     });
     return asArray(asObject(result.body)['data'])
       .map((item) => asObject(item))
-      .filter((item) => typeof item['id'] === 'string')
+      .filter((item) => typeof item['id'] === 'string' && isOpenAiTextModel(String(item['id'])))
       .map((item) => this.descriptor(String(item['id']), String(item['id']), null, null));
   }
 
@@ -207,6 +223,8 @@ export class OpenAiAdapter extends HttpAdapter {
             ? 'content_filter'
             : 'other';
     const usage = asObject(response['usage']);
+    // OpenAI counts reasoning inside output_tokens; split it out so cost never counts it twice.
+    const reasoning = num(asObject(usage['output_tokens_details'])['reasoning_tokens']);
     return {
       provider: 'openai',
       model: typeof response['model'] === 'string' ? response['model'] : request.model,
@@ -217,8 +235,8 @@ export class OpenAiAdapter extends HttpAdapter {
       rawFinishReason: raw,
       usage: {
         inputTokens: num(usage['input_tokens']) ?? 0,
-        outputTokens: num(usage['output_tokens']) ?? 0,
-        reasoningTokens: num(asObject(usage['output_tokens_details'])['reasoning_tokens']),
+        outputTokens: Math.max(0, (num(usage['output_tokens']) ?? 0) - (reasoning ?? 0)),
+        reasoningTokens: reasoning,
         cachedInputTokens: num(asObject(usage['input_tokens_details'])['cached_tokens']),
       },
       providerRequestId:
@@ -258,7 +276,8 @@ export class GeminiAdapter extends HttpAdapter {
       .filter(
         (item) =>
           typeof item['name'] === 'string' &&
-          asArray(item['supportedGenerationMethods']).includes('generateContent'),
+          asArray(item['supportedGenerationMethods']).includes('generateContent') &&
+          isGeminiTextModel(String(item['name'])),
       )
       .map((item) =>
         this.descriptor(

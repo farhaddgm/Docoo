@@ -5,6 +5,7 @@ import { ProviderRuntime, secretContext } from '@docoo/orchestration';
 import {
   checkCostLimit,
   encryptSecret,
+  FALLBACK_PRICE,
   sanitizeError,
   type MasterKey,
   type ProviderKind,
@@ -16,6 +17,7 @@ import { isoColumn } from '../common/pagination.js';
 import { badRequest, conflict, notFound, preconditionFailed } from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
+import { ConfigService } from '../config/config.service.js';
 import { canonicalJson } from '../config/setting-value.js';
 
 export const SECRET_MASTER_KEY = Symbol('SECRET_MASTER_KEY');
@@ -58,6 +60,7 @@ export class ProvidersService {
     private readonly database: WorkspaceDatabase,
     @Inject(SECRET_MASTER_KEY) private readonly masterKey: MasterKey | null,
     @Inject(PROVIDER_RUNTIME) private readonly runtime: ProviderRuntime,
+    private readonly config: ConfigService,
   ) {}
 
   async list(context: WorkspaceRequestContext) {
@@ -344,6 +347,54 @@ export class ProvidersService {
     );
   }
 
+  /**
+   * Whether the workspace's default model has a price. Without one, calls are estimated with the
+   * deliberately high fallback, so the cost ceiling stays on but over-counts.
+   */
+  async priceStatus(context: WorkspaceRequestContext) {
+    return this.database.run(context, async (client) => {
+      const effective = await this.config.resolve(
+        client,
+        context,
+        'workspace',
+        context.workspaceId,
+      );
+      const connectionId = effective.values['ai.connection_id'];
+      const model = effective.values['ai.model'];
+      const fallback = {
+        inputPerMillion: FALLBACK_PRICE.inputPerMillion,
+        outputPerMillion: FALLBACK_PRICE.outputPerMillion,
+      };
+      if (
+        typeof connectionId !== 'string' ||
+        typeof model !== 'string' ||
+        !connectionId ||
+        !model
+      ) {
+        return { fallback, defaultModel: null };
+      }
+      const connection = (
+        await client.query<{ provider: ProviderKind }>(
+          `select provider from provider_connections where id = $1`,
+          [connectionId],
+        )
+      ).rows[0];
+      if (!connection) return { fallback, defaultModel: null };
+      const priced = await client.query(
+        `select 1 from model_prices where provider = $1 and model = $2 and effective_from <= now() limit 1`,
+        [connection.provider, model],
+      );
+      return {
+        fallback,
+        defaultModel: {
+          provider: connection.provider,
+          model,
+          priced: (priced.rowCount ?? 0) > 0,
+        },
+      };
+    });
+  }
+
   async addPrice(
     context: WorkspaceRequestContext,
     input: {
@@ -398,7 +449,8 @@ export class ProvidersService {
                   attempt_id as "attemptId", provider, model, purpose, status, input_tokens as "inputTokens",
                   output_tokens as "outputTokens", reasoning_tokens as "reasoningTokens",
                   cached_input_tokens as "cachedInputTokens", latency_ms as "latencyMs", finish_reason as "finishReason",
-                  raw_finish_reason as "rawFinishReason", cost_usd as "costUsd", provider_request_id as "providerRequestId",
+                  raw_finish_reason as "rawFinishReason", cost_usd as "costUsd", (price_id is not null) as "priced",
+                  provider_request_id as "providerRequestId",
                   error_code as "errorCode", retry_no as "retryNo", ${isoColumn('created_at', '"createdAt"')}
              from model_invocations
             where ($1::uuid is null or project_id = $1)
@@ -431,12 +483,15 @@ export class ProvidersService {
           output_tokens: number;
           reasoning_tokens: number;
           cost_usd: number;
+          unpriced: number;
           failures: number;
           avg_latency_ms: number | null;
         }>(
           `select count(*)::int as invocations, coalesce(sum(input_tokens), 0)::int as input_tokens,
                   coalesce(sum(output_tokens), 0)::int as output_tokens, coalesce(sum(reasoning_tokens), 0)::int as reasoning_tokens,
-                  coalesce(sum(cost_usd), 0)::real as cost_usd, count(*) filter (where status <> 'succeeded')::int as failures,
+                  coalesce(sum(cost_usd), 0)::real as cost_usd,
+                  count(*) filter (where status = 'succeeded' and price_id is null)::int as unpriced,
+                  count(*) filter (where status <> 'succeeded')::int as failures,
                   round(avg(latency_ms))::int as avg_latency_ms
              from model_invocations i where ${filter}`,
           params,
@@ -464,6 +519,8 @@ export class ProvidersService {
           outputTokens: totals.output_tokens,
           reasoningTokens: totals.reasoning_tokens,
           costUsd: Math.round(totals.cost_usd * 1_000_000) / 1_000_000,
+          // Calls estimated with the high fallback because no price was entered for their model.
+          unpricedInvocations: totals.unpriced,
           failures: totals.failures,
           avgLatencyMs: totals.avg_latency_ms,
         },

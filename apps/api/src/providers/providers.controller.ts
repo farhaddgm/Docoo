@@ -205,7 +205,11 @@ export class ProvidersController {
   @ApiOperation({ summary: 'Dated model price snapshots (estimates)' })
   @RequireWorkspacePermission('provider.read')
   async prices(@Req() request: FastifyRequest) {
-    return { items: await this.providers.listPrices(workspaceContext(request)) };
+    const context = workspaceContext(request);
+    return {
+      items: await this.providers.listPrices(context),
+      ...(await this.providers.priceStatus(context)),
+    };
   }
 
   @Post('model-prices')
