@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "8b22689aa7b3a973c9fa51587946ef2c518d0022"
+    "source_commit": "b16a38b988c6dada128893445d0daa1a6fffcdc9"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-05T21:31:28.450Z",
-    "created": 1,
-    "updated": 11,
-    "unchanged": 49,
+    "synced_at": "2026-10-05T22:06:21.649Z",
+    "created": 0,
+    "updated": 1,
+    "unchanged": 60,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -596,16 +596,16 @@
     "DOCOO-OWNER-ACTION-GUIDE": {
       "path": "docs/06-delivery/07-owner-action-guide.md",
       "section": "06 Delivery & Operations",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "f598d2e052eb48e4a57a972fb8304b5a1b9a98aa79f904e02bcb284cae16ea6b",
+      "checksum_sha256": "f763f4c6866ab2ccf10e8e1bc2f36247d8936547e1dd7ce9a32d9df29449c16c",
       "notion_page_id": "3e55a24a-6668-81db-95db-d54a7c122e52",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881db95dbd54a7c122e52",
       "index_row_page_id": "3e55a24a-6668-8117-ae69-fb1bdc2e5df3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a66688117ae69fb1bdc2e5df3",
-      "synced_commit": "8b22689aa7b3a973c9fa51587946ef2c518d0022",
-      "synced_at": "2026-10-05T21:31:28.450Z"
+      "synced_commit": "b16a38b988c6dada128893445d0daa1a6fffcdc9",
+      "synced_at": "2026-10-05T22:06:21.649Z"
     },
     "DOCOO-READINESS-CHECKLIST": {
       "path": "docs/06-delivery/08-readiness-checklist.md",
