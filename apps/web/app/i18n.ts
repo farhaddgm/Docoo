@@ -60,6 +60,13 @@ const messages = {
     comingSoon: 'به‌زودی',
     switchLanguage: 'English',
     switchLanguageLabel: 'Switch to English',
+    menu: 'منو',
+    theme: {
+      label: 'پوسته',
+      system: 'هماهنگ با سیستم',
+      light: 'روشن',
+      dark: 'تیره',
+    },
     nav: {
       dashboard: 'داشبورد',
       projects: 'پروژه‌ها',
@@ -127,6 +134,13 @@ const messages = {
     comingSoon: 'Coming soon',
     switchLanguage: 'فارسی',
     switchLanguageLabel: 'تغییر زبان به فارسی',
+    menu: 'Menu',
+    theme: {
+      label: 'Theme',
+      system: 'Match system',
+      light: 'Light',
+      dark: 'Dark',
+    },
     nav: {
       dashboard: 'Dashboard',
       projects: 'Projects',

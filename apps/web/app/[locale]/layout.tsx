@@ -1,13 +1,23 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 
+import '@fontsource-variable/vazirmatn/wght.css';
+
 import '../globals.css';
 import { direction, isLocale } from '../i18n';
+import { themeInitScript } from '../theme';
 
 export const metadata: Metadata = {
   title: 'Docoo Backoffice',
   description: 'Private AI-assisted product development workspace',
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f6f7f9' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b0f14' },
+  ],
 };
 
 export function generateStaticParams() {
@@ -22,7 +32,11 @@ export default async function RootLayout({
   if (!isLocale(locale)) notFound();
 
   return (
-    <html lang={locale} dir={direction(locale)}>
+    // The theme script sets data-theme on <html> before React hydrates it.
+    <html lang={locale} dir={direction(locale)} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );

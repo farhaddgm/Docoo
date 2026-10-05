@@ -308,7 +308,7 @@ export function ProjectWizard({
           {text.steps.map((name, index) => (
             <li key={name}>
               <span
-                className={`badge tone-${index === step ? 'ok' : index < step ? 'neutral' : 'warn'}`}
+                className={`badge tone-${index < step ? 'ok' : 'neutral'}`}
                 aria-current={index === step ? 'step' : undefined}
               >
                 {formatNumber(locale, index + 1)}. {name}

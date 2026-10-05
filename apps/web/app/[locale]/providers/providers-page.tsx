@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { ApiError, apiGet, apiPost } from '../../api-client';
 import { formatDateTime, type Locale } from '../../i18n';
+import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
 import { providerMessages } from './messages';
 
@@ -47,6 +48,7 @@ export function ProvidersPage({ locale }: { locale: Locale }) {
 /** AI-001/003: add a provider key, check it, refresh models and pick the default model. */
 function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
   const text = providerMessages(locale);
+  const statuses = reportMessagesFor(locale).dashboard.providerStatuses;
   const base = `/workspaces/${workspaceId}`;
   const [connections, setConnections] = useState<Connection[] | null>(null);
   const [models, setModels] = useState<Record<string, Model[]>>({});
@@ -216,7 +218,9 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
                     <th scope="row">{item.name}</th>
                     <td dir="ltr">{item.provider}</td>
                     <td>
-                      <span className={`badge state-${item.status}`}>{item.status}</span>
+                      <span className={`badge state-${item.status}`}>
+                        {statuses[item.status] ?? item.status}
+                      </span>
                       {item.lastError && <small dir="ltr"> {item.lastError}</small>}
                     </td>
                     <td>{item.lastCheckedAt ? formatDateTime(locale, item.lastCheckedAt) : '—'}</td>
