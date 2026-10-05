@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d"
+    "source_commit": "fe98b6dfb5fdee2b3f85881074b8a62d54768e54"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,15 +62,15 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-05T05:25:38.438Z",
-    "created": 4,
-    "updated": 18,
-    "unchanged": 37,
+    "synced_at": "2026-10-05T10:14:13.200Z",
+    "created": 1,
+    "updated": 8,
+    "unchanged": 51,
     "failed": 0,
     "failures": [],
     "validation": {
-      "manifest_documents": 59,
-      "state_documents": 59,
+      "manifest_documents": 60,
+      "state_documents": 60,
       "orphaned_state_documents": []
     }
   },
@@ -179,13 +179,13 @@
       "version": "1.5.0",
       "status": "proposed",
       "owner": "Product Design",
-      "checksum_sha256": "1d132d460a38bb4e4848f1ad1f666f0ad371c808c552c218018ba6b6f6834acf",
+      "checksum_sha256": "a6c5073a3a65f4cb32ee81065f34ecc50ef43636967531f25de123ca51f5ea8b",
       "notion_page_id": "3e55a24a-6668-813a-a383-dae2ab20f78b",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668813aa383dae2ab20f78b?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81c0-8cf1-f939f466e9b8",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881c08cf1f939f466e9b8",
-      "synced_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d",
-      "synced_at": "2026-10-05T05:25:38.438Z"
+      "synced_commit": "fe98b6dfb5fdee2b3f85881074b8a62d54768e54",
+      "synced_at": "2026-10-05T10:14:13.200Z"
     },
     "DOCOO-DOMAIN-MODEL": {
       "path": "docs/02-domain/01-domain-model.md",
@@ -221,13 +221,13 @@
       "version": "1.2.0",
       "status": "approved-baseline",
       "owner": "Data Architecture",
-      "checksum_sha256": "63223952ae2f30e184bce64161592e37c2598ca4e7b35d2d1f01cf70a1dea9c7",
+      "checksum_sha256": "36e2d8e63e0712bb506249750386c010cb95b94804cf4b6f9299faa5a22901d7",
       "notion_page_id": "3e55a24a-6668-8185-bb93-c418b4b94e1b",
       "notion_page_url": "https://app.notion.com/p/3e55a24a66688185bb93c418b4b94e1b?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a2-baef-c7ba2ea19630",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a2baefc7ba2ea19630",
-      "synced_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d",
-      "synced_at": "2026-10-05T05:25:38.438Z"
+      "synced_commit": "fe98b6dfb5fdee2b3f85881074b8a62d54768e54",
+      "synced_at": "2026-10-05T10:14:13.200Z"
     },
     "DOCOO-AGENT-SYSTEM": {
       "path": "docs/03-ai/01-agent-system.md",
@@ -333,13 +333,13 @@
       "version": "1.7.0",
       "status": "proposed",
       "owner": "API Architecture",
-      "checksum_sha256": "b8d54844702f405dc063d67db5250574e17ba700f902863bbab4f260fd73471d",
+      "checksum_sha256": "f3761686620f94df4d133e775d57f5884320886e9d247e7d661420c5873dff85",
       "notion_page_id": "3e55a24a-6668-812d-9f69-cd7fceb4fea8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812d9f69cd7fceb4fea8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a8-8910-fed8b8b362d3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a88910fed8b8b362d3",
-      "synced_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d",
-      "synced_at": "2026-10-05T05:25:38.438Z"
+      "synced_commit": "fe98b6dfb5fdee2b3f85881074b8a62d54768e54",
+      "synced_at": "2026-10-05T10:14:13.200Z"
     },
     "DOCOO-WORKFLOWS-JOBS": {
       "path": "docs/04-architecture/04-workflows-and-jobs.md",
@@ -445,13 +445,13 @@
       "version": "1.6.0",
       "status": "proposed",
       "owner": "Product & Engineering",
-      "checksum_sha256": "b6e3db8e05713085e5ee7a09e88fa7f38afae3a5856a7333947d7d797bedf011",
+      "checksum_sha256": "a06d37c1f588c4053e2d3f296c020c5b56305c8a559eaec62438ab36e9d28d4e",
       "notion_page_id": "3e55a24a-6668-812c-98b6-d4dfbd111d55",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812c98b6d4dfbd111d55?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81fa-957c-fab6fa6c7319",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881fa957cfab6fa6c7319",
-      "synced_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d",
-      "synced_at": "2026-10-05T05:25:38.438Z"
+      "synced_commit": "fe98b6dfb5fdee2b3f85881074b8a62d54768e54",
+      "synced_at": "2026-10-05T10:14:13.200Z"
     },
     "DOCOO-ACCEPTANCE-TRACEABILITY": {
       "path": "docs/06-delivery/05-acceptance-and-traceability.md",
@@ -571,13 +571,13 @@
       "version": "0.3.1",
       "status": "active",
       "owner": "Product & Architecture",
-      "checksum_sha256": "796a765abc12a07a6bd253a0cbf0cfb38dbca6e8c58b80057e37433c1a551ce2",
+      "checksum_sha256": "66dc90681d34e41ef3d55ea2f522b2060926ee3f9af14cc47f42117dd008bf89",
       "notion_page_id": "3e55a24a-6668-814f-a8af-c79e5a2e44ee",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668814fa8afc79e5a2e44ee?pvs=204",
       "index_row_page_id": "3e55a24a-6668-818e-b8a6-e77117562585",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a6668818eb8a6e77117562585",
-      "synced_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d",
-      "synced_at": "2026-10-05T05:25:38.438Z"
+      "synced_commit": "fe98b6dfb5fdee2b3f85881074b8a62d54768e54",
+      "synced_at": "2026-10-05T10:14:13.200Z"
     },
     "DOCOO-IMPLEMENTATION-BACKLOG": {
       "path": "docs/06-delivery/06-implementation-backlog.md",
@@ -613,13 +613,13 @@
       "version": "1.8.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "269ee602012205eb06f3f3ea05000d8681a2e12229d646910bd687f447f718dc",
+      "checksum_sha256": "9c214f19ee90d57e9d49119a81526c1e2900c59c42d43ee747886134d980d14b",
       "notion_page_id": "3e55a24a-6668-815d-b2f0-d451feffe55e",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668815db2f0d451feffe55e",
       "index_row_page_id": "3e55a24a-6668-81d3-9a8e-d3b801cb1eb3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881d39a8ed3b801cb1eb3",
-      "synced_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d",
-      "synced_at": "2026-10-05T05:25:38.438Z"
+      "synced_commit": "fe98b6dfb5fdee2b3f85881074b8a62d54768e54",
+      "synced_at": "2026-10-05T10:14:13.200Z"
     },
     "DOCOO-ADR-0006": {
       "path": "docs/adr/0006-application-platform-and-toolchain.md",
@@ -655,13 +655,13 @@
       "version": "1.4.0",
       "status": "active",
       "owner": "Security & Engineering",
-      "checksum_sha256": "5ce38cdabfb752b97dda3c08c8d9bfb7e0b30e43543558a29058d7770ab15cf5",
+      "checksum_sha256": "429e719d31a0303139f7626424d2ca7a8d7ba86fd5f28532a9b9b48b6a9e83f4",
       "notion_page_id": "3ed5a24a-6668-8161-89cf-feb622f23b1a",
       "notion_page_url": "https://app.notion.com/p/3ed5a24a6668816189cffeb622f23b1a",
       "index_row_page_id": "3ed5a24a-6668-8125-b8de-ff89f4514ef2",
       "index_row_page_url": "https://app.notion.com/p/3ed5a24a66688125b8deff89f4514ef2",
-      "synced_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d",
-      "synced_at": "2026-10-05T05:25:38.438Z"
+      "synced_commit": "fe98b6dfb5fdee2b3f85881074b8a62d54768e54",
+      "synced_at": "2026-10-05T10:14:13.200Z"
     },
     "DOCOO-EPIC-BREAKDOWN": {
       "path": "docs/06-delivery/09-epic-breakdown.md",
@@ -669,13 +669,13 @@
       "version": "1.0.0",
       "status": "proposed",
       "owner": "Product & Engineering",
-      "checksum_sha256": "3b6d258db66fb87767cd158ea16bf6c46756268263c02958366bcd25250aef15",
+      "checksum_sha256": "1da3bb664e1c73a6e86f2790783deecfa310ea6403d4f46f72eb65a1c877a3bb",
       "notion_page_id": "3ed5a24a-6668-8189-8733-e103cfc7156b",
       "notion_page_url": "https://app.notion.com/p/3ed5a24a666881898733e103cfc7156b",
       "index_row_page_id": "3ed5a24a-6668-81e9-b455-ebd734626c7e",
       "index_row_page_url": "https://app.notion.com/p/3ed5a24a666881e9b455ebd734626c7e",
-      "synced_commit": "0ccf644cde2aa5bc4eb787e85c7ebda22db4758b",
-      "synced_at": "2026-10-02T17:40:42.204Z"
+      "synced_commit": "fe98b6dfb5fdee2b3f85881074b8a62d54768e54",
+      "synced_at": "2026-10-05T10:14:13.200Z"
     },
     "DOCOO-ADR-0008": {
       "path": "docs/adr/0008-ingestion-and-knowledge-runtime.md",
@@ -900,6 +900,20 @@
       "index_row_page_url": "https://app.notion.com/p/3f05a24a6668815fa4ddef0e11b5f6b5",
       "synced_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d",
       "synced_at": "2026-10-05T05:25:38.438Z"
+    },
+    "DOCOO-ADR-0020": {
+      "path": "docs/adr/0020-real-provider-readiness.md",
+      "section": "ADRs",
+      "version": "1.0.0",
+      "status": "accepted",
+      "owner": "Product & Engineering",
+      "checksum_sha256": "97302d03900422eef2eed003cf7b0ceaf7bf25889612aa6c807f3cc6d1cee092",
+      "notion_page_id": "3f05a24a-6668-81f1-ba54-e4ca81986818",
+      "notion_page_url": "https://app.notion.com/p/3f05a24a666881f1ba54e4ca81986818",
+      "index_row_page_id": "3f05a24a-6668-8127-a516-d07b31cac561",
+      "index_row_page_url": "https://app.notion.com/p/3f05a24a66688127a516d07b31cac561",
+      "synced_commit": "fe98b6dfb5fdee2b3f85881074b8a62d54768e54",
+      "synced_at": "2026-10-05T10:14:13.200Z"
     }
   }
 }
