@@ -2,9 +2,9 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.7.0
+version: 1.8.0
 owner: API Architecture
-last_updated: 2026-10-04
+last_updated: 2026-10-05
 notion_sync: true
 ---
 
@@ -84,6 +84,7 @@ notion_sync: true
 - `GET /projects/{id}/effective-config`
 - `GET /projects/{id}/config-snapshots`
 - `GET /projects/{id}/timeline`
+- کسب‌وکار پروژه (0.19.0، [ADR-0021](../adr/0021-business-from-contenter.md)): `POST /projects` فیلد اختیاری `businessId` (شناسهٔ کسب‌وکار در Contenter) دارد؛ کسب‌وکار پیش از تراکنش از Contenter خوانده می‌شود و در همان تراکنش ساخت پروژه پیوند می‌خورد. هر ردیف فهرست و `GET /projects/{id}` فیلد `business` (`{externalBusinessId, name}` یا `null`) دارد. `POST /projects/{id}/clone` پیوند و snapshot را به کپی می‌دهد. اگر `business.required` روشن باشد `activate` بدون کسب‌وکار با `PROJECT_NOT_READY` و `problems: ['business_missing']` رد می‌شود. مسیرهای کسب‌وکار پروژه در بخش ۱۸ است.
 
 ## ۶. workflow و human task (پیاده‌شده در 0.5.0)
 
@@ -252,3 +253,20 @@ Cursor opaque، `limit` سقف ۱۰۰، sort allowlist. filter fieldها schema-
 - `GET|POST /smart/conversations`، `GET|DELETE /smart/conversations/{id}`، `POST /smart/conversations/{id}/messages` (۲۰۱؛ مدل همان لحظه و فقط‌خواندنی پاسخ می‌دهد؛ بدون تنظیم مدل `409 AI_NOT_CONFIGURED`)
 - `GET|POST /smart/issues`، `GET|PATCH|DELETE /smart/issues/{id}`
 - خطای 5xx پاسخ Nest را بدون تغییر می‌فرستد و پس از آن در خطایاب ثبت می‌شود؛ 4xx ثبت نمی‌شود.
+
+## ۱۸. کسب‌وکار از Contenter (پیاده‌شده در 0.19.0، [ADR-0021](../adr/0021-business-from-contenter.md))
+
+همهٔ مسیرها زیر `/workspaces/{workspaceId}` هستند. اتصال فقط‌خواندنی است؛ Docoo چیزی به Contenter نمی‌نویسد.
+
+- `GET /integrations/contenter` (`integration.read`) → `{connection}` یا `{connection: null}`: `apiUrl`، `webUrl`، `status` (`unconfigured|healthy|unreachable|invalid`)، `secret: {configured, version, fingerprint}`، `lastCheckedAt`، `lastLatencyMs`، `lastError` (`unauthorized|unreachable|not_available|server_error|bad_response`)، `version`. توکن هرگز برنمی‌گردد.
+- `PUT /integrations/contenter` (`integration.configure`) با `{apiUrl, webUrl?, token?}`: نشانی‌ها `http(s)` و حداکثر ۵۰۰ نویسه‌اند؛ `token` (۳۲ تا ۵۱۲ نویسه) فقط نوشتنی است و برای اتصال تازه لازم است (`CONTENTER_TOKEN_REQUIRED`)؛ نبود `SECRET_MASTER_KEY` ۵۰۳ `SECRET_STORE_UNAVAILABLE` می‌دهد. بلافاصله اتصال آزموده می‌شود و `{connection}` با وضعیت تازه برمی‌گردد. audit: `integration.contenter_configured` (`securityRelevant`، بدون مقدار توکن).
+- `POST /integrations/contenter/test` (`integration.configure`، ۲۰۰) → `{connection}` پس از `ping`. `DELETE /integrations/contenter` (۲۰۴؛ `CONTENTER_NOT_CONFIGURED` اگر اتصالی نبود) اتصال را برمی‌دارد؛ snapshotها و پیوندها می‌مانند.
+- `GET /contenter-businesses?q=&page=&pageSize=` (`business.read`؛ `pageSize` تا ۵۰) → `{items: [{id, name, tagline, industry, website, location, language, status, filledSections, totalSections, topics, updatedAt}], total, page, pageSize, totalPages}`: فهرست سبک برای انتخاب.
+- `GET /projects/{id}/business` (`business.read`) → `{connection: {configured, status}, link: {externalBusinessId, name, snapshotId, linkedAt, syncedAt, syncError, contenterUrl} | null, snapshot: {id, versionNo, name, contentSha256, changes, exportedAt, fetchedAt, content} | null, latestVersionNo}`. `content` محتوای نرمال‌شدهٔ کسب‌وکار است: `business` (نام، شعار، صنعت، وب‌سایت، مکان، زبان، وضعیت، شکاف‌ها، منابع)، `sections` (همیشه ۱۵ بخش با `source` و `reviewedAt`)، `facts`، `terms`، `notes`، `references`، `assets`، `audit`، `health`، `pendingSuggestions` و `topics`.
+- `PUT /projects/{id}/business` (`business.link`) با `{externalBusinessId, reason?}` پروژه را به کسب‌وکار وصل یا عوض می‌کند (ابتدا از Contenter خوانده می‌شود)؛ `POST .../business/unlink` با `{reason?}` پیوند را برمی‌دارد (۲۰۰). هر دو `GET` را برمی‌گردانند. پروژهٔ بایگانی یا حذف‌شده `PROJECT_READ_ONLY` (۴۰۹) می‌دهد.
+- `POST /projects/{id}/business/sync` (`business.link`، ۲۰۰) → `{changed, snapshotId, versionNo, ...GET}`؛ اگر محتوا با آخرین نسخه یکی نباشد نسخهٔ تازه می‌سازد. شکست علت را در `link.syncError` می‌گذارد (کد خطا) و همان خطا را برمی‌گرداند؛ snapshot جاری دست‌نخورده می‌ماند.
+- `GET /projects/{id}/business/snapshots` (`business.read`) → `{items: [{id, versionNo, name, contentSha256, changes: {sections: [...], facts, terms, notes, details}, exportedAt, fetchedAt, current, runs, writings}]}` (تا ۵۰ نسخهٔ آخر) و `GET .../snapshots/{snapshotId}` → `{snapshot}` با `content`؛ فقط نسخه‌های همین کسب‌وکار در همین workspace (`BUSINESS_SNAPSHOT_NOT_FOUND` ۴۰۴ در غیر این صورت).
+- `GET /projects/{id}/business/context?role=` (`business.read`) → `{linked, snapshotId, versionNo, budgetChars, roles: [{role, summary | null, data?, rules?}]}`: برای هر نقش حجم، بخش‌های ارسالی (`sections: [{key, chars, truncated, confirmed}]`)، `omitted`، شمار واقعیت، اصطلاح و یادداشت؛ `summary: null` یعنی آن نقش پروفایل نمی‌گیرد (Brain). با `role` دادهٔ دقیق همان نقش (`data`) و دستورهای ثابت (`rules`) هم می‌آید.
+- خطاها: `CONTENTER_NOT_CONFIGURED` (۴۰۹)؛ `CONTENTER_UNREACHABLE`، `CONTENTER_TOKEN_REFUSED`، `CONTENTER_NOT_AVAILABLE`، `CONTENTER_BAD_RESPONSE`، `CONTENTER_ERROR` (۵۰۲)؛ `BUSINESS_NOT_FOUND`، `BUSINESS_LINK_NOT_FOUND`، `BUSINESS_SNAPSHOT_NOT_FOUND` (۴۰۴)؛ `BUSINESS_INVALID_REQUEST` (۴۰۰).
+- پاسخ بررسی زندهٔ سند (`POST /documents/{id}/check`) `termIssues` دارد و گزارش نگارش `report.termIssues`: `[{kind: 'USE'|'AVOID', term, found, count, replaceWith?, note?}]`. اجرای گردش‌کار، نگارش سند و هر تماس مدلی که پروفایل داشت نسخه‌ای را که دیده‌اند در `business_snapshot_id` ثبت می‌کنند (فرهنگ داده).
+- تنظیم‌ها: `business.required` (boolean، پیش‌فرض false)، `business.sync_on_start` (boolean، پیش‌فرض true) و `business.prompt_budget_chars` (integer ۲۰۰۰ تا ۳۰۰۰۰، پیش‌فرض ۱۲۰۰۰)؛ هر سه در scope workspace، موضوع و پروژه.

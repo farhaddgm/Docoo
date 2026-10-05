@@ -185,3 +185,6 @@ documents:
   - path: docs/adr/0020-real-provider-readiness.md
     doc_id: DOCOO-ADR-0020
     section: ADRs
+  - path: docs/adr/0021-business-from-contenter.md
+    doc_id: DOCOO-ADR-0021
+    section: ADRs

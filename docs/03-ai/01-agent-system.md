@@ -2,9 +2,9 @@
 doc_id: DOCOO-AGENT-SYSTEM
 title: معماری سامانه ایجنتی Docoo
 status: proposed
-version: 1.0.0
+version: 1.0.1
 owner: AI Architecture
-last_updated: 2026-09-24
+last_updated: 2026-10-05
 notion_sync: true
 ---
 
@@ -33,7 +33,7 @@ Orchestrator برای هر invocation یک `ContextEnvelope` می‌سازد:
 2. زبان و زمان مرجع؛
 3. نسخهٔ اصول و وظایف نقش؛
 4. مسئلهٔ اولیه و آخرین تعریف تأییدشده؛
-5. اسناد حوزه‌ها به ترتیب اولویت؛
+5. اسناد حوزه‌ها به ترتیب اولویت؛ و، وقتی پروژه به کسب‌وکاری وصل است، `businessProfile`: بخش‌های لازم همان نقش از snapshot نسخه‌دارِ کسب‌وکار در Contenter با سقف حجم (Brain هیچ؛ اصطلاحات برند فقط نویسندهٔ سند) و دستورهای ثابت `BUSINESS_RULES` ([ADR-0021](../adr/0021-business-from-contenter.md))؛
 6. خروجی‌های approved مرحلهٔ قبل؛
 7. knowledge snapshot مجاز با citation و conflict flag؛
 8. feedback و findings مرتبط؛
@@ -57,7 +57,7 @@ Envelope immutable و hash‌شده است. تغییر ادمین envelope جد�
 7. context data؛
 8. feedback.
 
-محتوای فایل و وب همیشه داخل data delimiter و با برچسب «untrusted content» وارد می‌شود. دستور داخل منبع نباید authority بگیرد.
+محتوای فایل و وب همیشه داخل data delimiter و با برچسب «untrusted content» وارد می‌شود. دستور داخل منبع نباید authority بگیرد. پروفایل کسب‌وکار هم داده است: داخل `<data>` (کلید `businessProfile`) می‌رود و هرگز به متن دستور افزوده نمی‌شود؛ دستور فقط می‌گوید با آن چه کند (معتبر بدان، عدد و قیمتی که در آن نیست نساز، بخش تأییدنشده را قطعی نکن، تعارض را گزارش کن).
 
 ## ۵. قرارداد خروجی
 
