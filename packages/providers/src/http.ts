@@ -1,4 +1,5 @@
 import { ProviderError } from './contract.js';
+import { sanitizeError } from './secrets.js';
 
 export interface HttpResult {
   readonly status: number;
@@ -18,21 +19,67 @@ function retryAfter(headers: Headers): number | null {
   return Number.isNaN(date) ? null : Math.max(0, Math.ceil((date - Date.now()) / 1000));
 }
 
-/** Maps HTTP status to the error taxonomy; the response body is never put in the message. */
-export function errorForStatus(status: number, headers: Headers, provider: string): ProviderError {
+/**
+ * The reason a provider gives for an error (OpenAI and Gemini `error.message`, Anthropic
+ * `error.message`), stripped of anything that looks like a key and cut short. Without it a bad
+ * request, an exhausted quota or an unsupported parameter all look like the same bare status.
+ */
+export function providerErrorDetail(raw: string): string | null {
+  let message: unknown;
+  try {
+    const body = JSON.parse(raw) as Record<string, unknown>;
+    const error = body['error'];
+    message =
+      typeof error === 'string'
+        ? error
+        : error !== null && typeof error === 'object'
+          ? (error as Record<string, unknown>)['message']
+          : body['message'];
+  } catch {
+    return null;
+  }
+  if (typeof message !== 'string') return null;
+  const text = sanitizeError(message.replace(/\s+/gu, ' ').trim());
+  return text.length > 0 ? text : null;
+}
+
+/**
+ * Maps HTTP status to the error taxonomy. The response body is never put in the message; its
+ * sanitised reason travels separately as `detail` so the administrator can tell why.
+ */
+export function errorForStatus(
+  status: number,
+  headers: Headers,
+  provider: string,
+  detail: string | null = null,
+): ProviderError {
   if (status === 401 || status === 403)
-    return new ProviderError('auth', `${provider}_unauthorized`, status);
-  if (status === 408) return new ProviderError('timeout', `${provider}_timeout`, status);
+    return new ProviderError('auth', `${provider}_unauthorized`, status, null, detail);
+  if (status === 408)
+    return new ProviderError('timeout', `${provider}_timeout`, status, null, detail);
   if (status === 429)
     return new ProviderError(
       'rate_limited',
       `${provider}_rate_limited`,
       status,
       retryAfter(headers),
+      detail,
     );
   if (status >= 500)
-    return new ProviderError('transient', `${provider}_unavailable`, status, retryAfter(headers));
-  return new ProviderError('invalid_request', `${provider}_bad_request_${status}`, status);
+    return new ProviderError(
+      'transient',
+      `${provider}_unavailable`,
+      status,
+      retryAfter(headers),
+      detail,
+    );
+  return new ProviderError(
+    'invalid_request',
+    `${provider}_bad_request_${status}`,
+    status,
+    null,
+    detail,
+  );
 }
 
 export async function requestJson(
@@ -67,8 +114,11 @@ export async function requestJson(
   }
   const latencyMs = Math.round(performance.now() - started);
   if (!response.ok) {
-    await response.body?.cancel().catch(() => undefined);
-    throw errorForStatus(response.status, response.headers, provider);
+    const raw = await response
+      .text()
+      .then((text) => text.slice(0, 4096))
+      .catch(() => '');
+    throw errorForStatus(response.status, response.headers, provider, providerErrorDetail(raw));
   }
   let body: unknown;
   try {

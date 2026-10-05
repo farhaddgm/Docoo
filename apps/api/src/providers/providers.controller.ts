@@ -11,6 +11,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SELF_CHECK_STEPS } from '@docoo/orchestration';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
@@ -54,6 +55,13 @@ const priceSchema = z
     cachedInputPerMillion: z.number().min(0).max(10_000).optional(),
     reasoningPerMillion: z.number().min(0).max(10_000).optional(),
     effectiveFrom: z.iso.datetime({ offset: true }),
+  })
+  .strict();
+const selfCheckSchema = z
+  .object({
+    model: z.string().trim().min(1).max(200),
+    step: z.enum(SELF_CHECK_STEPS),
+    language: z.enum(['fa', 'en']).default('fa'),
   })
   .strict();
 const invocationsQuery = z
@@ -184,6 +192,33 @@ export class ProvidersController {
   @RequireWorkspacePermission('provider.test')
   async health(@Req() request: FastifyRequest, @Param('connectionId') raw: string) {
     return { connection: await this.providers.healthCheck(workspaceContext(request), id(raw)) };
+  }
+
+  @Get('provider-connections/:connectionId/self-check')
+  @ApiOperation({ summary: 'The steps of the model self-check' })
+  @RequireWorkspacePermission('provider.read')
+  selfCheckSteps() {
+    return this.providers.selfCheckSteps();
+  }
+
+  @Post('provider-connections/:connectionId/self-check')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Run one step of the model self-check (a real, small, recorded model call)',
+  })
+  @RequireWorkspacePermission('provider.test')
+  async selfCheck(
+    @Req() request: FastifyRequest,
+    @Param('connectionId') raw: string,
+    @Body() body: unknown,
+  ) {
+    return {
+      result: await this.providers.selfCheck(
+        workspaceContext(request),
+        id(raw),
+        parse(selfCheckSchema, body),
+      ),
+    };
   }
 
   @Post('provider-connections/:connectionId/models/refresh')

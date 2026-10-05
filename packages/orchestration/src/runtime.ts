@@ -184,6 +184,7 @@ export class ProviderRuntime {
           costUsd: null,
           priceId: null,
           errorCode: providerError.code,
+          errorDetail: providerError.detail,
         }),
       );
       throw providerError;
@@ -259,6 +260,7 @@ export class ProviderRuntime {
       costUsd: number | null;
       priceId: string | null;
       errorCode: string | null;
+      errorDetail?: string | null;
     },
   ): Promise<string> {
     const response = result.response;
@@ -266,8 +268,8 @@ export class ProviderRuntime {
       `insert into model_invocations (workspace_id, connection_id, project_id, stage_run_id, attempt_id, provider, model,
                                       purpose, status, input_tokens, output_tokens, reasoning_tokens, cached_input_tokens,
                                       latency_ms, finish_reason, raw_finish_reason, cost_usd, price_id, provider_request_id,
-                                      error_code, retry_no, agent_definition_version_id, prompt_sha256, writing_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+                                      error_code, retry_no, agent_definition_version_id, prompt_sha256, writing_id, error_detail)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
        returning id`,
       [
         scope.workspaceId,
@@ -294,6 +296,7 @@ export class ProviderRuntime {
         scope.agentDefinitionVersionId ?? null,
         scope.promptSha256 ?? null,
         scope.writingId ?? null,
+        result.errorDetail ?? null,
       ],
     );
     return inserted.rows[0]!.id;

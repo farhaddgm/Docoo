@@ -105,6 +105,8 @@ const expectedMatrix: Record<string, string> = {
     'provider.rotate_secret',
   'POST workspaces/:workspaceId/provider-connections/:connectionId/disable': 'provider.configure',
   'POST workspaces/:workspaceId/provider-connections/:connectionId/health-check': 'provider.test',
+  'GET workspaces/:workspaceId/provider-connections/:connectionId/self-check': 'provider.read',
+  'POST workspaces/:workspaceId/provider-connections/:connectionId/self-check': 'provider.test',
   'POST workspaces/:workspaceId/provider-connections/:connectionId/models/refresh':
     'provider.configure',
   'GET workspaces/:workspaceId/provider-connections/:connectionId/models': 'provider.read',

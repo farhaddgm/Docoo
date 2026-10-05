@@ -14,6 +14,8 @@ import {
   isGeminiTextModel,
   isOpenAiTextModel,
   outputBudgetTokens,
+  providerErrorDetail,
+  FAKE_REFUSED_MODEL_PREFIX,
   FakeAdapter,
   ProviderError,
   RETRY_SCHEDULE_SECONDS,
@@ -233,6 +235,9 @@ describe('provider adapters share one contract (AI-002)', () => {
       expect(limited).toBeInstanceOf(ProviderError);
       expect(limited).toMatchObject({ kind: 'rate_limited', retryAfterSeconds: 12 });
       expect(String((limited as Error).message)).not.toContain('sk-live');
+      // The provider's reason is kept for the administrator, with anything key-like removed.
+      expect((limited as ProviderError).detail).toContain('[REDACTED]');
+      expect((limited as ProviderError).detail).not.toContain('sk-live');
       failWith = 401;
       expect((await adapter.healthCheck()).status).toBe('invalid');
       failWith = 503;
@@ -278,6 +283,21 @@ describe('fake provider (AI-002 in CI)', () => {
         's',
       ),
     ).toEqual(['a', 'a']);
+  });
+
+  it('refuses a model named as refused, with the reason a real provider would give', async () => {
+    const fake = new FakeAdapter();
+    await expect(
+      fake.invoke({
+        model: `${FAKE_REFUSED_MODEL_PREFIX}-x`,
+        messages: [{ role: 'user', content: 'x' }],
+      }),
+    ).rejects.toMatchObject({
+      kind: 'invalid_request',
+      code: 'fake_model_refused',
+      status: 400,
+      detail: expect.stringContaining('does not support structured output'),
+    });
   });
 
   it('can script failures', async () => {
@@ -402,6 +422,31 @@ describe('real-provider safety (cost ceiling, output limits, model lists)', () =
       'gemini-embedding-001',
     ])
       expect(isGeminiTextModel(id), id).toBe(false);
+  });
+});
+
+describe('provider error detail', () => {
+  it('reads the reason from OpenAI, Anthropic and Gemini error bodies and ignores the rest', () => {
+    expect(
+      providerErrorDetail(
+        JSON.stringify({ error: { message: 'You exceeded your current quota.' } }),
+      ),
+    ).toBe('You exceeded your current quota.');
+    expect(
+      providerErrorDetail(
+        JSON.stringify({
+          type: 'error',
+          error: { type: 'invalid_request_error', message: 'max_tokens: too large' },
+        }),
+      ),
+    ).toBe('max_tokens: too large');
+    expect(providerErrorDetail(JSON.stringify({ error: 'plain text reason' }))).toBe(
+      'plain text reason',
+    );
+    expect(providerErrorDetail('<html>502</html>')).toBeNull();
+    expect(providerErrorDetail(JSON.stringify({ unrelated: 1 }))).toBeNull();
+    const long = providerErrorDetail(JSON.stringify({ error: { message: 'x '.repeat(500) } }));
+    expect(long!.length).toBeLessThanOrEqual(300);
   });
 });
 

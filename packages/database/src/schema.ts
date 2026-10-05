@@ -1101,6 +1101,8 @@ export const modelInvocations = pgTable(
     priceId: uuid('price_id'),
     providerRequestId: text('provider_request_id'),
     errorCode: text('error_code'),
+    /** The provider's own reason for a failure, sanitised and at most 300 characters. */
+    errorDetail: text('error_detail'),
     retryNo: integer('retry_no').notNull().default(0),
     /** The role definition version and the digest of the exact instructions sent (FR-AGT-003). */
     agentDefinitionVersionId: uuid('agent_definition_version_id'),

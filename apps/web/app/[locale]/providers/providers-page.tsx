@@ -8,6 +8,7 @@ import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
 import { providerMessages } from './messages';
 import { ModelPrices } from './model-prices';
+import { ModelSelfCheck } from './model-self-check';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
 
@@ -379,6 +380,25 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
           </button>
         </div>
       </form>
+
+      <ModelSelfCheck
+        locale={locale}
+        workspaceId={workspaceId}
+        connections={(connections ?? []).map((item) => ({
+          id: item.id,
+          name: item.name,
+          provider: item.provider,
+        }))}
+        modelIds={Object.fromEntries(
+          (connections ?? []).map((item) => [
+            item.id,
+            (models[item.id] ?? [])
+              .filter((model) => model.capabilities.structuredOutput)
+              .map((model) => model.id),
+          ]),
+        )}
+        current={current}
+      />
 
       <ModelPrices
         locale={locale}

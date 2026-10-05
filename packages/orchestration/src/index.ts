@@ -9,6 +9,7 @@ export * from './db.js';
 export * from './research.js';
 export * from './research-activities.js';
 export * from './runtime.js';
+export * from './self-check.js';
 export * from './stages.js';
 export * from './tool-calls.js';
 export * from './writing.js';

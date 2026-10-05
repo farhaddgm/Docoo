@@ -36,6 +36,18 @@ describe.skipIf(!adminUrl)('provider connections (AI-001, AI-003, AI-004)', () =
         response.end(JSON.stringify({ error: { message: `Incorrect API key provided: ${auth}` } }));
         return;
       }
+      if (request.method === 'POST' && request.url?.endsWith('/responses')) {
+        // A refusal that names its reason (and, carelessly, the key) as real providers do.
+        response.writeHead(400, { 'content-type': 'application/json' });
+        response.end(
+          JSON.stringify({
+            error: {
+              message: `Unsupported value: max_output_tokens is too large for this model. (${auth})`,
+            },
+          }),
+        );
+        return;
+      }
       response.writeHead(200, { 'content-type': 'application/json' });
       // The embedding model must not be offered: it cannot answer a structured text request.
       response.end(
@@ -245,6 +257,87 @@ describe.skipIf(!adminUrl)('provider connections (AI-001, AI-003, AI-004)', () =
     expect(added.statusCode, added.body).toBe(201);
     const priced = await h.request('GET', api('/model-prices'), { cookie });
     expect(priced.json<{ defaultModel: unknown }>().defaultModel).toMatchObject({ priced: true });
+  });
+
+  it('AI-005: the self-check tries every kind of call and records each as a model call', async () => {
+    const fake = (
+      await h.request('POST', api('/provider-connections'), {
+        cookie,
+        payload: { provider: 'fake', name: 'Offline self-check' },
+      })
+    ).json<{ connection: Connection }>().connection;
+    const steps = (
+      await h.request('GET', api(`/provider-connections/${fake.id}/self-check`), { cookie })
+    ).json<{ steps: string[] }>().steps;
+    expect(steps).toHaveLength(9);
+    for (const step of steps) {
+      const response = await h.request('POST', api(`/provider-connections/${fake.id}/self-check`), {
+        cookie,
+        payload: { model: 'fake-standard', step },
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      const { result } = response.json<{
+        result: {
+          step: string;
+          status: string;
+          problem: string | null;
+          priced: boolean;
+          costUsd: number | null;
+        };
+      }>();
+      expect(result, JSON.stringify(result)).toMatchObject({
+        step,
+        status: 'passed',
+        priced: false,
+      });
+      expect(result.costUsd).toBeGreaterThan(0); // estimated, never free
+    }
+    const calls = await h.request('GET', api('/model-invocations?limit=200'), { cookie });
+    const purposes = calls
+      .json<{ items: { purpose: string; projectId: string | null }[] }>()
+      .items.filter((item) => item.purpose.startsWith('selfcheck:'));
+    expect(purposes.map((item) => item.purpose).sort()).toEqual(
+      steps.map((step) => `selfcheck:${step}`).sort(),
+    );
+
+    const unknown = await h.request('POST', api(`/provider-connections/${fake.id}/self-check`), {
+      cookie,
+      payload: { model: 'fake-standard', step: 'not_a_step' },
+    });
+    expect(unknown.statusCode).toBe(400);
+  });
+
+  it('AI-005: a refused self-check call reports the provider’s reason without the key', async () => {
+    const connection = (
+      await h.request('POST', api('/provider-connections'), {
+        cookie,
+        payload: { provider: 'openai', name: 'Refusing', baseUrl: base, secret: SECRET_V2 },
+      })
+    ).json<{ connection: Connection }>().connection;
+    const response = await h.request(
+      'POST',
+      api(`/provider-connections/${connection.id}/self-check`),
+      { cookie, payload: { model: 'gpt-test', step: 'stage_research' } },
+    );
+    expect(response.statusCode, response.body).toBe(200);
+    const { result } = response.json<{
+      result: { status: string; errorCode: string; errorKind: string; errorDetail: string };
+    }>();
+    expect(result).toMatchObject({
+      status: 'failed',
+      errorCode: 'openai_bad_request_400',
+      errorKind: 'invalid_request',
+    });
+    expect(result.errorDetail).toContain('max_output_tokens is too large');
+    expect(result.errorDetail).not.toContain(SECRET_V2);
+    // The failed call is kept with the same reason, so the costs and usage pages can show it.
+    const calls = await h.request('GET', api('/model-invocations?limit=200'), { cookie });
+    const failed = calls
+      .json<{ items: { purpose: string; status: string; errorDetail: string | null }[] }>()
+      .items.find(
+        (item) => item.purpose === 'selfcheck:stage_research' && item.status !== 'succeeded',
+      );
+    expect(failed?.errorDetail).toContain('max_output_tokens is too large');
   });
 
   it('edits need If-Match, connections can be disabled, and other workspaces see nothing', async () => {

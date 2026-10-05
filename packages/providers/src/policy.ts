@@ -78,7 +78,7 @@ const OUTPUT_BUDGETS: readonly (readonly [prefix: string, tokens: number])[] = [
   ['solutions', 16_000],
   ['evaluation', 8_000],
   ['brain:evaluate', 8_000],
-  ['selfcheck', 4_000],
+  ['selfcheck', 8_000],
 ];
 const DEFAULT_OUTPUT_BUDGET = 8_000;
 const MIN_OUTPUT_BUDGET = 1_024;

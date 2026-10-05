@@ -1,7 +1,13 @@
 import { createHash } from 'node:crypto';
 
 import { HttpException, Inject, Injectable } from '@nestjs/common';
-import { ProviderRuntime, secretContext } from '@docoo/orchestration';
+import {
+  ProviderRuntime,
+  runSelfCheckStep,
+  secretContext,
+  SELF_CHECK_STEPS,
+  type SelfCheckStep,
+} from '@docoo/orchestration';
 import {
   checkCostLimit,
   encryptSecret,
@@ -240,6 +246,59 @@ export class ProvidersService {
   }
 
   /** Health check without customer data; the error shown is sanitised (AI-004, FR-AI-005). */
+  /** The kinds of call the self-check tries, in the order the page runs them. */
+  selfCheckSteps(): { steps: readonly SelfCheckStep[] } {
+    return { steps: SELF_CHECK_STEPS };
+  }
+
+  /**
+   * One step of the model self-check: the platform's real prompt and schema for one kind of call,
+   * with a small made-up case, sent with the connection's key. It is recorded like any other
+   * call (it costs a little, and the costs page counts it) and a refusal comes back as a failed
+   * step with the provider's own reason.
+   */
+  async selfCheck(
+    context: WorkspaceRequestContext,
+    id: string,
+    input: { model: string; step: SelfCheckStep; language: 'fa' | 'en' },
+  ) {
+    await this.database.run(context, async (client) => {
+      const connection = await this.load(client, id);
+      if (connection.disabled_at)
+        throw conflict('PROVIDER_DISABLED', 'The connection is disabled.');
+    });
+    const result = await runSelfCheckStep(this.runtime, {
+      workspaceId: context.workspaceId,
+      connectionId: id,
+      model: input.model,
+      step: input.step,
+      language: input.language,
+    });
+    return this.database.run(context, async (client) => {
+      const priced = result.invocationId
+        ? ((
+            await client.query<{ priced: boolean }>(
+              `select (price_id is not null) as priced from model_invocations where id = $1`,
+              [result.invocationId],
+            )
+          ).rows[0]?.priced ?? false)
+        : false;
+      await writeAudit(client, context, {
+        action: 'provider.self_check',
+        targetType: 'provider_connection',
+        targetId: id,
+        after: {
+          step: input.step,
+          model: input.model,
+          status: result.status,
+          errorCode: result.errorCode,
+          problem: result.problem,
+        },
+      });
+      return { ...result, priced };
+    });
+  }
+
   async healthCheck(context: WorkspaceRequestContext, id: string) {
     const adapter = await this.database.run(context, async (client) => {
       const connection = await this.load(client, id);
@@ -451,7 +510,7 @@ export class ProvidersService {
                   cached_input_tokens as "cachedInputTokens", latency_ms as "latencyMs", finish_reason as "finishReason",
                   raw_finish_reason as "rawFinishReason", cost_usd as "costUsd", (price_id is not null) as "priced",
                   provider_request_id as "providerRequestId",
-                  error_code as "errorCode", retry_no as "retryNo", ${isoColumn('created_at', '"createdAt"')}
+                  error_code as "errorCode", error_detail as "errorDetail", retry_no as "retryNo", ${isoColumn('created_at', '"createdAt"')}
              from model_invocations
             where ($1::uuid is null or project_id = $1)
             order by created_at desc, id desc limit $2`,
