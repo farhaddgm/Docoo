@@ -250,7 +250,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(statusBadge(page)).toHaveText(detail.statuses['active']!);
     // The analyst asks first; the problem definition reaches the review once it is answered.
     await completeAnalysis(page);
-    await page.getByRole('button', { name: detail.tabs.workflow }).click();
+    await page.getByRole('button', { name: detail.tabs.workflow, exact: true }).click();
     await expect(page).toHaveURL(/[?&]tab=workflow/u);
 
     const review = (stage: string) => page.locator(`#review-title-${stage}`);
@@ -294,7 +294,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
 
     // The last approval completes the project: the overview shows the full milestone and the
     // header reads "done" without any reason to worry about.
-    await page.getByRole('button', { name: detail.tabs.overview }).click();
+    await page.getByRole('button', { name: detail.tabs.overview, exact: true }).click();
     const milestone = page.getByRole('region', { name: health.milestone });
     await expect(milestone.getByText(health.milestoneAll)).toBeVisible(waiting);
     await expect(
@@ -307,7 +307,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expectNoSeriousA11yViolations(page);
 
     // The timeline records the decisions.
-    await page.getByRole('button', { name: detail.tabs.timeline }).click();
+    await page.getByRole('button', { name: detail.tabs.timeline, exact: true }).click();
     await expect(page.getByRole('rowheader', { name: /workflow\.approve/u }).first()).toBeVisible();
     await expect(page.getByRole('rowheader', { name: /workflow\.output_edited/u })).toBeVisible();
 
@@ -337,7 +337,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.goto(`/fa/projects/${created.project.id}`);
     await page.getByRole('button', { name: detail.commands['activate']! }).click();
     await expect(statusBadge(page)).toHaveText(detail.statuses['active']!);
-    await page.getByRole('button', { name: detail.tabs.problem }).click();
+    await page.getByRole('button', { name: detail.tabs.problem, exact: true }).click();
     await expect(page).toHaveURL(/[?&]tab=problem/u);
 
     const wait = { timeout: 60_000 };
@@ -471,13 +471,15 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       wait,
     );
     await expect(page.getByText(problemText.phases['approved']!)).toBeVisible();
-    await page.getByRole('button', { name: detail.tabs.workflow }).click();
+    await page.getByRole('button', { name: detail.tabs.workflow, exact: true }).click();
     await expect(page.locator('.stage-list .badge.state-completed')).toHaveCount(1, wait);
 
     // The same tab in English keeps the section and the state.
     await page.getByRole('link', { name: 'Switch to English' }).click();
     await expect(page).toHaveURL(/\/en\/projects\/[0-9a-f-]{36}\?tab=workflow$/u);
-    await page.getByRole('button', { name: projectPageMessages('en').tabs.problem }).click();
+    await page
+      .getByRole('button', { name: projectPageMessages('en').tabs.problem, exact: true })
+      .click();
     await expect(
       page.getByRole('heading', { level: 3, name: problemMessages('en').title }),
     ).toBeVisible();
@@ -505,7 +507,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.goto(`/fa/projects/${created.project.id}`);
     await page.getByRole('button', { name: detail.commands['activate']! }).click();
     await expect(statusBadge(page)).toHaveText(detail.statuses['active']!);
-    await page.getByRole('button', { name: detail.tabs.problem }).click();
+    await page.getByRole('button', { name: detail.tabs.problem, exact: true }).click();
     await expect(page.locator('#batch-heading')).toBeVisible({ timeout: 60_000 });
 
     const first = page.locator('#batch-question-1');
@@ -631,7 +633,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(page.getByText(/انتخاب‌شده با اولویت/u)).toHaveCount(2);
 
     // Documents: one per selected solution, in priority order.
-    await page.getByRole('button', { name: detail.tabs.documents }).click();
+    await page.getByRole('button', { name: detail.tabs.documents, exact: true }).click();
     const rows = page.locator('#documents-title').locator('xpath=following-sibling::div//tbody/tr');
     await expect(rows).toHaveCount(2);
     await rows.first().getByRole('button', { name: documentText.open }).click();

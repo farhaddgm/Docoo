@@ -90,7 +90,7 @@ export async function useFakeProvider(page: Page) {
  */
 export async function completeAnalysis(page: Page) {
   const wait = { timeout: 60_000 };
-  await page.getByRole('button', { name: detail.tabs.problem }).click();
+  await page.getByRole('button', { name: detail.tabs.problem, exact: true }).click();
   const heading = page.locator('#batch-heading');
   const definition = page.locator('#definition-heading');
   for (let guard = 0; guard < 6; guard += 1) {

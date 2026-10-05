@@ -69,7 +69,7 @@ test.describe('knowledge-backed research and role evaluation (RSC-001, EVL-002)'
     await page.getByRole('button', { name: detail.commands['activate']! }).click();
     await expect(page.locator('.facts .badge').first()).toHaveText(detail.statuses['active']!);
     await completeAnalysis(page);
-    await page.getByRole('button', { name: detail.tabs.workflow }).click();
+    await page.getByRole('button', { name: detail.tabs.workflow, exact: true }).click();
 
     // Approve the problem definition; the researcher then gets the approved knowledge.
     const review = (stage: string) => page.locator(`#review-title-${stage}`);
