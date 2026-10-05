@@ -784,6 +784,29 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       }
     }, 90_000);
 
+    it('AI-005: every analyst call carries an output limit and, with no entered price, is estimated high', async () => {
+      const projectId = await project('limits');
+      await analysis.waitFor(projectId, (v) => v.phase === 'answering', 'first batch');
+      const requests = roundRequests();
+      expect(requests.length).toBeGreaterThan(0);
+      // The provider's own default would cut a long structured answer at 4096 tokens.
+      for (const request of requests) expect(request.maxOutputTokens).toBe(16_000);
+
+      const invocations = await h.request('GET', api(`/model-invocations?projectId=${projectId}`), {
+        cookie,
+      });
+      const [first] = invocations.json<{
+        items: { status: string; priced: boolean; costUsd: number | null }[];
+      }>().items;
+      expect(first).toMatchObject({ status: 'succeeded', priced: false });
+      expect(first!.costUsd).toBeGreaterThan(0); // never free: the ceiling must keep counting
+      const usage = await h.request('GET', api(`/projects/${projectId}/usage`), { cookie });
+      expect(
+        usage.json<{ usage: { totals: { unpricedInvocations: number } } }>().usage.totals
+          .unpricedInvocations,
+      ).toBeGreaterThan(0);
+    }, 90_000);
+
     it('ANL-002: the analysis stops at three hundred questions in batches of forty', async () => {
       analyst((data) => ({ questions: questions(data.capacity, data.asked) }));
       const projectId = await project('ceiling');

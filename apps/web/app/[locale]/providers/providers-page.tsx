@@ -7,6 +7,8 @@ import { formatDateTime, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
 import { providerMessages } from './messages';
+import { ModelPrices } from './model-prices';
+import { ModelSelfCheck } from './model-self-check';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
 
@@ -65,6 +67,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
   });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [priceVersion, setPriceVersion] = useState(0);
 
   const explain = useCallback(
     (error: unknown) =>
@@ -377,6 +380,41 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
           </button>
         </div>
       </form>
+
+      <ModelSelfCheck
+        locale={locale}
+        workspaceId={workspaceId}
+        connections={(connections ?? []).map((item) => ({
+          id: item.id,
+          name: item.name,
+          provider: item.provider,
+        }))}
+        modelIds={Object.fromEntries(
+          (connections ?? []).map((item) => [
+            item.id,
+            (models[item.id] ?? [])
+              .filter((model) => model.capabilities.structuredOutput)
+              .map((model) => model.id),
+          ]),
+        )}
+        current={current}
+      />
+
+      <ModelPrices
+        locale={locale}
+        workspaceId={workspaceId}
+        kinds={[...new Set((connections ?? []).map((item) => item.provider))].filter(
+          (item): item is Kind => item !== 'fake',
+        )}
+        modelIds={Object.fromEntries(
+          (connections ?? []).map((item) => [
+            item.provider,
+            (models[item.id] ?? []).map((model) => model.id),
+          ]),
+        )}
+        refreshKey={priceVersion + current.model.length}
+        onChanged={() => setPriceVersion((value) => value + 1)}
+      />
     </div>
   );
 }

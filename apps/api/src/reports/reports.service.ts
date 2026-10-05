@@ -227,6 +227,7 @@ export class ReportsService {
               coalesce(sum(i.reasoning_tokens), 0)::bigint::float8 as "reasoningTokens",
               coalesce(sum(i.cost_usd), 0)::float8 as "costUsd",
               count(*) filter (where i.status <> 'succeeded')::int as failures,
+              count(*) filter (where i.status = 'succeeded' and i.price_id is null)::int as "unpricedInvocations",
               round(avg(i.latency_ms))::int as "avgLatencyMs"`;
       const groups = (
         await client.query<Record<string, unknown> & { key: string; costUsd: number }>(

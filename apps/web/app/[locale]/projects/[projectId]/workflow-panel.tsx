@@ -40,6 +40,13 @@ interface HumanTask {
   createdAt: string;
 }
 
+/** What the provider said the last time it refused a call of this project (needs provider.read). */
+interface Refusal {
+  model: string;
+  errorCode: string | null;
+  errorDetail: string | null;
+}
+
 interface Overview {
   run: Run | null;
   stages: StageItem[];
@@ -96,6 +103,7 @@ export function WorkflowPanel({
   const common = reportMessagesFor(locale);
   const base = `/workspaces/${workspaceId}/projects/${projectId}`;
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [failed, setFailed] = useState(false);
   const [tick, setTick] = useState(0);
   const [cancelling, setCancelling] = useState(false);
@@ -112,11 +120,27 @@ export function WorkflowPanel({
     setOverview(workflow);
     setFailed(false);
     setTick((value) => value + 1);
+    // A paused project says why: the provider's own reason for its latest refusal.
+    if (workflow.humanTasks.some((task) => task.kind === 'provider_failure')) {
+      apiGet<{ items: (Refusal & { status: string })[] }>(
+        `/workspaces/${workspaceId}/model-invocations?projectId=${projectId}&limit=20`,
+      )
+        .then(({ items }) =>
+          setRefusal(
+            items.find(
+              (item) => item.status !== 'succeeded' && (item.errorDetail || item.errorCode),
+            ) ?? null,
+          ),
+        )
+        .catch(() => setRefusal(null));
+    } else {
+      setRefusal(null);
+    }
     // A change of run or stage can change the project too (a blocked run pauses it).
     const next = `${workflow.run?.status}:${workflow.run?.currentStage}:${workflow.humanTasks.length}`;
     if (signature.current && signature.current !== next) onProjectRefresh();
     signature.current = next;
-  }, [base, onProjectRefresh]);
+  }, [base, workspaceId, projectId, onProjectRefresh]);
 
   useEffect(() => {
     load().catch(() => setFailed(true));
@@ -334,6 +358,20 @@ export function WorkflowPanel({
                 <small className="muted"> · {formatDateTime(locale, task.createdAt)}</small>
                 <br />
                 <span className="muted">{text.taskHelp[task.kind] ?? ''}</span>
+                {task.kind === 'provider_failure' && refusal && (
+                  <>
+                    <br />
+                    <span>
+                      {text.providerSaid}:{' '}
+                      <span dir="auto" lang="en">
+                        {[refusal.errorCode, refusal.errorDetail].filter(Boolean).join(' · ')}
+                      </span>{' '}
+                      <small className="muted" dir="ltr">
+                        ({refusal.model})
+                      </small>
+                    </span>
+                  </>
+                )}
                 {(task.kind === 'configuration' || task.kind === 'provider_failure') && (
                   <>
                     {' '}

@@ -97,7 +97,7 @@ ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار �
 
 ### ثبت اجرا
 
-`stage_attempts.agent_definition_version_id` و `model_invocations.agent_definition_version_id` به‌علاوهٔ `model_invocations.prompt_sha256` (هش دستور و پیام ارسال‌شده؛ متن ذخیره نمی‌شود).
+`stage_attempts.agent_definition_version_id` و `model_invocations.agent_definition_version_id` به‌علاوهٔ `model_invocations.prompt_sha256` (هش دستور و پیام ارسال‌شده؛ متن ذخیره نمی‌شود). `model_invocations.error_detail` (مهاجرت 0027) دلیل خطای provider است: متن پاسخ پس از حذف رشته‌های شبیه کلید و کوتاه‌سازی به ۳۰۰ نویسه (قید `char_length <= 300`)؛ `null` برای تماس موفق یا خطایی که provider دلیلی نگفته. `price_id is null` یعنی هزینه با قیمت پیش‌فرض برآورد شده ([ADR-0020](../adr/0020-real-provider-readiness.md)).
 
 ## workflow
 

@@ -57,13 +57,14 @@ notion_sync: true
 
 ## AI — provider orchestration (فاز ۳، epic #28)
 
-| ID     | عنوان                                             | requirement               | وابستگی        | معیار پذیرش                                                                                  |
-| ------ | ------------------------------------------------- | ------------------------- | -------------- | -------------------------------------------------------------------------------------------- |
-| AI-001 | provider connection و secret write-only           | FR-AI-001، FR-AI-004      | TEN-001        | secret رمز و هرگز در API/UI/log بازگردانده نمی‌شود؛ rotate نسخهٔ قبلی را برنمی‌گرداند        |
-| AI-002 | قرارداد واحد و adapterهای OpenAI/Gemini/Anthropic | FR-AI-001، FR-AI-003      | AI-001         | یک فراخوانی ساختاریافته روی هر سه provider با fake و آزمون قرارداد سبز است                   |
-| AI-003 | catalog مدل و capability snapshot                 | FR-AI-002                 | AI-002         | فهرست مدل refresh و snapshot می‌شود؛ هیچ نام مدلی در کد hardcode نیست                        |
-| AI-004 | health، retry schedule و pause                    | FR-AI-005..006، FR-AI-008 | AI-002، WF-004 | خطای پیاپی طبق schedule retry و سپس پروژه را pause می‌کند؛ fallback پیش‌فرض خاموش است        |
-| AI-005 | usage، latency و برآورد هزینه                     | FR-AI-007                 | AI-002         | هر invocation token، latency، finish reason و هزینه دارد و با سقف هزینهٔ پروژه مقایسه می‌شود |
+| ID     | عنوان                                             | requirement               | وابستگی        | معیار پذیرش                                                                                                                                                                                                       |
+| ------ | ------------------------------------------------- | ------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AI-001 | provider connection و secret write-only           | FR-AI-001، FR-AI-004      | TEN-001        | secret رمز و هرگز در API/UI/log بازگردانده نمی‌شود؛ rotate نسخهٔ قبلی را برنمی‌گرداند                                                                                                                             |
+| AI-002 | قرارداد واحد و adapterهای OpenAI/Gemini/Anthropic | FR-AI-001، FR-AI-003      | AI-001         | یک فراخوانی ساختاریافته روی هر سه provider با fake و آزمون قرارداد سبز است                                                                                                                                        |
+| AI-003 | catalog مدل و capability snapshot                 | FR-AI-002                 | AI-002         | فهرست مدل refresh و snapshot می‌شود؛ هیچ نام مدلی در کد hardcode نیست                                                                                                                                             |
+| AI-004 | health، retry schedule و pause                    | FR-AI-005..006، FR-AI-008 | AI-002، WF-004 | خطای پیاپی طبق schedule retry و سپس پروژه را pause می‌کند؛ fallback پیش‌فرض خاموش است                                                                                                                             |
+| AI-005 | usage، latency و برآورد هزینه                     | FR-AI-007                 | AI-002         | هر invocation token، latency، finish reason و هزینه دارد و با سقف هزینهٔ پروژه مقایسه می‌شود                                                                                                                      |
+| AI-006 | آزمون خودکار مدل، قیمت و دلیل خطای provider       | FR-AI-005، FR-AI-007      | AI-002، AI-005 | ادمین با یک کلیک می‌بیند هر نوع تماس محصول روی مدل انتخابی کار می‌کند؛ مدل بی‌قیمت سقف هزینه را خاموش نمی‌کند؛ دلیل شکست sanitize‌شده ثبت و نشان داده می‌شود ([ADR-0020](../adr/0020-real-provider-readiness.md)) |
 
 ## SOL/DOC/EVA — راه‌حل، سند و ارزیابی (فاز ۴، epic #29)
 

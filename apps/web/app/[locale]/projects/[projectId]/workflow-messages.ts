@@ -74,6 +74,7 @@ const messages = {
       cost_limit: 'سقف هزینه را در تنظیمات بالا ببرید یا پروژه را ببندید، سپس ادامه دهید.',
     } as Record<string, string>,
     openProviders: 'رفتن به ارائه‌دهندگان AI',
+    providerSaid: 'پاسخ ارائه‌دهنده',
     // Review
     reviewTitle: 'بازبینی خروجی مرحلهٔ {stage}',
     outputVersion: 'نسخهٔ {n} خروجی',
@@ -265,6 +266,7 @@ const messages = {
       cost_limit: 'Raise the cost ceiling in the settings or close the project, then resume.',
     } as Record<string, string>,
     openProviders: 'Go to AI providers',
+    providerSaid: 'The provider said',
     reviewTitle: 'Review the {stage} output',
     outputVersion: 'Output version {n}',
     outputOrigin: { model: 'Made by the model', edit: 'Edited by you' } as Record<string, string>,

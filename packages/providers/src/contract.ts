@@ -100,6 +100,8 @@ export class ProviderError extends Error {
     readonly code: string,
     readonly status: number | null = null,
     readonly retryAfterSeconds: number | null = null,
+    /** The provider's own reason (sanitised, at most 300 characters); never part of `message`. */
+    readonly detail: string | null = null,
   ) {
     super(code);
     this.name = 'ProviderError';

@@ -1,0 +1,63 @@
+import type { Locale } from '../../i18n';
+
+const messages = {
+  fa: {
+    title: 'قیمت مدل‌ها',
+    help: 'قیمت هر مدل را از صفحهٔ قیمت‌گذاری خود ارائه‌دهنده بردارید (دلار برای هر میلیون توکن). هزینهٔ نمایش‌داده‌شده و سقف هزینهٔ هر اجرا از همین قیمت‌ها حساب می‌شود.',
+    unpricedTitle: 'قیمت مدل پیش‌فرض ثبت نشده است',
+    unpriced:
+      'تا قیمت «{model}» را ثبت نکنید، هزینه با یک قیمت پیش‌فرض بالا برآورد می‌شود (ورودی {input} و خروجی {output} دلار برای هر میلیون توکن). سقف هزینه کار می‌کند ولی زودتر از واقعیت فعال می‌شود.',
+    pricedOk: 'قیمت مدل پیش‌فرض ثبت شده است.',
+    none: 'هنوز قیمتی ثبت نشده است.',
+    caption: 'قیمت‌های ثبت‌شده (آخرین قیمت هر مدل)',
+    provider: 'ارائه‌دهنده',
+    model: 'مدل',
+    input: 'ورودی',
+    output: 'خروجی',
+    cached: 'ورودی کش‌شده',
+    reasoning: 'استدلال',
+    since: 'از تاریخ',
+    perMillion: 'دلار برای هر میلیون توکن',
+    add: 'ثبت قیمت',
+    adding: 'در حال ثبت…',
+    inputLabel: 'قیمت ورودی (دلار برای هر میلیون توکن)',
+    outputLabel: 'قیمت خروجی (دلار برای هر میلیون توکن)',
+    cachedLabel: 'قیمت ورودی کش‌شده (اختیاری)',
+    reasoningLabel: 'قیمت توکن استدلال (اختیاری؛ خالی یعنی مثل خروجی)',
+    modelLabel: 'نام مدل',
+    needNumbers: 'قیمت ورودی و خروجی لازم است و باید عدد ۰ تا ۱۰٬۰۰۰ باشد.',
+    saved: 'قیمت ثبت شد؛ از فراخوانی بعدی اعمال می‌شود.',
+    failed: 'انجام نشد. مقدارها را بررسی کنید.',
+  },
+  en: {
+    title: 'Model prices',
+    help: 'Take each model’s price from the provider’s own pricing page (USD per million tokens). The cost shown and the cost ceiling of a run are calculated from these prices.',
+    unpricedTitle: 'The default model has no price yet',
+    unpriced:
+      'Until you enter a price for “{model}”, cost is estimated with a high default price ({input} input and {output} output USD per million tokens). The ceiling works, but it triggers earlier than the real cost would.',
+    pricedOk: 'The default model has a price.',
+    none: 'No price entered yet.',
+    caption: 'Entered prices (latest per model)',
+    provider: 'Provider',
+    model: 'Model',
+    input: 'Input',
+    output: 'Output',
+    cached: 'Cached input',
+    reasoning: 'Reasoning',
+    since: 'Since',
+    perMillion: 'USD per million tokens',
+    add: 'Save price',
+    adding: 'Saving…',
+    inputLabel: 'Input price (USD per million tokens)',
+    outputLabel: 'Output price (USD per million tokens)',
+    cachedLabel: 'Cached input price (optional)',
+    reasoningLabel: 'Reasoning token price (optional; empty means the same as output)',
+    modelLabel: 'Model name',
+    needNumbers: 'Input and output prices are required and must be numbers from 0 to 10,000.',
+    saved: 'Price saved; it applies from the next call.',
+    failed: 'That did not work. Check the values.',
+  },
+};
+
+export type PriceText = (typeof messages)['fa'];
+export const priceMessages = (locale: Locale): PriceText => messages[locale];

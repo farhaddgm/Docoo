@@ -94,6 +94,12 @@ assert_eq PASS "$(status_of "$(judge_providers $'anthropic|healthy|1\nopenai|fai
 assert_eq WARN "$(status_of "$(judge_providers $'fake|healthy|1\nopenai|healthy|1')")" 'providers: offline connection next to a real one'
 assert_eq FAIL "$(status_of "$(judge_providers 'openai|failed|1')")" 'providers: real but unhealthy'
 assert_eq ACTION "$(status_of "$(judge_providers 'fake|healthy|1')")" 'providers: only the offline one means no real key yet'
+
+assert_eq PASS "$(status_of "$(judge_prices 'openai|2')")" 'prices: entered'
+assert_eq PASS "$(status_of "$(judge_prices $'anthropic|1\nopenai|3')")" 'prices: entered for every provider'
+assert_eq WARN "$(status_of "$(judge_prices 'openai|0')")" 'prices: none entered'
+assert_contains "$(judge_prices $'anthropic|1\nopenai|0')" 'no price entered for openai' 'prices: names the provider without one'
+assert_eq WARN "$(status_of "$(judge_prices $'gemini|0\nopenai|0')")" 'prices: several providers without one'
 assert_eq ACTION "$(status_of "$(judge_providers '')")" 'providers: nothing configured'
 assert_contains "$(judge_providers 'openai|failed|2')" '2 real' 'providers: counts connections'
 

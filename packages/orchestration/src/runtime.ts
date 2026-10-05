@@ -3,6 +3,8 @@ import {
   decryptSecret,
   FakeAdapter,
   estimateCostUsd,
+  FALLBACK_PRICE,
+  outputBudgetTokens,
   ProviderError,
   sanitizeError,
   type MasterKey,
@@ -139,10 +141,25 @@ export class ProviderRuntime {
       (client) => this.adapterFor(client, connectionId),
     );
     try {
-      const response = await adapter.invoke(request);
+      // Every call carries an output limit that fits what it is for and what the model can give.
+      const sent =
+        request.maxOutputTokens !== undefined
+          ? request
+          : {
+              ...request,
+              maxOutputTokens: outputBudgetTokens(
+                scope.purpose,
+                await inWorkspace(this.pool, { workspaceId: scope.workspaceId }, (client) =>
+                  this.modelMaxOutput(client, connection.id, request.model),
+                ),
+              ),
+            };
+      const response = await adapter.invoke(sent);
       return await inWorkspace(this.pool, { workspaceId: scope.workspaceId }, async (client) => {
         const price = await this.price(client, connection.provider, response.model, request.model);
-        const costUsd = estimateCostUsd(response.usage, price?.snapshot ?? null);
+        // No entered price: estimate with the deliberately high fallback so the ceiling still works;
+        // the row keeps price_id null, which is how the pages tell an estimate from a priced call.
+        const costUsd = estimateCostUsd(response.usage, price?.snapshot ?? FALLBACK_PRICE);
         const invocationId = await this.record(client, scope, connection, request.model, {
           status: 'succeeded',
           response,
@@ -167,10 +184,33 @@ export class ProviderRuntime {
           costUsd: null,
           priceId: null,
           errorCode: providerError.code,
+          errorDetail: providerError.detail,
         }),
       );
       throw providerError;
     }
+  }
+
+  /** What the latest model list of the connection says the model can generate, if it says. */
+  private async modelMaxOutput(
+    client: PoolClient,
+    connectionId: string,
+    model: string,
+  ): Promise<number | null> {
+    const row = (
+      await client.query<{ models: unknown }>(
+        `select models from model_catalog_snapshots where connection_id = $1 order by created_at desc limit 1`,
+        [connectionId],
+      )
+    ).rows[0];
+    if (!row || !Array.isArray(row.models)) return null;
+    for (const entry of row.models as unknown[]) {
+      if (entry === null || typeof entry !== 'object') continue;
+      const item = entry as { id?: unknown; maxOutputTokens?: unknown };
+      if (item.id === model && typeof item.maxOutputTokens === 'number' && item.maxOutputTokens > 0)
+        return item.maxOutputTokens;
+    }
+    return null;
   }
 
   private async price(
@@ -220,6 +260,7 @@ export class ProviderRuntime {
       costUsd: number | null;
       priceId: string | null;
       errorCode: string | null;
+      errorDetail?: string | null;
     },
   ): Promise<string> {
     const response = result.response;
@@ -227,8 +268,8 @@ export class ProviderRuntime {
       `insert into model_invocations (workspace_id, connection_id, project_id, stage_run_id, attempt_id, provider, model,
                                       purpose, status, input_tokens, output_tokens, reasoning_tokens, cached_input_tokens,
                                       latency_ms, finish_reason, raw_finish_reason, cost_usd, price_id, provider_request_id,
-                                      error_code, retry_no, agent_definition_version_id, prompt_sha256, writing_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+                                      error_code, retry_no, agent_definition_version_id, prompt_sha256, writing_id, error_detail)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
        returning id`,
       [
         scope.workspaceId,
@@ -255,6 +296,7 @@ export class ProviderRuntime {
         scope.agentDefinitionVersionId ?? null,
         scope.promptSha256 ?? null,
         scope.writingId ?? null,
+        result.errorDetail ?? null,
       ],
     );
     return inserted.rows[0]!.id;

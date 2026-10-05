@@ -1,0 +1,68 @@
+import type { Locale } from '../../../i18n';
+
+const messages = {
+  fa: {
+    label: 'سلامت پروژه',
+    levels: {
+      ok: 'در مسیر',
+      waiting: 'منتظر شما',
+      blocked: 'متوقف',
+      idle: 'بدون اجرا',
+      done: 'تمام‌شده',
+    } as Record<string, string>,
+    reasons: {
+      paused: 'پروژه متوقف شده است.',
+      pausedWith: 'پروژه متوقف شده است: {detail}',
+      no_run: 'پروژه فعال است ولی اجرایی ندارد؛ در بخش «گردش‌کار» آن را شروع کنید.',
+      run_failed: 'اجرای جاری ناموفق پایان یافت.',
+      run_paused: 'اجرای جاری متوقف است.',
+      run_cancelled: 'اجرای جاری لغو شده است؛ در بخش «گردش‌کار» اجرای تازه شروع کنید.',
+      run_completed: 'همهٔ مرحله‌ها پایان یافته است؛ خروجی‌ها را بازبینی و پروژه را تکمیل کنید.',
+      run_waiting: 'اجرا منتظر تصمیم شماست.',
+      stage_failed: 'مرحلهٔ {stage} ناموفق شد.',
+      task: '{kind}',
+      taskCount: '{kind} ({count} مورد)',
+    },
+    milestone: 'نقطهٔ پیشرفت',
+    milestoneSummary: '{completed} مرحله از {total} کامل شده است.',
+    milestoneCurrent: 'مرحلهٔ جاری: {stage}.',
+    milestoneAll: 'همهٔ مرحله‌ها کامل شده است.',
+    milestoneNone: 'هنوز مرحله‌ای کامل نشده است.',
+    milestoneProgress: 'پیشرفت مرحله‌ها',
+    stagesTitle: 'مرحله‌ها',
+    openWorkflow: 'رفتن به گردش‌کار',
+  },
+  en: {
+    label: 'Project health',
+    levels: {
+      ok: 'On track',
+      waiting: 'Waiting for you',
+      blocked: 'Blocked',
+      idle: 'Not running',
+      done: 'Done',
+    } as Record<string, string>,
+    reasons: {
+      paused: 'The project is paused.',
+      pausedWith: 'The project is paused: {detail}',
+      no_run: 'The project is active but has no run; start it in the “Workflow” section.',
+      run_failed: 'The current run ended in failure.',
+      run_paused: 'The current run is paused.',
+      run_cancelled: 'The current run was cancelled; start a new run in the “Workflow” section.',
+      run_completed: 'All stages have finished; review the outputs and complete the project.',
+      run_waiting: 'The run is waiting for your decision.',
+      stage_failed: 'The {stage} stage failed.',
+      task: '{kind}',
+      taskCount: '{kind} ({count} items)',
+    },
+    milestone: 'Milestone',
+    milestoneSummary: '{completed} of {total} stages complete.',
+    milestoneCurrent: 'Current stage: {stage}.',
+    milestoneAll: 'All stages are complete.',
+    milestoneNone: 'No stage is complete yet.',
+    milestoneProgress: 'Stage progress',
+    stagesTitle: 'Stages',
+    openWorkflow: 'Go to the workflow',
+  },
+};
+
+export const healthMessages = (locale: Locale) => messages[locale];

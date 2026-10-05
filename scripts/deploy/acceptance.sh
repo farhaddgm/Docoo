@@ -80,6 +80,16 @@ judge_providers() { # judge_providers "provider|status|count" lines
   else printf 'ACTION|no real AI key yet; add one on the "AI providers" page and press the health check\n'; fi
 }
 
+judge_prices() { # judge_prices "provider|price_count" lines, one per real connection
+  local rows=$1 missing=() line provider count
+  while IFS='|' read -r provider count; do
+    [ -n "$provider" ] || continue
+    [ "${count:-0}" -ge 1 ] || missing+=("$provider")
+  done <<<"$rows"
+  if [ "${#missing[@]}" -eq 0 ]; then printf 'PASS|a price is entered for every real provider, so costs and the cost ceiling are real\n'
+  else printf 'WARN|no price entered for %s; calls are estimated with a high default price and the cost ceiling triggers early (enter prices on the "AI providers" page)\n' "${missing[*]}"; fi
+}
+
 judge_backup() { # judge_backup PREFIX LIST_OUTPUT
   local prefix=$1 list=$2 last
   if [ -z "$prefix" ]; then printf 'ACTION|no off-host backup location; fill BACKUP_S3_* in deploy/.env and run install.sh update\n'; return; fi
@@ -118,7 +128,7 @@ cert_days_left() { # cert_days_left DOMAIN: whole days until the certificate exp
 psql_rows() { "${compose[@]}" exec -T postgres psql -U docoo_admin -d docoo -tA -F'|' -c "$1" 2>/dev/null; }
 
 collect() {
-  local domain version latest services code days providers admin backup list
+  local domain version latest services code days providers prices admin backup list
   domain=$(env_value DOMAIN)
 
   version=$(env_value DOCOO_VERSION)
@@ -154,6 +164,9 @@ collect() {
 
   providers=$(psql_rows "select provider::text, status::text, count(*) from provider_connections where disabled_at is null group by 1, 2 order by 1, 2")
   record_from "AI connection" "$(judge_providers "$providers")"
+
+  prices=$(psql_rows "select c.provider::text, count(p.id) from provider_connections c left join model_prices p on p.provider = c.provider where c.disabled_at is null and c.provider <> 'fake' group by 1 order by 1")
+  [ -n "$prices" ] && record_from "Model prices" "$(judge_prices "$prices")"
 
   backup=$(env_value BACKUP_S3_PREFIX)
   list=""

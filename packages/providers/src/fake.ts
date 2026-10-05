@@ -57,6 +57,9 @@ export function sampleForSchema(schema: JsonSchema, seed: string, depth = 0): un
   }
 }
 
+/** Models whose id starts with this are refused by the fake provider (offline failure tests). */
+export const FAKE_REFUSED_MODEL_PREFIX = 'fake-refused';
+
 /**
  * Deterministic provider for CI and local development: same request, same answer, no
  * network. Token counts are derived from the text so usage and cost paths are exercised.
@@ -112,6 +115,19 @@ export class FakeAdapter implements ModelProviderAdapter {
 
   invoke(request: NormalizedModelRequest): Promise<NormalizedModelResponse> {
     this.calls += 1;
+    // A model name that starts with this prefix is refused the way a real provider refuses a model
+    // that cannot do structured output; the model self-check tests show the reason that way.
+    if (request.model.startsWith(FAKE_REFUSED_MODEL_PREFIX)) {
+      return Promise.reject(
+        new ProviderError(
+          'invalid_request',
+          'fake_model_refused',
+          400,
+          null,
+          `The model ${request.model} does not support structured output.`,
+        ),
+      );
+    }
     const failure = this.script(request, this.calls);
     if (failure) {
       return Promise.reject(

@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
+import Link from 'next/link';
+import type { Route } from 'next';
+
 import { apiGet, dayBoundary, query } from '../../api-client';
 import { formatNumber, type Locale } from '../../i18n';
+import { fill } from '../agents/agent-messages';
 import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
 
@@ -15,6 +19,8 @@ interface Row {
   outputTokens: number;
   costUsd: number;
   failures: number;
+  /** Succeeded calls estimated with the high fallback because their model has no price. */
+  unpricedInvocations?: number;
   avgLatencyMs: number | null;
 }
 
@@ -139,6 +145,16 @@ function Report({ locale, workspaceId }: { locale: Locale; workspaceId: string }
       <section className="card" aria-labelledby="usage-title">
         <h2 id="usage-title">{text.title}</h2>
         <p className="muted">{text.estimate}</p>
+        {(usage?.totals.unpricedInvocations ?? 0) > 0 && usage && (
+          <div className="notice warn" role="status">
+            <p>
+              {fill(text.unpriced, {
+                n: formatNumber(locale, usage.totals.unpricedInvocations ?? 0),
+              })}{' '}
+              <Link href={`/${locale}/providers` as Route}>{text.setPrices}</Link>
+            </p>
+          </div>
+        )}
         {usage === null ? (
           <p role="status">{content.loading}</p>
         ) : (
