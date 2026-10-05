@@ -303,7 +303,9 @@ const server = createServer(async (request, response) => {
     }
     return send(404, { message: 'Not Found' });
   } catch (error) {
-    return send(500, { message: String(error) });
+    // The reason stays in this process's log; the answer never carries it.
+    console.error('Fake Contenter failed:', error);
+    return send(500, { message: 'Internal error' });
   }
 });
 
