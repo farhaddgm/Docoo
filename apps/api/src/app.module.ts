@@ -3,6 +3,7 @@ import { AgentsModule } from './agents/agents.module.js';
 import { AnalysisModule } from './analysis/analysis.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { BusinessModule } from './business/business.module.js';
 import { ConfigModule } from './config/config.module.js';
 import { CoreModule } from './core.module.js';
 import { DocumentsModule } from './documents/documents.module.js';
@@ -33,6 +34,7 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
     WorkflowModule,
     AgentsModule,
     AnalysisModule,
+    BusinessModule,
     DocumentsModule,
     ReportsModule,
     SmartModule,

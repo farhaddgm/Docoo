@@ -6,6 +6,8 @@ const chromiumPath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'];
 // The agent worker has no HTTP port; its Prometheus endpoint tells Playwright it is up.
 const workerMetricsPort = 9464;
 const ingestionMetricsPort = 9465;
+// The stand-in for Contenter's service API (the business module, ADR-0021).
+const contenterPort = Number(process.env['E2E_CONTENTER_PORT'] ?? 4010);
 
 /**
  * End-to-end tests of the main path (UX-001, AUTH-001) and of the project workflow in the
@@ -36,6 +38,13 @@ export default defineConfig({
     },
   ],
   webServer: [
+    {
+      command: 'node e2e/fake-contenter.mjs',
+      url: `http://127.0.0.1:${contenterPort}/__control/ready`,
+      env: { E2E_CONTENTER_PORT: String(contenterPort) },
+      reuseExistingServer: !process.env['CI'],
+      timeout: 30_000,
+    },
     {
       command: 'node --import ../api/dist/instrumentation.js ../api/dist/main.js',
       url: `${apiUrl}/v1/health/live`,

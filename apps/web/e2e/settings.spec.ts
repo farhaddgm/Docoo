@@ -304,7 +304,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
 
     // The project exists with its own values; the Settings tab shows them as its own.
     await expect(page).toHaveURL(/\/fa\/projects\/[0-9a-f-]{36}$/u);
-    await page.getByRole('button', { name: detail.tabs.settings }).click();
+    await page.getByRole('button', { name: detail.tabs.settings, exact: true }).click();
     const own = row(page, 'solution.count');
     await expect(own.getByRole('spinbutton')).toHaveValue('6');
     await expect(own.getByText(settings.sources.project, { exact: true })).toBeVisible();
@@ -315,10 +315,10 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
         .first(),
     ).toBeVisible();
     // The criteria chosen in the wizard are version 1 of the project's criteria.
-    await page.getByRole('button', { name: detail.tabs.solutions }).click();
+    await page.getByRole('button', { name: detail.tabs.solutions, exact: true }).click();
     await expect(page.getByText(solutionText.criteriaVersion.replace('{n}', '۱'))).toBeVisible();
     await expect(page.getByRole('spinbutton', { name: /Impact/u })).toHaveValue('35');
-    await page.getByRole('button', { name: detail.tabs.settings }).click();
+    await page.getByRole('button', { name: detail.tabs.settings, exact: true }).click();
     // Going back to the inherited value is one click with a reason.
     await own.getByLabel(settings.reasonLabel).fill('برگشت');
     await own.getByRole('button', { name: settings.resetProject }).click();

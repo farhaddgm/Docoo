@@ -906,6 +906,8 @@ export const workflowRuns = pgTable(
     status: workflowStatus('status').notNull().default('starting'),
     currentStage: stageKind('current_stage'),
     configSnapshotId: uuid('config_snapshot_id'),
+    /** The snapshot of the project's business this run's agents read, fixed at its start (ADR-0021). */
+    businessSnapshotId: uuid('business_snapshot_id'),
     startedAt: timestamp('started_at', { withTimezone: true }),
     endedAt: timestamp('ended_at', { withTimezone: true }),
     version: integer('version').notNull().default(1),
@@ -1107,6 +1109,8 @@ export const modelInvocations = pgTable(
     /** The role definition version and the digest of the exact instructions sent (FR-AGT-003). */
     agentDefinitionVersionId: uuid('agent_definition_version_id'),
     promptSha256: text('prompt_sha256'),
+    /** The business snapshot whose profile was part of the prompt (ADR-0021); null when none was. */
+    businessSnapshotId: uuid('business_snapshot_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1880,6 +1884,8 @@ export const documentWritings = pgTable(
     baseVersionId: uuid('base_version_id'),
     resultVersionId: uuid('result_version_id'),
     agentDefinitionVersionId: uuid('agent_definition_version_id'),
+    /** The snapshot of the project's business the documenter reads, fixed when the writing starts. */
+    businessSnapshotId: uuid('business_snapshot_id'),
     temporalWorkflowId: text('temporal_workflow_id').notNull(),
     plan: jsonb('plan'),
     parts: jsonb('parts')
@@ -1903,3 +1909,95 @@ export const documentWritings = pgTable(
     index('document_writings_project_idx').on(table.workspaceId, table.projectId, table.createdAt),
   ],
 );
+
+/**
+ * The connection to the Contenter application, where businesses are edited (ADR-0021): one per
+ * workspace. The service token is write-only and sealed like a provider key.
+ */
+export const contenterConnections = pgTable(
+  'contenter_connections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    /** The API root of Contenter, for example https://contenter.example.com/api */
+    apiUrl: text('api_url').notNull(),
+    /** The web address of Contenter, to link to a business there (optional). */
+    webUrl: text('web_url'),
+    /** unconfigured, healthy, unreachable or invalid (the token was refused). */
+    status: text('status').notNull().default('unconfigured'),
+    secretVersion: integer('secret_version').notNull().default(0),
+    ciphertext: text('ciphertext'),
+    iv: text('iv'),
+    tag: text('tag'),
+    wrappedKey: text('wrapped_key'),
+    wrapIv: text('wrap_iv'),
+    wrapTag: text('wrap_tag'),
+    keyId: text('key_id'),
+    fingerprint: text('fingerprint'),
+    lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+    lastLatencyMs: integer('last_latency_ms'),
+    lastError: text('last_error'),
+    version: integer('version').notNull().default(1),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex('contenter_connections_workspace_uq').on(table.workspaceId)],
+);
+
+/**
+ * What Contenter exported for a business at one moment (ADR-0021). Append-only: a change in
+ * Contenter makes a new version, and runs keep pointing at the version they started with.
+ */
+export const businessSnapshots = pgTable(
+  'business_snapshots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    /** The business's id in Contenter. */
+    externalBusinessId: text('external_business_id').notNull(),
+    versionNo: integer('version_no').notNull(),
+    name: text('name').notNull(),
+    /** SHA-256 of the canonical content: the same business gives the same hash. */
+    contentSha256: text('content_sha256').notNull(),
+    /** The normalized export (the shape of BusinessContent in @docoo/domain). */
+    content: jsonb('content').notNull(),
+    /** What differs from the previous version: sections, facts, terms, notes, details. */
+    changes: jsonb('changes')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    exportedAt: timestamp('exported_at', { withTimezone: true }),
+    fetchedBy: uuid('fetched_by').references(() => users.id, { onDelete: 'set null' }),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('business_snapshots_version_uq').on(
+      table.workspaceId,
+      table.externalBusinessId,
+      table.versionNo,
+    ),
+    index('business_snapshots_business_idx').on(
+      table.workspaceId,
+      table.externalBusinessId,
+      table.fetchedAt,
+    ),
+  ],
+);
+
+/** The business a project belongs to, and the snapshot its agents currently read (ADR-0021). */
+export const projectBusinesses = pgTable('project_businesses', {
+  projectId: uuid('project_id')
+    .primaryKey()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  workspaceId: tenant(),
+  externalBusinessId: text('external_business_id').notNull(),
+  /** The business's name when the link was last refreshed. */
+  name: text('name').notNull(),
+  snapshotId: uuid('snapshot_id').notNull(),
+  linkedBy: uuid('linked_by').references(() => users.id, { onDelete: 'set null' }),
+  linkedAt: timestamp('linked_at', { withTimezone: true }).notNull().defaultNow(),
+  /** When Contenter was last asked and answered; the snapshot may be older than this. */
+  syncedAt: timestamp('synced_at', { withTimezone: true }),
+  /** Why the last refresh failed (null when it worked). */
+  syncError: text('sync_error'),
+  ...timestamps,
+});

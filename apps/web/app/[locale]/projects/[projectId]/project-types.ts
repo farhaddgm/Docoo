@@ -19,6 +19,8 @@ export interface ProjectDetail {
     conflictInstruction: string | null;
     topicStatus: string;
   }[];
+  /** The business of Contenter the project is linked to (ADR-0021); null when it has none. */
+  business: { externalBusinessId: string; name: string } | null;
   approvedProblemVersionId: string | null;
   version: number;
   deletedAt: string | null;

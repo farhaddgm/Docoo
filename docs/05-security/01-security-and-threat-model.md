@@ -2,9 +2,9 @@
 doc_id: DOCOO-SECURITY-THREAT-MODEL
 title: معماری امنیت، حریم خصوصی و مدل تهدید
 status: approved-baseline
-version: 1.0.2
+version: 1.0.3
 owner: Security
-last_updated: 2026-10-04
+last_updated: 2026-10-05
 notion_sync: true
 ---
 
@@ -30,7 +30,8 @@ notion_sync: true
 - workflow state و approval؛
 - audit trail؛
 - اسناد نهایی و artifact؛
-- backup و کلید رمزنگاری.
+- backup و کلید رمزنگاری؛
+- توکن سرویس Contenter و snapshotهای پروفایل کسب‌وکار.
 
 ## ۴. مرزهای اعتماد
 
@@ -41,6 +42,7 @@ notion_sync: true
 5. renderer ↔ structured content و assets.
 6. repo ↔ Notion sync.
 7. production ↔ backup/observability.
+8. API ↔ Contenter (برنامهٔ خواهر: پروفایل کسب‌وکار و توکن سرویس).
 
 هر عبور نیازمند authentication، authorization، validation، encryption و logging متناسب است.
 
@@ -84,6 +86,12 @@ notion_sync: true
 
 کنترل: provenance، Brain audit، claim citation، conflict warning، source reputation، re-audit، admin override label و عدم یادگیری خودکار بی‌دروازه.
 
+### اتصال به Contenter (کسب‌وکار پروژه)
+
+تهدید: (الف) توکن سرویس لو برود و همهٔ کسب‌وکارهای Contenter خوانده شود؛ (ب) متن پروفایل (نوشتهٔ ادمین یا برگرفته از وب) به مدل دستور بدهد؛ (ج) اطلاعاتی که نباید از شرکت بیرون برود به provider برسد؛ (د) نشانی اتصال به سرویس داخلی اشاره کند؛ (ه) Contenter پاسخ ناسازگار یا عظیم بدهد؛ (و) snapshot یک tenant در tenant دیگر دیده یا با پروژه‌ای از tenant دیگر پیوند شود.
+
+کنترل: توکن فقط نوشتنی و envelope-encrypted (`SECRET_MASTER_KEY`، AAD به اتصال و نسخه بسته) و فقط fingerprint برمی‌گردد؛ سمت Contenter بدون `INTEGRATION_TOKEN` مسیر ۴۰۴ است، مقایسهٔ توکن زمان‌ثابت و نرخ ۱۲۰ در دقیقه است و هر export audit می‌شود؛ پروفایل داخل `<data>` به‌عنوان `businessProfile` می‌رود و هرگز به دستور افزوده نمی‌شود، با دستورهای ثابت `BUSINESS_RULES`؛ هر نقش فقط بخش‌های لازم را با سقف حجم می‌گیرد و Brain هیچ؛ رابط محتوای دقیق هر نقش را نشان می‌دهد؛ نشانی را فقط `integration.configure` می‌نویسد، redirect دنبال نمی‌شود، مهلت ۱۵ ثانیه و سقف ۶ مگابایت دارد؛ خروجی نرمال‌سازی و کوتاه می‌شود و schema ناسازگار رد می‌شود؛ `business_snapshots` append-only با RLS و FK ترکیبی `(id, workspace_id)` است. **ریسک پذیرفته‌شده:** چون نشانی را ادمین می‌نویسد، ثبت نشانی داخلی ممکن است؛ ادمین مورد اعتماد است و هیچ محتوای پاسخ به او برنمی‌گردد جز وضعیت و خطای کوتاه. ([ADR-0021](../adr/0021-business-from-contenter.md))
+
 ### supply chain
 
 کنترل: lockfile، signed/attested image، dependency/SBOM scan، secret scan، least privilege CI، pinned action digest، review migration و emergency patch process.
@@ -101,7 +109,7 @@ notion_sync: true
 ## ۶. secret management
 
 - env plaintext فایل production ممنوع؛ secret manager یا Docker secret.
-- envelope encryption برای API key.
+- envelope encryption برای API key و توکن سرویس Contenter.
 - UI فقط `••••last4` و metadata.
 - rotation با نسخه؛ old key grace محدود.
 - secret در exception، trace، prompt و backup report redacted.

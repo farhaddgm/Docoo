@@ -8,6 +8,7 @@ import {
   type CategoryCoverage,
   type QuestionCategory,
   type QuestionStatus,
+  type BusinessPrompt,
 } from '@docoo/domain';
 import { ProviderError, type JsonSchema } from '@docoo/providers';
 
@@ -272,6 +273,8 @@ export interface RoundRequestInput {
   readonly analysis: AnalysisContext;
   /** The analyst's definition this round runs with, pinned per project (FR-AGT-003). */
   readonly definition: AgentDefinitionContent;
+  /** What the analyst reads of the project's business (ADR-0021); absent when it has none. */
+  readonly business?: BusinessPrompt | null | undefined;
 }
 
 /**
@@ -304,7 +307,13 @@ export function roundPrompt(input: RoundRequestInput): { instructions: string; m
       'Set "sufficient" to true only when the problem can be defined without guessing; then propose no questions.',
       'In "understood" summarise what is now clear; in "nextAmbiguity" name the most important open point.',
       'Use followUpOf with the number of an earlier question when a new question follows from its answer, otherwise 0.',
+      ...(input.business
+        ? [
+            'businessProfile already tells you about the company: do not ask what it answers, and ask instead what it leaves open for this problem.',
+          ]
+        : []),
     ].join(' '),
+    ...(input.business ? { rules: input.business.rules } : {}),
   });
   const data = {
     project: input.projectTitle,
@@ -330,6 +339,7 @@ export function roundPrompt(input: RoundRequestInput): { instructions: string; m
     questionsAndAnswers: analysis.transcript,
     reviewerFeedback: input.feedback,
     approvedDefinitionOfEarlierRun: analysis.priorDefinition,
+    ...(input.business ? { businessProfile: input.business.data } : {}),
   };
   return { instructions, message: `<data>${JSON.stringify(data)}</data>` };
 }

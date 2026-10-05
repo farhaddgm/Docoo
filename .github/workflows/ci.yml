@@ -119,6 +119,8 @@ jobs:
           NODE_ENV: test
           DATABASE_URL: postgresql://docoo_e2e:docoo-e2e-runtime@localhost:5432/docoo_ci
           SESSION_PEPPER: docoo-ci-e2e-pepper-with-at-least-32-characters
+          # Seals the Contenter token the business end-to-end test enters (32 bytes, base64).
+          SECRET_MASTER_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           WEB_ORIGIN: http://localhost:3000
           # The whole suite comes from one address; the production limit (120/min) would ban it.
           API_RATE_LIMIT_PER_MINUTE: '5000'

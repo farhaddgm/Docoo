@@ -2,6 +2,26 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.19.0] — 2026-10-05
+
+A project can now be linked to a business defined in Contenter, and the agents work from it. Contenter stays the only place where a business is edited; Docoo reads it, keeps a numbered copy, and shows everything in a new tab. See [ADR-0021](docs/adr/0021-business-from-contenter.md). **Needs Contenter 0.9.0** with `INTEGRATION_TOKEN` set (owner guide, step 9).
+
+### Added
+
+- **Integrations page** (`/integrations`): the address of Contenter's API (and, optionally, of its site) and a service token. The token is write-only: it is stored encrypted like a provider key, never shown again, and only its fingerprint is displayed. Saving tries the connection at once and the page shows its health (healthy, token refused, unreachable), the delay and the last error; the connection can be checked again or removed. API: `GET`/`PUT`/`DELETE /integrations/contenter` and `POST /integrations/contenter/test` (`integration.read` and `integration.configure`).
+- **Business of a project.** Choose it in the first step of the project wizard (searchable list) or on the new **Business** tab; change it or unlink it later with an optional reason. The project list has a Business column and the project header names the business. A clone keeps the link.
+- **The Business tab shows everything Contenter holds, read-only**: the 15 profile sections in five groups (marked "written by an admin" or "AI draft, not confirmed", with the empty ones listed), key facts (verified, expired), brand terminology, admin notes, reference sources with excerpts, brand assets with their analysis, Contenter's health score and open checks, the latest audit and the information gaps, **what each agent role is given** (size per role, what did not fit, and the exact data and standing rules on request), and **the versions Docoo has kept** (what changed, how many runs and writings read each, any old version can be viewed).
+- **The agents work from the business.** The analyst, the researcher, the stage outputs, the solutions, the document writer and the document evaluation receive the sections their role needs (the Brain none; brand terminology only the writer), within a character budget (`business.prompt_budget_chars`, 12,000 by default). The profile is passed as data with standing instructions: treat it as authoritative, never state a price, number or date that is not in it, do not present AI drafts as confirmed, report a conflict instead of choosing silently.
+- **Brand terminology is checked by code**: the live document check and the writing report list the terms a document breaks ("always write" and "never write" rules), with Persian-aware matching.
+- **Versions, pinned.** Every sync that finds a change saves a new numbered version (append-only). Each workflow run, each document writing and each model call that carried the business records the version it read, so a later edit in Contenter never changes the past. A sync runs before every run and every writing (8 seconds at most); if Contenter does not answer, the last saved version is used and the reason is shown.
+- **Settings group "Business"**: `business.required` (a project cannot be activated without a business; off by default), `business.sync_on_start` (on) and `business.prompt_budget_chars`.
+- Migrations 0028 and 0029: `contenter_connections`, `business_snapshots`, `project_businesses` (row-level security on, snapshots append-only), `business_snapshot_id` on `workflow_runs`, `document_writings` and `model_invocations`, and the three settings. Permissions `integration.read`, `integration.configure`, `business.read`, `business.link`; audit events `integration.contenter_configured`, `integration.contenter_removed`, `business.link_set`, `business.unlinked`, `business.snapshot_created`.
+- End-to-end test of the whole flow against a stand-in for Contenter (token, wizard, tab, sync, outage, change and unlink, Persian and English, accessibility); the CI browser run gets a master key for the token.
+
+### Changed
+
+- The project wizard's first step has the business picker and its review shows the choice; `POST /projects` accepts `businessId` and project responses carry `business`.
+
 ## [0.18.0] — 2026-10-05
 
 Readiness for the first real model: the defaults that would have broken a first real run are fixed, the cost ceiling now really works, and the providers page can test a model with one click. See [ADR-0020](docs/adr/0020-real-provider-readiness.md).

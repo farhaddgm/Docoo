@@ -27,6 +27,7 @@ import {
 } from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
+import { BusinessService, type FetchedBusiness } from '../business/business.service.js';
 import { ConfigService } from '../config/config.service.js';
 
 export type OutputLanguage = 'fa' | 'en';
@@ -60,6 +61,8 @@ export interface Project {
   /** Lifecycle commands the project accepts now; the backoffice offers exactly these. */
   readonly availableCommands: readonly ProjectCommand[];
   readonly topics: readonly ProjectTopicLink[];
+  /** The business of Contenter the project belongs to (ADR-0021); null when it has none. */
+  readonly business: ProjectBusiness | null;
   readonly configSnapshotId: string | null;
   readonly clonedFromId: string | null;
   /** The approved analysis output that serves as the problem definition (FR-ANL-005). */
@@ -69,6 +72,11 @@ export interface Project {
   readonly purgeAfter: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+export interface ProjectBusiness {
+  readonly externalBusinessId: string;
+  readonly name: string;
 }
 
 export interface TopicLinkInput {
@@ -87,6 +95,8 @@ export interface CreateProjectInput {
   readonly settings?: readonly { readonly key: string; readonly value: unknown }[] | undefined;
   /** The weighted solution criteria chosen in the wizard; version 1, in the same transaction. */
   readonly solutionCriteria?: readonly Criterion[] | undefined;
+  /** The business of Contenter to link the project to; fetched first, linked in the same transaction. */
+  readonly businessId?: string | undefined;
 }
 
 export interface UpdateProjectInput {
@@ -201,6 +211,7 @@ export class ProjectsService {
   constructor(
     private readonly database: WorkspaceDatabase,
     private readonly configService: ConfigService,
+    private readonly business: BusinessService,
   ) {}
 
   async list(
@@ -265,6 +276,7 @@ export class ProjectsService {
       const rows = result.rows.slice(0, input.limit);
       const ids = rows.map((row) => row.id);
       const links = await this.loadLinks(client, context, ids);
+      const businesses = await this.loadBusinesses(client, ids);
       const owners = await client.query<{ id: string; owner_id: string; display_name: string }>(
         `select p.id, u.id as owner_id, u.display_name
            from projects p join users u on u.id = p.created_by where p.id = any($1::uuid[])`,
@@ -289,7 +301,7 @@ export class ProjectsService {
           const owner = ownerOf.get(row.id);
           const task = waitingOf.get(row.id);
           return {
-            ...this.toProject(row, links.get(row.id) ?? []),
+            ...this.toProject(row, links.get(row.id) ?? [], businesses.get(row.id) ?? null),
             owner: owner ? { id: owner.owner_id, displayName: owner.display_name } : null,
             waiting: task ? { kind: task.kind, stage: task.stage } : null,
           };
@@ -310,6 +322,11 @@ export class ProjectsService {
     const criteria = input.solutionCriteria;
     const criteriaIssue = criteria ? criteriaProblem(criteria) : null;
     if (criteriaIssue) throw badRequest('SOLUTION_CRITERIA_INVALID', criteriaIssue);
+    // Contenter is asked before the transaction opens, so a slow answer holds no database connection;
+    // if it cannot answer, no project is created and the form can be sent again.
+    const business: FetchedBusiness | null = input.businessId
+      ? await this.business.fetchBusiness(context, input.businessId)
+      : null;
     return this.database.run(context, async (client) => {
       await this.assertTopicsUsable(client, context, input.topics);
       let row: ProjectRow | undefined;
@@ -350,6 +367,15 @@ export class ProjectsService {
           'Set while creating the project',
         );
       }
+      if (business) {
+        await this.business.attach(
+          client,
+          context,
+          row.id,
+          business,
+          'Set while creating the project',
+        );
+      }
       if (criteria) {
         const version = (
           await client.query<{ id: string }>(
@@ -383,6 +409,7 @@ export class ProjectsService {
           topics: input.topics.map((topic) => topic.topicId),
           settings: settings.map((setting) => setting.key),
           ...(criteria ? { solutionCriteria: true } : {}),
+          ...(business ? { businessId: business.content.business.externalId } : {}),
         },
       });
       return this.read(client, context, row.id);
@@ -605,6 +632,8 @@ export class ProjectsService {
           conflictInstruction: link.conflictInstruction ?? undefined,
         })),
       );
+      // The clone belongs to the same business, at the snapshot the original reads now.
+      await this.business.copyLink(client, context, sourceId, row.id);
       // Settings are copied; audit, history, runs and secrets are not (FR-PRJ-006).
       const copied = await this.configService.copyProjectAssignments(
         client,
@@ -692,10 +721,18 @@ export class ProjectsService {
     if (project.initial_problem.trim().length === 0) problems.push('initial_problem_missing');
     if (links.length === 0) problems.push('topics_missing');
     if (links.some((link) => link.topicStatus !== 'active')) problems.push('topic_unavailable');
+    // A workspace or a topic can require every project to belong to a business (`business.required`).
+    const config = await this.configService.resolve(client, context, 'project', project.id);
+    if (
+      config.values['business.required'] === true &&
+      !(await this.business.hasLink(client, project.id))
+    ) {
+      problems.push('business_missing');
+    }
     if (problems.length > 0) {
       throw conflict(
         'PROJECT_NOT_READY',
-        'Add the problem and at least one active topic before activating the project.',
+        'Add the problem, at least one active topic and, when the workspace requires it, a business before activating the project.',
         { problems },
       );
     }
@@ -769,7 +806,8 @@ export class ProjectsService {
   ): Promise<Project> {
     const row = await this.load(client, context, projectId);
     const links = (await this.loadLinks(client, context, [projectId])).get(projectId) ?? [];
-    return this.toProject(row, links);
+    const business = (await this.loadBusinesses(client, [projectId])).get(projectId) ?? null;
+    return this.toProject(row, links, business);
   }
 
   private async load(
@@ -819,6 +857,26 @@ export class ProjectsService {
     return links;
   }
 
+  private async loadBusinesses(
+    client: PoolClient,
+    projectIds: readonly string[],
+  ): Promise<Map<string, ProjectBusiness>> {
+    const result = new Map<string, ProjectBusiness>();
+    if (projectIds.length === 0) return result;
+    const rows = await client.query<{
+      project_id: string;
+      external_business_id: string;
+      name: string;
+    }>(
+      `select project_id, external_business_id, name from project_businesses where project_id = any($1::uuid[])`,
+      [projectIds],
+    );
+    for (const row of rows.rows) {
+      result.set(row.project_id, { externalBusinessId: row.external_business_id, name: row.name });
+    }
+    return result;
+  }
+
   private assertVersion(row: ProjectRow, expectedVersion: number): void {
     if (row.version !== expectedVersion) {
       throw preconditionFailed(
@@ -848,7 +906,11 @@ export class ProjectsService {
     return notFound('PROJECT_NOT_FOUND', 'The project was not found.');
   }
 
-  private toProject(row: ProjectRow, topics: readonly ProjectTopicLink[]): Project {
+  private toProject(
+    row: ProjectRow,
+    topics: readonly ProjectTopicLink[],
+    business: ProjectBusiness | null,
+  ): Project {
     return {
       id: row.id,
       workspaceId: row.workspace_id,
@@ -866,6 +928,7 @@ export class ProjectsService {
         (command) => !(command === 'restore' && row.purge_expired),
       ),
       topics,
+      business,
       configSnapshotId: row.config_snapshot_id,
       approvedProblemVersionId: row.approved_problem_version_id,
       clonedFromId: row.cloned_from_id,

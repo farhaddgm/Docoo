@@ -1122,6 +1122,13 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   border-inline-start: 3px solid var(--color-border-strong);
 }
 
+/* Long text written elsewhere (a business profile): keeps its line breaks and never overflows. */
+.pre-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .json-block {
   max-height: 24rem;
   margin: 0;

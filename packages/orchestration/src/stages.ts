@@ -1,4 +1,9 @@
-import { STAGE_ROLE, composeInstructions, type AgentDefinitionContent } from '@docoo/domain';
+import {
+  STAGE_ROLE,
+  composeInstructions,
+  type AgentDefinitionContent,
+  type BusinessPrompt,
+} from '@docoo/domain';
 import type { JsonSchema } from '@docoo/providers';
 
 import type { AnalysisContext } from './analysis.js';
@@ -172,6 +177,8 @@ export interface StageContext {
    * say so and the model must leave every evidence list empty.
    */
   readonly knowledge?: readonly KnowledgePromptItem[] | undefined;
+  /** What this role reads of the project's business (ADR-0021); absent when it has none. */
+  readonly business?: BusinessPrompt | null | undefined;
 }
 
 /**
@@ -201,14 +208,14 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
     content: context.definition,
     language: context.language,
     task: context.definition.promptTemplate,
-    ...(context.stage === 'research'
-      ? {
-          rules:
-            context.knowledge && context.knowledge.length > 0
-              ? KNOWLEDGE_RULES
-              : NO_KNOWLEDGE_RULES,
-        }
-      : {}),
+    rules: [
+      ...(context.stage === 'research'
+        ? context.knowledge && context.knowledge.length > 0
+          ? KNOWLEDGE_RULES
+          : NO_KNOWLEDGE_RULES
+        : []),
+      ...(context.business?.rules ?? []),
+    ],
   });
   const data = {
     project: context.projectTitle,
@@ -229,6 +236,7 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
     ...(context.knowledge && context.knowledge.length > 0
       ? { approvedKnowledge: context.knowledge }
       : {}),
+    ...(context.business ? { businessProfile: context.business.data } : {}),
   };
   return { instructions, message: `<data>${JSON.stringify(data)}</data>` };
 }

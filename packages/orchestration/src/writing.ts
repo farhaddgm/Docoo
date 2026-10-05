@@ -1,6 +1,12 @@
 import { createHash } from 'node:crypto';
 
-import { composeInstructions, defaultDefinition, type AgentDefinitionContent } from '@docoo/domain';
+import {
+  composeInstructions,
+  defaultDefinition,
+  type AgentDefinitionContent,
+  clampBusinessBudget,
+  type BusinessPrompt,
+} from '@docoo/domain';
 import {
   type Block,
   type Budget,
@@ -81,6 +87,8 @@ export interface WritingMaterial {
   readonly stageOutline: readonly { readonly heading: string; readonly summary: string }[];
   readonly notes: string | null;
   readonly knowledge: readonly KnowledgePassage[];
+  /** What the documenter reads of the project's business (ADR-0021); absent when it has none. */
+  readonly business?: BusinessPrompt | null | undefined;
 }
 
 const approxWords = (letters: number, language: 'fa' | 'en') =>
@@ -103,6 +111,7 @@ const shared = (material: WritingMaterial) => ({
   ...(material.knowledge.length > 0
     ? { approvedKnowledge: knowledgePromptItems(material.knowledge) }
     : {}),
+  ...(material.business ? { businessProfile: material.business.data } : {}),
 });
 
 function instructionsFor(
@@ -134,6 +143,7 @@ function instructionsFor(
       ...(tablesAllowed
         ? []
         : ['Tables and charts are not allowed for this document; use paragraphs and lists only.']),
+      ...(material.business?.rules ?? []),
       ...callRules,
     ],
   });
@@ -427,6 +437,8 @@ export interface WritingSettings {
   readonly allowRestricted: boolean;
   /** `knowledge.min_audit_score`: the audit floor for knowledge the Brain approved (0 to 1). */
   readonly minAuditScore: number;
+  /** `business.prompt_budget_chars`: characters of the business profile one call may carry. */
+  readonly businessBudgetChars: number;
 }
 
 export const WRITING_DEFAULTS = { knowledgeLimit: 12, fitRounds: 3, costLimitUsd: 20 } as const;
@@ -457,6 +469,7 @@ export function resolveWritingSettings(values: Readonly<Record<string, unknown>>
     fitRounds: bounded(values['document.writing.fit_rounds'], WRITING_DEFAULTS.fitRounds, 0, 3),
     allowRestricted: values['research.allow_restricted_knowledge'] === true,
     minAuditScore: fraction(values['knowledge.min_audit_score']),
+    businessBudgetChars: clampBusinessBudget(values['business.prompt_budget_chars']),
   };
 }
 
@@ -474,5 +487,6 @@ export function writingSettingsFromRow(value: unknown): WritingSettings {
     fitRounds: bounded(raw['fitRounds'], WRITING_DEFAULTS.fitRounds, 0, 3),
     allowRestricted: raw['allowRestricted'] === true,
     minAuditScore: fraction(raw['minAuditScore']),
+    businessBudgetChars: clampBusinessBudget(raw['businessBudgetChars']),
   };
 }

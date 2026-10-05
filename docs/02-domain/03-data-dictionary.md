@@ -2,9 +2,9 @@
 doc_id: DOCOO-DATA-DICTIONARY
 title: فرهنگ داده هسته Docoo
 status: approved-baseline
-version: 1.2.0
+version: 1.3.0
 owner: Data Architecture
-last_updated: 2026-10-04
+last_updated: 2026-10-05
 notion_sync: true
 ---
 
@@ -204,6 +204,30 @@ ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار �
 ### artifact
 
 `document_version_id`, `format`, `storage_key`, `sha256`, `size`, `renderer`, `renderer_version`, `render_status`, `created_at`.
+
+## business (Contenter، [ADR-0021](../adr/0021-business-from-contenter.md))
+
+سه جدول tenant-scoped با RLS اجباری (مهاجرت‌های 0028 و 0029).
+
+### contenter_connections
+
+یک اتصال به Contenter برای هر workspace (یکتا روی `workspace_id`): `api_url` و `web_url` (nullable؛ هر دو `http(s)` و حداکثر ۵۰۰ نویسه)، `status` (`unconfigured|healthy|unreachable|invalid`)، `secret_version` و توکن envelope-encrypted (`ciphertext`، `iv`، `tag`، `wrapped_key`، `wrap_iv`، `wrap_tag`، `key_id`) به‌علاوهٔ `fingerprint`؛ قید می‌گوید توکن یا کاملاً مهر شده است یا کاملاً غایب. `last_checked_at`، `last_latency_ms`، `last_error` (کد کوتاه، حداکثر ۳۰۰)، `version`، `created_by`. فقط‌نوشتنی: هیچ پاسخ API توکن را برنمی‌گرداند.
+
+### business_snapshots
+
+نسخهٔ نرمال‌شدهٔ یک کسب‌وکار Contenter در یک لحظه. `workspace_id`، `external_business_id` (۱ تا ۱۰۰ نویسه)، `version_no` (از ۱، پشت‌سرهم برای هر کسب‌وکار در workspace؛ یکتا)، `name`، `content_sha256` (sha256 JSON کانونی)، `content` (jsonb: بخش‌ها، واقعیت‌ها، اصطلاحات، یادداشت‌ها، منابع، دارایی‌ها، ممیزی، سلامت، شکاف‌ها و موضوع‌ها)، `changes` (jsonb: `sections[]`، `facts`، `terms`، `notes`، `details` نسبت به نسخهٔ قبل)، `exported_at` (زمان Contenter)، `fetched_by`، `fetched_at`. **append-only** (trigger مانع `UPDATE` و `DELETE`؛ `docoo_app` فقط `SELECT, INSERT` دارد) و `UNIQUE (id, workspace_id)` برای FK ترکیبی.
+
+### project_businesses
+
+پیوند پروژه به کسب‌وکار؛ کلید اصلی `project_id` (حداکثر یک کسب‌وکار برای هر پروژه): `workspace_id`، `external_business_id`، `name`، `snapshot_id` (نسخهٔ جاری؛ FK ترکیبی `(snapshot_id, workspace_id)`)، `linked_by`، `linked_at`، `synced_at`، `sync_error` (کد خطای آخرین همگام‌سازی ناموفق، حداکثر ۳۰۰) و `created_at`/`updated_at`. پاک‌سازی دائمی پروژه پیوند را می‌برد؛ snapshotها می‌مانند.
+
+### ستون‌های سنجاق
+
+`workflow_runs.business_snapshot_id`، `document_writings.business_snapshot_id` و `model_invocations.business_snapshot_id` (nullable؛ FK ترکیبی `(id, workspace_id)`): نسخه‌ای از کسب‌وکار که آن اجرا، نگارش یا تماس خوانده است. چون snapshot هرگز پاک نمی‌شود، این ارجاع‌ها آویزان نمی‌شوند. `null` یعنی پروژه کسب‌وکار نداشت.
+
+### تنظیم‌ها
+
+`business.required` (boolean، پیش‌فرض `false`)، `business.sync_on_start` (boolean، `true`) و `business.prompt_budget_chars` (integer ۲۰۰۰ تا ۳۰۰۰۰، `12000`)؛ scope هر سه workspace، موضوع و پروژه.
 
 ## provider
 

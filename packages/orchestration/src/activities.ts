@@ -7,6 +7,7 @@ import type { Pool, PoolClient } from 'pg';
 import { createAnalysisActivities, loadDefinitionContext } from './analysis-activities.js';
 import { createWritingActivities, type WritingActivities } from './writing-activities.js';
 import type { AnalysisActivities } from './analysis-activities.js';
+import { businessForRole, loadRunBusiness } from './business.js';
 import { audit, inWorkspace } from './db.js';
 import type { RunRef, StageRef } from './refs.js';
 import { compactResearchForPrompt, knowledgePromptItems } from './research.js';
@@ -301,6 +302,13 @@ export function createOrchestrationActivities(
                 analysis: previous.rows.find((row) => row.stage === 'analysis')?.content ?? null,
               })
             : null;
+        // What this stage's role reads of the project's business: the snapshot pinned when the run
+        // started, cut to the role's sections within the run's budget (ADR-0021).
+        const business = businessForRole(
+          await loadRunBusiness(client, ref.runId),
+          STAGE_ROLE[stage.stage],
+          config.businessBudgetChars,
+        );
         const prompt = stagePrompt({
           stage: stage.stage,
           definition,
@@ -317,12 +325,14 @@ export function createOrchestrationActivities(
           feedback: feedback.rows.map((row) => row.comment),
           analysis: analysis ?? undefined,
           knowledge: research ? knowledgePromptItems(research.passages) : undefined,
+          business: business?.prompt,
         });
         return {
           attemptId,
           config: { ...config, connectionId, model },
           agentDefinitionVersionId: definition.id,
           promptSha256: promptDigest(prompt),
+          businessSnapshotId: business?.snapshotId ?? null,
           prompt,
           stage: stage.stage,
           toolScope,
@@ -350,6 +360,7 @@ export function createOrchestrationActivities(
             retryNo: ref.retryNo,
             agentDefinitionVersionId: prepared.agentDefinitionVersionId,
             promptSha256: prepared.promptSha256,
+            businessSnapshotId: prepared.businessSnapshotId,
           },
           prepared.config.connectionId,
           {

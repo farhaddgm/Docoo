@@ -85,6 +85,10 @@ export const SETTING_GROUPS = [
     ],
   },
   {
+    id: 'business',
+    keys: ['business.required', 'business.sync_on_start', 'business.prompt_budget_chars'],
+  },
+  {
     id: 'ingestion',
     keys: ['ingestion.max_file_mb', 'ingestion.url_policy', 'ingestion.url_allowlist'],
   },

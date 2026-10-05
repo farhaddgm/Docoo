@@ -87,6 +87,8 @@ const createSchema = z
     outputLanguage: languageSchema.default('fa'),
     topics: topicsSchema.default([]),
     settings: settingsSchema.default([]),
+    // The id of a business in Contenter; the project is linked to it as it is created.
+    businessId: z.string().trim().min(1).max(100).optional(),
     solutionCriteria: z
       .array(
         z
@@ -179,6 +181,12 @@ export class ProjectsController {
       (!authorization || !roleHasPermission(authorization.workspace.role, 'project.update'))
     ) {
       throw new ForbiddenException('Choosing criteria needs the permission to edit projects.');
+    }
+    if (
+      input.businessId &&
+      (!authorization || !roleHasPermission(authorization.workspace.role, 'business.link'))
+    ) {
+      throw new ForbiddenException('Linking a business needs the permission to link businesses.');
     }
     const project = await this.projectsService.create(workspaceContext(request), input);
     setVersionHeader(reply, project.version);

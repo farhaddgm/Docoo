@@ -214,7 +214,7 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
       topics: [{ topicId: topic.topic.id }],
     });
     await page.goto(`/fa/projects/${created.project.id}`);
-    await page.getByRole('button', { name: detail.tabs.agents }).click();
+    await page.getByRole('button', { name: detail.tabs.agents, exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: text.projectHeading })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { BusinessModule } from '../business/business.module.js';
 import { ConfigModule } from '../config/config.module.js';
 import { ProvidersModule } from '../providers/providers.module.js';
 import { SourcesModule } from '../sources/sources.module.js';
@@ -10,7 +11,7 @@ import { SolutionsService } from './solutions.service.js';
 import { WritingsService } from './writings.service.js';
 
 @Module({
-  imports: [ConfigModule, ProvidersModule, SourcesModule, WorkflowModule],
+  imports: [ConfigModule, BusinessModule, ProvidersModule, SourcesModule, WorkflowModule],
   controllers: [DocumentsController],
   providers: [DocumentsService, SolutionsService, WritingsService],
 })

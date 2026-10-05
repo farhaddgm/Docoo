@@ -25,6 +25,7 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   agents: '/agents',
   brain: '/brain',
   providers: '/providers',
+  integrations: '/integrations',
   costs: '/costs',
   audit: '/audit',
   smart: '/smart/errors',
@@ -44,6 +45,8 @@ const icons: Record<NavigationKey, string> = {
   brain:
     'M12 3a4 4 0 0 0-4 4v1a3 3 0 0 0-2 5 3 3 0 0 0 2 5 4 4 0 0 0 8 0 3 3 0 0 0 2-5 3 3 0 0 0-2-5V7a4 4 0 0 0-4-4zM12 3v18',
   providers: 'M12 2l9 5v10l-9 5-9-5V7zM12 12l9-5M12 12v10M12 12L3 7',
+  integrations:
+    'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   costs:
     'M12 2v20M17 6.5C16 5 14.2 4.5 12 4.5c-2.8 0-4.5 1.3-4.5 3.2 0 4.6 9 2.2 9 7 0 2-1.8 3.3-4.5 3.3-2.3 0-4.2-.7-5.2-2.3',
   audit: 'M9 4h6l1 2h3v15H5V6h3zM9 13l2 2 4-4',
