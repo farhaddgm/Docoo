@@ -183,6 +183,13 @@
       "when": 1791175417323,
       "tag": "0025_export_default_setting",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791176083081,
+      "tag": "0026_analysis_dimension_settings",
+      "breakpoints": true
     }
   ]
 }

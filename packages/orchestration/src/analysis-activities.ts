@@ -7,6 +7,7 @@ import {
   dedupeQuestions,
   decideRound,
   reconcileContradictions,
+  requiredCategoriesFor,
   type QuestionCategory,
   type QuestionStatus,
 } from '@docoo/domain';
@@ -190,6 +191,32 @@ async function loadQuestions(
   return { questions, pendingAttachments };
 }
 
+/**
+ * The dimensions the analyst must ask about before it may say "enough": the eight of FR-ANL-004,
+ * plus risk and out-of-scope when the run's configuration asks for them.
+ */
+export async function loadRequiredCategories(
+  client: PoolClient,
+  sessionId: string,
+): Promise<readonly QuestionCategory[]> {
+  const row = (
+    await client.query<{ resolved: Record<string, unknown> | null }>(
+      `select c.resolved
+         from analysis_sessions a
+         join stage_runs sr on sr.id = a.stage_run_id
+         join workflow_runs r on r.id = sr.run_id
+         left join config_snapshots c on c.id = r.config_snapshot_id
+        where a.id = $1`,
+      [sessionId],
+    )
+  ).rows[0];
+  const values = row?.resolved ?? {};
+  return requiredCategoriesFor({
+    risk: values['analysis.require_risk_dimension'] === true,
+    outOfScope: values['analysis.require_out_of_scope_dimension'] === true,
+  });
+}
+
 /** Everything the analyst or the definition writer is shown about the analysis so far. */
 export async function loadAnalysisContext(
   client: PoolClient,
@@ -197,7 +224,7 @@ export async function loadAnalysisContext(
   preloaded?: TranscriptQuestion[],
 ): Promise<AnalysisContext> {
   const questions = preloaded ?? (await loadQuestions(client, input.sessionId)).questions;
-  const report = coverageReport(questions);
+  const report = coverageReport(questions, await loadRequiredCategories(client, input.sessionId));
   const contradictions = await client.query<{ a: number; b: number; description: string }>(
     `select qa.ordinal as a, qb.ordinal as b, c.description
        from analysis_contradictions c
@@ -465,6 +492,7 @@ export function createAnalysisActivities(
           output.questions,
           loaded.questions.map((question) => question.text),
         ).kept.slice(0, batchCapacity(asked));
+        const required = await loadRequiredCategories(client, session.id);
         const projected = [
           ...loaded.questions,
           ...kept.map((question) => ({ category: question.category, status: 'open' as const })),
@@ -474,7 +502,7 @@ export function createAnalysisActivities(
           finishRequested: session.finish_requested_at !== null,
           modelSufficient: output.sufficient,
           newQuestionCount: kept.length,
-          coverageGaps: coverageGaps(coverageReport(projected)),
+          coverageGaps: coverageGaps(coverageReport(projected, required)),
         });
         if (decision.action === 'stalled') {
           return {

@@ -59,6 +59,10 @@ export const SETTING_GROUPS = [
   },
   { id: 'ai', keys: ['ai.connection_id', 'ai.model'] },
   {
+    id: 'analysis',
+    keys: ['analysis.require_risk_dimension', 'analysis.require_out_of_scope_dimension'],
+  },
+  {
     id: 'research',
     keys: [
       'research.max_queries',

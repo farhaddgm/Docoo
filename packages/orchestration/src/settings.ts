@@ -19,6 +19,10 @@ export interface Settings {
   researchMaxSources: number;
   /** Audit score floor, 0 to 1, for knowledge the Brain approved (`knowledge.min_audit_score`). */
   knowledgeMinAuditScore: number;
+  /** The analyst must also ask about risks before "enough" (`analysis.require_risk_dimension`). */
+  analysisRequireRisk: boolean;
+  /** ... and about what is out of scope (`analysis.require_out_of_scope_dimension`). */
+  analysisRequireOutOfScope: boolean;
 }
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
@@ -74,5 +78,7 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
       values['knowledge.min_audit_score'],
       RESEARCH_DEFAULTS.minAuditScore,
     ),
+    analysisRequireRisk: values['analysis.require_risk_dimension'] === true,
+    analysisRequireOutOfScope: values['analysis.require_out_of_scope_dimension'] === true,
   };
 }

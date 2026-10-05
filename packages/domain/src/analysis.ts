@@ -42,6 +42,22 @@ export const requiredQuestionCategories: readonly QuestionCategory[] = [
   'success_criteria',
 ];
 
+/**
+ * The eight required dimensions of FR-ANL-004 plus the two an administrator may also require
+ * (`analysis.require_risk_dimension`, `analysis.require_out_of_scope_dimension`). The eight
+ * can never be switched off.
+ */
+export function requiredCategoriesFor(extra: {
+  readonly risk?: boolean | undefined;
+  readonly outOfScope?: boolean | undefined;
+}): readonly QuestionCategory[] {
+  return [
+    ...requiredQuestionCategories,
+    ...(extra.risk === true ? (['risk'] as const) : []),
+    ...(extra.outOfScope === true ? (['out_of_scope'] as const) : []),
+  ];
+}
+
 export function isQuestionCategory(value: unknown): value is QuestionCategory {
   return questionCategories.some((category) => category === value);
 }
@@ -213,6 +229,7 @@ export function coverageLevel(
 /** Coverage of the questions over the dimensions of FR-ANL-004, in a fixed order. */
 export function coverageReport(
   questions: readonly { readonly category: QuestionCategory; readonly status: QuestionStatus }[],
+  required: readonly QuestionCategory[] = requiredQuestionCategories,
 ): CategoryCoverage[] {
   return questionCategories.map((category) => {
     const own = questions.filter((question) => question.category === category);
@@ -228,7 +245,7 @@ export function coverageReport(
     };
     return {
       category,
-      required: requiredQuestionCategories.includes(category),
+      required: required.includes(category),
       ...counts,
       level: coverageLevel(counts),
     };

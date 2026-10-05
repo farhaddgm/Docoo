@@ -23,6 +23,10 @@ const messages = {
         title: 'هوش مصنوعی',
         help: 'اتصال و مدل پیش‌فرض.',
       },
+      analysis: {
+        title: 'پرسش‌وپاسخ تحلیلگر',
+        help: 'هشت بُعد لازم همیشه لازم می‌ماند؛ این‌جا می‌توانید ریسک و خارج از دامنه را هم لازم کنید.',
+      },
       research: {
         title: 'تحقیق و دانش',
         help: 'چه مقدار دانش تأییدشده به مرحلهٔ تحقیق برسد.',
@@ -143,6 +147,10 @@ const messages = {
         help: 'Human approval, attempts per stage and the cost ceiling of a run.',
       },
       ai: { title: 'Artificial intelligence', help: 'The default connection and model.' },
+      analysis: {
+        title: 'Analyst questions',
+        help: 'The eight required dimensions always stay required; here you can also require risks and out of scope.',
+      },
       research: {
         title: 'Research and knowledge',
         help: 'How much approved knowledge reaches the research stage.',
