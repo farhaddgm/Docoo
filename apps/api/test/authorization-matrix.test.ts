@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AgentsController } from '../src/agents/agents.controller.js';
 import { AnalysisController } from '../src/analysis/analysis.controller.js';
 import { AuditController } from '../src/audit/audit.controller.js';
+import { BusinessController } from '../src/business/business.controller.js';
 import {
   permissionMetadataKey,
   ROLE_PERMISSIONS,
@@ -113,6 +114,18 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/model-prices': 'provider.read',
   'POST workspaces/:workspaceId/model-prices': 'provider.configure',
   'GET workspaces/:workspaceId/model-invocations': 'provider.read',
+  'GET workspaces/:workspaceId/integrations/contenter': 'integration.read',
+  'PUT workspaces/:workspaceId/integrations/contenter': 'integration.configure',
+  'POST workspaces/:workspaceId/integrations/contenter/test': 'integration.configure',
+  'DELETE workspaces/:workspaceId/integrations/contenter': 'integration.configure',
+  'GET workspaces/:workspaceId/contenter-businesses': 'business.read',
+  'GET workspaces/:workspaceId/projects/:projectId/business': 'business.read',
+  'PUT workspaces/:workspaceId/projects/:projectId/business': 'business.link',
+  'POST workspaces/:workspaceId/projects/:projectId/business/unlink': 'business.link',
+  'POST workspaces/:workspaceId/projects/:projectId/business/sync': 'business.link',
+  'GET workspaces/:workspaceId/projects/:projectId/business/snapshots': 'business.read',
+  'GET workspaces/:workspaceId/projects/:projectId/business/snapshots/:snapshotId': 'business.read',
+  'GET workspaces/:workspaceId/projects/:projectId/business/context': 'business.read',
   'GET workspaces/:workspaceId/projects/:projectId/usage': 'project.read',
   'GET workspaces/:workspaceId/projects/:projectId/workflow': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/workflow/start': 'project.run',
@@ -222,6 +235,7 @@ const controllers = [
   WorkflowController,
   AgentsController,
   AnalysisController,
+  BusinessController,
   DocumentsController,
   ReportsController,
   SmartController,
