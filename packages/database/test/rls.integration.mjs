@@ -102,6 +102,9 @@ const knowledgeTables = [
   'agent_roles',
   'project_agent_profiles',
   'agent_tool_calls',
+  'contenter_connections',
+  'business_snapshots',
+  'project_businesses',
 ];
 
 async function withContext(workspaceId, actorId, action) {
@@ -988,8 +991,181 @@ try {
   );
   assert.equal(remaining.rows[0].count, 0, 'writings go with their document');
 
+  // Businesses of Contenter (ADR-0021): the connection, append-only snapshots and project links.
+  const sealed = ['c', 'i', 't', 'w', 'wi', 'wt', 'k', 'f'];
+  const connectionSql = `INSERT INTO contenter_connections (workspace_id, api_url, status, secret_version, ciphertext, iv, tag, wrapped_key, wrap_iv, wrap_tag, key_id, fingerprint)
+     VALUES ($1, 'https://contenter.example.test/api', 'healthy', 1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, connectionSql, [
+    ids.workspaceB,
+    ...sealed,
+  ]);
+  await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(connectionSql, [ids.workspaceA, ...sealed]),
+  );
+  const foreignConnections = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM contenter_connections'),
+  );
+  assert.equal(foreignConnections.rows[0].count, 0, 'The Contenter connection must not leak.');
+  // One connection per workspace; a token is whole or absent; the address is a web address.
+  await assert.rejects(admin.query(connectionSql, [ids.workspaceA, ...sealed]), (error) => {
+    assert.equal(error.code, '23505', 'a second connection in one workspace is refused');
+    return true;
+  });
+  for (const [label, sql] of [
+    [
+      'status',
+      `UPDATE contenter_connections SET status = 'fine' WHERE workspace_id = '${ids.workspaceA}'`,
+    ],
+    [
+      'half a token',
+      `UPDATE contenter_connections SET tag = NULL WHERE workspace_id = '${ids.workspaceA}'`,
+    ],
+    [
+      'token without a version',
+      `UPDATE contenter_connections SET secret_version = 0 WHERE workspace_id = '${ids.workspaceA}'`,
+    ],
+    [
+      'address',
+      `UPDATE contenter_connections SET api_url = 'ftp://x' WHERE workspace_id = '${ids.workspaceA}'`,
+    ],
+    [
+      'long error',
+      `UPDATE contenter_connections SET last_error = repeat('x', 301) WHERE workspace_id = '${ids.workspaceA}'`,
+    ],
+  ]) {
+    await assert.rejects(admin.query(sql), (error) => {
+      assert.equal(error.code, '23514', label);
+      return true;
+    });
+  }
+
+  const hash = 'a'.repeat(64);
+  const snapshotSql = `INSERT INTO business_snapshots (workspace_id, external_business_id, version_no, name, content_sha256, content)
+     VALUES ($1, 'biz-1', $2, 'Test business', $3, $4::jsonb) RETURNING id`;
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, snapshotSql, [
+    ids.workspaceB,
+    1,
+    hash,
+    '{}',
+  ]);
+  const snapshot = await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(snapshotSql, [ids.workspaceA, 1, hash, '{}']),
+  );
+  const snapshotId = snapshot.rows[0].id;
+  const foreignSnapshot = await admin.query(snapshotSql, [ids.workspaceB, 1, hash, '{}']);
+  const foreignSnapshots = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT id::text AS id FROM business_snapshots'),
+  );
+  assert.deepEqual(
+    foreignSnapshots.rows.map((row) => row.id),
+    [foreignSnapshot.rows[0].id],
+    'Snapshots must not leak across tenants.',
+  );
+  for (const [label, params, code] of [
+    ['version number repeated', [ids.workspaceA, 1, hash, '{}'], '23505'],
+    ['version number zero', [ids.workspaceA, 0, hash, '{}'], '23514'],
+    ['hash not sha-256', [ids.workspaceA, 2, 'xyz', '{}'], '23514'],
+    ['content not an object', [ids.workspaceA, 2, hash, '[]'], '23514'],
+  ]) {
+    await assert.rejects(admin.query(snapshotSql, params), (error) => {
+      assert.equal(error.code, code, label);
+      return true;
+    });
+  }
+  // A snapshot is a record: nobody changes or deletes it, and the app role has no such grant.
+  for (const sql of [
+    `UPDATE business_snapshots SET name = 'other' WHERE id = '${snapshotId}'`,
+    `DELETE FROM business_snapshots WHERE id = '${snapshotId}'`,
+  ]) {
+    await assert.rejects(admin.query(sql), (error) => {
+      assert.equal(error.code, 'P0001', 'snapshots are append-only');
+      return true;
+    });
+  }
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM business_snapshots');
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    `UPDATE business_snapshots SET name = 'x' WHERE id = '${snapshotId}'`,
+  );
+
+  // The project link: a project of the workspace and a snapshot of the same workspace.
+  const linkSql = `INSERT INTO project_businesses (project_id, workspace_id, external_business_id, name, snapshot_id)
+     VALUES ($1, $2, 'biz-1', 'Test business', $3)`;
+  await assert.rejects(
+    admin.query(linkSql, [ids.projectA, ids.workspaceA, foreignSnapshot.rows[0].id]),
+    (error) => {
+      assert.equal(error.code, '23503', 'a link needs a snapshot of its own workspace');
+      return true;
+    },
+  );
+  await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(linkSql, [ids.projectA, ids.workspaceA, snapshotId]),
+  );
+  const foreignLinks = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM project_businesses'),
+  );
+  assert.equal(foreignLinks.rows[0].count, 0, 'Project links must not leak across tenants.');
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, linkSql, [
+    ids.projectB,
+    ids.workspaceB,
+    foreignSnapshot.rows[0].id,
+  ]);
+  await assert.rejects(
+    admin.query(linkSql, [ids.projectA, ids.workspaceA, snapshotId]),
+    (error) => {
+      assert.equal(error.code, '23505', 'a project belongs to one business');
+      return true;
+    },
+  );
+
+  // What a run, a writing and a call read must be a snapshot of the same workspace.
+  await assert.rejects(
+    admin.query(
+      `INSERT INTO workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id, business_snapshot_id)
+       VALUES ($1, $2, 1, $3, $4)`,
+      [
+        ids.workspaceA,
+        ids.projectA,
+        `business-test-run-foreign-${ids.workspaceA}`,
+        foreignSnapshot.rows[0].id,
+      ],
+    ),
+    (error) => {
+      assert.equal(error.code, '23503', 'a run pins a snapshot of its own workspace');
+      return true;
+    },
+  );
+  const pinned = await admin.query(
+    `INSERT INTO workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id, business_snapshot_id)
+     VALUES ($1, $2, 1, $3, $4) RETURNING id`,
+    [ids.workspaceA, ids.projectA, `business-test-run-${ids.workspaceA}`, snapshotId],
+  );
+  assert.equal(pinned.rowCount, 1);
+  await assert.rejects(
+    admin.query(
+      `INSERT INTO model_invocations (workspace_id, provider, model, purpose, status, business_snapshot_id)
+       VALUES ($1, 'fake', 'm', 'stage:analysis', 'succeeded', $2)`,
+      [ids.workspaceA, foreignSnapshot.rows[0].id],
+    ),
+    (error) => {
+      assert.equal(error.code, '23503', 'a call records a snapshot of its own workspace');
+      return true;
+    },
+  );
+  // Removing the project (a purge) removes its link; the snapshots stay as records.
+  await admin.query('DELETE FROM workflow_runs WHERE id = $1', [pinned.rows[0].id]);
+  await admin.query('DELETE FROM project_businesses WHERE project_id = $1', [ids.projectA]);
+  const keptSnapshots = await admin.query(
+    'SELECT count(*)::int AS count FROM business_snapshots WHERE id = $1',
+    [snapshotId],
+  );
+  assert.equal(keptSnapshots.rows[0].count, 1, 'snapshots outlive links');
+  await admin.query(`DELETE FROM contenter_connections WHERE workspace_id = $1`, [ids.workspaceA]);
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent and tool-call tables, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent, tool-call and Contenter business tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {
