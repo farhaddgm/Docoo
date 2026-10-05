@@ -20,6 +20,7 @@ export interface ProjectSummary {
   updatedAt: string;
   topics: { topicId: string; title: string; priority: number }[];
   owner: { id: string; displayName: string } | null;
+  business?: { externalBusinessId: string; name: string } | null;
   waiting: { kind: string; stage: string | null } | null;
 }
 
@@ -237,6 +238,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                   <th scope="col">{text.code}</th>
                   <th scope="col">{text.projectTitle}</th>
                   <th scope="col">{text.topics}</th>
+                  <th scope="col">{text.business}</th>
                   <th scope="col">{text.status}</th>
                   <th scope="col">{text.stage}</th>
                   <th scope="col">{text.waiting}</th>
@@ -259,6 +261,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                         ? '—'
                         : project.topics.map((topic) => topic.title).join('، ')}
                     </td>
+                    <td dir="auto">{project.business?.name ?? '—'}</td>
                     <td>
                       <span className={`badge state-${project.status}`}>
                         {text.statuses[project.status] ?? project.status}

@@ -15,6 +15,7 @@ import {
   sameContent,
 } from './document-editor-model';
 import { editorMessages, fill } from './editor-messages';
+import { TermIssues, type TermIssueView } from './term-issues';
 
 interface Check {
   valid: boolean;
@@ -27,6 +28,7 @@ interface Check {
     deviation: number;
   };
   references?: { id: string; text: string; cited: boolean }[];
+  termIssues?: TermIssueView[];
 }
 
 /**
@@ -211,6 +213,7 @@ export function DocumentEditor({
                 </ul>
               </div>
             )}
+            <TermIssues locale={locale} issues={check?.termIssues} />
             {check?.references && check.references.length > 0 && (
               <>
                 <h4>{text.referencesUsed}</h4>

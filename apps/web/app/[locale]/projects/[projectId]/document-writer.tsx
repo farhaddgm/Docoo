@@ -6,6 +6,7 @@ import { apiGet, apiSend } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { explainError, Notice, useAction } from '../../use-action';
 import { editorMessages, fill } from './editor-messages';
+import { TermIssues, type TermIssueView } from './term-issues';
 
 interface WritingSummary {
   id: string;
@@ -48,6 +49,7 @@ interface WritingDetail extends WritingSummary {
     references: number;
     discardedBlocks: number;
     notes: string[];
+    termIssues?: TermIssueView[];
   } | null;
   cost: { usd: number | null; modelCalls: number };
 }
@@ -460,6 +462,7 @@ export function DocumentWriter({
                   </ul>
                 </>
               )}
+              <TermIssues locale={locale} issues={latest.report.termIssues} level="h5" />
               {latest.report.notes.length > 0 && (
                 <>
                   <h5>{text.reportNotes}</h5>

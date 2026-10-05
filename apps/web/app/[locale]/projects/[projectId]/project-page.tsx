@@ -16,6 +16,7 @@ import { healthMessages } from './health-messages';
 import { HealthBadge, HealthReasons, MilestoneCard } from './health-view';
 import { projectHealth, projectMilestone, type WorkflowFacts } from './project-health';
 import { AgentsPanel } from './agents-panel';
+import { BusinessPanel } from './business-panel';
 import { DocumentsPanel } from './documents-panel';
 import { KnowledgePanel } from './knowledge-panel';
 import { OverviewPanel } from './overview-panel';
@@ -28,6 +29,7 @@ import { ProjectSettingsPanel } from './settings-panel';
 
 const tabs = [
   'overview',
+  'business',
   'problem',
   'workflow',
   'solutions',
@@ -168,6 +170,18 @@ function ProjectView({
             </dd>
           </div>
           <div>
+            <dt>{text.business}</dt>
+            <dd dir="auto">
+              {project.business ? (
+                <button type="button" className="link-button" onClick={() => choose('business')}>
+                  {project.business.name}
+                </button>
+              ) : (
+                text.noBusiness
+              )}
+            </dd>
+          </div>
+          <div>
             <dt>{text.stage}</dt>
             <dd>{text.stages[project.currentStage] ?? project.currentStage}</dd>
           </div>
@@ -248,6 +262,16 @@ function ProjectView({
             setProject(next);
             setRefreshKey((key) => key + 1);
           }}
+        />
+      )}
+      {tab === 'business' && (
+        <BusinessPanel
+          locale={locale}
+          workspaceId={workspaceId}
+          projectId={projectId}
+          readOnly={project.status === 'archived' || project.status === 'deleted'}
+          refreshKey={refreshKey}
+          onChanged={reload}
         />
       )}
       {tab === 'problem' && (

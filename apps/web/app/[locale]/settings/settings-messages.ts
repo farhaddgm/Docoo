@@ -36,6 +36,10 @@ const messages = {
         title: 'اسناد',
         help: 'سطح طول و قالب پیش‌فرض اسناد خروجی.',
       },
+      business: {
+        title: 'کسب‌وکار (Contenter)',
+        help: 'وصل بودن پروژه به کسب‌وکار، همگام‌سازی پیش از اجرا و سقف حجم اطلاعاتی که به هر ایجنت می‌رسد.',
+      },
       ingestion: {
         title: 'منبع‌ها و فایل‌ها',
         help: 'حداکثر حجم فایل و سیاست خواندن نشانی‌های وب.',
@@ -159,6 +163,10 @@ const messages = {
       documents: {
         title: 'Documents',
         help: 'The default length level and template of output documents.',
+      },
+      business: {
+        title: 'Business (Contenter)',
+        help: 'Whether a project must be linked to a business, syncing before a run, and how much business information each agent gets.',
       },
       ingestion: {
         title: 'Sources and files',

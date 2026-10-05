@@ -19,6 +19,9 @@ import {
   type Effective,
 } from '../../settings/settings-model';
 import { explainError, Notice, useAction } from '../../use-action';
+import { BusinessPicker } from '../business-picker';
+import { businessMessages } from '../business-messages';
+import type { ContenterBusinessItem } from '../business-types';
 import { explainProject } from '../explain';
 import { projectMessages } from '../messages';
 import {
@@ -62,6 +65,8 @@ interface Draft {
   model: string;
   /** The criteria the administrator changed; null keeps the defaults. */
   criteria?: Criterion[] | null;
+  /** The business of Contenter the project is linked to (ADR-0021). */
+  business?: ContenterBusinessItem | null;
 }
 
 const draftKey = (workspaceId: string) => `docoo:new-project:${workspaceId}`;
@@ -102,14 +107,15 @@ export function ProjectWizard({
   const text = wizardMessages(locale);
   const project = projectMessages(locale);
   const settings = settingsMessages(locale);
+  const businessText = businessMessages(locale);
   const id = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const explain = useCallback(
     (error: unknown) =>
       error instanceof ApiError && error.code?.startsWith('CONFIG_')
         ? explainError(error, settings.errors, settings.genericError)
-        : explainProject(error, project),
-    [project, settings],
+        : explainProject(error, project, businessText.errors),
+    [project, settings, businessText],
   );
   const action = useAction(explain);
 
@@ -119,6 +125,7 @@ export function ProjectWizard({
   const [connectionId, setConnectionId] = useState('');
   const [model, setModel] = useState('');
   const [criteria, setCriteria] = useState<Criterion[] | null>(null);
+  const [business, setBusiness] = useState<ContenterBusinessItem | null>(null);
   const [defaultCriteria, setDefaultCriteria] = useState<Criterion[] | null>(null);
   const [restored, setRestored] = useState(false);
   const [ready, setReady] = useState(false);
@@ -138,6 +145,7 @@ export function ProjectWizard({
       setConnectionId(draft.connectionId ?? '');
       setModel(draft.model ?? '');
       setCriteria(draft.criteria ?? null);
+      setBusiness(draft.business ?? null);
       setRestored(true);
     }
     setReady(true);
@@ -145,8 +153,8 @@ export function ProjectWizard({
 
   useEffect(() => {
     if (!ready) return;
-    writeDraft(workspaceId, { step, values, touched, connectionId, model, criteria });
-  }, [ready, workspaceId, step, values, touched, connectionId, model, criteria]);
+    writeDraft(workspaceId, { step, values, touched, connectionId, model, criteria, business });
+  }, [ready, workspaceId, step, values, touched, connectionId, model, criteria, business]);
 
   useEffect(() => {
     apiGet<{ items: Definition[] }>(`${base}/settings/definitions`)
@@ -244,8 +252,12 @@ export function ProjectWizard({
       ? criteria
       : null;
   const criteriaProblem = customCriteria ? criteriaIssue(customCriteria) : null;
+  // The workspace or a topic can require every project to belong to a business.
+  const businessRequired = baseline?.values['business.required'] === true;
+  const businessProblem = businessRequired && business === null;
   const stepProblem = (() => {
     if (step === 0 && !basicsOk) return text.needBasics;
+    if (step === 0 && businessProblem) return businessText.picker.needed;
     if (step === SOLUTIONS_STEP && criteriaProblem !== null)
       return criteriaProblem === 'none_enabled'
         ? text.criteriaNoneEnabled
@@ -273,6 +285,7 @@ export function ProjectWizard({
               : {}),
           })),
           settings: choices.overrides,
+          ...(business ? { businessId: business.id } : {}),
           ...(customCriteria
             ? {
                 solutionCriteria: customCriteria.map((item) => ({
@@ -295,6 +308,7 @@ export function ProjectWizard({
     setConnectionId('');
     setModel('');
     setCriteria(null);
+    setBusiness(null);
     setStep(0);
     setRestored(false);
   }
@@ -340,6 +354,15 @@ export function ProjectWizard({
         <p className="muted">{text.stepHelp[step]}</p>
 
         {step === 0 && <BasicsFields locale={locale} values={values} onChange={setValues} />}
+        {step === 0 && (
+          <BusinessPicker
+            locale={locale}
+            workspaceId={workspaceId}
+            value={business}
+            onChange={setBusiness}
+            required={businessRequired}
+          />
+        )}
         {step === 1 && (
           <TopicsSection
             locale={locale}
@@ -429,6 +452,7 @@ export function ProjectWizard({
             overrides={choices.overrides.length}
             values={values}
             connectionId={connectionId}
+            business={business}
             criteriaCount={
               customCriteria ? customCriteria.filter((item) => item.enabled).length : null
             }
@@ -464,7 +488,11 @@ export function ProjectWizard({
             type="button"
             className="primary-button"
             disabled={
-              !basicsOk || choices.problem !== null || criteriaProblem !== null || action.busy
+              !basicsOk ||
+              businessProblem ||
+              choices.problem !== null ||
+              criteriaProblem !== null ||
+              action.busy
             }
             onClick={submit}
           >
@@ -484,6 +512,7 @@ function Review({
   overrides,
   values,
   connectionId,
+  business,
   criteriaCount,
 }: {
   locale: Locale;
@@ -493,9 +522,11 @@ function Review({
   overrides: number;
   values: ProjectValues;
   connectionId: string;
+  business: ContenterBusinessItem | null;
   criteriaCount: number | null;
 }) {
   const text = wizardMessages(locale);
+  const businessText = businessMessages(locale);
   const settings = settingsMessages(locale);
   const project = projectMessages(locale);
   if (failed) {
@@ -531,6 +562,10 @@ function Review({
         <div>
           <dt>{project.topicsSection}</dt>
           <dd>{formatNumber(locale, values.topics.length)}</dd>
+        </div>
+        <div>
+          <dt>{businessText.picker.title}</dt>
+          <dd dir="auto">{business ? business.name : businessText.picker.noneSelected}</dd>
         </div>
         {!connectionId && (
           <div>

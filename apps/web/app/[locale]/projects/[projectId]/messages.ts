@@ -9,6 +9,7 @@ const messages = {
     sections: 'بخش‌های پروژه',
     tabs: {
       overview: 'نمای کلی',
+      business: 'کسب‌وکار',
       problem: 'مسئله',
       workflow: 'گردش‌کار',
       solutions: 'راه‌حل‌ها',
@@ -19,6 +20,8 @@ const messages = {
       timeline: 'تاریخچه',
     },
     status: 'وضعیت',
+    business: 'کسب‌وکار',
+    noBusiness: 'وصل نشده',
     stage: 'مرحلهٔ جاری',
     nextAction: 'قدم بعدی',
     language: 'زبان خروجی',
@@ -113,6 +116,7 @@ const messages = {
     sections: 'Project sections',
     tabs: {
       overview: 'Overview',
+      business: 'Business',
       problem: 'Problem',
       workflow: 'Workflow',
       solutions: 'Solutions',
@@ -123,6 +127,8 @@ const messages = {
       timeline: 'Timeline',
     },
     status: 'Status',
+    business: 'Business',
+    noBusiness: 'Not linked',
     stage: 'Current stage',
     nextAction: 'Next step',
     language: 'Output language',

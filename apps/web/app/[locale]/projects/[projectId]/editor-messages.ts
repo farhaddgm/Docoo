@@ -192,6 +192,13 @@ const messages = {
     reportBlocks: 'بلوک ردشده',
     reportCost: 'هزینهٔ برآوردی (دلار)',
     reportNotes: 'نکته‌ها',
+    termTitle: 'اصطلاحات برند',
+    termHelp: 'با فهرست اصطلاحات کسب‌وکار در Contenter مقایسه شده است.',
+    termAvoidBadge: 'ممنوع',
+    termUseBadge: 'شکل نادرست',
+    termAvoid: '«{found}» نباید نوشته شود ({n} بار).',
+    termUse: 'به‌جای «{found}» باید «{term}» نوشته شود ({n} بار).',
+    termReplaceWith: 'جایگزین',
     reportNoteTexts: {
       knowledge_retrieve_denied: 'مستندساز اجازهٔ بازیابی دانش ندارد؛ بدون دانش و بدون ارجاع نوشت.',
       knowledge_off: 'دانش برای نگارش خاموش است؛ بدون ارجاع نوشته شد.',
@@ -421,6 +428,13 @@ const messages = {
     reportBlocks: 'Blocks discarded',
     reportCost: 'Estimated cost (USD)',
     reportNotes: 'Notes',
+    termTitle: 'Brand terminology',
+    termHelp: 'Compared with the terminology of the business in Contenter.',
+    termAvoidBadge: 'Avoid',
+    termUseBadge: 'Wrong form',
+    termAvoid: '“{found}” must not be written ({n} times).',
+    termUse: 'Write “{term}” instead of “{found}” ({n} times).',
+    termReplaceWith: 'Instead',
     reportNoteTexts: {
       knowledge_retrieve_denied:
         'The documenter may not retrieve knowledge; it wrote without knowledge and without citations.',
