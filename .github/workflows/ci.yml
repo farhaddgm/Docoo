@@ -122,6 +122,8 @@ jobs:
           WEB_ORIGIN: http://localhost:3000
           # The whole suite comes from one address; the production limit (120/min) would ban it.
           API_RATE_LIMIT_PER_MINUTE: '5000'
+          # ... and signs in more than the 10 a minute that production allows, depending on how fast it runs.
+          AUTH_RATE_LIMIT_PER_MINUTE: '1000'
           # Sources are scanned by the ingestion worker the end-to-end run starts.
           CLAMD_HOST: localhost
           TEMPORAL_ADDRESS: localhost:7233

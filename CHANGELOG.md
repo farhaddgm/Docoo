@@ -2,6 +2,19 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.17.2] — 2026-10-05
+
+A fix for the Knowledge page and the green CI that 0.17.1 was tagged without.
+
+### Changed
+
+- **`AUTH_RATE_LIMIT_PER_MINUTE`** (default 10, minimum 3): the per-IP ceiling for sign-in and password reset, which was fixed at 10 a minute. Production and the security test keep the default; only the browser test run raises it, because that suite signs in more often than ten times a minute when it runs fast and then failed with "too many attempts" at random.
+
+### Fixed
+
+- The browser tests set `reducedMotion`, which the stylesheet already honours: the redesign added colour transitions, and the accessibility check could read a colour half-way through one (a random `color-contrast` failure on the English Knowledge page).
+- **Resolving a knowledge conflict:** the confirmation ("conflict resolved") was shown inside the conflict's card, and the card leaves the open list the moment it is resolved, so the message vanished almost at once. It now stays at the top of the panel until you switch between open and resolved. The browser test that checks it had started failing on `main` after the 0.17.1 redesign because of that timing; with the confirmation kept in the panel it no longer depends on it.
+
 ## [0.17.1] — 2026-10-05
 
 A modernised backoffice interface with a light and a dark theme.

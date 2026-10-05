@@ -23,6 +23,8 @@ export default defineConfig({
   use: {
     baseURL: webUrl,
     trace: 'retain-on-failure',
+    // The stylesheet honours this and drops its transitions; axe reads colours mid-fade otherwise.
+    reducedMotion: 'reduce',
   },
   projects: [
     {

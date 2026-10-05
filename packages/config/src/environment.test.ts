@@ -15,6 +15,17 @@ describe('environment configuration', () => {
     expect(config.PASSWORD_ARGON2_PARALLELISM).toBe(1);
   });
 
+  it('keeps sign-in at ten a minute unless a test run asks for more, and never below three', () => {
+    const base = { SESSION_PEPPER: 'a-development-only-pepper-with-32-characters' };
+    expect(parseEnvironment(base).AUTH_RATE_LIMIT_PER_MINUTE).toBe(10);
+    expect(
+      parseEnvironment({ ...base, AUTH_RATE_LIMIT_PER_MINUTE: '1000' }).AUTH_RATE_LIMIT_PER_MINUTE,
+    ).toBe(1000);
+    expect(() => parseEnvironment({ ...base, AUTH_RATE_LIMIT_PER_MINUTE: '2' })).toThrow(
+      'Invalid environment configuration',
+    );
+  });
+
   it('rejects a short session pepper', () => {
     expect(() => parseEnvironment({ SESSION_PEPPER: 'short' })).toThrow(
       'Invalid environment configuration',

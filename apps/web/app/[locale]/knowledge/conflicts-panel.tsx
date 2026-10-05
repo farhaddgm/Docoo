@@ -65,7 +65,7 @@ export function ConflictCard({
           resolution: resolution.trim(),
         },
       );
-    }, text.resolved);
+    }, '');
     if (done) onResolved();
   }
 
@@ -137,6 +137,8 @@ export function ConflictsPanel({ locale, workspaceId }: { locale: Locale; worksp
   const [status, setStatus] = useState<'open' | 'resolved'>('open');
   const [items, setItems] = useState<Conflict[] | null>(null);
   const [failed, setFailed] = useState(false);
+  // The confirmation lives here, not in the card: the card leaves the open list at once.
+  const [justResolved, setJustResolved] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -166,12 +168,20 @@ export function ConflictsPanel({ locale, workspaceId }: { locale: Locale; worksp
             type="button"
             className="secondary-button"
             aria-pressed={status === item}
-            onClick={() => setStatus(item)}
+            onClick={() => {
+              setStatus(item);
+              setJustResolved(false);
+            }}
           >
             {item === 'open' ? text.conflictOpen : text.conflictResolved}
           </button>
         ))}
       </div>
+      {justResolved && (
+        <p className="notice ok" role="status">
+          {text.resolved}
+        </p>
+      )}
       {failed && (
         <p className="notice error" role="alert">
           {text.failed}
@@ -191,7 +201,10 @@ export function ConflictsPanel({ locale, workspaceId }: { locale: Locale; worksp
               locale={locale}
               workspaceId={workspaceId}
               conflict={conflict}
-              onResolved={() => void load()}
+              onResolved={() => {
+                setJustResolved(true);
+                void load();
+              }}
             />
           ))}
         </ul>
