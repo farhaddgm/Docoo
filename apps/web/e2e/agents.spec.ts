@@ -125,7 +125,9 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
 
     // Roll back: activating the earlier version, which stays in the history unchanged.
     await history.getByLabel(text.activateReason).fill('بازگشت به نسخهٔ قبلی');
-    await history.getByRole('button', { name: `${text.restore}: ${versionLabel(before)}` }).click();
+    await history
+      .getByRole('button', { name: `${text.restore}: ${versionLabel(before)}`, exact: true })
+      .click();
     await expect(headerBadge).toContainText(versionLabel(before));
     await expect(
       history.locator('.version-row').filter({ hasText: versionLabel(after) }),
