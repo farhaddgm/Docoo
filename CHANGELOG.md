@@ -2,6 +2,29 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [Unreleased]
+
+A modernised backoffice interface with a light and a dark theme.
+
+### Added
+
+- **Light and dark theme** with a three-way switch (system, light, dark) in the page header, also on the sign-in page. The choice is kept in the browser and applied before the first paint, so a stored theme never flashes the other one; without a choice the interface follows the system. All colours are `light-dark()` tokens in one place (`app/globals.css`).
+- **Vazirmatn** is now actually loaded (self-hosted through `@fontsource-variable/vazirmatn`, Persian and Latin subsets); the stylesheet named it before but nothing provided it, so pages fell back to a system font.
+- **Collapsible navigation on narrow screens:** a sticky top bar with a menu button instead of a full-height list of links above every page.
+
+### Changed
+
+- Refreshed look: cooler neutral surfaces, softer borders and shadows, stat tiles on the dashboard, one shared style for every input, select and textarea, clearer links, tabs and badges.
+
+### Fixed
+
+- The language switch on signed-out pages sat inside the narrow centred column instead of the page corner.
+- The project wizard's step list was stacked vertically, and upcoming steps were drawn in the warning colour; it now wraps horizontally, with the current step highlighted.
+- Dollar amounts on the dashboard are isolated from the surrounding right-to-left text, so `($4.20 / $5.00)` no longer renders scrambled.
+- Provider health shows a localised label instead of the raw status (`healthy`, `degraded`) on the dashboard and the providers page.
+- The workspace list in the signed-in bar used the Persian comma in the English interface.
+- Disabled buttons showed a "wait" cursor even when nothing was loading.
+
 ## [0.17.0] — 2026-10-05
 
 The documenter writes the whole document and a structured block editor changes it ([ADR-0019](docs/adr/0019-document-writing-and-structured-editor.md)), plus the leftovers of the earlier roadmap steps.

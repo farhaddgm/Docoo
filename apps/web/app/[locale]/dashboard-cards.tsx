@@ -49,12 +49,17 @@ interface Dashboard {
   } | null;
 }
 
-function money(locale: Locale, value: number): string {
-  return new Intl.NumberFormat(locale === 'fa' ? 'fa-IR' : 'en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 4,
-  }).format(value);
+/** Isolated so a dollar amount keeps its own direction inside right-to-left text. */
+function money(locale: Locale, value: number) {
+  return (
+    <bdi>
+      {new Intl.NumberFormat(locale === 'fa' ? 'fa-IR' : 'en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 4,
+      }).format(value)}
+    </bdi>
+  );
 }
 
 /** Live dashboard cards (REP-001, docs/01-product/05-backoffice-ux.md §3). */
@@ -149,7 +154,10 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
           <ul className="plain-list">
             {data.providers.items.map((item) => (
               <li key={item.id}>
-                {item.name} <span className={`badge state-${item.status}`}>{item.status}</span>
+                {item.name}{' '}
+                <span className={`badge state-${item.status}`}>
+                  {text.providerStatuses[item.status] ?? item.status}
+                </span>
               </li>
             ))}
           </ul>

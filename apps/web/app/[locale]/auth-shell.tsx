@@ -197,7 +197,9 @@ export function AuthShell({ locale }: { locale: Locale }) {
                 ·
               </span>
               {content.workspaces} ({formatNumber(locale, view.identity.workspaces.length)}):{' '}
-              {view.identity.workspaces.map((item) => item.name).join('، ')}
+              {view.identity.workspaces
+                .map((item) => item.name)
+                .join(locale === 'fa' ? '، ' : ', ')}
             </p>
             <button
               className="secondary-button"

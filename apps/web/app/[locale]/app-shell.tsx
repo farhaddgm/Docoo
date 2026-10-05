@@ -3,7 +3,7 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import {
   direction,
@@ -14,6 +14,7 @@ import {
   type NavigationKey,
 } from '../i18n';
 import { SmartRoot, SmartToggle } from '../smart/smart-root';
+import { ThemeToggle } from '../theme-toggle';
 
 /** Pages that exist; the others stay visible but disabled until their slice ships. */
 const implemented: Partial<Record<NavigationKey, string>> = {
@@ -96,6 +97,9 @@ export function AppShell({
   const content = messagesFor(locale);
   const alternate: Locale = locale === 'fa' ? 'en' : 'fa';
   const pathname = usePathname() || `/${locale}`;
+  // Narrow screens fold the navigation behind a button; it closes again on every page change.
+  const [menu, setMenu] = useState({ open: false, path: pathname });
+  const menuOpen = menu.open && menu.path === pathname;
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -108,24 +112,48 @@ export function AppShell({
         {content.skipToContent}
       </a>
       <div className={showNavigation ? 'shell' : 'shell shell-guest'}>
-        <aside className="sidebar">
-          <p className="brand">
-            <span className="brand-mark" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+        <aside className={menuOpen ? 'sidebar sidebar-open' : 'sidebar'}>
+          <div className="sidebar-head">
+            <p className="brand">
+              <span className="brand-mark" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6" />
+                </svg>
+              </span>
+              Docoo
+            </p>
+            {showNavigation && (
+              <button
+                type="button"
+                className="menu-button"
+                aria-expanded={menuOpen}
+                aria-controls="primary-navigation"
+                onClick={() => setMenu({ open: !menuOpen, path: pathname })}
               >
-                <path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6" />
-              </svg>
-            </span>
-            Docoo
-          </p>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d={menuOpen ? 'M6 6l12 12M18 6L6 18' : 'M4 7h16M4 12h16M4 17h16'} />
+                </svg>
+                {content.menu}
+              </button>
+            )}
+          </div>
           {showNavigation && (
-            <nav aria-label={content.navigation}>
+            <nav id="primary-navigation" aria-label={content.navigation}>
               <ul className="nav-list">
                 {navigation.map((key) => {
                   const route = implemented[key];
@@ -177,6 +205,7 @@ export function AppShell({
               {showNavigation && workspaceId && (
                 <SmartToggle locale={locale} workspaceId={workspaceId} />
               )}
+              <ThemeToggle locale={locale} />
               <a
                 className="locale-link"
                 href={localizedPath(pathname, alternate)}
