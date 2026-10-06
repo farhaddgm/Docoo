@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import type { Locale } from '../../../i18n';
 import { WorkspacePage } from '../../workspace-page';
+import { useSessionIdentity } from '../../signed-in';
 import { projectMessages } from '../messages';
 import { ProjectWizard } from './project-wizard';
 
@@ -22,6 +23,15 @@ export function NewProjectPage({ locale }: { locale: Locale }) {
 function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
   const text = projectMessages(locale);
   const router = useRouter();
+  const identity = useSessionIdentity();
+  if (identity?.user.role === 'viewer')
+    return (
+      <p role="alert">
+        {locale === 'fa'
+          ? 'نقش مشاهده‌گر اجازهٔ ساخت پروژه ندارد.'
+          : 'Viewers cannot create projects.'}
+      </p>
+    );
 
   return (
     <div className="stack">

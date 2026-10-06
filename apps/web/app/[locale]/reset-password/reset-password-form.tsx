@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { errorMessage, messagesFor, problemCode, type Locale } from '../../i18n';
 import { AppShell } from '../app-shell';
 
-const minimumLength = 12;
+const minimumLength = 8;
 
 /** Reads the single-use token from the URL fragment, which never reaches server logs. */
 function tokenFromFragment(): string {
@@ -90,6 +90,7 @@ export function ResetPasswordForm({ locale }: { locale: Locale }) {
               dir="ltr"
               autoComplete="new-password"
               minLength={minimumLength}
+              maxLength={128}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               aria-describedby={error ? 'reset-error' : undefined}
@@ -102,6 +103,7 @@ export function ResetPasswordForm({ locale }: { locale: Locale }) {
               dir="ltr"
               autoComplete="new-password"
               minLength={minimumLength}
+              maxLength={128}
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
               aria-describedby={error ? 'reset-error' : undefined}

@@ -15,3 +15,6 @@ playwright-report
 deploy/.env
 deploy/.env.production
 deploy/.admin
+
+# API-only Google credentials and private deployment backups
+deploy/.env*

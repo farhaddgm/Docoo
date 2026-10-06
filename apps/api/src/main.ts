@@ -24,6 +24,13 @@ const adapter = new FastifyAdapter({
   trustProxy: (_address: string, hop: number) => hop < config.TRUST_PROXY_HOPS,
   logger: {
     level: config.LOG_LEVEL,
+    serializers: {
+      req: (request: { method: string; url: string; id: string }) => ({
+        method: request.method,
+        url: request.url.split('?')[0] ?? '/',
+        id: request.id,
+      }),
+    },
     redact: {
       paths: [
         'req.headers.authorization',
@@ -59,10 +66,15 @@ app
       : [routeOptions.method];
     const sensitiveAuthRoute = [
       '/auth/login',
+      '/auth/google',
+      '/auth/google/callback',
       '/auth/password/reset-request',
       '/auth/password/reset',
     ].some((suffix) => routeOptions.url.endsWith(suffix));
-    if (sensitiveAuthRoute && methods.includes('POST')) {
+    if (
+      sensitiveAuthRoute &&
+      (methods.includes('POST') || routeOptions.url.includes('/auth/google'))
+    ) {
       routeOptions.config = {
         ...routeOptions.config,
         rateLimit: { max: config.AUTH_RATE_LIMIT_PER_MINUTE, timeWindow: '1 minute' },

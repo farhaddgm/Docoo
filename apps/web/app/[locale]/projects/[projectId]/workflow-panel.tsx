@@ -233,6 +233,7 @@ export function WorkflowPanel({
             </button>
             {live && (
               <button
+                data-write-action
                 className="secondary-button"
                 type="button"
                 disabled={busy}
@@ -243,6 +244,7 @@ export function WorkflowPanel({
             )}
             {live && (
               <button
+                data-write-action
                 className="secondary-button danger"
                 type="button"
                 disabled={busy}
@@ -254,6 +256,7 @@ export function WorkflowPanel({
             )}
             {!live && projectStatus === 'active' && (
               <button
+                data-write-action
                 className="primary-button"
                 type="button"
                 disabled={busy}
@@ -285,7 +288,7 @@ export function WorkflowPanel({
         )}
         {live && <p className="muted">{text.syncHelp}</p>}
         {cancelling && (
-          <form className="filter-form" onSubmit={cancelRun}>
+          <form data-write-action className="filter-form" onSubmit={cancelRun}>
             <p className="muted">{text.cancelHelp}</p>
             <div className="filter-grid">
               <label htmlFor="cancel-reason">{text.cancelReason}</label>
@@ -304,6 +307,7 @@ export function WorkflowPanel({
                 {busy ? text.working : text.cancelConfirm}
               </button>
               <button
+                data-write-action
                 className="secondary-button"
                 type="button"
                 disabled={busy}
@@ -560,7 +564,7 @@ function ReviewPanel({
           </details>
 
           {editing ? (
-            <form className="stack" onSubmit={saveEdit} aria-busy={busy}>
+            <form data-write-action className="stack" onSubmit={saveEdit} aria-busy={busy}>
               <p className="muted">{text.editHelp}</p>
               <div className="field-stack">
                 <label htmlFor={`edit-content-${stage.stage}`}>{text.editContent}</label>
@@ -595,6 +599,7 @@ function ReviewPanel({
                   {busy ? text.working : text.editSave}
                 </button>
                 <button
+                  data-write-action
                   className="secondary-button"
                   type="button"
                   disabled={busy}
@@ -623,6 +628,7 @@ function ReviewPanel({
               </div>
               <div className="toolbar">
                 <button
+                  data-write-action
                   className="primary-button"
                   type="button"
                   disabled={busy}
@@ -631,6 +637,7 @@ function ReviewPanel({
                   {text.approve}
                 </button>
                 <button
+                  data-write-action
                   className="secondary-button danger"
                   type="button"
                   disabled={busy || comment.trim().length < 3}
@@ -639,6 +646,7 @@ function ReviewPanel({
                   {text.reject}
                 </button>
                 <button
+                  data-write-action
                   className="secondary-button"
                   type="button"
                   disabled={busy || comment.trim().length < 3}
@@ -714,6 +722,7 @@ function AttemptDecision({
 
   return (
     <form
+      data-write-action
       className="card filter-form"
       onSubmit={submit}
       aria-labelledby={`decision-title-${stage.stage}`}

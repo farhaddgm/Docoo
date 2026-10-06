@@ -255,7 +255,7 @@ export function DocumentEditor({
             )}
           </nav>
 
-          <form className="card filter-form" onSubmit={save} aria-busy={busy}>
+          <form data-write-action className="card filter-form" onSubmit={save} aria-busy={busy}>
             <div className="field-stack">
               <label htmlFor="editor-reason">{text.reasonLabel}</label>
               <input

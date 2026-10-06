@@ -1,4 +1,5 @@
 'use client';
+import { useReadOnlyAccess } from '../resource-access';
 
 import type { Route } from 'next';
 import Link from 'next/link';
@@ -214,7 +215,10 @@ function SettingRow({
     setReason('');
   }, [valueKey]);
 
-  const readOnly = EDITED_ELSEWHERE.has(definition.key) || PROVIDER_PAGE.has(definition.key);
+  const readOnly =
+    useReadOnlyAccess() ||
+    EDITED_ELSEWHERE.has(definition.key) ||
+    PROVIDER_PAGE.has(definition.key);
   const parsed = parseControlText(definition.valueSchema, draft);
   const changed = parsed.ok && !sameValue(parsed.value, value);
   const canSave = parsed.ok && changed && reason.trim() !== '';
@@ -529,7 +533,7 @@ function History({
 }
 
 /** The project's own model: connection and model saved together, or both cleared. */
-export function ProjectModelSection({
+export function EditableProjectModelSection({
   locale,
   workspaceId,
   projectId,
@@ -629,4 +633,9 @@ export function ProjectModelSection({
       </div>
     </section>
   );
+}
+
+export function ProjectModelSection(props: Parameters<typeof EditableProjectModelSection>[0]) {
+  const readOnly = useReadOnlyAccess();
+  return readOnly ? null : <EditableProjectModelSection {...props} />;
 }

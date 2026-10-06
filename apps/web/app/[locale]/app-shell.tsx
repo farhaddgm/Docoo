@@ -14,6 +14,7 @@ import {
   type NavigationKey,
 } from '../i18n';
 import { SmartRoot, SmartToggle } from '../smart/smart-root';
+import type { SessionIdentity } from './signed-in';
 import { ThemeToggle } from '../theme-toggle';
 
 /** Pages that exist; the others stay visible but disabled until their slice ships. */
@@ -75,6 +76,7 @@ function NavIcon({ name }: { name: NavigationKey }) {
 }
 
 interface AppShellProps {
+  readonly identity?: SessionIdentity | undefined;
   readonly locale: Locale;
   readonly title: string;
   readonly subtitle?: string;
@@ -90,6 +92,7 @@ interface AppShellProps {
  * that keeps the current page and session (FR-LOC-001..002, NFR-UX-003..004).
  */
 export function AppShell({
+  identity,
   locale,
   title,
   subtitle,
@@ -158,40 +161,61 @@ export function AppShell({
           {showNavigation && (
             <nav id="primary-navigation" aria-label={content.navigation}>
               <ul className="nav-list">
-                {navigation.map((key) => {
-                  const route = implemented[key];
-                  if (route === undefined) {
+                {navigation
+                  .filter(
+                    (key) =>
+                      !identity ||
+                      identity.user.role === 'super_admin' ||
+                      ['dashboard', 'projects', 'topics', 'knowledge', 'templates'].includes(key),
+                  )
+                  .map((key) => {
+                    const route = implemented[key];
+                    if (route === undefined) {
+                      return (
+                        <li key={key}>
+                          <span className="nav-item" aria-disabled="true">
+                            <NavIcon name={key} />
+                            <span className="nav-label">
+                              {content.nav[key]} <small>{content.comingSoon}</small>
+                            </span>
+                          </span>
+                        </li>
+                      );
+                    }
+                    const href = `/${locale}${route}` as Route;
+                    // A page below a section (a project of /projects) keeps its section marked.
+                    const current =
+                      pathname === href ||
+                      (route !== '' && pathname.startsWith(`${href}/`)) ||
+                      // The two Smart pages share one navigation entry.
+                      (key === 'smart' && pathname.startsWith(`/${locale}/smart`));
                     return (
                       <li key={key}>
-                        <span className="nav-item" aria-disabled="true">
+                        <Link
+                          className="nav-item"
+                          href={href}
+                          aria-current={current ? 'page' : undefined}
+                        >
                           <NavIcon name={key} />
-                          <span className="nav-label">
-                            {content.nav[key]} <small>{content.comingSoon}</small>
-                          </span>
-                        </span>
+                          <span className="nav-label">{content.nav[key]}</span>
+                        </Link>
                       </li>
                     );
-                  }
-                  const href = `/${locale}${route}` as Route;
-                  // A page below a section (a project of /projects) keeps its section marked.
-                  const current =
-                    pathname === href ||
-                    (route !== '' && pathname.startsWith(`${href}/`)) ||
-                    // The two Smart pages share one navigation entry.
-                    (key === 'smart' && pathname.startsWith(`/${locale}/smart`));
-                  return (
-                    <li key={key}>
-                      <Link
-                        className="nav-item"
-                        href={href}
-                        aria-current={current ? 'page' : undefined}
-                      >
-                        <NavIcon name={key} />
-                        <span className="nav-label">{content.nav[key]}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
+                  })}
+                {identity?.user.role === 'super_admin' && (
+                  <li>
+                    <Link className="nav-item" href={`/${locale}/admin/users` as Route}>
+                      {locale === 'fa' ? 'کاربران' : 'Users'}
+                    </Link>
+                  </li>
+                )}
+                {identity?.user.isOwner && (
+                  <li>
+                    <Link className="nav-item" href={`/${locale}/settings/google-access` as Route}>
+                      {locale === 'fa' ? 'ورود با جیمیل' : 'Gmail sign-in'}
+                    </Link>
+                  </li>
+                )}
               </ul>
             </nav>
           )}
@@ -205,9 +229,11 @@ export function AppShell({
               {subtitle && <p>{subtitle}</p>}
             </div>
             <div className="topbar-actions">
-              {showNavigation && workspaceId && (
-                <SmartToggle locale={locale} workspaceId={workspaceId} />
-              )}
+              {showNavigation &&
+                workspaceId &&
+                (!identity || identity.user.role === 'super_admin') && (
+                  <SmartToggle locale={locale} workspaceId={workspaceId} />
+                )}
               <ThemeToggle locale={locale} />
               <a
                 className="locale-link"
@@ -229,7 +255,9 @@ export function AppShell({
           </main>
         </div>
       </div>
-      {showNavigation && workspaceId && <SmartRoot locale={locale} workspaceId={workspaceId} />}
+      {showNavigation && workspaceId && (!identity || identity.user.role === 'super_admin') && (
+        <SmartRoot locale={locale} workspaceId={workspaceId} />
+      )}
     </>
   );
 }

@@ -84,7 +84,7 @@ jobs:
           tail -50 reports/api.log reports/web.log; exit 1
       - name: Load test of the main path (SRE-002)
         run: |
-          docker run --rm --network host -v "$GITHUB_WORKSPACE/scripts/load:/scripts:ro" -v "$GITHUB_WORKSPACE/reports:/reports" \
+          docker run --rm --user "$(id -u):$(id -g)" --network host -v "$GITHUB_WORKSPACE/scripts/load:/scripts:ro" -v "$GITHUB_WORKSPACE/reports:/reports" \
             grafana/k6:latest run --summary-export=/reports/k6-summary.json /scripts/main-path.js
       - name: DAST of the web app and the authenticated API (SEC-002)
         run: |

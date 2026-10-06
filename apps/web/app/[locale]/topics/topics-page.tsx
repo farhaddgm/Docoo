@@ -6,6 +6,7 @@ import { apiGet, apiSend, query } from '../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { explainError, Notice, useAction } from '../use-action';
+import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
 import { topicMessages } from './messages';
 
@@ -13,6 +14,7 @@ type TopicStatus = 'active' | 'archived' | 'deleted';
 type TopicLanguage = 'fa' | 'en';
 
 interface Topic {
+  access: 'VIEW' | 'EDIT' | null;
   id: string;
   code: string;
   title: string;
@@ -53,6 +55,9 @@ export function TopicsPage({ locale }: { locale: Locale }) {
 function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
   const text = topicMessages(locale);
   const common = reportMessagesFor(locale);
+  const identity = useSessionIdentity();
+  const canCreate = identity?.user.role !== 'viewer';
+  const isAdmin = identity?.user.role === 'super_admin';
   const base = `/workspaces/${workspaceId}/topics`;
   const [view, setView] = useState<TopicStatus>('active');
   const [items, setItems] = useState<Topic[] | null>(null);
@@ -223,7 +228,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                     </td>
                     <td>
                       <div className="toolbar">
-                        {view === 'active' && (
+                        {topic.access === 'EDIT' && view === 'active' && (
                           <button
                             className="secondary-button"
                             type="button"
@@ -238,7 +243,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                             {text.edit}
                           </button>
                         )}
-                        {view === 'active' && (
+                        {topic.access === 'EDIT' && view === 'active' && (
                           <button
                             className="secondary-button"
                             type="button"
@@ -249,7 +254,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                             {text.archive}
                           </button>
                         )}
-                        {view !== 'active' && (
+                        {topic.access === 'EDIT' && view !== 'active' && (
                           <button
                             className="secondary-button"
                             type="button"
@@ -260,7 +265,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                             {text.restore}
                           </button>
                         )}
-                        {view !== 'deleted' && (
+                        {isAdmin && view !== 'deleted' && (
                           <button
                             className="secondary-button danger"
                             type="button"
@@ -372,64 +377,66 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
         />
       )}
 
-      <form
-        className="card filter-form"
-        onSubmit={create}
-        aria-labelledby="topic-create-title"
-        aria-busy={busy}
-      >
-        <h2 id="topic-create-title">{text.create}</h2>
-        <div className="filter-grid">
-          <label htmlFor="topic-code">{text.code}</label>
-          <input
-            id="topic-code"
-            dir="ltr"
-            value={form.code}
-            onChange={(event) => setForm({ ...form, code: event.target.value })}
-            pattern="[a-zA-Z0-9][a-zA-Z0-9_\-]{0,63}"
-            aria-describedby="topic-code-help"
-            autoComplete="off"
-            required
-          />
-          <span />
-          <p id="topic-code-help" className="muted">
-            {text.codeHelp}
-          </p>
-          <label htmlFor="topic-title">{text.topicTitle}</label>
-          <input
-            id="topic-title"
-            dir="auto"
-            value={form.title}
-            onChange={(event) => setForm({ ...form, title: event.target.value })}
-            maxLength={200}
-            autoComplete="off"
-            required
-          />
-          <label htmlFor="topic-description">{text.description}</label>
-          <textarea
-            id="topic-description"
-            dir="auto"
-            rows={3}
-            value={form.description}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
-            maxLength={10000}
-          />
-          <label htmlFor="topic-language">{text.language}</label>
-          <select
-            id="topic-language"
-            value={form.language}
-            onChange={(event) => setForm({ ...form, language: event.target.value as Locale })}
-          >
-            <option value="fa">{text.languages.fa}</option>
-            <option value="en">{text.languages.en}</option>
-          </select>
-        </div>
-        <div className="toolbar">
-          <button className="primary-button" type="submit" disabled={busy}>
-            {busy ? text.creating : text.createSubmit}
-          </button>
-        </div>
-      </form>
+      {canCreate && (
+        <form
+          className="card filter-form"
+          onSubmit={create}
+          aria-labelledby="topic-create-title"
+          aria-busy={busy}
+        >
+          <h2 id="topic-create-title">{text.create}</h2>
+          <div className="filter-grid">
+            <label htmlFor="topic-code">{text.code}</label>
+            <input
+              id="topic-code"
+              dir="ltr"
+              value={form.code}
+              onChange={(event) => setForm({ ...form, code: event.target.value })}
+              pattern="[a-zA-Z0-9][a-zA-Z0-9_\-]{0,63}"
+              aria-describedby="topic-code-help"
+              autoComplete="off"
+              required
+            />
+            <span />
+            <p id="topic-code-help" className="muted">
+              {text.codeHelp}
+            </p>
+            <label htmlFor="topic-title">{text.topicTitle}</label>
+            <input
+              id="topic-title"
+              dir="auto"
+              value={form.title}
+              onChange={(event) => setForm({ ...form, title: event.target.value })}
+              maxLength={200}
+              autoComplete="off"
+              required
+            />
+            <label htmlFor="topic-description">{text.description}</label>
+            <textarea
+              id="topic-description"
+              dir="auto"
+              rows={3}
+              value={form.description}
+              onChange={(event) => setForm({ ...form, description: event.target.value })}
+              maxLength={10000}
+            />
+            <label htmlFor="topic-language">{text.language}</label>
+            <select
+              id="topic-language"
+              value={form.language}
+              onChange={(event) => setForm({ ...form, language: event.target.value as Locale })}
+            >
+              <option value="fa">{text.languages.fa}</option>
+              <option value="en">{text.languages.en}</option>
+            </select>
+          </div>
+          <div className="toolbar">
+            <button className="primary-button" type="submit" disabled={busy}>
+              {busy ? text.creating : text.createSubmit}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

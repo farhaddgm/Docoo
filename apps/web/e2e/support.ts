@@ -22,7 +22,7 @@ export async function expectNoSeriousA11yViolations(page: Page) {
 
 /** Signs in on the Persian sign-in page with the keyboard only. */
 export async function signInWithKeyboard(page: Page) {
-  await page.goto('/fa');
+  await page.goto('/fa/auth/login-up');
   await page.getByLabel('ایمیل').focus();
   await page.keyboard.type(email);
   await page.keyboard.press('Tab');

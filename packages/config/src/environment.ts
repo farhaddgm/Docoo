@@ -3,6 +3,10 @@ import { z } from 'zod';
 const emptyStringToUndefined = (value: unknown): unknown => (value === '' ? undefined : value);
 
 export const environmentSchema = z.object({
+  OWNER_EMAIL: z.string().trim().toLowerCase().email().default('farhad.dgm@gmail.com'),
+  GOOGLE_CLIENT_ID: z.string().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().default(''),
+  GOOGLE_REDIRECT_URI: z.string().url().default('http://localhost:3000/api/auth/google/callback'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
