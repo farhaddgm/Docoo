@@ -1,4 +1,4 @@
-import { fakeResponder } from '@docoo/orchestration';
+import { fakeResponder, fakeToolResponder } from '@docoo/orchestration';
 import type { NormalizedModelRequest, ToolCall } from '@docoo/providers';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -93,7 +93,7 @@ describe.skipIf(!adminUrl || !temporalAddress)('tool calling by the model (ADR-0
   });
   afterEach(async () => {
     temporal.fake.responder = fakeResponder;
-    temporal.fake.toolResponder = () => null;
+    temporal.fake.toolResponder = fakeToolResponder;
     await flow.setting('agents.tool_calling', false);
     await flow.setting('agents.max_tool_calls', 6);
   });
@@ -317,5 +317,48 @@ describe.skipIf(!adminUrl || !temporalAddress)('tool calling by the model (ADR-0
     ]);
     // The ledger holds counts and references, never the material itself.
     expect(JSON.stringify(calls)).not.toContain('problemStatement');
+  });
+
+  it('TLC-006: the calculator computes exactly, refuses what is not arithmetic and keeps the figures out of the ledger', async () => {
+    await flow.setting('agents.tool_calling', true);
+    temporal.fake.toolResponder = (request) => {
+      captured.push(request);
+      if (!(request.instructions ?? '').includes('Your role: ideator.')) return null;
+      if (request.messages.length > 1) return null;
+      return [
+        { id: 'k1', name: 'calculator', arguments: { expression: '(1200000 * 0.15) / 12' } },
+        { id: 'k2', name: 'calculator', arguments: { expression: '۱٬۰۰۰ × ۳' } },
+        { id: 'k3', name: 'calculator', arguments: { expression: 'process.exit(1)' } },
+        { id: 'k4', name: 'calculator', arguments: { expression: '1 / 0' } },
+      ];
+    };
+    const projectId = await flow.reach('tlc6', 'ideation');
+    const [final] = captured.filter(
+      (request) => request.responseSchema?.name === 'ideation_output',
+    );
+    const results = dataOf(final!)['toolResults'] as {
+      input: { expression: string };
+      output: Record<string, unknown>;
+    }[];
+    expect(results.map((entry) => entry.output)).toEqual([
+      { expression: '(1200000 * 0.15) / 12', result: 15000 },
+      { expression: '۱٬۰۰۰ × ۳', result: 3000 },
+      { error: 'syntax', expression: 'process.exit(1)' },
+      { error: 'division_by_zero', expression: '1 / 0' },
+    ]);
+    const calls = await flow.toolCalls(projectId, 'calculator');
+    expect(calls.map((call) => call.error_code)).toEqual([
+      null,
+      null,
+      'invalid_expression',
+      'invalid_expression',
+    ]);
+    expect(calls.map((call) => call.result)).toEqual([
+      { ok: true },
+      { ok: true },
+      { ok: false, error: 'syntax' },
+      { ok: false, error: 'division_by_zero' },
+    ]);
+    expect(JSON.stringify(calls)).not.toContain('15000');
   });
 });

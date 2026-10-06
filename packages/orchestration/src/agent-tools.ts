@@ -1,5 +1,5 @@
+import { AGENT_TOOLS, evaluateExpression, formatNumber } from '@docoo/domain';
 import type { AgentRole, AgentTool } from '@docoo/domain';
-import { AGENT_TOOLS } from '@docoo/domain';
 import type {
   ConversationMessage,
   NormalizedModelResponse,
@@ -206,11 +206,51 @@ const projectDocumentsRead: ToolImplementation<{ ref: string }> = {
   },
 };
 
+const calculator: ToolImplementation<{ expression: string }> = {
+  tool: 'calculator',
+  spec: () => ({
+    name: 'calculator',
+    description:
+      'Compute an arithmetic expression exactly instead of in your head: + - * / % ^, parentheses, pi, e and sqrt, abs, round, floor, ceil, ln, log10, exp, pow(a, b), min(…), max(…). Persian digits work too.',
+    parameters: {
+      type: 'object',
+      properties: {
+        expression: { type: 'string', description: 'For example (1200000 * 0.15) / 12.' },
+      },
+      required: ['expression'],
+      additionalProperties: false,
+    },
+  }),
+  available: () => true,
+  parse(args) {
+    return isRecord(args) && typeof args['expression'] === 'string'
+      ? { ok: true, value: { expression: args['expression'] } }
+      : { ok: false, error: 'expression must be a string' };
+  },
+  execute(_context, { expression }) {
+    const result = evaluateExpression(expression);
+    // The ledger keeps whether it worked, not the numbers: they may be the project's own figures.
+    return Promise.resolve(
+      result.ok
+        ? {
+            output: { expression: expression.trim(), result: formatNumber(result.value) },
+            result: { ok: true },
+          }
+        : {
+            output: { error: result.error, expression: expression.trim().slice(0, 100) },
+            result: { ok: false, error: result.error },
+            errorCode: 'invalid_expression',
+          },
+    );
+  },
+};
+
 /** Every tool the model can call; `AGENT_TOOLS` entries without one are run by code or not built. */
 export const TOOL_IMPLEMENTATIONS: Readonly<Partial<Record<AgentTool, ToolImplementation<never>>>> =
   {
     knowledge_retrieve: knowledgeRetrieve as unknown as ToolImplementation<never>,
     project_documents_read: projectDocumentsRead as unknown as ToolImplementation<never>,
+    calculator: calculator as unknown as ToolImplementation<never>,
   };
 
 /** Tools the role may use (allowlist of the pinned definition) that exist and apply to this run. */

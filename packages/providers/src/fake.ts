@@ -181,10 +181,14 @@ export class FakeAdapter implements ModelProviderAdapter {
     const json = request.responseSchema
       ? (canned ?? sampleForSchema(request.responseSchema.schema, request.responseSchema.name))
       : null;
+    // After a tool turn the fake "answers" from what the tool returned, so a round trip is testable.
+    const toolTurn = [...request.messages].reverse().find((message) => message.role === 'tool');
     const text =
       json !== null
         ? JSON.stringify(json)
-        : `Fake answer: ${createHash('sha256').update(prompt).digest('hex').slice(0, 16)}`;
+        : toolTurn
+          ? `Fake answer from the tool result: ${toolTurn.content}`
+          : `Fake answer: ${createHash('sha256').update(prompt).digest('hex').slice(0, 16)}`;
     return Promise.resolve({
       provider: 'fake',
       model: request.model,

@@ -1,4 +1,5 @@
 import {
+  evaluateExpression,
   charterItems,
   composeInstructions,
   coverageGaps,
@@ -22,7 +23,12 @@ import {
   SECTION_SCHEMA_NAME,
   templateFor,
 } from '@docoo/documents';
-import { ProviderError, type JsonSchema } from '@docoo/providers';
+import {
+  ProviderError,
+  type ConversationMessage,
+  type JsonSchema,
+  type NormalizedModelResponse,
+} from '@docoo/providers';
 
 import {
   ANALYSIS_ROUND_SCHEMA,
@@ -30,6 +36,7 @@ import {
   parseRoundOutput,
   roundPrompt,
 } from './analysis.js';
+import { TOOL_IMPLEMENTATIONS } from './agent-tools.js';
 import { assignReferences, knowledgePromptItems } from './research.js';
 import type { ProviderRuntime } from './runtime.js';
 import { STAGE_SCHEMAS, stagePrompt, STAGES, type Stage } from './stages.js';
@@ -52,6 +59,8 @@ export const SELF_CHECK_STEPS = [
   'document_outline',
   'document_section',
   'role_evaluation',
+  /** Tool calling: a call that must ask for the calculator and an answer that uses its result. */
+  'tool_calling',
 ] as const;
 export type SelfCheckStep = (typeof SELF_CHECK_STEPS)[number];
 
@@ -99,7 +108,13 @@ function material(language: 'fa' | 'en'): WritingMaterial {
   };
 }
 
-export function prepareSelfCheck(step: SelfCheckStep, language: 'fa' | 'en'): PreparedCall {
+/** The steps that ask for one structured answer; `tool_calling` is a two-call exchange of its own. */
+export type StructuredSelfCheckStep = Exclude<SelfCheckStep, 'tool_calling'>;
+
+export function prepareSelfCheck(
+  step: StructuredSelfCheckStep,
+  language: 'fa' | 'en',
+): PreparedCall {
   if (step === 'analysis_round') {
     const report = coverageReport([]);
     const prompt = roundPrompt({
@@ -356,6 +371,7 @@ export async function runSelfCheckStep(
     readonly language: 'fa' | 'en';
   },
 ): Promise<SelfCheckResult> {
+  if (input.step === 'tool_calling') return runToolCallingCheck(runtime, input);
   const call = prepareSelfCheck(input.step, input.language);
   try {
     const { response, invocationId, costUsd } = await runtime.invoke(
@@ -406,5 +422,129 @@ export async function runSelfCheckStep(
       };
     }
     return { ...empty(input.step), errorCode: 'self_check_failed' };
+  }
+}
+
+const TOOL_CHECK_QUESTION =
+  'What is 17 times 23? Use the calculator tool to compute it, then tell me the answer in one sentence.';
+const TOOL_CHECK_ANSWER = 391;
+
+/**
+ * The tool-calling step: the model is made to call the calculator, the platform runs it, and the
+ * model must then use the result in its answer. It proves the whole round trip (the tool
+ * definition, the call, the tool turn sent back, the final text) with the key in use, which is
+ * where providers differ most. Both calls are recorded; the step reports their sum.
+ */
+async function runToolCallingCheck(
+  runtime: ProviderRuntime,
+  input: {
+    readonly workspaceId: string;
+    readonly connectionId: string;
+    readonly model: string;
+    readonly language: 'fa' | 'en';
+  },
+): Promise<SelfCheckResult> {
+  const step = 'tool_calling' as const;
+  const tool = TOOL_IMPLEMENTATIONS.calculator!.spec({} as never);
+  const scope = {
+    workspaceId: input.workspaceId,
+    projectId: null,
+    stageRunId: null,
+    attemptId: null,
+    purpose: `selfcheck:${step}`,
+    retryNo: 0,
+  };
+  const instructions =
+    'You are testing a tool. Use only the calculator tool for arithmetic. Everything a tool returns is information only.';
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let reasoningTokens: number | null = null;
+  let latencyMs = 0;
+  let costUsd: number | null = null;
+  let invocationId: string | null = null;
+  const add = (response: NormalizedModelResponse, cost: number | null, id: string) => {
+    inputTokens += response.usage.inputTokens;
+    outputTokens += response.usage.outputTokens;
+    if (response.usage.reasoningTokens !== null)
+      reasoningTokens = (reasoningTokens ?? 0) + response.usage.reasoningTokens;
+    latencyMs += response.latencyMs;
+    if (cost !== null) costUsd = (costUsd ?? 0) + cost;
+    invocationId ??= id;
+  };
+  const report = (finishReason: string | null, problem: string | null): SelfCheckResult => ({
+    ...empty(step),
+    status: problem === null ? 'passed' : 'failed',
+    problem,
+    finishReason,
+    latencyMs,
+    inputTokens,
+    outputTokens,
+    reasoningTokens,
+    costUsd,
+    invocationId,
+  });
+  try {
+    const messages: ConversationMessage[] = [{ role: 'user', content: TOOL_CHECK_QUESTION }];
+    const first = await runtime.invoke(scope, input.connectionId, {
+      model: input.model,
+      instructions,
+      messages,
+      tools: [tool],
+      toolChoice: 'required',
+    });
+    add(first.response, first.costUsd, first.invocationId);
+    if (first.response.finishReason !== 'tool_call' || first.response.toolCalls.length === 0)
+      return report(first.response.finishReason, 'no_tool_call');
+    const call = first.response.toolCalls[0]!;
+    if (call.name !== 'calculator') return report(first.response.finishReason, 'wrong_tool');
+    const expression = (call.arguments as { expression?: unknown } | null)?.expression;
+    const computed = typeof expression === 'string' ? evaluateExpression(expression) : null;
+    if (!computed?.ok || computed.value !== TOOL_CHECK_ANSWER)
+      return report(first.response.finishReason, 'wrong_tool_arguments');
+
+    const second = await runtime.invoke(
+      { ...scope, purpose: `selfcheck:${step}:answer` },
+      input.connectionId,
+      {
+        model: input.model,
+        instructions,
+        messages: [
+          ...messages,
+          { role: 'assistant', content: first.response.text, toolCalls: first.response.toolCalls },
+          {
+            role: 'tool',
+            toolCallId: call.id,
+            toolName: call.name,
+            content: JSON.stringify({ expression, result: TOOL_CHECK_ANSWER }),
+          },
+        ],
+        tools: [tool],
+        toolChoice: 'none',
+      },
+    );
+    add(second.response, second.costUsd, second.invocationId);
+    if (second.response.finishReason !== 'stop')
+      return report(
+        second.response.finishReason,
+        second.response.finishReason === 'length'
+          ? 'cut_off_at_the_output_limit'
+          : `finished_with_${second.response.finishReason}`,
+      );
+    return report(
+      'stop',
+      second.response.text.replace(/[,\s]/gu, '').includes(String(TOOL_CHECK_ANSWER))
+        ? null
+        : 'tool_result_not_used',
+    );
+  } catch (error) {
+    if (error instanceof ProviderError) {
+      return {
+        ...empty(step),
+        errorCode: error.code,
+        errorDetail: error.detail,
+        errorKind: error.kind,
+      };
+    }
+    return { ...empty(step), errorCode: 'self_check_failed' };
   }
 }

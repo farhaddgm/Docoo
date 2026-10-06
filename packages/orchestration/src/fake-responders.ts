@@ -1,6 +1,6 @@
 import { OUTLINE_SCHEMA_NAME, SECTION_SCHEMA_NAME } from '@docoo/documents';
 import { ROLE_EVALUATION_SCHEMA_NAME } from '@docoo/domain';
-import type { NormalizedModelRequest } from '@docoo/providers';
+import type { NormalizedModelRequest, ToolCall } from '@docoo/providers';
 
 import { dataOf, fakeAnalystResponder } from './fake-analyst.js';
 
@@ -263,4 +263,19 @@ export function fakeResponder(request: NormalizedModelRequest): unknown {
     fakeRoleEvaluationResponder(request) ??
     fakeDocumenterResponder(request)
   );
+}
+
+/**
+ * Deterministic tool use for the offline provider: it only answers the model self-check's
+ * question (17 times 23) by asking for the calculator, so a pipeline run with tool calling on
+ * never calls a tool by itself. Tests script their own calls.
+ */
+export function fakeToolResponder(request: NormalizedModelRequest): readonly ToolCall[] | null {
+  const first = request.messages[0];
+  const asked = first && first.role === 'user' && first.content.includes('17 times 23');
+  const answered = request.messages.some((message) => message.role === 'tool');
+  const offered = request.tools?.some((tool) => tool.name === 'calculator') ?? false;
+  return asked && offered && !answered
+    ? [{ id: 'call_selfcheck', name: 'calculator', arguments: { expression: '17 * 23' } }]
+    : null;
 }

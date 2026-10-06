@@ -510,7 +510,7 @@ describe.skipIf(!adminUrl)('provider connections (AI-001, AI-003, AI-004)', () =
     const steps = (
       await h.request('GET', api(`/provider-connections/${fake.id}/self-check`), { cookie })
     ).json<{ steps: string[] }>().steps;
-    expect(steps).toHaveLength(9);
+    expect(steps).toHaveLength(10);
     for (const step of steps) {
       const response = await h.request('POST', api(`/provider-connections/${fake.id}/self-check`), {
         cookie,
@@ -537,8 +537,9 @@ describe.skipIf(!adminUrl)('provider connections (AI-001, AI-003, AI-004)', () =
     const purposes = calls
       .json<{ items: { purpose: string; projectId: string | null }[] }>()
       .items.filter((item) => item.purpose.startsWith('selfcheck:'));
+    // The tool-calling step is an exchange of two model calls; every other step is one.
     expect(purposes.map((item) => item.purpose).sort()).toEqual(
-      steps.map((step) => `selfcheck:${step}`).sort(),
+      [...steps.map((step) => `selfcheck:${step}`), 'selfcheck:tool_calling:answer'].sort(),
     );
 
     const unknown = await h.request('POST', api(`/provider-connections/${fake.id}/self-check`), {

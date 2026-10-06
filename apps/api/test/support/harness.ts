@@ -27,6 +27,7 @@ import {
   AGENT_TASK_QUEUE,
   createOrchestrationActivities,
   fakeResponder,
+  fakeToolResponder,
   ProviderRuntime,
   type RunRef,
   type WritingRef,
@@ -163,6 +164,7 @@ export class TemporalTestRuntime implements WorkflowEngine {
   constructor(private readonly pool: Pool) {
     // The same analyst, researcher and judge the stack uses for provider kind `fake`; tests may script their own.
     this.fake.responder = fakeResponder;
+    this.fake.toolResponder = fakeToolResponder;
   }
   private worker: Worker | null = null;
   private running: Promise<void> | null = null;
@@ -390,7 +392,10 @@ export async function createHarness(
     engine = new RecordingEngine();
   }
   const fake = engine instanceof TemporalTestRuntime ? engine.fake : new FakeAdapter();
-  if (!(engine instanceof TemporalTestRuntime)) fake.responder = fakeResponder;
+  if (!(engine instanceof TemporalTestRuntime)) {
+    fake.responder = fakeResponder;
+    fake.toolResponder = fakeToolResponder;
+  }
   const providerRuntime = new ProviderRuntime(runtimePool, masterKeyFromEnv(), (kind, options) =>
     kind === 'fake' ? fake : createAdapter(kind, options),
   );
