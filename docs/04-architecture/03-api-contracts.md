@@ -96,6 +96,7 @@ notion_sync: true
 - `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/approve|reject|comment|edit` — reject بازخورد لازم دارد و attempt بعدی را می‌سازد؛ edit نسخهٔ جدید می‌سازد و approval/gate نسخهٔ قبلی را `expired` می‌کند؛ بازبینی نسخهٔ جایگزین‌شده `409 WORKFLOW_OUTPUT_SUPERSEDED`.
 - `POST /projects/{id}/stages/{stageRunId}/attempt-decision` — پس از سقف attempt (حداکثر ۱۰، قابل کاهش با `workflow.max_attempts_per_stage`) فقط با تصمیم `extend|pass` و دلیل.
 - `GET /human-tasks?status=pending`.
+- `POST /projects/{id}/agent-questions/{questionId}/answer` (`project.update`، پاسخ ۲۰۰) با `{answer: string (۱ تا ۴۰۰۰) | null}`؛ `null` یعنی ادمین نمی‌خواهد پاسخ دهد و ایجنت با فرض ادامه می‌دهد. پرسش را فقط یک‌بار می‌بندد (`409 WORKFLOW_QUESTION_CLOSED`، `404 WORKFLOW_QUESTION_NOT_FOUND` برای پرسش پروژهٔ دیگر یا workspace دیگر)، کار انسانی `agent_question` را حل می‌کند و سیگنال `agentInput` را به workflow می‌فرستد. پاسخ `GET /projects/{id}/workflow` فیلد `agentQuestions` (۳۰ پرسش اخیر با `status` و `answer`) دارد. audit: `workflow.agent_question_asked` و `workflow.agent_question_answered` (فقط نقش، شناسه‌ها و طول متن) ([ADR-0023](../adr/0023-agent-tool-calling.md)).
 - commandهای بازبینی و تصمیم سرآیند `Idempotency-Key` می‌پذیرند؛ تکرار همان کلید پاسخ ذخیره‌شده را با `replayed: true` برمی‌گرداند و کلید تکراری با بدنهٔ متفاوت `409 IDEMPOTENCY_KEY_REUSED` است.
 - gate پیش‌فرض دستی است (`workflow.require_human_approval`)؛ در gate خودکار مرحله بدون human task جلو می‌رود.
 

@@ -47,10 +47,22 @@ interface Refusal {
   errorDetail: string | null;
 }
 
+interface AgentQuestion {
+  id: string;
+  stageRunId: string;
+  role: string;
+  question: string;
+  reason: string;
+  status: 'open' | 'answered' | 'dismissed';
+  answer: string | null;
+  createdAt: string;
+}
+
 interface Overview {
   run: Run | null;
   stages: StageItem[];
   humanTasks: HumanTask[];
+  agentQuestions: AgentQuestion[];
 }
 
 interface StageOutputRow {
@@ -399,6 +411,46 @@ export function WorkflowPanel({
         ) : null;
       })}
 
+      {overview.agentQuestions
+        .filter((question) => question.status === 'open')
+        .map((question) => (
+          <AgentQuestionForm
+            key={question.id}
+            locale={locale}
+            base={base}
+            question={question}
+            busy={busy}
+            run={run}
+            onChanged={afterChange}
+          />
+        ))}
+
+      {overview.agentQuestions.some((question) => question.status !== 'open') && (
+        <section className="card" aria-labelledby="agent-questions-title">
+          <h2 id="agent-questions-title">{text.questionHistory}</h2>
+          <ul className="plain-list">
+            {overview.agentQuestions
+              .filter((question) => question.status !== 'open')
+              .map((question) => (
+                <li key={question.id}>
+                  <strong dir="auto">{question.question}</strong>
+                  <small className="muted">
+                    {' '}
+                    · {text.roles[question.role] ?? question.role} ·{' '}
+                    {question.status === 'answered' ? text.questionAnswered : text.questionDeclined}
+                  </small>
+                  {question.answer && (
+                    <>
+                      <br />
+                      <span dir="auto">{question.answer}</span>
+                    </>
+                  )}
+                </li>
+              ))}
+          </ul>
+        </section>
+      )}
+
       {reviewStages.map((stage) => (
         <ReviewPanel
           key={`${stage.id}-${stage.pendingGateOutputId}`}
@@ -412,6 +464,91 @@ export function WorkflowPanel({
         />
       ))}
     </div>
+  );
+}
+
+/** ADR-0023: an agent asked something mid-stage; the stage goes on with the answer (or without). */
+function AgentQuestionForm({
+  locale,
+  base,
+  question,
+  busy,
+  run,
+  onChanged,
+}: {
+  locale: Locale;
+  base: string;
+  question: AgentQuestion;
+  busy: boolean;
+  run: RunAction;
+  onChanged: () => Promise<void>;
+}) {
+  const text = workflowMessages(locale);
+  const [answer, setAnswer] = useState('');
+
+  function send(body: { answer: string | null }) {
+    void run(async () => {
+      await apiSend('POST', `${base}/agent-questions/${question.id}/answer`, body, {
+        headers: { 'idempotency-key': idempotencyKey() },
+      });
+      setAnswer('');
+      await onChanged();
+    }, text.done.questionAnswered);
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    send({ answer: answer.trim() });
+  }
+
+  return (
+    <form
+      className="card filter-form"
+      onSubmit={submit}
+      aria-labelledby={`question-title-${question.id}`}
+      aria-busy={busy}
+    >
+      <h2 id={`question-title-${question.id}`}>
+        {text.questionTitle.replace('{role}', text.roles[question.role] ?? question.role)}
+      </h2>
+      <p>{text.questionHelp}</p>
+      <p>
+        <strong dir="auto">{question.question}</strong>
+      </p>
+      {question.reason && (
+        <p className="muted">
+          {text.questionWhy}: <span dir="auto">{question.reason}</span>
+        </p>
+      )}
+      <div className="filter-grid">
+        <label htmlFor={`question-answer-${question.id}`}>{text.questionAnswer}</label>
+        <textarea
+          id={`question-answer-${question.id}`}
+          value={answer}
+          maxLength={4000}
+          rows={4}
+          onChange={(event) => setAnswer(event.target.value)}
+          required
+        />
+      </div>
+      <div className="toolbar">
+        <button className="primary-button" type="submit" disabled={busy || answer.trim() === ''}>
+          {busy ? text.working : text.questionSend}
+        </button>
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={busy}
+          aria-describedby={`question-decline-help-${question.id}`}
+          onClick={() => send({ answer: null })}
+        >
+          {text.questionDecline}
+        </button>
+      </div>
+      <small id={`question-decline-help-${question.id}`} className="muted">
+        {text.questionDeclineHelp}
+      </small>
+    </form>
   );
 }
 

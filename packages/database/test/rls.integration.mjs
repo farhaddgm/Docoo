@@ -102,6 +102,7 @@ const knowledgeTables = [
   'agent_roles',
   'project_agent_profiles',
   'agent_tool_calls',
+  'agent_questions',
   'contenter_connections',
   'business_snapshots',
   'project_businesses',
@@ -1164,8 +1165,106 @@ try {
   assert.equal(keptSnapshots.rows[0].count, 1, 'snapshots outlive links');
   await admin.query(`DELETE FROM contenter_connections WHERE workspace_id = $1`, [ids.workspaceA]);
 
+  // Questions an agent puts to the administrator (ADR-0023): tenant-scoped, the question is fixed,
+  // an answer can be given once, and the state rules hold.
+  const questionRun = await admin.query(
+    `INSERT INTO workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id)
+     VALUES ($1, $2, 99, $3) RETURNING id`,
+    [ids.workspaceA, ids.projectA, `question-test-run-${ids.workspaceA}`],
+  );
+  const questionStage = await admin.query(
+    `INSERT INTO stage_runs (workspace_id, run_id, project_id, stage, sequence)
+     VALUES ($1, $2, $3, 'analysis', 1) RETURNING id`,
+    [ids.workspaceA, questionRun.rows[0].id, ids.projectA],
+  );
+  const questionSql = `INSERT INTO agent_questions (workspace_id, project_id, stage_run_id, role, question, reason)
+     VALUES ($1, $2, $3, 'analyst', $4, 'to size the budget') RETURNING id`;
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, questionSql, [
+    ids.workspaceB,
+    ids.projectA,
+    questionStage.rows[0].id,
+    'How large is the budget?',
+  ]);
+  const question = await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(questionSql, [
+      ids.workspaceA,
+      ids.projectA,
+      questionStage.rows[0].id,
+      'How large is the budget?',
+    ]),
+  );
+  const questionId = question.rows[0].id;
+  const foreignQuestions = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM agent_questions'),
+  );
+  assert.equal(foreignQuestions.rows[0].count, 0, 'Questions must not leak across tenants.');
+  // A question of this workspace cannot hang on a project of another one.
+  await assert.rejects(
+    admin.query(questionSql, [
+      ids.workspaceB,
+      ids.projectA,
+      questionStage.rows[0].id,
+      'A question across workspaces',
+    ]),
+    (error) => {
+      assert.equal(error.code, '23503', 'the project must be of the same workspace');
+      return true;
+    },
+  );
+  // The question itself never changes; only the answer columns can be written.
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'UPDATE agent_questions SET question = $1 WHERE id = $2',
+    ['A different question', questionId],
+  );
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM agent_questions');
+  // State rules: an answer needs its status and time, an open question has neither.
+  for (const [label, sql] of [
+    ['answer on an open question', `UPDATE agent_questions SET answer = 'x' WHERE id = $1`],
+    [
+      'answered without text',
+      `UPDATE agent_questions SET status = 'answered', answered_at = now() WHERE id = $1`,
+    ],
+    ['unknown status', `UPDATE agent_questions SET status = 'later' WHERE id = $1`],
+    [
+      'dismissed with text',
+      `UPDATE agent_questions SET status = 'dismissed', answer = 'x', answered_at = now() WHERE id = $1`,
+    ],
+  ]) {
+    await assert.rejects(admin.query(sql, [questionId]), (error) => {
+      assert.equal(error.code, '23514', label);
+      return true;
+    });
+  }
+  await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(
+      `UPDATE agent_questions SET status = 'answered', answer = '50,000 USD', answered_by = $2, answered_at = now() WHERE id = $1`,
+      [questionId, ids.actorA],
+    ),
+  );
+  // An answer, once given, is history: it cannot be changed, reopened or deleted.
+  await assert.rejects(
+    admin.query(`UPDATE agent_questions SET answer = 'something else' WHERE id = $1`, [questionId]),
+    (error) => {
+      assert.equal(error.code, 'P0001', 'an answered question is history');
+      return true;
+    },
+  );
+  await assert.rejects(
+    admin.query('DELETE FROM agent_questions WHERE id = $1', [questionId]),
+    (error) => {
+      assert.equal(error.code, 'P0001');
+      return true;
+    },
+  );
+  await admin
+    .query('DELETE FROM workflow_runs WHERE id = $1', [questionRun.rows[0].id])
+    .catch(() => null);
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent, tool-call and Contenter business tables, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent, tool-call, agent-question and Contenter business tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {

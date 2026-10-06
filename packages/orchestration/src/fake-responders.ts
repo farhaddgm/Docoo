@@ -266,12 +266,31 @@ export function fakeResponder(request: NormalizedModelRequest): unknown {
 }
 
 /**
- * Deterministic tool use for the offline provider: it only answers the model self-check's
- * question (17 times 23) by asking for the calculator, so a pipeline run with tool calling on
- * never calls a tool by itself. Tests script their own calls.
+ * Deterministic tool use for the offline provider: it answers the model self-check's question
+ * (17 times 23) by asking for the calculator, and the model `fake-asks-human` makes the ideator ask
+ * the administrator once; otherwise a pipeline run with tool calling on never calls a tool by
+ * itself. Tests script their own calls.
  */
 export function fakeToolResponder(request: NormalizedModelRequest): readonly ToolCall[] | null {
   const first = request.messages[0];
+  // The model named `fake-asks-human` makes the ideator ask the administrator once, so the
+  // question screen can be tried and tested without a real model.
+  if (
+    request.model === 'fake-asks-human' &&
+    (request.instructions ?? '').includes('Your role: ideator.') &&
+    (request.tools?.some((tool) => tool.name === 'request_human_input') ?? false) &&
+    first?.role === 'user' &&
+    request.messages.length === 1 &&
+    !first.content.includes('"humanAnswers"')
+  ) {
+    return [
+      {
+        id: 'call_ask',
+        name: 'request_human_input',
+        arguments: { question: 'What is the budget ceiling?', reason: 'To rank the solutions' },
+      },
+    ];
+  }
   const asked = first && first.role === 'user' && first.content.includes('17 times 23');
   const answered = request.messages.some((message) => message.role === 'tool');
   const offered = request.tools?.some((tool) => tool.name === 'calculator') ?? false;

@@ -319,6 +319,14 @@ export class WorkflowService {
             : { stage, sequence: index + 1, status: 'pending', id: null };
         }),
         humanTasks: tasks,
+        agentQuestions: (
+          await client.query<Record<string, unknown>>(
+            `select id, stage_run_id as "stageRunId", role::text as role, question, reason, status, answer,
+                    ${isoColumn('created_at', '"createdAt"')}, ${isoColumn('answered_at', '"answeredAt"')}
+               from agent_questions where project_id = $1 order by created_at desc, id desc limit 30`,
+            [projectId],
+          )
+        ).rows,
       };
     });
   }
@@ -658,6 +666,79 @@ export class WorkflowService {
             payload: { stageRunId, decision: input.decision },
           },
           result: { stageRunId, decision: input.decision },
+        };
+      },
+    );
+  }
+
+  /**
+   * ADR-0023: the administrator answers (or declines) a question an agent asked in a stage. The
+   * stage's attempt then runs again with the answer as part of its data.
+   */
+  async answerAgentQuestion(
+    context: WorkspaceRequestContext,
+    projectId: string,
+    questionId: string,
+    input: { answer: string | null; idempotencyKey?: string | undefined },
+  ) {
+    return this.idempotent(
+      context,
+      input.idempotencyKey,
+      'agent-question-answer',
+      { projectId, questionId, declined: input.answer === null },
+      async (client) => {
+        const question = (
+          await client.query<{ id: string; stage_run_id: string; status: string; role: string }>(
+            `select id, stage_run_id, status, role::text as role from agent_questions
+              where id = $1 and project_id = $2 for update`,
+            [questionId, projectId],
+          )
+        ).rows[0];
+        if (!question) throw notFound('WORKFLOW_QUESTION_NOT_FOUND', 'The question was not found.');
+        if (question.status !== 'open')
+          throw conflict('WORKFLOW_QUESTION_CLOSED', 'The question has already been answered.');
+        await client.query(
+          `update agent_questions
+              set status = $2, answer = $3, answered_by = $4, answered_at = now()
+            where id = $1`,
+          [
+            questionId,
+            input.answer === null ? 'dismissed' : 'answered',
+            input.answer,
+            context.actorId,
+          ],
+        );
+        await client.query(
+          `update human_tasks set status = 'resolved', resolved_by = $2, resolved_at = now(), resolution = $3::jsonb
+            where kind = 'agent_question' and status = 'pending' and payload ->> 'questionId' = $1`,
+          [questionId, context.actorId, JSON.stringify({ declined: input.answer === null })],
+        );
+        // The question and the answer are the project's own text: the audit log keeps who and how long.
+        await writeAudit(client, context, {
+          action: 'workflow.agent_question_answered',
+          targetType: 'agent_question',
+          targetId: questionId,
+          projectId,
+          after: {
+            role: question.role,
+            stageRunId: question.stage_run_id,
+            declined: input.answer === null,
+            answerLength: input.answer?.length ?? 0,
+          },
+        });
+        const stage = await this.loadStage(client, projectId, question.stage_run_id);
+        const run = await this.runOf(client, stage.run_id);
+        return {
+          signal: {
+            workflowId: run.temporal_workflow_id,
+            name: 'agentInput' as const,
+            payload: { stageRunId: question.stage_run_id },
+          },
+          result: {
+            questionId,
+            stageRunId: question.stage_run_id,
+            declined: input.answer === null,
+          },
         };
       },
     );

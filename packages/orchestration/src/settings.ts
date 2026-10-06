@@ -30,6 +30,8 @@ export interface Settings {
   agentToolCalling: boolean;
   /** Tool calls one answer may use (`agents.max_tool_calls`). */
   agentMaxToolCalls: number;
+  /** Questions an agent may put to the administrator in one stage (`agents.max_human_questions`). */
+  agentMaxHumanQuestions: number;
 }
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
@@ -90,5 +92,6 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
     businessBudgetChars: clampBusinessBudget(values['business.prompt_budget_chars']),
     agentToolCalling: values['agents.tool_calling'] === true,
     agentMaxToolCalls: boundedInteger(values['agents.max_tool_calls'], 6, 1, 20),
+    agentMaxHumanQuestions: boundedInteger(values['agents.max_human_questions'], 2, 0, 5),
   };
 }

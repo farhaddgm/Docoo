@@ -91,6 +91,10 @@ notion_sync: true
 
 ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار ایجنت‌ها (FR-AGT-005): `project_id`، `stage_run_id`، `attempt_id`، `role`، `agent_definition_version_id` (کلید ترکیبی با workspace)، `tool` (یکی از ابزارهای شناخته‌شده، CHECK)، `decision` (`allowed|denied`)، `input_sha256` (فقط digest ۶۴ هگزا، CHECK)، `output_ref` (مثلاً `{type: "retrieval_snapshot", id}`)، `result` (شمارش‌ها و شناسه‌ها؛ برای بازیابی `results` و `knowledgeIds`، برای `citation_verifier` شمارش‌های تأیید و `cited[{ref, knowledgeId, versionId}]`)، `latency_ms`، `error_code`. ایندکس GIN روی `result` صفحهٔ «کجا استفاده شد» دانش را می‌دهد.
 
+### agent_questions
+
+پرسشی که یک ایجنت وسط مرحله با ابزار `request_human_input` از ادمین می‌پرسد ([ADR-0023](../adr/0023-agent-tool-calling.md)، مهاجرت 0032 و 0033): `project_id`، `stage_run_id` (کلیدهای ترکیبی با workspace)، `attempt_id`، `role`، `question` (۳ تا ۱۰۰۰ نویسه)، `reason` (تا ۶۰۰)، `status` (`open|answered|dismissed`)، `answer` (تا ۴۰۰۰؛ برای `dismissed` خالی)، `answered_by`، `answered_at`. قید جدول حالت و متن پاسخ را جفت می‌کند؛ trigger هر تغییر یا حذف پرسش بسته را رد می‌کند (پرسش باز فقط از راه ستون‌های پاسخ، که تنها مجوز UPDATE هستند)، و حذف retention مجاز است. متن پرسش و پاسخ محتوای پروژه است و به audit نمی‌رود. کار انسانی متناظر `human_tasks.kind = 'agent_question'` با `payload.questionId` است.
+
 ### brain_reports.evaluations
 
 آرایهٔ ارزیابی مدل‌محور نقش‌ها در گزارش Brain (پیش‌فرض `[]`، مثل بقیهٔ ستون‌های گزارش تغییرناپذیر): برای هر نقش `status` (`completed|skipped|failed`)، `reason`، `score` (۱ تا ۵)، `summary`، نسخهٔ منشور سنجیده‌شده، نمونه‌ها (`S#` با شناسهٔ خروجی مرحله)، `findings[]` با `kind`، `severity`، `clauses[]` (بند و متن منشور) و `evidence[]` (`stage_output` با شناسه)، شمار یافته‌های دورریخته، `invocation_id` و `errorCode`. خلاصه در `summary.modelEvaluation`.

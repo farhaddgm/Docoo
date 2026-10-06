@@ -225,6 +225,20 @@
       "when": 1791326400000,
       "tag": "0031_agent_tool_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791317329003,
+      "tag": "0032_agent_questions",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791317330004,
+      "tag": "0033_agent_questions_security",
+      "breakpoints": true
     }
   ]
 }

@@ -361,4 +361,205 @@ describe.skipIf(!adminUrl || !temporalAddress)('tool calling by the model (ADR-0
     ]);
     expect(JSON.stringify(calls)).not.toContain('15000');
   });
+
+  describe('TLC-007: an agent asks the administrator', () => {
+    interface Question {
+      id: string;
+      stageRunId: string;
+      role: string;
+      question: string;
+      reason: string;
+      status: string;
+      answer: string | null;
+    }
+    interface Waiting {
+      run: { status: string } | null;
+      stages: { stage: string; status: string; pendingGateOutputId: string | null }[];
+      humanTasks: { kind: string; payload: Record<string, unknown> }[];
+      agentQuestions: Question[];
+    }
+    const askOnce = (request: NormalizedModelRequest) => {
+      captured.push(request);
+      if (!(request.instructions ?? '').includes('Your role: ideator.')) return null;
+      const data = dataOf(request);
+      // Once the administrator has answered, the answer is in the data and the agent asks no more.
+      if (data['humanAnswers'] || request.messages.length > 1) return null;
+      return [
+        {
+          id: 'q1',
+          name: 'request_human_input',
+          arguments: { question: 'What is the budget ceiling?', reason: 'To rank the solutions' },
+        },
+      ];
+    };
+    const overviewOf = async (projectId: string) =>
+      (await flow.get<{ workflow: Waiting }>(`/projects/${projectId}/workflow`)).workflow;
+    async function untilAsked(projectId: string): Promise<Question> {
+      const deadline = Date.now() + 30_000;
+      for (;;) {
+        const view = await overviewOf(projectId);
+        const open = view.agentQuestions.find((item) => item.status === 'open');
+        if (open) return open;
+        if (Date.now() > deadline) throw new Error('The agent never asked');
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      }
+    }
+    async function toIdeation(prefix: string): Promise<string> {
+      const projectId = await flow.reach(prefix);
+      const view = await flow.overview(projectId);
+      await flow.decide(projectId, flow.stageOf(view, 'research'), 'approve');
+      return projectId;
+    }
+    const answer = (projectId: string, questionId: string, body: unknown) =>
+      h.request('POST', flow.api(`/projects/${projectId}/agent-questions/${questionId}/answer`), {
+        cookie: flow.cookie,
+        payload: body,
+      });
+
+    beforeAll(async () => {
+      await flow.allowTools('ideator', [
+        'knowledge_retrieve',
+        'project_documents_read',
+        'calculator',
+        'request_human_input',
+      ]);
+    });
+
+    it('stops the stage at the question, goes on with the answer, and keeps the text out of the audit log', async () => {
+      await flow.setting('agents.tool_calling', true);
+      temporal.fake.toolResponder = askOnce;
+      const projectId = await toIdeation('tlc7a');
+      const question = await untilAsked(projectId);
+      expect(question).toMatchObject({
+        role: 'ideator',
+        question: 'What is the budget ceiling?',
+        reason: 'To rank the solutions',
+      });
+
+      // While it waits: the run and the stage wait for a person, with a task that says so, and no
+      // output or gate exists yet.
+      const waiting = await overviewOf(projectId);
+      expect(waiting.run?.status).toBe('waiting_for_human');
+      const stage = waiting.stages.find((item) => item.stage === 'ideation')!;
+      expect(stage).toMatchObject({ status: 'waiting_for_human', pendingGateOutputId: null });
+      expect(waiting.humanTasks).toContainEqual(
+        expect.objectContaining({
+          kind: 'agent_question',
+          payload: { questionId: question.id, role: 'ideator' },
+        }),
+      );
+      const before = captured.length;
+
+      const given = await answer(projectId, question.id, { answer: '  50,000 USD  ' });
+      expect(given.statusCode, given.body).toBe(200);
+      // A question is answered once.
+      expect((await answer(projectId, question.id, { answer: 'again' })).statusCode).toBe(409);
+      const view = await flow.waitFor(projectId, flow.waiting('ideation'), 'ideation gate');
+      expect(flow.stageOf(view, 'ideation').status).toBe('waiting_for_human');
+      expect(captured.length).toBeGreaterThan(before);
+
+      // The answer is part of the data of the attempt that went on, with the rule for reading it.
+      const [final] = captured.filter(
+        (request) => request.responseSchema?.name === 'ideation_output',
+      );
+      expect(dataOf(final!)['humanAnswers']).toEqual([
+        { question: 'What is the budget ceiling?', answer: '50,000 USD' },
+      ]);
+      expect(final!.instructions).toContain('humanAnswers holds');
+      expect(final!.instructions).not.toContain('50,000');
+
+      const after = await overviewOf(projectId);
+      expect(after.humanTasks.some((task) => task.kind === 'agent_question')).toBe(false);
+      expect(after.agentQuestions[0]).toMatchObject({ status: 'answered', answer: '50,000 USD' });
+
+      // Ledger and audit know the question happened, not what it said.
+      const calls = await flow.toolCalls(projectId, 'request_human_input');
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toMatchObject({ decision: 'allowed', role: 'ideator', error_code: null });
+      expect(calls[0]!.result).toMatchObject({ questionId: question.id });
+      const events = await h.admin.query<{ action: string; after: unknown }>(
+        `select action, after from audit_events where project_id = $1 and action like 'workflow.agent_question%' order by occurred_at`,
+        [projectId],
+      );
+      expect(events.rows.map((row) => row.action)).toEqual([
+        'workflow.agent_question_asked',
+        'workflow.agent_question_answered',
+      ]);
+      expect(JSON.stringify(events.rows)).not.toContain('budget');
+      expect(JSON.stringify(events.rows)).not.toContain('50,000');
+    });
+
+    it('goes on with an assumption when the administrator declines', async () => {
+      await flow.setting('agents.tool_calling', true);
+      temporal.fake.toolResponder = askOnce;
+      const projectId = await toIdeation('tlc7b');
+      const question = await untilAsked(projectId);
+      const declined = await answer(projectId, question.id, { answer: null });
+      expect(declined.statusCode, declined.body).toBe(200);
+      await flow.waitFor(projectId, flow.waiting('ideation'), 'ideation gate');
+      const [final] = captured.filter(
+        (request) => request.responseSchema?.name === 'ideation_output',
+      );
+      expect(dataOf(final!)['humanAnswers']).toEqual([
+        { question: 'What is the budget ceiling?', answer: null },
+      ]);
+      const stored = await h.admin.query<{ status: string; answer: string | null }>(
+        'select status, answer from agent_questions where id = $1',
+        [question.id],
+      );
+      expect(stored.rows[0]).toEqual({ status: 'dismissed', answer: null });
+    });
+
+    it('refuses an answer that is empty, or for a question of another project', async () => {
+      await flow.setting('agents.tool_calling', true);
+      temporal.fake.toolResponder = askOnce;
+      const projectId = await toIdeation('tlc7c');
+      const question = await untilAsked(projectId);
+      expect((await answer(projectId, question.id, { answer: '   ' })).statusCode).toBe(400);
+      expect((await answer(projectId, question.id, {})).statusCode).toBe(400);
+      const other = await flow.project('tlc7other');
+      expect((await answer(other, question.id, { answer: 'x' })).statusCode).toBe(404);
+      const cookieB = await h.login(h.emails.b);
+      const foreign = await h.request(
+        'POST',
+        `/v1/workspaces/${h.ids.workspaceB}/projects/${projectId}/agent-questions/${question.id}/answer`,
+        { cookie: cookieB, payload: { answer: 'x' } },
+      );
+      expect(foreign.statusCode).toBe(404);
+      // Cancelling the run while it waits does not hang: the workflow ends.
+      const cancelled = await h.request(
+        'POST',
+        flow.api(`/projects/${projectId}/workflow/cancel`),
+        {
+          cookie: flow.cookie,
+          payload: { reason: 'Not needed any more' },
+        },
+      );
+      expect(cancelled.statusCode, cancelled.body).toBe(202);
+      const deadline = Date.now() + 20_000;
+      let status = '';
+      while (Date.now() < deadline && status !== 'cancelled') {
+        status = (await overviewOf(projectId)).run?.status ?? '';
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      }
+      expect(status).toBe('cancelled');
+    });
+
+    it('does not offer the tool when the limit is zero, and refuses a second question past the limit', async () => {
+      await flow.setting('agents.tool_calling', true);
+      await flow.setting('agents.max_human_questions', 0);
+      temporal.fake.toolResponder = askOnce;
+      const projectId = await toIdeation('tlc7d');
+      await flow.waitFor(projectId, flow.waiting('ideation'), 'ideation gate');
+      const offered = captured.filter(
+        (request) => (request.instructions ?? '').includes('Your role: ideator.') && request.tools,
+      );
+      expect(offered.length).toBeGreaterThan(0);
+      for (const request of offered) {
+        expect(request.tools!.map((tool) => tool.name)).not.toContain('request_human_input');
+      }
+      expect((await overviewOf(projectId)).agentQuestions).toEqual([]);
+      await flow.setting('agents.max_human_questions', 2);
+    });
+  });
 });

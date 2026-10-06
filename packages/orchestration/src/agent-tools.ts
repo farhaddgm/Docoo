@@ -8,6 +8,7 @@ import type {
 } from '@docoo/providers';
 import type { PoolClient } from 'pg';
 
+import { audit } from './db.js';
 import { retrieveKnowledge } from './knowledge-retrieval.js';
 import { listMaterials, readMaterial } from './project-materials.js';
 import { addPassages, knowledgePromptItems, type KnowledgePassage } from './research.js';
@@ -58,6 +59,11 @@ export interface ToolOutcome {
   /** Counts and ids only, never content: this is the ledger row. */
   readonly result: Record<string, unknown>;
   readonly errorCode?: string | null;
+  /**
+   * Set by a tool that cannot be answered now (an administrator must): the loop stops at once and
+   * the attempt waits for them (`request_human_input`).
+   */
+  readonly suspend?: { readonly questionId: string };
 }
 
 export type ParsedArguments<T> =
@@ -245,12 +251,119 @@ const calculator: ToolImplementation<{ expression: string }> = {
   },
 };
 
+/** Questions an agent may put to the administrator: how long they may be. */
+export const QUESTION_LIMITS = { maxQuestion: 1000, maxReason: 600 } as const;
+
+const requestHumanInput: ToolImplementation<{ question: string; reason: string }> = {
+  tool: 'request_human_input',
+  spec: () => ({
+    name: 'request_human_input',
+    description:
+      'Ask the project administrator one question you cannot answer from the materials, when a wrong guess would change the result. The work stops until they answer, so ask only what matters and ask once; their answer arrives in humanAnswers.',
+    parameters: {
+      type: 'object',
+      properties: {
+        question: { type: 'string', description: 'One clear question.' },
+        reason: { type: 'string', description: 'Why the answer changes your work.' },
+      },
+      required: ['question', 'reason'],
+      additionalProperties: false,
+    },
+  }),
+  available: (config) => config.agentMaxHumanQuestions > 0,
+  parse(args) {
+    if (!isRecord(args)) return { ok: false, error: 'arguments must be an object' };
+    const question = typeof args['question'] === 'string' ? args['question'].trim() : '';
+    const reason = typeof args['reason'] === 'string' ? args['reason'].trim() : '';
+    if (question.length < 3) return { ok: false, error: 'question must be at least 3 characters' };
+    return {
+      ok: true,
+      value: {
+        question: clip(question, QUESTION_LIMITS.maxQuestion),
+        reason: clip(reason, QUESTION_LIMITS.maxReason),
+      },
+    };
+  },
+  async execute({ client, scope, config }, { question, reason }) {
+    if (!scope.projectId || !scope.stageRunId) {
+      return { output: { error: 'no_stage' }, result: {}, errorCode: 'no_stage' };
+    }
+    const asked = Number(
+      (
+        await client.query<{ count: string }>(
+          'select count(*) as count from agent_questions where stage_run_id = $1',
+          [scope.stageRunId],
+        )
+      ).rows[0]?.count ?? 0,
+    );
+    if (asked >= config.agentMaxHumanQuestions) {
+      return {
+        output: {
+          error: 'question_limit',
+          message:
+            'You have asked all the questions this stage allows. Go on with stated assumptions and list each as an assumption.',
+        },
+        result: { asked },
+        errorCode: 'question_limit',
+      };
+    }
+    const row = (
+      await client.query<{ id: string }>(
+        `insert into agent_questions (workspace_id, project_id, stage_run_id, attempt_id, role, question, reason)
+         values ($1, $2, $3, $4, $5::agent_role, $6, $7) returning id`,
+        [
+          scope.workspaceId,
+          scope.projectId,
+          scope.stageRunId,
+          scope.attemptId,
+          scope.role,
+          question,
+          reason,
+        ],
+      )
+    ).rows[0]!;
+    await client.query(
+      `insert into human_tasks (workspace_id, project_id, stage_run_id, kind, title, payload)
+       values ($1, $2, $3, 'agent_question', $4, $5::jsonb)`,
+      [
+        scope.workspaceId,
+        scope.projectId,
+        scope.stageRunId,
+        `The ${scope.role} asks a question`,
+        JSON.stringify({ questionId: row.id, role: scope.role }),
+      ],
+    );
+    await client.query(`update stage_runs set status = 'waiting_for_human' where id = $1`, [
+      scope.stageRunId,
+    ]);
+    await client.query(
+      `update workflow_runs set status = 'waiting_for_human'
+        where id = (select run_id from stage_runs where id = $1)`,
+      [scope.stageRunId],
+    );
+    // The text is the project's own; the audit log keeps who asked and how long, not what.
+    await audit(client, scope.workspaceId, {
+      action: 'workflow.agent_question_asked',
+      targetType: 'agent_question',
+      targetId: row.id,
+      projectId: scope.projectId,
+      after: { role: scope.role, stageRunId: scope.stageRunId, questionLength: question.length },
+    });
+    return {
+      output: { status: 'waiting_for_administrator' },
+      result: { questionId: row.id, asked: asked + 1 },
+      suspend: { questionId: row.id },
+    };
+  },
+};
+
 /** Every tool the model can call; `AGENT_TOOLS` entries without one are run by code or not built. */
 export const TOOL_IMPLEMENTATIONS: Readonly<Partial<Record<AgentTool, ToolImplementation<never>>>> =
   {
     knowledge_retrieve: knowledgeRetrieve as unknown as ToolImplementation<never>,
     project_documents_read: projectDocumentsRead as unknown as ToolImplementation<never>,
     calculator: calculator as unknown as ToolImplementation<never>,
+    request_human_input: requestHumanInput as unknown as ToolImplementation<never>,
   };
 
 /** Tools the role may use (allowlist of the pinned definition) that exist and apply to this run. */
@@ -287,8 +400,10 @@ export interface ToolLoopResult {
   readonly transcript: readonly ToolTranscriptEntry[];
   readonly calls: number;
   readonly denied: number;
-  /** Why the loop stopped asking: the model was done, or a limit was hit. */
-  readonly stoppedBy: 'done' | 'call_limit' | 'cost_limit';
+  /** Why the loop stopped asking: the model was done, a limit was hit, or it asked the administrator. */
+  readonly stoppedBy: 'done' | 'call_limit' | 'cost_limit' | 'asked_human';
+  /** The question the administrator must answer before the attempt can go on. */
+  readonly suspendedFor: string | null;
 }
 
 /** The result of a call the platform will not run, sent back so the model can go on without it. */
@@ -319,6 +434,7 @@ export async function runToolLoop(input: {
   let calls = 0;
   let denied = 0;
   let stoppedBy: ToolLoopResult['stoppedBy'] = 'done';
+  let suspendedFor: string | null = null;
 
   const handle = async (call: ToolCall): Promise<string> => {
     calls += 1;
@@ -389,6 +505,7 @@ export async function runToolLoop(input: {
         });
         return result;
       });
+      if (outcome.suspend) suspendedFor = outcome.suspend.questionId;
       transcript.push({
         tool: call.name,
         input: call.arguments ?? {},
@@ -419,13 +536,20 @@ export async function runToolLoop(input: {
     if (response.finishReason !== 'tool_call' || response.toolCalls.length === 0) break;
     messages.push({ role: 'assistant', content: response.text, toolCalls: response.toolCalls });
     for (const call of response.toolCalls) {
+      // Once the administrator has been asked nothing else runs: the attempt starts over with
+      // their answer, and a call made now would only be repeated.
+      if (suspendedFor) break;
       const content = await handle(call);
       messages.push({ role: 'tool', toolCallId: call.id, toolName: call.name, content });
+    }
+    if (suspendedFor) {
+      stoppedBy = 'asked_human';
+      break;
     }
     if (calls >= input.maxCalls) {
       stoppedBy = 'call_limit';
       break;
     }
   }
-  return { transcript, calls, denied, stoppedBy };
+  return { transcript, calls, denied, stoppedBy, suspendedFor };
 }

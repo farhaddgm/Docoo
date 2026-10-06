@@ -8,4 +8,8 @@ INSERT INTO setting_definitions (key, value_schema, default_value, allowed_scope
   ('agents.max_tool_calls', '{"type":"integer","minimum":1,"maximum":20}', '6',
    '{workspace,topic,project}', false,
    'حداکثر تعداد فراخوانی ابزار برای هر پاسخ مدل',
-   'Maximum number of tool calls for one model answer');
+   'Maximum number of tool calls for one model answer'),
+  ('agents.max_human_questions', '{"type":"integer","minimum":0,"maximum":5}', '2',
+   '{workspace,topic,project}', false,
+   'حداکثر تعداد پرسش یک ایجنت از ادمین در هر مرحله؛ صفر یعنی ایجنت نمی‌تواند بپرسد',
+   'Maximum number of questions an agent may put to the administrator in one stage; zero means it cannot ask');

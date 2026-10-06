@@ -1859,6 +1859,40 @@ export const agentToolCalls = pgTable(
 );
 
 /**
+ * A question an agent put to the administrator in the middle of a stage with the
+ * `request_human_input` tool (ADR-0023). While one is open the stage waits; an answer (or a
+ * dismissal) lets the attempt go on with it as part of the data. The question and the answer are
+ * the project's own text, so they live here and the tool ledger keeps only counts and ids.
+ */
+export const agentQuestions = pgTable(
+  'agent_questions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    stageRunId: uuid('stage_run_id')
+      .notNull()
+      .references(() => stageRuns.id, { onDelete: 'cascade' }),
+    attemptId: uuid('attempt_id').references(() => stageAttempts.id, { onDelete: 'set null' }),
+    role: agentRole('role').notNull(),
+    question: text('question').notNull(),
+    /** Why the agent needs the answer; shown next to the question. */
+    reason: text('reason').notNull().default(''),
+    status: text('status').notNull().default('open'),
+    answer: text('answer'),
+    answeredBy: uuid('answered_by').references(() => users.id, { onDelete: 'set null' }),
+    answeredAt: timestamp('answered_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('agent_questions_stage_idx').on(table.stageRunId, table.createdAt),
+    index('agent_questions_project_status_idx').on(table.projectId, table.status, table.createdAt),
+  ],
+);
+
+/**
  * One run of the documenter on a document (ADR-0019, FR-AGT-001): the plan with its length
  * budgets, the subsections written so far, the references it cited and, at the end, the report.
  * The row is the progress the screen shows and what lets a restarted worker pick up where it

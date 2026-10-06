@@ -139,6 +139,7 @@ notion_sync: true
 | `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/reject`  | `workflow.reject`           |
 | `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/comment` | `project.update`            |
 | `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/edit`    | `project.update`            |
+| `POST /projects/{id}/agent-questions/{questionId}/answer`            | `project.update`            |
 | `POST /projects/{id}/stages/{stageRunId}/attempt-decision`           | `workflow.override`         |
 | `GET /human-tasks`                                                   | `workspace.read`            |
 | `GET /projects/{id}/analysis`                                        | `project.read`              |

@@ -39,7 +39,9 @@ export type AttemptResult =
       readonly status: 'blocked';
       readonly code: string;
       readonly reason: 'provider_failure' | 'configuration' | 'cost_limit';
-    };
+    }
+  /** The agent asked the administrator something; the stage waits for the answer (ADR-0023). */
+  | { readonly status: 'needs_input'; readonly questionId: string };
 
 export interface OrchestrationActivities extends AnalysisActivities, WritingActivities {
   startRun(ref: RunRef): Promise<{ paused: boolean }>;
@@ -292,6 +294,29 @@ export function createOrchestrationActivities(
           agentDefinitionVersionId: definition.id,
           allowed: definition.tools,
         };
+        // Questions the role put to the administrator in this stage: an open one means the attempt
+        // is still waiting for them; answered ones are part of the data from now on.
+        const questions = (
+          await client.query<{
+            id: string;
+            question: string;
+            status: string;
+            answer: string | null;
+          }>(
+            `select id, question, status, answer from agent_questions where stage_run_id = $1 order by created_at, id`,
+            [ref.stageRunId],
+          )
+        ).rows;
+        const openQuestion = questions.find((item) => item.status === 'open');
+        if (openQuestion) return { needsInput: openQuestion.id } as const;
+        await client.query(
+          `update stage_runs set status = 'running' where id = $1 and status = 'waiting_for_human'`,
+          [ref.stageRunId],
+        );
+        await client.query(
+          `update workflow_runs set status = 'running' where id = $1 and status = 'waiting_for_human'`,
+          [ref.runId],
+        );
         const research: ResearchRun | null =
           stage.stage === 'research'
             ? await prepareResearch(client, {
@@ -327,6 +352,7 @@ export function createOrchestrationActivities(
           analysis: analysis ?? undefined,
           knowledge: research ? knowledgePromptItems(research.passages) : undefined,
           business: business?.prompt,
+          humanAnswers: questions.map((item) => ({ question: item.question, answer: item.answer })),
         };
         const prompt = stagePrompt(promptInput);
         // Tools the model itself may call (ADR-0023): off unless the setting is on, and only those
@@ -348,6 +374,8 @@ export function createOrchestrationActivities(
       });
       if ('reuse' in prepared)
         return { status: 'succeeded', outputId: prepared.reuse, reused: true };
+      if ('needsInput' in prepared)
+        return { status: 'needs_input', questionId: prepared.needsInput };
       if ('blocked' in prepared) {
         return {
           status: 'blocked',
@@ -425,6 +453,7 @@ export function createOrchestrationActivities(
                 );
               }),
           });
+          if (loop.suspendedFor) return { status: 'needs_input', questionId: loop.suspendedFor };
           prompt = stagePrompt({
             ...prepared.promptInput,
             knowledge:

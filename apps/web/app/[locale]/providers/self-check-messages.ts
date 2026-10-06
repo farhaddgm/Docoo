@@ -62,10 +62,6 @@ const messages = {
       wrong_tool: 'مدل ابزار دیگری را صدا زد.',
       wrong_tool_arguments: 'آرگومان‌های ابزار درست نبود (ضرب ۱۷ در ۲۳ حساب نشد).',
       tool_result_not_used: 'مدل از نتیجهٔ ابزار در پاسخ نهایی استفاده نکرد.',
-      no_tool_call: 'مدل ابزار را صدا نزد، با اینکه مجبور به این کار شده بود.',
-      wrong_tool: 'مدل ابزار دیگری را صدا زد.',
-      wrong_tool_arguments: 'آرگومان‌های ابزار درست نبود (ضرب ۱۷ در ۲۳ حساب نشد).',
-      tool_result_not_used: 'مدل از نتیجهٔ ابزار در پاسخ نهایی استفاده نکرد.',
     } as Record<string, string>,
   },
   en: {
@@ -107,6 +103,7 @@ const messages = {
       document_outline: 'Document writing: outline',
       document_section: 'Document writing: one part',
       role_evaluation: 'Brain’s role evaluation',
+      tool_calling: 'Tool calling by the model',
     } as Record<string, string>,
     kinds: {
       auth: 'The key was not accepted or has no access to this model.',

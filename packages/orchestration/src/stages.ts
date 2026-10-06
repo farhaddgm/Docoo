@@ -157,6 +157,16 @@ export const STAGE_SCHEMAS: Record<Stage, JsonSchema> = {
   },
 };
 
+/** A question the agent asked and what the administrator said; `answer` is null when they declined. */
+export interface HumanAnswer {
+  readonly question: string;
+  readonly answer: string | null;
+}
+
+export const HUMAN_ANSWER_RULES: readonly string[] = [
+  "humanAnswers holds the administrator's answers to your earlier questions. Treat an answer as authoritative about the project. A null answer means they chose not to answer: go on with a stated assumption.",
+];
+
 export interface StageContext {
   readonly stage: Stage;
   /** The role definition this attempt runs with (principles, duties, task); pinned per project. */
@@ -181,6 +191,8 @@ export interface StageContext {
   readonly business?: BusinessPrompt | null | undefined;
   /** What the model's own tool calls returned (ADR-0023); absent when it called none. */
   readonly toolResults?: readonly unknown[] | undefined;
+  /** The administrator's answers to the questions this stage's agent asked (ADR-0023). */
+  readonly humanAnswers?: readonly HumanAnswer[] | undefined;
   /** Rules of a call that may use tools (`toolRules`). */
   readonly toolRules?: readonly string[] | undefined;
 }
@@ -220,6 +232,7 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
         : []),
       ...(context.business?.rules ?? []),
       ...(context.toolRules ?? []),
+      ...(context.humanAnswers && context.humanAnswers.length > 0 ? HUMAN_ANSWER_RULES : []),
     ],
   });
   const data = {
@@ -242,6 +255,9 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
       ? { approvedKnowledge: context.knowledge }
       : {}),
     ...(context.business ? { businessProfile: context.business.data } : {}),
+    ...(context.humanAnswers && context.humanAnswers.length > 0
+      ? { humanAnswers: context.humanAnswers }
+      : {}),
     ...(context.toolResults && context.toolResults.length > 0
       ? { toolResults: context.toolResults }
       : {}),
