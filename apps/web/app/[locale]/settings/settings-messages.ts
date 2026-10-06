@@ -36,6 +36,10 @@ const messages = {
         title: 'اسناد',
         help: 'سطح طول و قالب پیش‌فرض اسناد خروجی.',
       },
+      agents: {
+        title: 'ابزارهای ایجنت‌ها',
+        help: 'اجازهٔ فراخوانی ابزار توسط خود مدل (فقط ابزارهایی که نقش اجازه دارد) و سقف فراخوانی برای هر پاسخ. هر فراخوانی در دفتر ابزارها ثبت می‌شود.',
+      },
       business: {
         title: 'کسب‌وکار (Contenter)',
         help: 'وصل بودن پروژه به کسب‌وکار، همگام‌سازی پیش از اجرا و سقف حجم اطلاعاتی که به هر ایجنت می‌رسد.',
@@ -163,6 +167,10 @@ const messages = {
       documents: {
         title: 'Documents',
         help: 'The default length level and template of output documents.',
+      },
+      agents: {
+        title: 'Agent tools',
+        help: 'Let the model itself call the tools its role is allowed, and how many calls one answer may use. Every call is recorded in the tool ledger.',
       },
       business: {
         title: 'Business (Contenter)',

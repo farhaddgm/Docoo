@@ -26,6 +26,10 @@ export interface Settings {
   analysisRequireOutOfScope: boolean;
   /** Characters of the business profile one call may carry (`business.prompt_budget_chars`). */
   businessBudgetChars: number;
+  /** The model may call the tools its role is allowed (`agents.tool_calling`, ADR-0023). */
+  agentToolCalling: boolean;
+  /** Tool calls one answer may use (`agents.max_tool_calls`). */
+  agentMaxToolCalls: number;
 }
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
@@ -84,5 +88,7 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
     analysisRequireRisk: values['analysis.require_risk_dimension'] === true,
     analysisRequireOutOfScope: values['analysis.require_out_of_scope_dimension'] === true,
     businessBudgetChars: clampBusinessBudget(values['business.prompt_budget_chars']),
+    agentToolCalling: values['agents.tool_calling'] === true,
+    agentMaxToolCalls: boundedInteger(values['agents.max_tool_calls'], 6, 1, 20),
   };
 }

@@ -84,6 +84,7 @@ export const SETTING_GROUPS = [
       'document.level_bounds',
     ],
   },
+  { id: 'agents', keys: ['agents.tool_calling', 'agents.max_tool_calls'] },
   {
     id: 'business',
     keys: ['business.required', 'business.sync_on_start', 'business.prompt_budget_chars'],

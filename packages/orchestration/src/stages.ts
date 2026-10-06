@@ -179,6 +179,10 @@ export interface StageContext {
   readonly knowledge?: readonly KnowledgePromptItem[] | undefined;
   /** What this role reads of the project's business (ADR-0021); absent when it has none. */
   readonly business?: BusinessPrompt | null | undefined;
+  /** What the model's own tool calls returned (ADR-0023); absent when it called none. */
+  readonly toolResults?: readonly unknown[] | undefined;
+  /** Rules of a call that may use tools (`toolRules`). */
+  readonly toolRules?: readonly string[] | undefined;
 }
 
 /**
@@ -215,6 +219,7 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
           : NO_KNOWLEDGE_RULES
         : []),
       ...(context.business?.rules ?? []),
+      ...(context.toolRules ?? []),
     ],
   });
   const data = {
@@ -237,6 +242,9 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
       ? { approvedKnowledge: context.knowledge }
       : {}),
     ...(context.business ? { businessProfile: context.business.data } : {}),
+    ...(context.toolResults && context.toolResults.length > 0
+      ? { toolResults: context.toolResults }
+      : {}),
   };
   return { instructions, message: `<data>${JSON.stringify(data)}</data>` };
 }
