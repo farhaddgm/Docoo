@@ -127,7 +127,7 @@ documents:
     section: 07 Integrations
   - path: docs/06-delivery/13-google-accounts.md
     doc_id: DOCOO-DEL-0013
-    section: Delivery
+    section: 06 Delivery & Operations
   - path: docs/adr/0001-modular-monolith.md
     doc_id: DOCOO-ADR-0001
     section: ADRs

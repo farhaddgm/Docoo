@@ -179,7 +179,9 @@ BEGIN
     scope := 'app.knowledge_version_access(workspace_id,knowledge_version_id)';
    END IF;
   END CASE;
-  scope := format('CASE WHEN app.actor_role(workspace_id)=''super_admin'' THEN ''EDIT'' ELSE (%s) END',COALESCE(scope,'NULL::text'));
+  -- Every table in this loop already has a restrictive tenant boundary. Evaluate
+  -- the administrator shortcut once per statement, rather than once per row.
+  scope := format('CASE WHEN (SELECT app.actor_role(app.current_workspace_id()))=''super_admin'' THEN ''EDIT'' ELSE (%s) END',COALESCE(scope,'NULL::text'));
   read_scope := format('(%s) IS NOT NULL',scope); write_scope := format('(%s)=''EDIT''',scope);
   IF is_root THEN
    -- INSERT ... RETURNING must see the new tuple before a helper can query it.

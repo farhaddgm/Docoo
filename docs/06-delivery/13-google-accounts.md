@@ -1,10 +1,11 @@
 ---
 doc_id: DOCOO-DEL-0013
 title: Google sign-in and account management
-section: Delivery
-status: implemented
+status: active
 version: 1.0.0
-updated: 2026-10-07
+owner: Platform & Operations
+last_updated: 2026-10-07
+notion_sync: true
 ---
 
 # ورود با جیمیل و مدیریت حساب‌ها
