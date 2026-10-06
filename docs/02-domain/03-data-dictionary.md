@@ -2,9 +2,9 @@
 doc_id: DOCOO-DATA-DICTIONARY
 title: فرهنگ داده هسته Docoo
 status: approved-baseline
-version: 1.3.0
+version: 1.4.0
 owner: Data Architecture
-last_updated: 2026-10-05
+last_updated: 2026-10-06
 notion_sync: true
 ---
 
@@ -97,7 +97,7 @@ ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار �
 
 ### ثبت اجرا
 
-`stage_attempts.agent_definition_version_id` و `model_invocations.agent_definition_version_id` به‌علاوهٔ `model_invocations.prompt_sha256` (هش دستور و پیام ارسال‌شده؛ متن ذخیره نمی‌شود). `model_invocations.error_detail` (مهاجرت 0027) دلیل خطای provider است: متن پاسخ پس از حذف رشته‌های شبیه کلید و کوتاه‌سازی به ۳۰۰ نویسه (قید `char_length <= 300`)؛ `null` برای تماس موفق یا خطایی که provider دلیلی نگفته. `price_id is null` یعنی هزینه با قیمت پیش‌فرض برآورد شده ([ADR-0020](../adr/0020-real-provider-readiness.md)).
+`stage_attempts.agent_definition_version_id` و `model_invocations.agent_definition_version_id` به‌علاوهٔ `model_invocations.prompt_sha256` (هش دستور و پیام ارسال‌شده؛ متن ذخیره نمی‌شود). `model_invocations.error_detail` (مهاجرت 0027) دلیل خطای provider است: متن پاسخ پس از حذف رشته‌های شبیه کلید و کوتاه‌سازی به ۳۰۰ نویسه (قید `char_length <= 300`)؛ `null` برای تماس موفق یا خطایی که provider دلیلی نگفته. `price_id is null` یعنی هزینه با قیمت پیش‌فرض برآورد شده ([ADR-0020](../adr/0020-real-provider-readiness.md)). `model_prices.source` (`manual` یا `catalog`)، `source_ref` (مثلاً `litellm:gpt-4o`) و `catalog_hash` (sha256 محتوای کاتالوگی که قیمت از آن خوانده شد) مبدأ هر قیمت را نگه می‌دارند (مهاجرت 0030)؛ قید جدول می‌گوید ردیف `catalog` هر دو را دارد و ردیف `manual` هیچ‌کدام را ([ADR-0022](../adr/0022-model-prices-from-public-catalog.md)).
 
 ## workflow
 

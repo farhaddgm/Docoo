@@ -31,7 +31,14 @@ import {
   type RunRef,
   type WritingRef,
 } from '@docoo/orchestration';
-import { createAdapter, FakeAdapter, masterKeyFromEnv, type FakeScript } from '@docoo/providers';
+import {
+  createAdapter,
+  FakeAdapter,
+  masterKeyFromEnv,
+  parsePriceCatalog,
+  PriceCatalogError,
+  type FakeScript,
+} from '@docoo/providers';
 import {
   Client as TemporalClient,
   Connection as TemporalConnection,
@@ -51,6 +58,11 @@ import {
   type PasswordResetDelivery,
   type PasswordResetMessage,
 } from '../../src/auth/auth.reset-delivery.js';
+import {
+  PRICE_CATALOG,
+  type LoadedPriceCatalog,
+  type PriceCatalogSource,
+} from '../../src/providers/price-catalog.source.js';
 import { PROVIDER_RUNTIME } from '../../src/providers/providers.service.js';
 import { INGESTION_DISPATCHER, OBJECT_STORE } from '../../src/sources/ingestion.providers.js';
 import { DATABASE_POOL } from '../../src/tokens.js';
@@ -232,6 +244,30 @@ export class TemporalTestRuntime implements WorkflowEngine {
   }
 }
 
+/** The public price catalog replaced by a file the test controls (nothing leaves the machine). */
+export class StubPriceCatalog implements PriceCatalogSource {
+  /** Set to make the catalog unreachable, as a blocked network would. */
+  failing = false;
+  loads = 0;
+  private loaded: LoadedPriceCatalog;
+
+  constructor(file: Record<string, unknown>) {
+    this.loaded = { catalog: parsePriceCatalog(file), fetchedAt: new Date().toISOString() };
+  }
+
+  /** Publishes a new version of the catalog file. */
+  publish(file: Record<string, unknown>): void {
+    this.loaded = { catalog: parsePriceCatalog(file), fetchedAt: new Date().toISOString() };
+  }
+
+  load(): Promise<LoadedPriceCatalog> {
+    this.loads += 1;
+    return this.failing
+      ? Promise.reject(new PriceCatalogError('unreachable', 'ENOTFOUND'))
+      : Promise.resolve(this.loaded);
+  }
+}
+
 export interface Harness {
   readonly app: NestFastifyApplication;
   readonly admin: Client;
@@ -241,6 +277,8 @@ export interface Harness {
   readonly engine: RecordingEngine | TemporalTestRuntime;
   /** Fake model provider shared by the API and the test worker; tests may set `responder`/`script`. */
   readonly fake: FakeAdapter;
+  /** Stand-in for the public model price catalog; tests publish files into it. */
+  readonly priceCatalog: StubPriceCatalog;
   readonly ids: {
     readonly userA: string;
     readonly userB: string;
@@ -356,6 +394,7 @@ export async function createHarness(
   const providerRuntime = new ProviderRuntime(runtimePool, masterKeyFromEnv(), (kind, options) =>
     kind === 'fake' ? fake : createAdapter(kind, options),
   );
+  const priceCatalog = new StubPriceCatalog({});
   const module = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(DATABASE_POOL)
     .useValue(runtimePool)
@@ -369,6 +408,8 @@ export async function createHarness(
     .useValue(engine)
     .overrideProvider(PROVIDER_RUNTIME)
     .useValue(providerRuntime)
+    .overrideProvider(PRICE_CATALOG)
+    .useValue(priceCatalog)
     .compile();
   const app = module.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
     logger: false,
@@ -425,6 +466,7 @@ export async function createHarness(
     ingestion,
     engine,
     fake,
+    priceCatalog,
     ids,
     emails,
     suffix,

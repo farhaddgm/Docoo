@@ -2,9 +2,9 @@
 doc_id: DOCOO-EPIC-BREAKDOWN
 title: شکست epicهای فاز ۲ تا ۶ به story
 status: proposed
-version: 1.1.0
+version: 1.2.0
 owner: Product & Engineering
-last_updated: 2026-10-05
+last_updated: 2026-10-06
 notion_sync: true
 ---
 
@@ -66,6 +66,7 @@ notion_sync: true
 | AI-005 | usage، latency و برآورد هزینه                     | FR-AI-007                 | AI-002         | هر invocation token، latency، finish reason و هزینه دارد و با سقف هزینهٔ پروژه مقایسه می‌شود                                                                                                                                                                                                           |
 | AI-006 | آزمون خودکار مدل، قیمت و دلیل خطای provider       | FR-AI-005، FR-AI-007      | AI-002، AI-005 | ادمین با یک کلیک می‌بیند هر نوع تماس محصول روی مدل انتخابی کار می‌کند؛ مدل بی‌قیمت سقف هزینه را خاموش نمی‌کند؛ دلیل شکست sanitize‌شده ثبت و نشان داده می‌شود ([ADR-0020](../adr/0020-real-provider-readiness.md))                                                                                      |
 | AI-007 | کسب‌وکار پروژه از Contenter                       | FR-AI-001، FR-AI-004      | AI-001، AI-006 | پروژه به کسب‌وکار Contenter وصل می‌شود؛ ایجنت‌ها فقط بخش لازم نقش خود را با سقف حجم می‌گیرند و هر اجرا، نگارش و تماس به snapshot نسخه‌دار خود سنجاق است؛ توکن سرویس write-only است؛ خاموشی Contenter کار را متوقف نمی‌کند؛ اصطلاحات را کد می‌سنجد ([ADR-0021](../adr/0021-business-from-contenter.md)) |
+| AI-008 | قیمت مدل‌ها از کاتالوگ عمومی                      | FR-AI-007                 | AI-005، AI-006 | ادمین قیمت پیشنهادی هر مدل را کنار قیمت فعلی می‌بیند و خودش انتخاب می‌کند؛ ثبت از نسخهٔ خود سرور با `catalogHash`، منبع و audit انجام می‌شود؛ قیمت صفر یا نامعتبر هرگز پیشنهاد نمی‌شود؛ خاموشی کاتالوگ ثبت دستی را متوقف نمی‌کند ([ADR-0022](../adr/0022-model-prices-from-public-catalog.md))         |
 
 ## SOL/DOC/EVA — راه‌حل، سند و ارزیابی (فاز ۴، epic #29)
 

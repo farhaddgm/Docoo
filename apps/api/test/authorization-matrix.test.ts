@@ -113,6 +113,8 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/provider-connections/:connectionId/models': 'provider.read',
   'GET workspaces/:workspaceId/model-prices': 'provider.read',
   'POST workspaces/:workspaceId/model-prices': 'provider.configure',
+  'POST workspaces/:workspaceId/model-prices/catalog-lookup': 'provider.configure',
+  'POST workspaces/:workspaceId/model-prices/catalog-import': 'provider.configure',
   'GET workspaces/:workspaceId/model-invocations': 'provider.read',
   'GET workspaces/:workspaceId/integrations/contenter': 'integration.read',
   'PUT workspaces/:workspaceId/integrations/contenter': 'integration.configure',

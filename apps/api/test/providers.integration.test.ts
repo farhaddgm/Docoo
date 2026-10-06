@@ -259,6 +259,247 @@ describe.skipIf(!adminUrl)('provider connections (AI-001, AI-003, AI-004)', () =
     expect(priced.json<{ defaultModel: unknown }>().defaultModel).toMatchObject({ priced: true });
   });
 
+  it('AI-005: prices come from the public catalog only after a preview, from the server’s own copy, and traceably', async () => {
+    const entry = (input: number, output: number, extra: Record<string, unknown> = {}) => ({
+      litellm_provider: 'openai',
+      mode: 'chat',
+      input_cost_per_token: input,
+      output_cost_per_token: output,
+      ...extra,
+    });
+    const fileV1 = {
+      'gpt-a': entry(0.0000025, 0.00001, { cache_read_input_token_cost: 0.00000125 }),
+      'gpt-b': entry(1.5e-7, 6e-7),
+      'gpt-manual': entry(0.000002, 0.000008),
+      'gpt-free': entry(0, 0),
+    };
+    h.priceCatalog.publish(fileV1);
+    const connection = (
+      await h.request('POST', api('/provider-connections'), {
+        cookie,
+        payload: { provider: 'openai', name: 'Catalog prices', baseUrl: base, secret: SECRET_V2 },
+      })
+    ).json<{ connection: Connection }>().connection;
+    const refreshed = await h.request(
+      'POST',
+      api(`/provider-connections/${connection.id}/models/refresh`),
+      { cookie },
+    );
+    expect(refreshed.statusCode, refreshed.body).toBe(200);
+    // Two models already priced by hand: one the catalog disagrees with, one it calls free.
+    for (const [model, inputPerMillion, outputPerMillion] of [
+      ['gpt-manual', 1, 4],
+      ['gpt-free', 3, 9],
+    ] as const) {
+      const added = await h.request('POST', api('/model-prices'), {
+        cookie,
+        payload: {
+          provider: 'openai',
+          model,
+          inputPerMillion,
+          outputPerMillion,
+          effectiveFrom: '2026-01-01T00:00:00Z',
+        },
+      });
+      expect(added.statusCode, added.body).toBe(201);
+    }
+
+    type Item = {
+      provider: string;
+      model: string;
+      status: string;
+      match: string | null;
+      reason: string | null;
+      current: { inputPerMillion: number; source: string } | null;
+      catalog: { key: string; inputPerMillion: number; outputPerMillion: number } | null;
+    };
+    type Lookup = {
+      catalog: { source: string; hash: string; entryCount: number };
+      items: Item[];
+    };
+    const lookup = async () => {
+      const response = await h.request('POST', api('/model-prices/catalog-lookup'), {
+        cookie,
+        payload: {},
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      return response.json<Lookup>();
+    };
+    const before = await lookup();
+    const byModel = (view: Lookup, model: string) => view.items.find((i) => i.model === model)!;
+    expect(before.catalog).toMatchObject({ source: 'litellm', entryCount: 3 });
+    expect(byModel(before, 'gpt-a')).toMatchObject({
+      status: 'new',
+      match: 'exact',
+      current: null,
+      catalog: { key: 'gpt-a', inputPerMillion: 2.5, outputPerMillion: 10 },
+    });
+    expect(byModel(before, 'gpt-b')).toMatchObject({ status: 'new' });
+    expect(byModel(before, 'gpt-manual')).toMatchObject({
+      status: 'changed',
+      current: { inputPerMillion: 1, source: 'manual' },
+      catalog: { inputPerMillion: 2 },
+    });
+    // A zero price is never offered: it would switch the cost ceiling off for the model.
+    expect(byModel(before, 'gpt-free')).toMatchObject({
+      status: 'unusable',
+      reason: 'zero_price',
+      catalog: null,
+    });
+    const countRows = async () =>
+      Number(
+        (
+          await h.admin.query<{ n: string }>(
+            `select count(*) as n from model_prices where workspace_id = $1`,
+            [h.ids.workspaceA],
+          )
+        ).rows[0]!.n,
+      );
+    const rowsBefore = await countRows();
+    expect(rowsBefore).toBeGreaterThan(0); // the preview itself saved nothing
+
+    const importItems = (...models: string[]) => ({
+      catalogHash: before.catalog.hash,
+      items: models.map((model) => ({ provider: 'openai', model })),
+    });
+    const wrongHash = await h.request('POST', api('/model-prices/catalog-import'), {
+      cookie,
+      payload: { ...importItems('gpt-a'), catalogHash: 'a'.repeat(64) },
+    });
+    expect(wrongHash.statusCode).toBe(409);
+    expect(wrongHash.json<{ code: string }>().code).toBe('PRICE_CATALOG_CHANGED');
+    expect(await countRows()).toBe(rowsBefore);
+
+    // The request names models, never prices: the figures are the server's own copy.
+    const forged = await h.request('POST', api('/model-prices/catalog-import'), {
+      cookie,
+      payload: {
+        ...importItems('gpt-a'),
+        items: [{ provider: 'openai', model: 'gpt-a', inputPerMillion: 0.0001 }],
+      },
+    });
+    expect(forged.statusCode).toBe(400);
+
+    const noMatch = await h.request('POST', api('/model-prices/catalog-import'), {
+      cookie,
+      payload: importItems('gpt-a', 'gpt-free'),
+    });
+    expect(noMatch.statusCode).toBe(422);
+    expect(noMatch.json<{ code: string }>().code).toBe('PRICE_CATALOG_NO_MATCH');
+    expect(await countRows()).toBe(rowsBefore); // all or nothing
+
+    const saved = await h.request('POST', api('/model-prices/catalog-import'), {
+      cookie,
+      payload: importItems('gpt-a', 'gpt-b', 'gpt-manual'),
+    });
+    expect(saved.statusCode, saved.body).toBe(200);
+    const result = saved.json<{ imported: { model: string }[]; skipped: unknown[] }>();
+    expect(result.imported.map((item) => item.model).sort()).toEqual([
+      'gpt-a',
+      'gpt-b',
+      'gpt-manual',
+    ]);
+    expect(await countRows()).toBe(rowsBefore + 3);
+    const stored = await h.admin.query<{
+      model: string;
+      input_per_million: number;
+      output_per_million: number;
+      cached_input_per_million: number | null;
+      source: string;
+      source_ref: string;
+      catalog_hash: string;
+    }>(
+      `select model, input_per_million, output_per_million, cached_input_per_million, source, source_ref, catalog_hash
+         from model_prices where workspace_id = $1 and source = 'catalog' order by model`,
+      [h.ids.workspaceA],
+    );
+    expect(stored.rows).toEqual([
+      {
+        model: 'gpt-a',
+        input_per_million: 2.5,
+        output_per_million: 10,
+        cached_input_per_million: 1.25,
+        source: 'catalog',
+        source_ref: 'litellm:gpt-a',
+        catalog_hash: before.catalog.hash,
+      },
+      expect.objectContaining({ model: 'gpt-b', input_per_million: 0.15, output_per_million: 0.6 }),
+      expect.objectContaining({ model: 'gpt-manual', input_per_million: 2, output_per_million: 8 }),
+    ]);
+    // The newest price wins, the older manual one stays in the history.
+    const listed = (await h.request('GET', api('/model-prices'), { cookie })).json<{
+      items: { model: string; inputPerMillion: number; source: string }[];
+    }>();
+    expect(
+      listed.items.filter((item) => item.model === 'gpt-manual').map((item) => item.source),
+    ).toEqual(['catalog', 'manual']);
+    const audit = await h.admin.query<{ after: { count: number; catalogHash: string } }>(
+      `select after from audit_events where workspace_id = $1 and action = 'provider.prices_imported'`,
+      [h.ids.workspaceA],
+    );
+    expect(audit.rows).toHaveLength(1);
+    expect(audit.rows[0]!.after).toMatchObject({ count: 3, catalogHash: before.catalog.hash });
+
+    // Saving the same thing again changes nothing.
+    const again = await h.request('POST', api('/model-prices/catalog-import'), {
+      cookie,
+      payload: importItems('gpt-a', 'gpt-b', 'gpt-manual'),
+    });
+    expect(again.json<{ imported: unknown[]; skipped: unknown[] }>()).toMatchObject({
+      imported: [],
+      skipped: expect.arrayContaining([expect.objectContaining({ model: 'gpt-a' })]),
+    });
+    expect(await countRows()).toBe(rowsBefore + 3);
+    expect(byModel(await lookup(), 'gpt-a').status).toBe('same');
+
+    // The catalog moves on: the old preview can no longer be applied, a new one shows the change.
+    h.priceCatalog.publish({ ...fileV1, 'gpt-a': entry(0.000003, 0.000012) });
+    const stale = await h.request('POST', api('/model-prices/catalog-import'), {
+      cookie,
+      payload: importItems('gpt-a'),
+    });
+    expect(stale.statusCode).toBe(409);
+    const moved = await lookup();
+    expect(moved.catalog.hash).not.toBe(before.catalog.hash);
+    expect(byModel(moved, 'gpt-a')).toMatchObject({
+      status: 'changed',
+      current: { inputPerMillion: 2.5 },
+      catalog: { inputPerMillion: 3, outputPerMillion: 12 },
+    });
+
+    // An unreachable catalog is reported plainly and writes nothing.
+    h.priceCatalog.failing = true;
+    for (const [suffix, payload] of [
+      ['/model-prices/catalog-lookup', {}],
+      [
+        '/model-prices/catalog-import',
+        { catalogHash: moved.catalog.hash, items: [{ provider: 'openai', model: 'gpt-a' }] },
+      ],
+    ] as const) {
+      const down = await h.request('POST', api(suffix), { cookie, payload });
+      expect(down.statusCode, down.body).toBe(502);
+      expect(down.json<{ code: string }>().code).toBe('PRICE_CATALOG_UNAVAILABLE');
+    }
+    h.priceCatalog.failing = false;
+    expect(await countRows()).toBe(rowsBefore + 3);
+
+    // The other workspace has none of these prices and cannot import into this one.
+    const cookieB = await h.login(h.emails.b);
+    const other = await h.request('GET', `/v1/workspaces/${h.ids.workspaceB}/model-prices`, {
+      cookie: cookieB,
+    });
+    expect(other.json<{ items: unknown[] }>().items).toEqual([]);
+    const crossed = await h.request('POST', api('/model-prices/catalog-lookup'), {
+      cookie: cookieB,
+      payload: {},
+    });
+    expect([403, 404]).toContain(crossed.statusCode);
+    const unauthenticated = await h.request('POST', api('/model-prices/catalog-lookup'), {
+      payload: {},
+    });
+    expect(unauthenticated.statusCode).toBe(401);
+  });
+
   it('AI-005: the self-check tries every kind of call and records each as a model call', async () => {
     const fake = (
       await h.request('POST', api('/provider-connections'), {

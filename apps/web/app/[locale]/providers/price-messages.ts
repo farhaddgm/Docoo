@@ -3,7 +3,7 @@ import type { Locale } from '../../i18n';
 const messages = {
   fa: {
     title: 'قیمت مدل‌ها',
-    help: 'قیمت هر مدل را از صفحهٔ قیمت‌گذاری خود ارائه‌دهنده بردارید (دلار برای هر میلیون توکن). هزینهٔ نمایش‌داده‌شده و سقف هزینهٔ هر اجرا از همین قیمت‌ها حساب می‌شود.',
+    help: 'قیمت مدل‌ها را با «دریافت خودکار» از کاتالوگ عمومی بگیرید یا خودتان از صفحهٔ قیمت‌گذاری ارائه‌دهنده وارد کنید (دلار برای هر میلیون توکن). هزینهٔ نمایش‌داده‌شده و سقف هزینهٔ هر اجرا از همین قیمت‌ها حساب می‌شود.',
     unpricedTitle: 'قیمت مدل پیش‌فرض ثبت نشده است',
     unpriced:
       'تا قیمت «{model}» را ثبت نکنید، هزینه با یک قیمت پیش‌فرض بالا برآورد می‌شود (ورودی {input} و خروجی {output} دلار برای هر میلیون توکن). سقف هزینه کار می‌کند ولی زودتر از واقعیت فعال می‌شود.',
@@ -17,6 +17,9 @@ const messages = {
     cached: 'ورودی کش‌شده',
     reasoning: 'استدلال',
     since: 'از تاریخ',
+    source: 'منبع',
+    sourceManual: 'دستی',
+    sourceCatalog: 'کاتالوگ',
     perMillion: 'دلار برای هر میلیون توکن',
     add: 'ثبت قیمت',
     adding: 'در حال ثبت…',
@@ -31,7 +34,7 @@ const messages = {
   },
   en: {
     title: 'Model prices',
-    help: 'Take each model’s price from the provider’s own pricing page (USD per million tokens). The cost shown and the cost ceiling of a run are calculated from these prices.',
+    help: 'Get model prices automatically from the public catalog, or enter them yourself from the provider’s pricing page (USD per million tokens). The cost shown and the cost ceiling of a run are calculated from these prices.',
     unpricedTitle: 'The default model has no price yet',
     unpriced:
       'Until you enter a price for “{model}”, cost is estimated with a high default price ({input} input and {output} output USD per million tokens). The ceiling works, but it triggers earlier than the real cost would.',
@@ -45,6 +48,9 @@ const messages = {
     cached: 'Cached input',
     reasoning: 'Reasoning',
     since: 'Since',
+    source: 'Source',
+    sourceManual: 'Manual',
+    sourceCatalog: 'Catalog',
     perMillion: 'USD per million tokens',
     add: 'Save price',
     adding: 'Saving…',

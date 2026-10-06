@@ -188,3 +188,6 @@ documents:
   - path: docs/adr/0021-business-from-contenter.md
     doc_id: DOCOO-ADR-0021
     section: ADRs
+  - path: docs/adr/0022-model-prices-from-public-catalog.md
+    doc_id: DOCOO-ADR-0022
+    section: ADRs

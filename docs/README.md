@@ -2,9 +2,9 @@
 doc_id: DOCOO-DOC-INDEX
 title: فهرست مرجع مستندات Docoo
 status: active
-version: 0.3.1
+version: 0.3.2
 owner: Product & Architecture
-last_updated: 2026-10-03
+last_updated: 2026-10-06
 notion_sync: true
 ---
 
@@ -102,6 +102,7 @@ notion_sync: true
 57. [ADR-0019: نگارش سند توسط مستندساز و ویرایشگر ساختاریافتهٔ بلوک‌ها](adr/0019-document-writing-and-structured-editor.md)
 58. [ADR-0020: آمادگی برای مدل واقعی: سقف خروجی، سقف هزینهٔ کارا، دلیل خطای provider و آزمون خودکار مدل](adr/0020-real-provider-readiness.md)
 59. [ADR-0021: کسب‌وکار از Contenter: اتصال فقط‌خواندنی، snapshot نسخه‌دار، و کار ایجنت‌ها بر پایهٔ کسب‌وکار پروژه](adr/0021-business-from-contenter.md)
+60. [ADR-0022: دریافت قیمت مدل‌ها از کاتالوگ عمومی: پیش‌نمایش، انتخاب انسان و ثبت ردیابی‌پذیر](adr/0022-model-prices-from-public-catalog.md)
 
 ## وضعیت اسناد
 

@@ -5,6 +5,7 @@ import {
   errorMessage,
   formatDate,
   formatNumber,
+  formatPrice,
   isLocale,
   localizedPath,
   messagesFor,
@@ -31,6 +32,14 @@ describe('i18n (FR-LOC-001..004)', () => {
     expect(formatNumber('en', 1234)).toBe('1,234');
     expect(formatDate('en', '2026-10-02T00:00:00Z')).toContain('2026');
     expect(formatDate('fa', '2026-10-02T00:00:00Z')).toMatch(/[۰-۹]/);
+  });
+
+  it('shows a price with every real digit, where a plain number would round to three', () => {
+    expect(formatPrice('en', 0.0375)).toBe('0.0375');
+    expect(formatNumber('en', 0.0375)).toBe('0.038');
+    expect(formatPrice('en', 2.5)).toBe('2.5');
+    expect(formatPrice('fa', 2.5)).toBe('۲٫۵');
+    expect(formatPrice('en', 1250)).toBe('1,250');
   });
 
   it('maps API problem codes to safe localized messages', () => {

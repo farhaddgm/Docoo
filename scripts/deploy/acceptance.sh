@@ -87,7 +87,7 @@ judge_prices() { # judge_prices "provider|price_count" lines, one per real conne
     [ "${count:-0}" -ge 1 ] || missing+=("$provider")
   done <<<"$rows"
   if [ "${#missing[@]}" -eq 0 ]; then printf 'PASS|a price is entered for every real provider, so costs and the cost ceiling are real\n'
-  else printf 'WARN|no price entered for %s; calls are estimated with a high default price and the cost ceiling triggers early (enter prices on the "AI providers" page)\n' "${missing[*]}"; fi
+  else printf 'WARN|no price entered for %s; calls are estimated with a high default price and the cost ceiling triggers early (on the "AI providers" page use "Get prices from the public catalog" or enter them)\n' "${missing[*]}"; fi
 }
 
 judge_backup() { # judge_backup PREFIX LIST_OUTPUT

@@ -211,6 +211,13 @@
       "when": 1791197406446,
       "tag": "0029_business_security",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791240027990,
+      "tag": "0030_model_price_source",
+      "breakpoints": true
     }
   ]
 }

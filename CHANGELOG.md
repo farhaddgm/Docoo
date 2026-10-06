@@ -2,6 +2,28 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.20.0] — 2026-10-06
+
+Model prices can be read from a public catalog instead of being typed in. See [ADR-0022](docs/adr/0022-model-prices-from-public-catalog.md). Nothing is saved on its own: the administrator sees each price next to the current one and chooses.
+
+### Added
+
+- **"Get prices from the public catalog"** in the _Model prices_ section of the AI providers page. It reads LiteLLM's public price catalog, finds the price of every model the workspace can use (the models in the connections' lists, the default model and the models that already have a price) and shows it next to the current price with a status: new, changed, same, not in the catalog, or no reliable price. New and changed exact matches are preselected; a match made by dropping a date from the name (`gpt-4o-2024-08-06` → `gpt-4o`) is marked and not preselected. Input, output, cached-input and reasoning prices are read, converted from price per token to USD per million tokens; models with a higher price above some prompt length are marked "base price", and models the catalog says are being retired show the date.
+- **The server saves its own copy, not the browser's figures.** `POST /model-prices/catalog-lookup` (nothing saved) and `POST /model-prices/catalog-import` (`provider.configure`). The import takes model names and the `catalogHash` of the preview, and answers `409 PRICE_CATALOG_CHANGED` if the catalog is no longer the one that was shown; it is all or nothing (`422 PRICE_CATALOG_NO_MATCH`), and a price equal to the current one is skipped, so repeating it changes nothing. An unreachable catalog answers `502 PRICE_CATALOG_UNAVAILABLE` and typing a price still works.
+- **A zero, missing, negative or absurd price is never offered.** A zero price would switch the cost ceiling off for that model. Only text models of OpenAI, Anthropic and Gemini are read; other providers' entries with the same model name never leak in.
+- **Where each price came from.** `model_prices.source` (`manual` or `catalog`), `source_ref` (for example `litellm:gpt-4o`) and `catalog_hash` (migration 0030, with a check that a catalog price has both and a manual one neither). The price list shows the source, and an audit event `provider.prices_imported` records what was saved.
+- `MODEL_PRICE_CATALOG_URL` (optional, https): a copy of the catalog you host yourself, for a server that may not reach GitHub. The download has one fixed address, no redirects, a 30-second and a 12 MB limit, and sends nothing from the workspace.
+- End-to-end test in the browser (including accessibility) against a stand-in catalog; integration test of the whole flow on PostgreSQL; unit tests of the parser, the matcher and the download (also run against the real 3 MB catalog file).
+
+### Changed
+
+- Prices on the page are shown with every real digit (`0.0375`, not `0.038`).
+- The server acceptance report's "Model prices" hint now names the new button.
+
+### Fixed
+
+- The documented command for the server acceptance report (`… > acceptance-DATE.md` inside `/opt/docoo`) failed with "Permission denied" for a non-root user because the shell, not `sudo`, opens the file. The guides now use `| tee ~/acceptance-DATE.md`.
+
 ## [0.19.0] — 2026-10-05
 
 A project can now be linked to a business defined in Contenter, and the agents work from it. Contenter stays the only place where a business is edited; Docoo reads it, keeps a numbered copy, and shows everything in a new tab. See [ADR-0021](docs/adr/0021-business-from-contenter.md). **Needs Contenter 0.9.0** with `INTEGRATION_TOKEN` set (owner guide, step 9).

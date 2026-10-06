@@ -4,7 +4,8 @@ import { createServer } from 'node:http';
  * A stand-in for the service API of Contenter (docs/18-docoo-integration.md of Contenter) for the
  * end-to-end tests: the same routes, the same bearer token, the same shape of answer. The tests
  * edit the businesses and switch the service off through the /__control routes, which only exist
- * here. Started by Playwright (see playwright.config.ts); never part of a deployment.
+ * here. It also serves a tiny model price catalog at /__prices/catalog.json. Started by Playwright
+ * (see playwright.config.ts); never part of a deployment.
  */
 const PORT = Number(process.env.E2E_CONTENTER_PORT ?? 4010);
 const TOKEN = 'e2e-contenter-service-token-0123456789abcdef';
@@ -249,6 +250,27 @@ const server = createServer(async (request, response) => {
   };
   try {
     const url = new URL(request.url ?? '/', 'http://contenter.e2e');
+
+    // A small model price catalog in the shape of LiteLLM's public file, for the "get prices from the
+    // public catalog" test (the API reads it through MODEL_PRICE_CATALOG_URL).
+    if (url.pathname === '/__prices/catalog.json') {
+      return send(200, {
+        sample_spec: { litellm_provider: 'one of https://docs.litellm.ai/docs/providers' },
+        'gpt-e2e-catalog': {
+          litellm_provider: 'openai',
+          mode: 'chat',
+          input_cost_per_token: 0.0000025,
+          output_cost_per_token: 0.00001,
+          cache_read_input_token_cost: 0.00000125,
+        },
+        'gpt-e2e-free': {
+          litellm_provider: 'openai',
+          mode: 'chat',
+          input_cost_per_token: 0,
+          output_cost_per_token: 0,
+        },
+      });
+    }
 
     // ---- control routes for the tests (no token; this server only listens on loopback) ----
     if (url.pathname.startsWith('/__control/')) {
