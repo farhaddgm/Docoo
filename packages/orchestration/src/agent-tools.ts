@@ -9,6 +9,7 @@ import type {
 import type { PoolClient } from 'pg';
 
 import { retrieveKnowledge } from './knowledge-retrieval.js';
+import { listMaterials, readMaterial } from './project-materials.js';
 import { addPassages, knowledgePromptItems, type KnowledgePassage } from './research.js';
 import type { Settings } from './settings.js';
 import { recordToolCall, toolDecision, type ToolCallScope } from './tool-calls.js';
@@ -139,10 +140,77 @@ const knowledgeRetrieve: ToolImplementation<{ query: string }> = {
   },
 };
 
+const projectDocumentsRead: ToolImplementation<{ ref: string }> = {
+  tool: 'project_documents_read',
+  spec: () => ({
+    name: 'project_documents_read',
+    description:
+      'Read what already exists in this project: the approved problem definition, the output of earlier stages, the solutions and the documents. Call it with an empty ref to list what can be read, then with one of the listed refs (problem, stage:research, solution:1, document:1) to read it.',
+    parameters: {
+      type: 'object',
+      properties: {
+        ref: {
+          type: 'string',
+          description: 'A ref from the list, or an empty string to list the materials.',
+        },
+      },
+      required: ['ref'],
+      additionalProperties: false,
+    },
+  }),
+  available: () => true,
+  parse(args) {
+    if (!isRecord(args) || typeof args['ref'] !== 'string')
+      return { ok: false, error: 'ref must be a string' };
+    const ref = args['ref'].trim();
+    return ref.length > 40 ? { ok: false, error: 'ref is too long' } : { ok: true, value: { ref } };
+  },
+  async execute({ client, scope }, { ref }) {
+    if (!scope.projectId) {
+      return { output: { error: 'no_project' }, result: {}, errorCode: 'no_project' };
+    }
+    const base = { projectId: scope.projectId, stageRunId: scope.stageRunId };
+    if (ref === '') {
+      const materials = await listMaterials(client, base);
+      return {
+        output: { materials: materials.map((item) => ({ ref: item.ref, title: item.title })) },
+        result: { action: 'list', count: materials.length },
+      };
+    }
+    const read = await readMaterial(client, { ...base, ref });
+    if (!read.ok) {
+      return {
+        output: {
+          error: read.error,
+          message: 'That material cannot be read; list the refs first.',
+        },
+        result: { action: 'read', ref, found: false },
+        errorCode: read.error,
+      };
+    }
+    return {
+      output: {
+        ref: read.entry.ref,
+        title: read.entry.title,
+        content: read.content,
+        truncated: read.truncated,
+      },
+      result: {
+        action: 'read',
+        ref: read.entry.ref,
+        found: true,
+        chars: read.content.length,
+        truncated: read.truncated,
+      },
+    };
+  },
+};
+
 /** Every tool the model can call; `AGENT_TOOLS` entries without one are run by code or not built. */
 export const TOOL_IMPLEMENTATIONS: Readonly<Partial<Record<AgentTool, ToolImplementation<never>>>> =
   {
     knowledge_retrieve: knowledgeRetrieve as unknown as ToolImplementation<never>,
+    project_documents_read: projectDocumentsRead as unknown as ToolImplementation<never>,
   };
 
 /** Tools the role may use (allowlist of the pinned definition) that exist and apply to this run. */
