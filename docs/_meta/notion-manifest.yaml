@@ -194,3 +194,6 @@ documents:
   - path: docs/adr/0023-agent-tool-calling.md
     doc_id: DOCOO-ADR-0023
     section: ADRs
+  - path: docs/adr/0024-analyst-question-quality.md
+    doc_id: DOCOO-ADR-0024
+    section: ADRs

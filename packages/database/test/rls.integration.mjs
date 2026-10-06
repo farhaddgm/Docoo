@@ -103,6 +103,7 @@ const knowledgeTables = [
   'project_agent_profiles',
   'agent_tool_calls',
   'agent_questions',
+  'question_quality_reviews',
   'contenter_connections',
   'business_snapshots',
   'project_businesses',
@@ -1263,8 +1264,100 @@ try {
     .query('DELETE FROM workflow_runs WHERE id = $1', [questionRun.rows[0].id])
     .catch(() => null);
 
+  // The Brain's judgement of the analyst's questions (ADR-0024): tenant-scoped, append-only, with
+  // the state rules of a verdict and of a failure.
+  const qualitySession = await admin.query(
+    `INSERT INTO analysis_sessions (workspace_id, project_id, stage_run_id, minimum_questions, maximum_questions, batch_size)
+     VALUES ($1, $2, $3, 30, 300, 40) RETURNING id`,
+    [ids.workspaceA, ids.projectA, questionStage.rows[0].id],
+  );
+  const qualitySql = `INSERT INTO question_quality_reviews
+       (workspace_id, project_id, session_id, criteria, question_count, model, status, reason, score, summary, findings, created_by)
+     VALUES ($1, $2, $3, '["duplicate"]'::jsonb, $4, 'fake-standard', $5, $6, $7, $8, $9::jsonb, $10) RETURNING id`;
+  const completed = [
+    ids.workspaceA,
+    ids.projectA,
+    qualitySession.rows[0].id,
+    31,
+    'completed',
+    null,
+    4,
+    'Mostly relevant questions.',
+    '[]',
+    ids.actorA,
+  ];
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, qualitySql, [
+    ids.workspaceB,
+    ...completed.slice(1),
+  ]);
+  // Another administrator's name cannot be put on a row.
+  await expectSqlState('42501', ids.workspaceA, ids.actorB, qualitySql, completed);
+  const review = await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(qualitySql, completed),
+  );
+  assert.equal(review.rowCount, 1);
+  const foreignReviews = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM question_quality_reviews'),
+  );
+  assert.equal(foreignReviews.rows[0].count, 0, 'Reviews must not leak across tenants.');
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'UPDATE question_quality_reviews SET score = 1',
+  );
+  await assert.rejects(
+    admin.query('UPDATE question_quality_reviews SET score = 1 WHERE id = $1', [review.rows[0].id]),
+    (error) => {
+      assert.equal(error.code, 'P0001', 'a judgement is history for everyone');
+      return true;
+    },
+  );
+  for (const [label, params] of [
+    ['score out of range', [...completed.slice(0, 6), 6, ...completed.slice(7)]],
+    ['a verdict without a summary', [...completed.slice(0, 7), null, ...completed.slice(8)]],
+    [
+      'a verdict that also names a failure',
+      [...completed.slice(0, 5), 'provider_failure', ...completed.slice(6)],
+    ],
+    [
+      'a failure with a score',
+      [...completed.slice(0, 4), 'failed', 'provider_failure', 4, null, '[]', ids.actorA],
+    ],
+    [
+      'a failure with an unknown reason',
+      [...completed.slice(0, 4), 'failed', 'odd', null, null, '[]', ids.actorA],
+    ],
+    ['no questions', [...completed.slice(0, 3), 0, ...completed.slice(4)]],
+    ['findings that are not a list', [...completed.slice(0, 8), '{}', ids.actorA]],
+    ['unknown status', [...completed.slice(0, 4), 'maybe', ...completed.slice(5)]],
+  ]) {
+    await assert.rejects(admin.query(qualitySql, params), (error) => {
+      assert.equal(error.code, '23514', label);
+      return true;
+    });
+  }
+  const failure = await admin.query(qualitySql, [
+    ...completed.slice(0, 4),
+    'failed',
+    'provider_failure',
+    null,
+    null,
+    '[]',
+    ids.actorA,
+  ]);
+  assert.equal(failure.rowCount, 1, 'a failed judgement is a row too');
+  // A project of another workspace cannot be judged here.
+  await assert.rejects(
+    admin.query(qualitySql, [ids.workspaceB, ...completed.slice(1)]),
+    (error) => {
+      assert.equal(error.code, '23503', 'the project must be of the same workspace');
+      return true;
+    },
+  );
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent, tool-call, agent-question and Contenter business tables, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent, tool-call, agent-question, question-quality and Contenter business tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {

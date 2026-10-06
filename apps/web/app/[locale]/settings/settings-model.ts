@@ -60,7 +60,11 @@ export const SETTING_GROUPS = [
   { id: 'ai', keys: ['ai.connection_id', 'ai.model'] },
   {
     id: 'analysis',
-    keys: ['analysis.require_risk_dimension', 'analysis.require_out_of_scope_dimension'],
+    keys: [
+      'analysis.require_risk_dimension',
+      'analysis.require_out_of_scope_dimension',
+      'analysis.quality_criteria',
+    ],
   },
   {
     id: 'research',

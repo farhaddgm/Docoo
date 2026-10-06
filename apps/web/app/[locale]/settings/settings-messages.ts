@@ -88,6 +88,13 @@ const messages = {
     reset: 'بازگشت انجام شد؛ «{key}» دوباره مقدار ارث‌برده را می‌گیرد.',
     restored: 'نسخه بازگردانده شد؛ «{key}» تغییر کرد.',
     enumLabels: {
+      'analysis.quality_criteria': {
+        decision_relevance: 'اثر پاسخ بر تصمیم',
+        leading: 'القای راه‌حل',
+        duplicate: 'تکراری بودن',
+        vague: 'ابهام',
+        tone: 'لحن',
+      },
       'ingestion.url_policy': {
         deny: 'هیچ نشانی خوانده نشود',
         allowlist: 'فقط نشانی‌های فهرست مجاز',
@@ -220,6 +227,13 @@ const messages = {
     reset: 'Reset; "{key}" takes the inherited value again.',
     restored: 'Version restored; "{key}" changed.',
     enumLabels: {
+      'analysis.quality_criteria': {
+        decision_relevance: 'Bearing of the answer on a decision',
+        leading: 'Steering to a solution',
+        duplicate: 'Repeats',
+        vague: 'Vagueness',
+        tone: 'Tone',
+      },
       'ingestion.url_policy': {
         deny: 'Read no web address',
         allowlist: 'Only allow-listed addresses',

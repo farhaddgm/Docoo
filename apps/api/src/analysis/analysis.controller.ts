@@ -8,6 +8,7 @@ import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { AnalysisService } from './analysis.service.js';
+import { QuestionQualityService } from './question-quality.service.js';
 
 const answerSchema = z
   .object({
@@ -57,7 +58,10 @@ function idempotencyKey(request: FastifyRequest): string | undefined {
 @ApiCookieAuth('docoo_session')
 @Controller('workspaces/:workspaceId')
 export class AnalysisController {
-  constructor(private readonly analysis: AnalysisService) {}
+  constructor(
+    private readonly analysis: AnalysisService,
+    private readonly quality: QuestionQualityService,
+  ) {}
 
   @Get('projects/:projectId/analysis')
   @ApiOperation({
@@ -80,6 +84,23 @@ export class AnalysisController {
   @RequireWorkspacePermission('project.read')
   async definitions(@Req() request: FastifyRequest, @Param('projectId') raw: string) {
     return this.analysis.definitions(workspaceContext(request), id(raw));
+  }
+
+  @Get('projects/:projectId/analysis/question-quality')
+  @ApiOperation({ summary: "The Brain's earlier judgements of the analyst's questions" })
+  @RequireWorkspacePermission('project.read')
+  async qualityList(@Req() request: FastifyRequest, @Param('projectId') raw: string) {
+    return this.quality.list(workspaceContext(request), id(raw));
+  }
+
+  @Post('projects/:projectId/analysis/question-quality')
+  @HttpCode(201)
+  @ApiOperation({
+    summary: "Ask the Brain to judge the analyst's questions with the model (costs a model call)",
+  })
+  @RequireWorkspacePermission('project.run')
+  async qualityRun(@Req() request: FastifyRequest, @Param('projectId') raw: string) {
+    return this.quality.run(workspaceContext(request), id(raw));
   }
 
   @Post('question-batches/:batchId/answers')

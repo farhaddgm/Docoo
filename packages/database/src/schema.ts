@@ -1893,6 +1893,44 @@ export const agentQuestions = pgTable(
 );
 
 /**
+ * The Brain's model-based judgement of the analyst's questions of one project (ADR-0024). Each
+ * row is one judgement of the questions as they stood: the criteria asked about, the verdict and
+ * the findings with the questions that prove them. Append-only: a later judgement is a new row.
+ */
+export const questionQualityReviews = pgTable(
+  'question_quality_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => analysisSessions.id, { onDelete: 'cascade' }),
+    /** The criteria the administrator had switched on when it ran. */
+    criteria: jsonb('criteria').notNull(),
+    questionCount: integer('question_count').notNull(),
+    /** The Brain definition version that judged. */
+    judgeVersionId: uuid('judge_version_id'),
+    model: text('model').notNull(),
+    status: text('status').notNull(),
+    reason: text('reason'),
+    score: integer('score'),
+    summary: text('summary'),
+    findings: jsonb('findings')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    discarded: integer('discarded').notNull().default(0),
+    invocationId: uuid('invocation_id'),
+    errorCode: text('error_code'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('question_quality_reviews_project_idx').on(table.projectId, table.createdAt)],
+);
+
+/**
  * One run of the documenter on a document (ADR-0019, FR-AGT-001): the plan with its length
  * budgets, the subsections written so far, the references it cited and, at the end, the report.
  * The row is the progress the screen shows and what lets a restarted worker pick up where it

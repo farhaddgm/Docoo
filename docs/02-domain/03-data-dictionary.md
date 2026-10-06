@@ -95,6 +95,10 @@ ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار �
 
 پرسشی که یک ایجنت وسط مرحله با ابزار `request_human_input` از ادمین می‌پرسد ([ADR-0023](../adr/0023-agent-tool-calling.md)، مهاجرت 0032 و 0033): `project_id`، `stage_run_id` (کلیدهای ترکیبی با workspace)، `attempt_id`، `role`، `question` (۳ تا ۱۰۰۰ نویسه)، `reason` (تا ۶۰۰)، `status` (`open|answered|dismissed`)، `answer` (تا ۴۰۰۰؛ برای `dismissed` خالی)، `answered_by`، `answered_at`. قید جدول حالت و متن پاسخ را جفت می‌کند؛ trigger هر تغییر یا حذف پرسش بسته را رد می‌کند (پرسش باز فقط از راه ستون‌های پاسخ، که تنها مجوز UPDATE هستند)، و حذف retention مجاز است. متن پرسش و پاسخ محتوای پروژه است و به audit نمی‌رود. کار انسانی متناظر `human_tasks.kind = 'agent_question'` با `payload.questionId` است.
 
+### question_quality_reviews
+
+ارزیابی مدل‌محور پرسش‌های تحلیلگر توسط Brain ([ADR-0024](../adr/0024-analyst-question-quality.md)، مهاجرت 0034 و 0035؛ append-only و RLS): `project_id`، `session_id`، `criteria` (جنبه‌های پرسیده‌شده، ۱ تا ۵)، `question_count` (۱ تا ۳۰۰)، `judge_version_id` (نسخهٔ تعریف Brain)، `model`، `status` (`completed|failed`)، `reason` (`provider_failure|invalid_output` برای `failed`)، `score` (۱ تا ۵)، `summary`، `findings` (حداکثر ۱۵ یافتهٔ `{kind: strength|weakness, criterion, severity, detail, recommendation, questions: [{ref, id, number}]}`؛ هر یافته دست‌کم یک پرسش واقعی را می‌نامد)، `discarded` (یافتهٔ دورریخته)، `invocation_id`، `error_code`، `created_by`. قید جدول می‌گوید `completed` امتیاز و خلاصه دارد و دلیل ندارد و `failed` برعکس. تنظیم `analysis.quality_criteria` جنبه‌ها را انتخاب می‌کند.
+
 ### brain_reports.evaluations
 
 آرایهٔ ارزیابی مدل‌محور نقش‌ها در گزارش Brain (پیش‌فرض `[]`، مثل بقیهٔ ستون‌های گزارش تغییرناپذیر): برای هر نقش `status` (`completed|skipped|failed`)، `reason`، `score` (۱ تا ۵)، `summary`، نسخهٔ منشور سنجیده‌شده، نمونه‌ها (`S#` با شناسهٔ خروجی مرحله)، `findings[]` با `kind`، `severity`، `clauses[]` (بند و متن منشور) و `evidence[]` (`stage_output` با شناسه)، شمار یافته‌های دورریخته، `invocation_id` و `errorCode`. خلاصه در `summary.modelEvaluation`.

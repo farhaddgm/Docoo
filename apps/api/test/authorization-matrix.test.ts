@@ -142,6 +142,8 @@ const expectedMatrix: Record<string, string> = {
     'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/outputs/:outputId/edit':
     'project.update',
+  'GET workspaces/:workspaceId/projects/:projectId/analysis/question-quality': 'project.read',
+  'POST workspaces/:workspaceId/projects/:projectId/analysis/question-quality': 'project.run',
   'POST workspaces/:workspaceId/projects/:projectId/agent-questions/:questionId/answer':
     'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/attempt-decision':

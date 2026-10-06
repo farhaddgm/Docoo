@@ -397,6 +397,36 @@ export function SettingControl({
       </div>
     );
   }
+  if (schema.type === 'array' && schema.items?.enum) {
+    // A fixed set of choices: tick the ones that apply (the order is the order of the choices).
+    const options = schema.items.enum;
+    const chosen = new Set(
+      draft
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter((line) => line !== ''),
+    );
+    return (
+      <fieldset id={id} aria-describedby={describedBy}>
+        <legend>{label}</legend>
+        {options.map((option) => (
+          <label key={option} className="mode">
+            <input
+              type="checkbox"
+              checked={chosen.has(option)}
+              onChange={(event) => {
+                const next = new Set(chosen);
+                if (event.target.checked) next.add(option);
+                else next.delete(option);
+                onChange(options.filter((item) => next.has(item)).join('\n'));
+              }}
+            />{' '}
+            {text.enumLabels[definition.key]?.[option] ?? option}
+          </label>
+        ))}
+      </fieldset>
+    );
+  }
   if (schema.type === 'array') {
     return (
       <div className="filter-grid">
