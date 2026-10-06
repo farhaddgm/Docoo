@@ -78,7 +78,7 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     await expect(page.getByText('E2E Admin')).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 
-    const signOut = page.getByRole('button', { name: 'Sign out' });
+    const signOut = page.getByRole('button', { name: 'Sign out', exact: true });
     await signOut.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('status').filter({ hasText: 'signed out' })).toHaveText(
