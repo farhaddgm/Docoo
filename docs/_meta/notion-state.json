@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "48171e97b32685a2d61ebe41ba0a9f748722e215"
+    "source_commit": "31834043a0f8bf4e0ff88fc7a3be424088283df8"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,15 +62,15 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-06T04:12:06.257Z",
+    "synced_at": "2026-10-06T21:37:02.351Z",
     "created": 1,
-    "updated": 10,
-    "unchanged": 51,
+    "updated": 0,
+    "unchanged": 62,
     "failed": 0,
     "failures": [],
     "validation": {
-      "manifest_documents": 62,
-      "state_documents": 62,
+      "manifest_documents": 63,
+      "state_documents": 63,
       "orphaned_state_documents": []
     }
   },
@@ -942,6 +942,20 @@
       "index_row_page_url": "https://app.notion.com/p/3f15a24a6668818ba279fb9acd99c260",
       "synced_commit": "48171e97b32685a2d61ebe41ba0a9f748722e215",
       "synced_at": "2026-10-06T04:12:06.257Z"
+    },
+    "DOCOO-DEL-0013": {
+      "path": "docs/06-delivery/13-google-accounts.md",
+      "section": "06 Delivery & Operations",
+      "version": "1.0.0",
+      "status": "active",
+      "owner": "Platform & Operations",
+      "checksum_sha256": "9b4f632c55622fd4e77b5e322adfaab541e47177447c23e44d6e2eb475888ca9",
+      "notion_page_id": "3f15a24a-6668-8176-8492-f94bf53aff65",
+      "notion_page_url": "https://app.notion.com/p/3f15a24a666881768492f94bf53aff65",
+      "index_row_page_id": "3f15a24a-6668-8153-99e8-dc647ce78274",
+      "index_row_page_url": "https://app.notion.com/p/3f15a24a6668815399e8dc647ce78274",
+      "synced_commit": "31834043a0f8bf4e0ff88fc7a3be424088283df8",
+      "synced_at": "2026-10-06T21:37:02.351Z"
     }
   }
 }
