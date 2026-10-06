@@ -7,6 +7,7 @@ import {
   HttpCode,
   Inject,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import type { Environment } from '@docoo/config';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
+import { GoogleOAuthService, GoogleAuthError } from './google-oauth.service.js';
 import { API_CONFIG } from '../tokens.js';
 import { clearSessionCookie, SESSION_COOKIE, setSessionCookie } from './auth.cookies.js';
 import {
@@ -67,7 +69,86 @@ export class AuthController {
     private readonly authService: AuthService,
     @Inject(PASSWORD_RESET_DELIVERY) private readonly resetDelivery: PasswordResetDelivery,
     @Inject(API_CONFIG) private readonly config: Environment,
+    @Inject(GoogleOAuthService) private readonly google: GoogleOAuthService,
   ) {}
+
+  @Get('providers')
+  providers(@Res({ passthrough: true }) reply: FastifyReply) {
+    reply.header('Cache-Control', 'no-store');
+    return { google: this.google.enabled };
+  }
+
+  @Get('google')
+  googleStart(@Query('redirectTo') redirectTo: string | undefined, @Res() reply: FastifyReply) {
+    reply.header('Cache-Control', 'no-store');
+    try {
+      const flow = this.google.start(redirectTo);
+      reply.setCookie('docoo_goauth', flow.flowToken, {
+        httpOnly: true,
+        secure: this.authService.secureCookies,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 600,
+      });
+      return reply.redirect(flow.url, 302);
+    } catch (error) {
+      return this.googleFailure(reply, error);
+    }
+  }
+
+  @Get('google/callback')
+  async googleCallback(
+    @Query() query: { code?: string; state?: string; error?: string },
+    @Req() request: FastifyRequest,
+    @Res() reply: FastifyReply,
+  ) {
+    reply.header('Cache-Control', 'no-store');
+    reply.clearCookie('docoo_goauth', { path: '/' });
+    try {
+      const flow = await this.google.finish(query, request.cookies['docoo_goauth']);
+      const result = await this.authService.loginWithGoogle(
+        flow.identity,
+        requestMetadata(request),
+      );
+      reply.setCookie('docoo_session', result.token, {
+        httpOnly: true,
+        secure: this.authService.secureCookies,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: result.maxAgeSeconds,
+      });
+      return reply.redirect(`${this.config.WEB_ORIGIN}${flow.redirectTo}`, 302);
+    } catch (error) {
+      return this.googleFailure(reply, error);
+    }
+  }
+
+  private googleFailure(reply: FastifyReply, error: unknown) {
+    const code = error instanceof GoogleAuthError ? error.code : 'failed';
+    return reply.redirect(`${this.config.WEB_ORIGIN}/fa/auth/login?error=${code}`, 302);
+  }
+
+  @Get('access')
+  async access(
+    @Query('workspaceId') workspaceId: string,
+    @Query('projectId') projectId: string | undefined,
+    @Query('topicId') topicId: string | undefined,
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    reply.header('Cache-Control', 'no-store');
+    const current = await this.authService.currentSession(request.cookies['docoo_session']);
+    if (
+      !z.uuid().safeParse(workspaceId).success ||
+      !current.workspaces.some((w) => w.id === workspaceId)
+    )
+      throw new BadRequestException();
+    const access = await this.authService.resourceAccess(workspaceId, current.user.id, {
+      projectId,
+      topicId,
+    });
+    return { access, role: current.user.role };
+  }
 
   @Post('login')
   @HttpCode(200)

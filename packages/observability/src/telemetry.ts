@@ -43,6 +43,10 @@ export function startTelemetry(options: TelemetryOptions): NodeSDK | undefined {
     instrumentations: [
       getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-fs': { enabled: false },
+        '@opentelemetry/instrumentation-http': {
+          ignoreIncomingRequestHook: (request) =>
+            request.url?.split('?')[0]?.includes('/auth/google') ?? false,
+        },
         // SQL text is parameterized; values (which may hold problem content) are never recorded.
         '@opentelemetry/instrumentation-pg': { enhancedDatabaseReporting: false },
       }),

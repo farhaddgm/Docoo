@@ -196,7 +196,7 @@ export function DocumentWriter({
       )}
 
       {!live && !locked && (
-        <form className="stack" onSubmit={start} aria-busy={busy}>
+        <form data-write-action className="stack" onSubmit={start} aria-busy={busy}>
           <div className="filter-grid">
             <label htmlFor="writer-level">{text.writerLevel}</label>
             <select
@@ -327,6 +327,7 @@ export function DocumentWriter({
             <div className="toolbar">
               {latest.status === 'paused' ? (
                 <button
+                  data-write-action
                   className="primary-button"
                   type="button"
                   disabled={busy}
@@ -336,6 +337,7 @@ export function DocumentWriter({
                 </button>
               ) : (
                 <button
+                  data-write-action
                   className="secondary-button"
                   type="button"
                   disabled={busy}
@@ -369,6 +371,7 @@ export function DocumentWriter({
               </div>
               <div className="toolbar">
                 <button
+                  data-write-action
                   className="secondary-button danger"
                   type="button"
                   disabled={busy}

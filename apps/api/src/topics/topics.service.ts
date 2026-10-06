@@ -18,6 +18,7 @@ export type TopicLanguage = 'fa' | 'en';
 
 export interface Topic {
   readonly id: string;
+  readonly access: 'VIEW' | 'EDIT' | null;
   readonly workspaceId: string;
   readonly code: string;
   readonly title: string;
@@ -87,6 +88,7 @@ export const TOPIC_RECOVERY_DAYS = 30;
 
 interface TopicRow extends QueryResultRow {
   id: string;
+  access?: 'VIEW' | 'EDIT' | null;
   workspace_id: string;
   code: string;
   title: string;
@@ -102,7 +104,7 @@ interface TopicRow extends QueryResultRow {
 }
 
 const topicColumns = `
-  id, workspace_id, code, title, description, language, version,
+  COALESCE(app.resource_access('topic',workspace_id,id),CASE WHEN created_by=app.current_actor_id() AND app.actor_role(workspace_id)='editor' THEN 'EDIT' END) as access, id, workspace_id, code, title, description, language, version,
   ${isoColumn('archived_at', 'archived_at')},
   ${isoColumn('deleted_at', 'deleted_at')},
   ${isoColumn('purge_after', 'purge_after')},
@@ -517,6 +519,7 @@ export class TopicsService {
     return {
       id: row.id,
       workspaceId: row.workspace_id,
+      access: row.access ?? null,
       code: row.code,
       title: row.title,
       description: row.description,

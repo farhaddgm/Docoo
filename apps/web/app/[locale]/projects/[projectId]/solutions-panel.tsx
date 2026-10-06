@@ -166,6 +166,7 @@ export function SolutionsPanel({
 
       {!readOnly && (
         <form
+          data-write-action
           className="card filter-form"
           onSubmit={generate}
           aria-labelledby="generate-title"
@@ -202,6 +203,7 @@ export function SolutionsPanel({
       )}
 
       <form
+        data-write-action
         className="card filter-form"
         onSubmit={saveCriteria}
         aria-labelledby="criteria-title"
@@ -423,6 +425,7 @@ export function SolutionsPanel({
 
       {set.items.length > 0 && !readOnly && (
         <form
+          data-write-action
           className="card filter-form"
           onSubmit={select}
           aria-labelledby="selection-title"

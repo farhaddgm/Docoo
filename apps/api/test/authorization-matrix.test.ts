@@ -283,7 +283,7 @@ describe('authorization matrix (AUTH-003, TC-AUTH-005)', () => {
     expect([...ROLE_PERMISSIONS.super_admin].sort()).toEqual([...WORKSPACE_PERMISSIONS].sort());
     for (const permission of WORKSPACE_PERMISSIONS) {
       expect(roleHasPermission('super_admin', permission)).toBe(true);
-      expect(roleHasPermission('viewer', permission)).toBe(false);
+      expect(roleHasPermission('unknown', permission)).toBe(false);
       expect(roleHasPermission('__proto__', permission)).toBe(false);
     }
   });

@@ -179,6 +179,7 @@ export function AgentsPanel({
                   )}
                   {profile.customized && (
                     <button
+                      data-write-action
                       type="button"
                       className="secondary-button"
                       aria-expanded={open}
@@ -207,6 +208,7 @@ export function AgentsPanel({
 
               {active && (
                 <form
+                  data-write-action
                   className="field-stack"
                   onSubmit={(event) => {
                     event.preventDefault();

@@ -169,6 +169,11 @@ services:
 
   api:
     <<: *app
+    # Google credentials belong only to the API, never to the browser or workers.
+    env_file:
+      - path: .env.production
+      - path: .env.google
+        required: false
     build:
       context: ..
       dockerfile: infra/docker/Dockerfile.node

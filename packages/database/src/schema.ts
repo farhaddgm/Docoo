@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -17,7 +18,7 @@ import {
 
 export const locale = pgEnum('locale', ['fa', 'en']);
 export const userStatus = pgEnum('user_status', ['active', 'locked', 'disabled']);
-export const membershipRole = pgEnum('membership_role', ['super_admin']);
+export const membershipRole = pgEnum('membership_role', ['super_admin', 'editor', 'viewer']);
 export const authEventAction = pgEnum('auth_event_action', [
   'login.failed',
   'login.succeeded',
@@ -61,7 +62,12 @@ export const users = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     email: text('email').notNull(),
-    passwordHash: text('password_hash').notNull(),
+    passwordHash: text('password_hash'),
+    accountRole: text('account_role').notNull().default('super_admin'),
+    loginMethod: text('login_method').notNull().default('PASSWORD'),
+    googleSub: text('google_sub'),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     displayName: text('display_name').notNull(),
     status: userStatus('status').notNull().default('active'),
     failedLoginCount: integer('failed_login_count').notNull().default(0),
@@ -143,6 +149,7 @@ export const passwordResetTokens = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
   },
   (table) => [
     uniqueIndex('password_reset_tokens_digest_uq').on(table.tokenDigest),
@@ -2006,4 +2013,34 @@ export const projectBusinesses = pgTable('project_businesses', {
   /** Why the last refresh failed (null when it worked). */
   syncError: text('sync_error'),
   ...timestamps,
+});
+
+export const resourceAccess = pgTable(
+  'resource_access',
+  {
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    resourceId: uuid('resource_id').notNull(),
+    access: text('access').notNull(),
+    grantedBy: uuid('granted_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.userId, table.kind, table.resourceId] }),
+    check('resource_access_kind_check', sql`${table.kind} IN ('topic','project')`),
+    check('resource_access_access_check', sql`${table.access} IN ('VIEW','EDIT')`),
+  ],
+);
+export const accountEvents = pgTable('account_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+  targetId: uuid('target_id'),
+  action: text('action').notNull(),
+  details: jsonb('details').notNull().default({}),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 });

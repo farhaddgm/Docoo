@@ -15,6 +15,7 @@ async function expectNoSeriousA11yViolations(page: Page) {
 }
 
 async function signInWithKeyboard(page: Page) {
+  await page.goto('/fa/auth/login-up');
   await page.getByLabel('ایمیل').focus();
   await page.keyboard.type(email);
   await page.keyboard.press('Tab');
@@ -29,7 +30,7 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     await page.goto('/fa');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
-    await expect(page.getByRole('heading', { level: 1, name: 'ورود ادمین' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'ورود به Docoo' })).toBeVisible();
 
     await page.keyboard.press('Tab');
     const skip = page.getByRole('link', { name: 'رفتن به محتوای اصلی' });
@@ -42,7 +43,7 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
   });
 
   test('announces and focuses a failed sign-in', async ({ page }) => {
-    await page.goto('/fa');
+    await page.goto('/fa/auth/login-up');
     await page.getByLabel('ایمیل').fill(email);
     await page.getByLabel('گذرواژه').fill('definitely-wrong-password');
     await page.getByRole('button', { name: 'ورود' }).click();
@@ -83,20 +84,16 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     await expect(page.getByRole('status').filter({ hasText: 'signed out' })).toHaveText(
       'You have signed out.',
     );
-    await expect(
-      page.getByRole('heading', { level: 1, name: 'Administrator sign in' }),
-    ).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Sign in to Docoo' })).toBeFocused();
 
     await page.reload();
-    await expect(
-      page.getByRole('heading', { level: 1, name: 'Administrator sign in' }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Sign in to Docoo' })).toBeVisible();
   });
 
   test('requests a reset link with a generic answer and handles a missing token', async ({
     page,
   }) => {
-    await page.goto('/en');
+    await page.goto('/en/auth/login-up');
     await page.getByRole('link', { name: 'Forgot your password?' }).click();
     await expect(page).toHaveURL(/\/en\/forgot-password$/);
     await page.getByLabel('Email').fill(`unknown-${Date.now()}@example.test`);

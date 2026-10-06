@@ -379,6 +379,7 @@ function DocumentView({
         <div className="toolbar" role="group" aria-label={text.actions}>
           {['draft', 'non_compliant', 'rejected'].includes(status) && (
             <button
+              data-write-action
               className="primary-button"
               type="button"
               disabled={busy || live}
@@ -389,6 +390,7 @@ function DocumentView({
           )}
           {!['locked', 'superseded'].includes(status) && current && (
             <button
+              data-write-action
               className="secondary-button"
               type="button"
               disabled={busy}
@@ -405,6 +407,7 @@ function DocumentView({
           {status === 'ready_for_review' && (
             <>
               <button
+                data-write-action
                 className="primary-button"
                 type="button"
                 disabled={busy || live}
@@ -413,6 +416,7 @@ function DocumentView({
                 {text.approve}
               </button>
               <button
+                data-write-action
                 className="secondary-button danger"
                 type="button"
                 disabled={busy || live}
@@ -425,6 +429,7 @@ function DocumentView({
           )}
           {status === 'approved' && (
             <button
+              data-write-action
               className="secondary-button"
               type="button"
               disabled={busy || live}
@@ -436,6 +441,7 @@ function DocumentView({
           )}
           {status === 'locked' && (
             <button
+              data-write-action
               className="secondary-button"
               type="button"
               disabled={busy || live}
@@ -447,6 +453,7 @@ function DocumentView({
           )}
           {!['locked', 'superseded'].includes(status) && current && !editing && (
             <button
+              data-write-action
               className="secondary-button"
               type="button"
               disabled={busy || live}
@@ -458,7 +465,12 @@ function DocumentView({
         </div>
 
         {pending && (
-          <form className="card confirm-panel filter-form" onSubmit={confirm} aria-busy={busy}>
+          <form
+            data-write-action
+            className="card confirm-panel filter-form"
+            onSubmit={confirm}
+            aria-busy={busy}
+          >
             <p>
               {pending.kind === 'exception'
                 ? text.exceptionHelp
@@ -485,6 +497,7 @@ function DocumentView({
                 {busy ? text.working : text.confirm}
               </button>
               <button
+                data-write-action
                 className="secondary-button"
                 type="button"
                 disabled={busy}
@@ -610,6 +623,7 @@ function DocumentView({
             {failedEvaluation && (
               <div className="toolbar">
                 <button
+                  data-write-action
                   className="secondary-button"
                   type="button"
                   disabled={busy}
@@ -633,6 +647,7 @@ function DocumentView({
             ...formats.filter((item) => item !== doc.defaultExportFormat),
           ].map((format) => (
             <button
+              data-write-action
               key={format}
               className={format === doc.defaultExportFormat ? 'primary-button' : 'secondary-button'}
               type="button"
@@ -721,6 +736,7 @@ function DocumentView({
                   <td>
                     {version.id !== current?.id && !['locked', 'superseded'].includes(status) && (
                       <button
+                        data-write-action
                         className="secondary-button"
                         type="button"
                         disabled={busy || live}

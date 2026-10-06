@@ -2,6 +2,23 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.21.0] — 2026-10-07
+
+Google sign-in and account management now follow Contenter's owner-approved Gmail model. Existing password accounts remain usable through the private password sign-in page.
+
+### Added
+
+- Google-only main sign-in at `/fa/auth/login` and `/en/auth/login`; `/auth/login` redirects to Persian. Password sign-in and reset remain available at the unlinked, noindex `/fa/auth/login-up` and `/en/auth/login-up` pages.
+- Owner-only Gmail approvals, administrator account management, PASSWORD/GOOGLE/BOTH sign-in methods, active/disabled accounts, search and pagination, workspace membership and last sign-in dates.
+- Administrator, editor and viewer roles with independent VIEW/EDIT grants for each topic and project. Access applies to API routes, related database rows and browser editing controls; creators retain access and may be downgraded to VIEW by the owner.
+- Personal account details, password change where applicable and sign-out from all devices. Security-related account changes immediately revoke existing sessions and reset links. Deleting an account preserves project and audit history.
+- Google OIDC code flow with PKCE, state, nonce, signed temporary cookie and signature/issuer/audience verification. Only verified personal Gmail accounts approved by the owner may sign in; the configured owner's first Google sign-in bootstraps access.
+- Additive migration 0031, OAuth unit tests, database-backed role/access/account tests and browser tests. API request logs and HTTP traces omit Google callback query strings.
+
+### Deployment
+
+- Set `OWNER_EMAIL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_REDIRECT_URI` in private `deploy/.env.google` (mode 600). Only the API loads that file; it survives release updates. See [the setup guide](docs/06-delivery/13-google-accounts.md).
+
 ## [0.20.0] — 2026-10-06
 
 Model prices can be read from a public catalog instead of being typed in. See [ADR-0022](docs/adr/0022-model-prices-from-public-catalog.md). Nothing is saved on its own: the administrator sees each price next to the current one and chooses.

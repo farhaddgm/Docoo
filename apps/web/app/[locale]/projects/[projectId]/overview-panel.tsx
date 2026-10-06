@@ -1,4 +1,5 @@
 'use client';
+import { useReadOnlyAccess } from '../../resource-access';
 
 import { useCallback, useState } from 'react';
 
@@ -23,12 +24,13 @@ export function OverviewPanel({
   project: ProjectDetail;
   onChanged: (project: ProjectDetail) => void;
 }) {
+  const accessReadOnly = useReadOnlyAccess();
   const text = projectPageMessages(locale);
   const formText = projectMessages(locale);
   const [editing, setEditing] = useState(false);
   const explain = useCallback((error: unknown) => explainProject(error, formText), [formText]);
   const { busy, notice, setNotice, run } = useAction(explain);
-  const readOnly = project.status === 'archived' || project.status === 'deleted';
+  const readOnly = accessReadOnly || project.status === 'archived' || project.status === 'deleted';
 
   if (editing) {
     const initial: ProjectValues = {
@@ -103,7 +105,12 @@ export function OverviewPanel({
         <div className="toolbar spread">
           <h2 id="problem-title">{text.problem}</h2>
           {!readOnly && (
-            <button className="secondary-button" type="button" onClick={() => setEditing(true)}>
+            <button
+              data-write-action
+              className="secondary-button"
+              type="button"
+              onClick={() => setEditing(true)}
+            >
               {text.edit}
             </button>
           )}
