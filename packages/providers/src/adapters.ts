@@ -1,5 +1,6 @@
 import {
   ProviderError,
+  type ConversationMessage,
   type FinishReason,
   type ModelCapabilities,
   type ModelDescriptor,
@@ -8,6 +9,7 @@ import {
   type NormalizedModelResponse,
   type ProviderHealth,
   type ProviderKind,
+  type ToolCall,
 } from './contract.js';
 import { parseStructured, requestJson, type FetchLike } from './http.js';
 
@@ -73,6 +75,28 @@ function asArray(value: unknown): unknown[] {
 
 function num(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** A request asks for tools or for a structured answer, never both (see `NormalizedModelRequest`). */
+function assertToolsOrSchema(request: NormalizedModelRequest): void {
+  if (request.tools && request.tools.length > 0 && request.responseSchema) {
+    throw new ProviderError('invalid_request', 'tools_with_response_schema');
+  }
+}
+
+function hasTools(request: NormalizedModelRequest): boolean {
+  return request.tools !== undefined && request.tools.length > 0;
+}
+
+/** Parses the arguments a model wrote for a tool; anything but a JSON object is an invalid answer. */
+function parseToolArguments(raw: unknown, provider: string): unknown {
+  if (raw === undefined || raw === null || raw === '') return {};
+  if (typeof raw !== 'string') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new ProviderError('invalid_output', `${provider}_tool_arguments_invalid`);
+  }
 }
 
 /** Chat-capable OpenAI models only: the account also lists embeddings, speech, images and more. */
@@ -176,13 +200,55 @@ export class OpenAiAdapter extends HttpAdapter {
       .map((item) => this.descriptor(String(item['id']), String(item['id']), null, null));
   }
 
+  /**
+   * Responses API input items. A tool call goes back as `function_call` and its result as
+   * `function_call_output`; no item id is sent, so no reasoning item has to travel with it.
+   */
+  private inputItems(messages: readonly ConversationMessage[]): Json[] {
+    const items: Json[] = [];
+    for (const message of messages) {
+      if (message.role === 'tool') {
+        items.push({
+          type: 'function_call_output',
+          call_id: message.toolCallId,
+          output: message.content,
+        });
+        continue;
+      }
+      if (message.content !== '' || !message.toolCalls?.length) {
+        items.push({ role: message.role, content: message.content });
+      }
+      for (const call of message.toolCalls ?? []) {
+        items.push({
+          type: 'function_call',
+          call_id: call.id,
+          name: call.name,
+          arguments: JSON.stringify(call.arguments ?? {}),
+        });
+      }
+    }
+    return items;
+  }
+
   async invoke(request: NormalizedModelRequest): Promise<NormalizedModelResponse> {
+    assertToolsOrSchema(request);
     const body: Json = {
       model: request.model,
-      input: request.messages.map((message) => ({ role: message.role, content: message.content })),
+      input: this.inputItems(request.messages),
       store: false,
       max_output_tokens: request.maxOutputTokens ?? DEFAULT_MAX_OUTPUT,
     };
+    if (hasTools(request)) {
+      body['tools'] = request.tools!.map((tool) => ({
+        type: 'function',
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+        strict: true,
+      }));
+      body['tool_choice'] = request.toolChoice ?? 'auto';
+      body['parallel_tool_calls'] = false;
+    }
     if (request.instructions) body['instructions'] = request.instructions;
     if (request.temperature !== undefined) body['temperature'] = request.temperature;
     if (request.responseSchema) {
@@ -211,12 +277,22 @@ export class OpenAiAdapter extends HttpAdapter {
       .filter((part) => part['type'] === 'output_text' && typeof part['text'] === 'string')
       .map((part) => String(part['text']))
       .join('');
+    const toolCalls: ToolCall[] = asArray(response['output'])
+      .map((item) => asObject(item))
+      .filter((item) => item['type'] === 'function_call' && typeof item['name'] === 'string')
+      .map((item, index) => ({
+        id: typeof item['call_id'] === 'string' ? item['call_id'] : `call_${index}`,
+        name: String(item['name']),
+        arguments: parseToolArguments(item['arguments'], 'openai'),
+      }));
     const status = typeof response['status'] === 'string' ? response['status'] : null;
     const incomplete = asObject(response['incomplete_details'])['reason'];
     const raw = status === 'incomplete' && typeof incomplete === 'string' ? incomplete : status;
     const finishReason: FinishReason =
       status === 'completed'
-        ? 'stop'
+        ? toolCalls.length > 0
+          ? 'tool_call'
+          : 'stop'
         : incomplete === 'max_output_tokens'
           ? 'length'
           : incomplete === 'content_filter'
@@ -231,6 +307,7 @@ export class OpenAiAdapter extends HttpAdapter {
       text,
       json:
         request.responseSchema && finishReason === 'stop' ? parseStructured(text, 'openai') : null,
+      toolCalls: finishReason === 'tool_call' ? toolCalls : [],
       finishReason,
       rawFinishReason: raw,
       usage: {
@@ -289,7 +366,44 @@ export class GeminiAdapter extends HttpAdapter {
       );
   }
 
+  /**
+   * `contents` with tool turns: a model turn that called tools carries `functionCall` parts (with
+   * the thought signature Gemini asked to have returned) and the results come back together as
+   * `functionResponse` parts of one user turn.
+   */
+  private contents(messages: readonly ConversationMessage[]): Json[] {
+    const contents: Json[] = [];
+    let pending: Json[] = [];
+    const flush = () => {
+      if (pending.length > 0) contents.push({ role: 'user', parts: pending });
+      pending = [];
+    };
+    for (const message of messages) {
+      if (message.role === 'tool') {
+        pending.push({
+          functionResponse: { name: message.toolName, response: { result: message.content } },
+        });
+        continue;
+      }
+      flush();
+      const parts: Json[] = [];
+      if (message.content !== '') parts.push({ text: message.content });
+      for (const call of message.toolCalls ?? []) {
+        const signature = asObject(call.providerData)['thoughtSignature'];
+        parts.push({
+          functionCall: { name: call.name, args: call.arguments ?? {} },
+          ...(typeof signature === 'string' ? { thoughtSignature: signature } : {}),
+        });
+      }
+      if (parts.length === 0) parts.push({ text: '' });
+      contents.push({ role: message.role === 'assistant' ? 'model' : 'user', parts });
+    }
+    flush();
+    return contents;
+  }
+
   async invoke(request: NormalizedModelRequest): Promise<NormalizedModelResponse> {
+    assertToolsOrSchema(request);
     const generationConfig: Json = {
       maxOutputTokens: request.maxOutputTokens ?? DEFAULT_MAX_OUTPUT,
     };
@@ -299,12 +413,22 @@ export class GeminiAdapter extends HttpAdapter {
       generationConfig['responseJsonSchema'] = request.responseSchema.schema;
     }
     const body: Json = {
-      contents: request.messages.map((message) => ({
-        role: message.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: message.content }],
-      })),
+      contents: this.contents(request.messages),
       generationConfig,
     };
+    if (hasTools(request)) {
+      body['tools'] = [
+        {
+          functionDeclarations: request.tools!.map((tool) => ({
+            name: tool.name,
+            description: tool.description,
+            parametersJsonSchema: tool.parameters,
+          })),
+        },
+      ];
+      const mode = { auto: 'AUTO', none: 'NONE', required: 'ANY' }[request.toolChoice ?? 'auto'];
+      body['toolConfig'] = { functionCallingConfig: { mode } };
+    }
     if (request.instructions)
       body['systemInstruction'] = { parts: [{ text: request.instructions }] };
     const model = encodeURIComponent(request.model.replace(/^models\//u, ''));
@@ -326,10 +450,26 @@ export class GeminiAdapter extends HttpAdapter {
       .filter((part) => typeof part['text'] === 'string' && part['thought'] !== true)
       .map((part) => String(part['text']))
       .join('');
+    const toolCalls: ToolCall[] = asArray(asObject(candidate['content'])['parts'])
+      .map((part) => asObject(part))
+      .filter((part) => asObject(part['functionCall'])['name'] !== undefined)
+      .map((part, index) => {
+        const call = asObject(part['functionCall']);
+        return {
+          id: typeof call['id'] === 'string' ? call['id'] : `call_${index}`,
+          name: String(call['name']),
+          arguments: call['args'] ?? {},
+          ...(typeof part['thoughtSignature'] === 'string'
+            ? { providerData: { thoughtSignature: part['thoughtSignature'] } }
+            : {}),
+        };
+      });
     const raw = typeof candidate['finishReason'] === 'string' ? candidate['finishReason'] : null;
     const finishReason: FinishReason =
-      raw === 'STOP'
-        ? 'stop'
+      raw === 'STOP' || (raw === null && toolCalls.length > 0)
+        ? toolCalls.length > 0
+          ? 'tool_call'
+          : 'stop'
         : raw === 'MAX_TOKENS'
           ? 'length'
           : raw === 'SAFETY' || raw === 'PROHIBITED_CONTENT' || raw === 'BLOCKLIST'
@@ -343,6 +483,7 @@ export class GeminiAdapter extends HttpAdapter {
       text,
       json:
         request.responseSchema && finishReason === 'stop' ? parseStructured(text, 'gemini') : null,
+      toolCalls: finishReason === 'tool_call' ? toolCalls : [],
       finishReason,
       rawFinishReason: raw,
       usage: {
@@ -393,15 +534,66 @@ export class AnthropicAdapter extends HttpAdapter {
       );
   }
 
+  /**
+   * Messages with tool turns: an assistant turn that called tools is text plus `tool_use` blocks,
+   * and the results of that turn come back together as `tool_result` blocks of one user message.
+   */
+  private wireMessages(messages: readonly ConversationMessage[]): Json[] {
+    const wire: Json[] = [];
+    let results: Json[] = [];
+    const flush = () => {
+      if (results.length > 0) wire.push({ role: 'user', content: results });
+      results = [];
+    };
+    for (const message of messages) {
+      if (message.role === 'tool') {
+        results.push({
+          type: 'tool_result',
+          tool_use_id: message.toolCallId,
+          content: message.content,
+        });
+        continue;
+      }
+      flush();
+      if (!message.toolCalls?.length) {
+        wire.push({ role: message.role, content: message.content });
+        continue;
+      }
+      wire.push({
+        role: 'assistant',
+        content: [
+          ...(message.content !== '' ? [{ type: 'text', text: message.content }] : []),
+          ...message.toolCalls.map((call) => ({
+            type: 'tool_use',
+            id: call.id,
+            name: call.name,
+            input: call.arguments ?? {},
+          })),
+        ],
+      });
+    }
+    flush();
+    return wire;
+  }
+
   async invoke(request: NormalizedModelRequest): Promise<NormalizedModelResponse> {
+    assertToolsOrSchema(request);
     const body: Json = {
       model: request.model,
       max_tokens: request.maxOutputTokens ?? DEFAULT_MAX_OUTPUT,
-      messages: request.messages.map((message) => ({
-        role: message.role,
-        content: message.content,
-      })),
+      messages: this.wireMessages(request.messages),
     };
+    if (hasTools(request)) {
+      body['tools'] = request.tools!.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.parameters,
+      }));
+      body['tool_choice'] = {
+        type: { auto: 'auto', none: 'none', required: 'any' }[request.toolChoice ?? 'auto'],
+        disable_parallel_tool_use: true,
+      };
+    }
     if (request.instructions) body['system'] = request.instructions;
     if (request.temperature !== undefined) body['temperature'] = request.temperature;
     if (request.responseSchema) {
@@ -427,17 +619,30 @@ export class AnthropicAdapter extends HttpAdapter {
       .map((block) => String(block['text']))
       .join('');
     const raw = typeof response['stop_reason'] === 'string' ? response['stop_reason'] : null;
-    const toolUse = blocks.find(
-      (block) => block['type'] === 'tool_use' && block['name'] === request.responseSchema?.name,
-    );
+    const toolUse = request.responseSchema
+      ? blocks.find(
+          (block) => block['type'] === 'tool_use' && block['name'] === request.responseSchema?.name,
+        )
+      : undefined;
+    const toolCalls: ToolCall[] = request.responseSchema
+      ? []
+      : blocks
+          .filter((block) => block['type'] === 'tool_use' && typeof block['name'] === 'string')
+          .map((block, index) => ({
+            id: typeof block['id'] === 'string' ? block['id'] : `call_${index}`,
+            name: String(block['name']),
+            arguments: block['input'] ?? {},
+          }));
     const finishReason: FinishReason =
-      raw === 'end_turn' || raw === 'stop_sequence' || (raw === 'tool_use' && toolUse)
-        ? 'stop'
-        : raw === 'max_tokens'
-          ? 'length'
-          : raw === 'refusal'
-            ? 'content_filter'
-            : 'other';
+      raw === 'tool_use' && toolCalls.length > 0
+        ? 'tool_call'
+        : raw === 'end_turn' || raw === 'stop_sequence' || (raw === 'tool_use' && toolUse)
+          ? 'stop'
+          : raw === 'max_tokens'
+            ? 'length'
+            : raw === 'refusal'
+              ? 'content_filter'
+              : 'other';
     if (request.responseSchema && finishReason === 'stop' && !toolUse) {
       throw new ProviderError('invalid_output', 'anthropic_structured_output_missing');
     }
@@ -447,6 +652,7 @@ export class AnthropicAdapter extends HttpAdapter {
       model: typeof response['model'] === 'string' ? response['model'] : request.model,
       text: request.responseSchema && toolUse ? JSON.stringify(toolUse['input']) : text,
       json: request.responseSchema && toolUse ? (toolUse['input'] ?? null) : null,
+      toolCalls: finishReason === 'tool_call' ? toolCalls : [],
       finishReason,
       rawFinishReason: raw,
       usage: {

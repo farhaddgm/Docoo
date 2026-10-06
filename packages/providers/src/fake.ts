@@ -9,6 +9,7 @@ import {
   type NormalizedModelResponse,
   type ProviderErrorKind,
   type ProviderHealth,
+  type ToolCall,
 } from './contract.js';
 
 /** Fails the n-th call (1-based) with the given error kind, for retry and pause tests. */
@@ -70,6 +71,12 @@ export class FakeAdapter implements ModelProviderAdapter {
 
   /** Optional canned structured answer per request (tests); null falls back to the schema sample. */
   responder: (request: NormalizedModelRequest) => unknown = () => null;
+
+  /**
+   * Optional tool calls per request (tests): when the request offers tools and this returns calls,
+   * the answer is those calls; returning null or an empty list lets the model "answer" instead.
+   */
+  toolResponder: (request: NormalizedModelRequest) => readonly ToolCall[] | null = () => null;
 
   constructor(public script: FakeScript = () => null) {}
 
@@ -143,6 +150,33 @@ export class FakeAdapter implements ModelProviderAdapter {
       request.instructions ?? '',
       ...request.messages.map((message) => message.content),
     ].join('\n');
+    if (request.tools && request.tools.length > 0 && request.responseSchema) {
+      return Promise.reject(new ProviderError('invalid_request', 'tools_with_response_schema'));
+    }
+    const calls = request.tools && request.tools.length > 0 ? this.toolResponder(request) : null;
+    if (calls && calls.length > 0 && request.toolChoice !== 'none') {
+      const text = '';
+      return Promise.resolve({
+        provider: 'fake',
+        model: request.model,
+        text,
+        json: null,
+        toolCalls: calls,
+        finishReason: 'tool_call',
+        rawFinishReason: 'tool_calls',
+        usage: {
+          inputTokens: Math.ceil(prompt.length / 4),
+          outputTokens: Math.ceil(JSON.stringify(calls).length / 4),
+          reasoningTokens: null,
+          cachedInputTokens: null,
+        },
+        providerRequestId: `fake-${createHash('sha256')
+          .update(`${prompt}|${request.idempotencyKey ?? ''}`)
+          .digest('hex')
+          .slice(0, 12)}`,
+        latencyMs: 1,
+      });
+    }
     const canned = request.responseSchema ? this.responder(request) : null;
     const json = request.responseSchema
       ? (canned ?? sampleForSchema(request.responseSchema.schema, request.responseSchema.name))
@@ -156,6 +190,7 @@ export class FakeAdapter implements ModelProviderAdapter {
       model: request.model,
       text,
       json,
+      toolCalls: [],
       finishReason: 'stop',
       rawFinishReason: 'stop',
       usage: {
