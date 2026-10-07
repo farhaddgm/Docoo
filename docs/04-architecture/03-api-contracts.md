@@ -212,7 +212,7 @@ notion_sync: true
 
 - `GET /audit-events` (فیلتر project، action یا خانوادهٔ `x.*`، target، actor، severity، بازهٔ زمان)
 - `POST /audit-events/export` (JSON/CSV تا ۵۰۰۰ رویداد؛ خودِ export ممیزی می‌شود)
-- `POST /retention/purge` (حذف دائمی موارد منقضی با tombstone ممیزی)
+- `POST /retention/purge` (حذف دائمی موارد منقضی با tombstone ممیزی؛ پروژه و حوزهٔ حذف‌شده، و خطاهای بستهٔ خطایاب پس از `retention.app_errors_days`؛ پاسخ `appErrors` را هم می‌شمارد)
 - `GET /dashboard?from=&to=`: کارت‌های داشبورد با دادهٔ زنده (بازهٔ مصرف پیش‌فرض ۳۰ روز).
 - `GET /reports/usage?from=&to=&projectId=&groupBy=project|stage|day|model`: token و هزینهٔ برآوردی؛ بازه حداکثر ۴۰۰ روز.
 - `POST /brain-reports` با `{projectId?, from?, to?, modelEvaluation?}` → 201؛ گزارش پروژه یا workspace با `deviations[]` (rule، clause، role، severity، count، detail، evidence) و `recommendations[]`. هیچ وضعیتی تغییر نمی‌کند. با `modelEvaluation: true` (پیش‌فرض false؛ هر نقش یک فراخوانی مدل) گزارش `evaluations[]` هم دارد: برای هر یک از پنج نقش مرحله `status`، `reason`، `score` ۱ تا ۵، `summary`، `charterVersionId`، `samples[]`، `findings[]` (هر یافته با `clauses[]` و `evidence[]` ‌ـ یافتهٔ بی‌شاهد دور ریخته می‌شود)، `discarded` و `errorCode`؛ `summary.modelEvaluation` شمارهٔ نسخهٔ داور و شمارش‌ها را دارد. نقشی که نمی‌تواند سنجیده شود (`no_samples`، `ai_not_configured`، `provider_failure`، `invalid_output`) گزارش را از بین نمی‌برد ([ADR-0017](../adr/0017-research-with-knowledge-and-role-evaluation.md)).

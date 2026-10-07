@@ -175,10 +175,28 @@ describe('walker helpers', () => {
     expect(stepHref('en', 'complete_stages', id)).toBe(`/en/projects/${id}?tab=workflow`);
     expect(stepHref('en', 'choose_solution', id)).toBe(`/en/projects/${id}?tab=solutions`);
     expect(stepHref('en', 'approve_document', id)).toBe(`/en/projects/${id}?tab=documents`);
-    // A project step without a selected project has nowhere to go; so do steps without a page.
+    expect(stepHref('fa', 'configure_ai')).toBe('/fa/settings');
+    expect(stepHref('en', 'add_sources')).toBe('/en/knowledge?tab=sources');
+    expect(stepHref('en', 'approve_knowledge')).toBe('/en/knowledge');
+    // A project step without a selected project has nowhere to go.
     expect(stepHref('en', 'complete_stages')).toBeNull();
-    expect(stepHref('en', 'add_sources')).toBeNull();
-    expect(stepHref('en', 'configure_ai')).toBeNull();
+    // Every one of the twelve steps now has a page once a project is selected.
+    for (const key of [
+      'connect_provider',
+      'configure_ai',
+      'create_topic',
+      'add_sources',
+      'approve_knowledge',
+      'create_project',
+      'activate_project',
+      'complete_stages',
+      'choose_solution',
+      'evaluate_document',
+      'approve_document',
+      'review_brain',
+    ]) {
+      expect(stepHref('en', key, id), key).not.toBeNull();
+    }
   });
 
   it('follows the project of the current page', () => {

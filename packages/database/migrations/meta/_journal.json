@@ -267,6 +267,13 @@
       "when": 1791319046066,
       "tag": "0037_notifications_security",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791347138060,
+      "tag": "0038_app_errors_retention",
+      "breakpoints": true
     }
   ]
 }
