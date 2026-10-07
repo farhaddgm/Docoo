@@ -24,6 +24,8 @@ RUN apt-get update && apt-get upgrade -y --no-install-recommends && \
     rm -rf /var/lib/apt/lists/* && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
            /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-*
+# Both possible first mounts of the heartbeat volume use PostgreSQL UID 999.
+RUN mkdir -p /run/docoo-backup && chown 999:999 /run/docoo-backup
 WORKDIR /service
 COPY --from=builder --chown=node:node /service /service
 # Node arguments of the service, e.g. "--import ./dist/instrumentation.js dist/main.js".

@@ -141,20 +141,32 @@ jobs:
           - name: caddy
             image: caddy:2@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772
           - name: redis
-            image: redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+            image: docoo-redis:ci
           - name: object-store
             image: chrislusf/seaweedfs:latest@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
           - name: clamav
-            image: clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23
+            image: docoo-clamav:ci
           - name: temporal
-            image: temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+            image: docoo-temporal:ci
           - name: object-backup
-            image: rclone/rclone:latest@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+            image: docoo-object-backup:ci
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Build PostgreSQL runtime image
         if: matrix.name == 'postgres'
         run: docker build -t docoo-postgres:ci infra/postgres
+      - name: Build patched redis runtime
+        if: matrix.name == 'redis'
+        run: docker build -f infra/docker/Dockerfile.patched --build-arg BASE_IMAGE=redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499 -t docoo-redis:ci infra/docker
+      - name: Build patched clamav runtime
+        if: matrix.name == 'clamav'
+        run: docker build -f infra/docker/Dockerfile.patched --build-arg BASE_IMAGE=clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23 -t docoo-clamav:ci infra/docker
+      - name: Build patched temporal runtime
+        if: matrix.name == 'temporal'
+        run: docker build -f infra/docker/Dockerfile.patched --build-arg BASE_IMAGE=temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e -t docoo-temporal:ci infra/docker
+      - name: Build patched object backup runtime
+        if: matrix.name == 'object-backup'
+        run: docker build -f infra/docker/Dockerfile.rclone -t docoo-object-backup:ci infra/docker
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: v0.75.0

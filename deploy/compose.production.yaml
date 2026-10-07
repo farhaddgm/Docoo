@@ -110,7 +110,12 @@ services:
 
   redis:
     networks: [backend]
-    image: redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    build:
+      context: ../infra/docker
+      dockerfile: Dockerfile.patched
+      args:
+        BASE_IMAGE: redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    image: docoo-redis:${DOCOO_VERSION:-local}
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes']
     volumes: [redis-data:/data]
@@ -128,7 +133,10 @@ services:
   object-backup:
     networks: [backend, egress]
     # Mirrors uploads and artifacts to the off-host backup bucket every BACKUP_INTERVAL_HOURS.
-    image: rclone/rclone:latest@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+    build:
+      context: ../infra/docker
+      dockerfile: Dockerfile.rclone
+    image: docoo-object-backup:${DOCOO_VERSION:-local}
     restart: unless-stopped
     entrypoint: ['/bin/sh', '-c']
     command:
@@ -159,14 +167,24 @@ services:
   clamav:
     networks: [backend, egress]
     # Official signatures, refreshed by freshclam inside the container.
-    image: clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23
+    build:
+      context: ../infra/docker
+      dockerfile: Dockerfile.patched
+      args:
+        BASE_IMAGE: clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23
+    image: docoo-clamav:${DOCOO_VERSION:-local}
     restart: unless-stopped
     volumes: [clamav-data:/var/lib/clamav]
 
   temporal:
     networks: [backend]
     # Single-node Temporal with a persistent SQLite store, sized for the private beta.
-    image: temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+    build:
+      context: ../infra/docker
+      dockerfile: Dockerfile.patched
+      args:
+        BASE_IMAGE: temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+    image: docoo-temporal:${DOCOO_VERSION:-local}
     restart: unless-stopped
     command: ['server', 'start-dev', '--ip', '0.0.0.0', '--db-filename', '/data/temporal.db']
     user: root

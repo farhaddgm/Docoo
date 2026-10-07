@@ -155,6 +155,12 @@ jobs:
           done
           "${c[@]}" logs backup | tail -5
           "${c[@]}" exec -T backup wal-g backup-list
+          "${c[@]}" exec -T api node -e '
+            const fs=require("node:fs");
+            const last=Number(fs.readFileSync("/run/docoo-backup/database-success","utf8"));
+            if(!Number.isFinite(last)||Date.now()/1000-last>600) process.exit(1);
+            console.log("Database backup heartbeat is readable by the restricted API");'
+
           "${c[@]}" exec -T postgres psql -U docoo_admin -d docoo -tAc "select pg_switch_wal()" >/dev/null
           sleep 10
           "${c[@]}" exec -T postgres psql -U docoo_admin -d docoo -tAc \
