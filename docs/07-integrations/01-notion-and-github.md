@@ -2,9 +2,9 @@
 doc_id: DOCOO-NOTION-GITHUB
 title: راهبرد GitHub و همگام‌سازی Notion
 status: active
-version: 1.3.0
+version: 1.3.1
 owner: Documentation Engineering
-last_updated: 2026-10-01
+last_updated: 2026-10-07
 notion_sync: true
 ---
 
@@ -71,7 +71,7 @@ Notion read-only واقعی ممکن است از نظر permission قابل‌ت
 موتور sync در `scripts/notion/` پیاده‌سازی شده و مستقیم با Notion API (نسخهٔ `2025-09-03`) کار می‌کند؛ webhook خارجی دیگر لازم نیست:
 
 - `pnpm docs:sync:plan` بدون token و بدون شبکه برنامهٔ create/update/unchanged را بر اساس checksum و state نشان می‌دهد و در CI روی هر PR اجرا می‌شود.
-- workflow `Notion documentation sync` پس از push به `main` (تغییر `docs/**` یا `scripts/notion/**`) یا اجرای دستی، با secret `NOTION_TOKEN` صفحه‌ها را به‌روز می‌کند، ردیف index را با Version، Status، Commit SHA و Last Synced می‌نویسد و `docs/_meta/notion-state.json` را با SHA واقعی در `main` commit می‌کند. اجرای دستی با گزینهٔ `force` همهٔ صفحه‌ها را بازنویسی می‌کند.
+- workflow `Notion documentation sync` پس از push به `main` (تغییر `docs/**` یا `scripts/notion/**`) یا اجرای دستی روی `main`، با secret `NOTION_TOKEN` صفحه‌ها را به‌روز می‌کند و ردیف index را با Version، Status، Commit SHA و Last Synced می‌نویسد. وضعیت پایدار در فایل `docs/_meta/notion-state.json` روی شاخهٔ مستقل `codex/notion-sync-state` نگهداری می‌شود؛ این شاخه فقط همان فایل وضعیت را دارد و کد برنامه وارد آن نمی‌شود. اجرای بعدی آخرین وضعیت را از آن بازیابی می‌کند؛ در اولین اجرا، وضعیت بازبینی‌شدهٔ مخزن مبناست. بنابراین ربات نیازی به نوشتن مستقیم یا استثنای عبور از حفاظت `main` ندارد. اجرای دستی با گزینهٔ `force` همهٔ صفحه‌ها را بازنویسی می‌کند.
 - محتوای صفحه جایگزین می‌شود ولی صفحه‌ها و databaseهای فرزند حفظ می‌شوند. سندی که در state نیست ابتدا با عنوان در بخش خودش و با `Doc ID` در index جست‌وجو می‌شود تا ردیف یا صفحهٔ تکراری ساخته نشود.
 - پس از هر انتشار، دو بولت «Source commit» و «آخرین همگام‌سازی» در بالای صفحهٔ ریشه نیز با SHA و تاریخ واقعی به‌روز می‌شوند؛ پیش‌تر این هدر دستی بود و کهنه می‌ماند.
 - بدون `NOTION_TOKEN` workflow فقط validate و plan را اجرا و هشدار پیکربندی ثبت می‌کند.
