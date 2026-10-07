@@ -6,6 +6,7 @@ import {
   type AgentDefinitionContent,
   clampBusinessBudget,
   type BusinessPrompt,
+  dataBlock,
 } from '@docoo/domain';
 import {
   type Block,
@@ -177,7 +178,7 @@ export function outlinePrompt(input: {
   };
   return {
     instructions: instructionsFor(input.definition, input.material, 'outline', input.tablesAllowed),
-    message: `<data>${JSON.stringify(data)}</data>`,
+    message: dataBlock(data),
   };
 }
 
@@ -253,7 +254,7 @@ export function sectionPrompt(input: {
   };
   return {
     instructions: instructionsFor(input.definition, material, input.call, input.tablesAllowed),
-    message: `<data>${JSON.stringify(data)}</data>`,
+    message: dataBlock(data),
   };
 }
 

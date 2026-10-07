@@ -87,4 +87,12 @@ describe('calculator (ADR-0023)', () => {
       expect(refused(attack), attack).not.toMatch(/^ok:/u);
     }
   });
+
+  it('does not mistake what every object inherits for a function or a constant', () => {
+    for (const name of ['constructor', 'toString', 'valueOf', 'hasOwnProperty']) {
+      expect(refused(name)).toBe('unknown_name');
+      expect(refused(`-${name}`)).toBe('unknown_name');
+      expect(refused(`${name}(1)`)).toBe('unknown_name');
+    }
+  });
 });

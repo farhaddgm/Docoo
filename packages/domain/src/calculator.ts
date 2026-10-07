@@ -180,7 +180,7 @@ class Parser {
     if (token.kind === 'name') {
       this.at += 1;
       if (this.takeOp('(')) {
-        const fn = FUNCTIONS[token.value];
+        const fn = Object.hasOwn(FUNCTIONS, token.value) ? FUNCTIONS[token.value] : undefined;
         if (!fn) throw new Refusal('unknown_name');
         const args: number[] = [];
         if (!this.takeOp(')')) {
@@ -192,7 +192,7 @@ class Parser {
           throw new Refusal('wrong_arguments');
         return finite(fn.run(...args));
       }
-      const constant = CONSTANTS[token.value];
+      const constant = Object.hasOwn(CONSTANTS, token.value) ? CONSTANTS[token.value] : undefined;
       if (constant === undefined) throw new Refusal('unknown_name');
       return constant;
     }

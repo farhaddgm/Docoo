@@ -13,6 +13,7 @@ import {
   type QualityFinding,
   type QualityQuestion,
   type QualityReviewReason,
+  dataBlock,
 } from '@docoo/domain';
 import { activeAgentVersion, ProviderRuntime } from '@docoo/orchestration';
 import { ProviderError } from '@docoo/providers';
@@ -155,9 +156,9 @@ export class QuestionQualityService {
         task: plan.judge.promptTemplate,
         rules: QUESTION_QUALITY_RULES,
       }),
-      message: `<data>${JSON.stringify(
+      message: dataBlock(
         questionQualityPromptData({ criteria: plan.criteria, questions: plan.questions }),
-      )}</data>`,
+      ),
     };
     type Outcome =
       | {

@@ -12,6 +12,7 @@ import {
   ROLE_EVALUATION_SCHEMA_NAME,
   STAGE_ROLE,
   type EvaluationSample,
+  dataBlock,
 } from '@docoo/domain';
 import {
   DEFAULT_LEVEL_BOUNDS,
@@ -315,7 +316,7 @@ export function prepareSelfCheck(
   });
   return {
     instructions,
-    message: `<data>${JSON.stringify(data)}</data>`,
+    message: dataBlock(data),
     schemaName: ROLE_EVALUATION_SCHEMA_NAME,
     schema: ROLE_EVALUATION_SCHEMA,
     judge: (json) => (normalizeEvaluation(json, { charter, samples }).ok ? null : 'invalid_output'),

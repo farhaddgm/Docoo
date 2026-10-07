@@ -543,6 +543,14 @@ describe.skipIf(!adminUrl || !temporalAddress)('tool calling by the model (ADR-0
         await new Promise((resolve) => setTimeout(resolve, 150));
       }
       expect(status).toBe('cancelled');
+      // The question nobody waits for is closed, so a late answer is refused, not half-applied.
+      const stored = await h.admin.query<{ status: string; answer: string | null }>(
+        'select status, answer from agent_questions where id = $1',
+        [question.id],
+      );
+      expect(stored.rows[0]).toEqual({ status: 'dismissed', answer: null });
+      const late = await answer(projectId, question.id, { answer: 'Too late' });
+      expect(late.statusCode, late.body).toBe(409);
     });
 
     it('does not offer the tool when the limit is zero, and refuses a second question past the limit', async () => {

@@ -249,6 +249,23 @@ export class WorkflowService {
         batchId: pending.id,
       });
     }
+    // A stage that waits for an agent's question which is already answered lost its
+    // "agentInput" signal the same way; with no open question left it is certainly waiting.
+    const answered = await this.database.run(context, async (client) =>
+      (
+        await client.query<{ id: string }>(
+          `select sr.id from stage_runs sr
+            where sr.run_id = $1 and sr.status = 'waiting_for_human'
+              and exists (select 1 from agent_questions q where q.stage_run_id = sr.id)
+              and not exists (select 1 from agent_questions q
+                               where q.stage_run_id = sr.id and q.status = 'open')`,
+          [live.id],
+        )
+      ).rows.map((row) => row.id),
+    );
+    for (const stageRunId of answered) {
+      await this.engine.signal(live.temporal_workflow_id, 'agentInput', { stageRunId });
+    }
   }
 
   async cancel(context: WorkspaceRequestContext, projectId: string, reason: string) {
@@ -697,6 +714,14 @@ export class WorkflowService {
         if (!question) throw notFound('WORKFLOW_QUESTION_NOT_FOUND', 'The question was not found.');
         if (question.status !== 'open')
           throw conflict('WORKFLOW_QUESTION_CLOSED', 'The question has already been answered.');
+        // Only a stage that is really waiting can use the answer; a cancelled run cannot.
+        const stage = await this.loadStage(client, projectId, question.stage_run_id);
+        if (stage.status !== 'waiting_for_human') {
+          throw conflict(
+            'WORKFLOW_QUESTION_STALE',
+            'The stage is no longer waiting for this answer.',
+          );
+        }
         await client.query(
           `update agent_questions
               set status = $2, answer = $3, answered_by = $4, answered_at = now()
@@ -726,7 +751,6 @@ export class WorkflowService {
             answerLength: input.answer?.length ?? 0,
           },
         });
-        const stage = await this.loadStage(client, projectId, question.stage_run_id);
         const run = await this.runOf(client, stage.run_id);
         return {
           signal: {

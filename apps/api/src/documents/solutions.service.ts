@@ -9,6 +9,7 @@ import {
   type Criterion,
   type Level,
 } from '@docoo/documents';
+import { dataBlock } from '@docoo/domain';
 import { ProviderRuntime } from '@docoo/orchestration';
 import { ProviderError, type JsonSchema } from '@docoo/providers';
 import type { PoolClient } from 'pg';
@@ -219,12 +220,12 @@ export class SolutionsService {
           messages: [
             {
               role: 'user',
-              content: `<data>${JSON.stringify({
+              content: dataBlock({
                 problem: prepared.project.initial_problem,
                 title: prepared.project.title,
                 ideation: prepared.ideation,
                 ...(prepared.company ? { businessProfile: prepared.company.prompt.data } : {}),
-              })}</data>`,
+              }),
             },
           ],
           responseSchema: { name: 'solutions', schema: solutionSchema(prepared.count) },

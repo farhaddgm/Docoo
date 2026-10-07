@@ -3,6 +3,7 @@ import {
   composeInstructions,
   type AgentDefinitionContent,
   type BusinessPrompt,
+  dataBlock,
 } from '@docoo/domain';
 import type { JsonSchema } from '@docoo/providers';
 
@@ -262,5 +263,5 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
       ? { toolResults: context.toolResults }
       : {}),
   };
-  return { instructions, message: `<data>${JSON.stringify(data)}</data>` };
+  return { instructions, message: dataBlock(data) };
 }

@@ -208,17 +208,21 @@ export class NotificationMailer implements OnApplicationBootstrap, OnModuleDestr
 
     // 2. Send outside any transaction: a slow mail server holds no database connection.
     const mail = composeMail(claimed.rows, this.environment.WEB_ORIGIN);
-    let delivered = false;
-    try {
-      for (const to of claimed.recipients) {
+    // Each recipient is tried on its own: one address that cannot be delivered must not stop the
+    // others, and must not make the ones already served get the same mail again. The rows count
+    // as sent once at least one recipient has the mail; they are retried only when none has.
+    let served = 0;
+    for (const to of claimed.recipients) {
+      try {
         await this.transport!.sendMail({ from: this.environment.MAIL_FROM, to, ...mail });
+        served += 1;
+      } catch (error) {
+        this.logger.error(
+          `Notification mail could not be sent (${error instanceof Error ? error.name : 'error'}).`,
+        );
       }
-      delivered = true;
-    } catch (error) {
-      this.logger.error(
-        `Notification mail could not be sent (${error instanceof Error ? error.name : 'error'}).`,
-      );
     }
+    const delivered = served > 0;
 
     // 3. Record the result: sent, or one more attempt (and given up after the last).
     const ids = claimed.rows.map((row) => row.id);

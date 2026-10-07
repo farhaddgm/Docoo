@@ -261,9 +261,9 @@ describe.skipIf(!adminUrl || !temporalAddress)('notifications (ADR-0025)', () =>
       const fifth = await flow.reach('ntf5');
       h.mailbox.sent.length = 0;
       h.mailbox.failures = 1;
-      const first = await h.mailer.dispatch();
-      expect(first.sent).toBe(0);
-      expect(first.failed).toBeGreaterThan(0);
+      // A tick scans every workspace of the shared database, so the totals are not this
+      // test's alone; its own rows are what is asserted.
+      await h.mailer.dispatch();
       let rows = (await rowsOf(fifth)).rows;
       expect(rows.every((row) => row.email_status === 'pending' && row.email_attempts === 1)).toBe(
         true,

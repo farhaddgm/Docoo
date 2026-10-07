@@ -19,6 +19,7 @@ import {
   type KnownDeviation,
   type RoleEvaluation,
   type WorkflowStage,
+  dataBlock,
 } from '@docoo/domain';
 import {
   activeAgentVersion,
@@ -292,7 +293,7 @@ export class RoleEvaluationService {
         task: plan.judge.promptTemplate,
         rules: ROLE_EVALUATION_RULES,
       }),
-      message: `<data>${JSON.stringify(
+      message: dataBlock(
         evaluationPromptData({
           role: entry.role,
           stage: entry.stage,
@@ -300,7 +301,7 @@ export class RoleEvaluationService {
           samples: entry.samples,
           knownDeviations: entry.knownDeviations,
         }),
-      )}</data>`,
+      ),
     };
     try {
       const { response, invocationId } = await this.runtime.invoke(

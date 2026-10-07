@@ -20,6 +20,10 @@ Agents can now call tools themselves, ask the administrator a question in the mi
 - The Smart walker links every one of its twelve steps to a page (settings, knowledge sources, knowledge).
 - The retention purge also removes closed (fixed or ignored) error-log entries last seen more than `retention.app_errors_days` ago (default 90); an open entry is never deleted and a trigger makes the purge the only way to delete one (migration 0038). The response gains `appErrors`.
 
+### Fixed
+
+- Security review of the new code (see ADR-0023): an answer whose "go on" signal was lost no longer leaves a stage waiting forever (`workflow/sync` sends it again); a cancelled run closes its open agent questions and a late answer gets `409`; one undeliverable mail recipient no longer blocks the others or causes repeat mail; text inside a prompt's data (an answer, a document, a knowledge passage) can no longer close the `<data>` block early; the calculator no longer treats inherited names such as `constructor` as constants.
+
 ## [0.20.0] — 2026-10-06
 
 Model prices can be read from a public catalog instead of being typed in. See [ADR-0022](docs/adr/0022-model-prices-from-public-catalog.md). Nothing is saved on its own: the administrator sees each price next to the current one and chooses.

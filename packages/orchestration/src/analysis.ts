@@ -9,6 +9,7 @@ import {
   type QuestionCategory,
   type QuestionStatus,
   type BusinessPrompt,
+  dataBlock,
 } from '@docoo/domain';
 import { ProviderError, type JsonSchema } from '@docoo/providers';
 
@@ -341,5 +342,5 @@ export function roundPrompt(input: RoundRequestInput): { instructions: string; m
     approvedDefinitionOfEarlierRun: analysis.priorDefinition,
     ...(input.business ? { businessProfile: input.business.data } : {}),
   };
-  return { instructions, message: `<data>${JSON.stringify(data)}</data>` };
+  return { instructions, message: dataBlock(data) };
 }

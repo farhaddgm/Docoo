@@ -793,6 +793,12 @@ export function createOrchestrationActivities(
           `update human_tasks set status = 'cancelled', resolved_at = now() where project_id = $1 and status = 'pending'`,
           [ref.projectId],
         );
+        // A question nobody is waiting for any more is closed, so it cannot be answered later.
+        await client.query(
+          `update agent_questions set status = 'dismissed', answered_at = now()
+            where status = 'open' and stage_run_id in (select id from stage_runs where run_id = $1)`,
+          [ref.runId],
+        );
         await audit(client, ref.workspaceId, {
           action: 'workflow.cancelled',
           targetType: 'workflow_run',
