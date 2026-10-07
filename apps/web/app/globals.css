@@ -2163,3 +2163,111 @@ progress {
     grid-template-columns: 3rem minmax(0, 1fr);
   }
 }
+
+/* VIEW access keeps project data and navigation visible while hiding changes. */
+.resource-view-only [data-write-action] {
+  display: none !important;
+}
+
+.google-sign-in {
+  display: flex;
+  justify-content: center;
+  text-decoration: none;
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+.google-sign-in::before {
+  content: 'G';
+  font-weight: 800;
+  background: white;
+  color: #4285f4;
+  border-radius: 50%;
+  width: 1.5rem;
+  text-align: center;
+}
+.accounts-page {
+  max-width: 1500px;
+  margin-inline: auto;
+}
+.accounts-toolbar,
+.accounts-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-block: 1rem;
+}
+.accounts-toolbar {
+  justify-content: space-between;
+}
+.accounts-toolbar label {
+  display: grid;
+  gap: 0.5rem;
+}
+.accounts-page input,
+.accounts-page select {
+  border: 1px solid var(--border, #d1d5db);
+  padding: 0.6rem;
+  border-radius: 0.4rem;
+  background: var(--surface, #fff);
+  color: inherit;
+}
+.accounts-table-wrap {
+  overflow: auto;
+}
+.accounts-page table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: start;
+}
+.accounts-page th,
+.accounts-page td {
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  text-align: start;
+  vertical-align: top;
+}
+.account-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #0007;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+  padding: 1rem;
+}
+.account-dialog {
+  width: min(100%, 650px);
+  max-height: 90vh;
+  overflow: auto;
+}
+.account-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block: 0.5rem;
+}
+.account-checkbox input {
+  width: auto;
+}
+.account-access-list {
+  list-style: none;
+  padding: 0;
+  max-height: 50vh;
+  overflow: auto;
+}
+.account-access-list li {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  padding-block: 0.8rem;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+.account-profile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem 1.5rem;
+  margin-block: 1rem;
+}

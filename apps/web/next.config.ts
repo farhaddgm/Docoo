@@ -3,11 +3,16 @@ import type { NextConfig } from 'next';
 /** The Content-Security-Policy is set per request in `proxy.ts`, because it names the deployment's files host. */
 const nextConfig: NextConfig = {
   output: 'standalone',
+  experimental: { useTypeScriptCli: false },
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,
   redirects() {
-    return Promise.resolve([{ source: '/', destination: '/fa', permanent: false }]);
+    return Promise.resolve([
+      { source: '/', destination: '/fa', permanent: false },
+      { source: '/auth/login', destination: '/fa/auth/login', permanent: false },
+      { source: '/auth/login-up', destination: '/fa/auth/login-up', permanent: false },
+    ]);
   },
   rewrites() {
     const apiUrl = (process.env['API_PUBLIC_URL'] ?? 'http://localhost:4000').replace(/\/$/, '');

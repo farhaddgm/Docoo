@@ -6,6 +6,8 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { isGmail, normalizeGmail, type AccountRole, type LoginMethod } from '@docoo/contracts';
+import { GoogleAuthError, type GoogleIdentity } from './google-oauth.service.js';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient, QueryResultRow } from 'pg';
 import type { Environment } from '@docoo/config';
@@ -32,14 +34,18 @@ export interface AuthUser {
   readonly id: string;
   readonly email: string;
   readonly displayName: string;
-  readonly role: 'super_admin';
+  readonly role: AccountRole;
+  readonly loginMethod?: LoginMethod;
+  readonly hasPassword?: boolean;
+  readonly isOwner?: boolean;
+  readonly lastLoginAt?: string | null;
 }
 
 export interface AuthWorkspace {
   readonly id: string;
   readonly code: string;
   readonly name: string;
-  readonly role: 'super_admin';
+  readonly role: AccountRole;
 }
 
 export interface IssuedSession {
@@ -60,20 +66,25 @@ type AuthEventAction =
 interface UserRow extends QueryResultRow {
   id: string;
   email: string;
-  password_hash: string;
+  password_hash: string | null;
   display_name: string;
   status: 'active' | 'locked' | 'disabled';
   locked: boolean;
+  account_role?: AccountRole;
+  login_method?: LoginMethod;
+  deleted_at?: Date | null;
+  google_sub?: string | null;
+  last_login_at?: Date | null;
 }
 
 interface WorkspaceRow extends QueryResultRow {
   id: string;
   code: string;
   name: string;
-  role: 'super_admin';
+  role: AccountRole;
 }
 
-interface SessionUserRow extends QueryResultRow {
+interface SessionUserRow extends UserRow {
   id: string;
   email: string;
   display_name: string;
@@ -91,7 +102,7 @@ interface AuthEventInput {
   readonly userAgentHash: string | null;
 }
 
-export const PASSWORD_MIN_LENGTH = 12;
+export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 1024;
 
 @Injectable()
@@ -116,7 +127,7 @@ export class AuthService {
   ): Promise<LoginResult> {
     const identifierDigest = this.identifierDigest(identifier);
     const userResult = await this.pool.query<UserRow>(
-      `select id, email, password_hash, display_name, status,
+      `select id, email, password_hash, display_name, status, account_role, login_method, deleted_at, google_sub, last_login_at,
               coalesce(locked_until > now(), false) as locked
          from users
         where lower(email) = lower($1)
@@ -130,7 +141,14 @@ export class AuthService {
       password,
     );
 
-    if (!user || user.status !== 'active' || user.locked || !passwordMatches) {
+    if (
+      !user ||
+      user.status !== 'active' ||
+      user.locked ||
+      user.deleted_at ||
+      user.login_method === 'GOOGLE' ||
+      !passwordMatches
+    ) {
       if (user && user.status === 'active' && !user.locked && !passwordMatches) {
         await this.registerFailedAttempt(user.id, identifierDigest, metadata);
       }
@@ -147,7 +165,7 @@ export class AuthService {
     try {
       await client.query('begin');
       const currentUserResult = await client.query<UserRow>(
-        `select id, email, password_hash, display_name, status,
+        `select id, email, password_hash, display_name, status, account_role, login_method, deleted_at, google_sub, last_login_at,
                 coalesce(locked_until > now(), false) as locked
            from users
           where id = $1
@@ -159,6 +177,8 @@ export class AuthService {
         !currentUser ||
         currentUser.status !== 'active' ||
         currentUser.locked ||
+        currentUser.deleted_at ||
+        currentUser.login_method === 'GOOGLE' ||
         currentUser.password_hash !== user.password_hash
       ) {
         await client.query('rollback');
@@ -184,7 +204,7 @@ export class AuthService {
       }
 
       await client.query(
-        'update users set failed_login_count = 0, locked_until = null where id = $1',
+        'update users set failed_login_count = 0, locked_until = null, last_login_at=now() where id = $1',
         [user.id],
       );
       const session = await this.issueSession(client, user.id, metadata);
@@ -196,7 +216,7 @@ export class AuthService {
       });
       await client.query('commit');
 
-      return { ...session, user: this.toAuthUser(user), workspaces };
+      return { ...session, user: this.toAuthUser(currentUser), workspaces };
     } catch (error) {
       await client.query('rollback').catch(() => undefined);
       throw error;
@@ -226,13 +246,13 @@ export class AuthService {
             and absolute_expires_at > now()
             and exists (
               select 1 from users active_user
-               where active_user.id = sessions.user_id and active_user.status = 'active'
+               where active_user.id = sessions.user_id and active_user.status = 'active' and active_user.deleted_at IS NULL
             )
           returning user_id, absolute_expires_at,
                     least($2::integer, ceil(extract(epoch from absolute_expires_at - now()))::integer)
                       as cookie_max_age_seconds
        )
-       select u.id, u.email, u.display_name, u.status, r.absolute_expires_at,
+       select u.id, u.email, u.display_name, u.status, u.password_hash, u.account_role, u.login_method, u.last_login_at, r.absolute_expires_at,
               r.cookie_max_age_seconds
          from refreshed r
          join users u on u.id = r.user_id`,
@@ -256,12 +276,7 @@ export class AuthService {
     if (workspaces.length === 0) throw this.invalidSession();
 
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.display_name,
-        role: 'super_admin',
-      },
+      user: this.toAuthUser(user),
       workspaces,
       maxAgeSeconds: user.cookie_max_age_seconds,
     };
@@ -318,7 +333,7 @@ export class AuthService {
     const session = await this.currentSession(token);
     const identifierDigest = this.identifierDigest(session.user.email);
     const stored = await this.pool.query<{ password_hash: string } & QueryResultRow>(
-      'select password_hash from users where id = $1',
+      "select password_hash from users where id = $1 and login_method<>'GOOGLE' and deleted_at IS NULL and status='active'",
       [session.user.id],
     );
     const passwordHash = stored.rows[0]?.password_hash;
@@ -334,6 +349,18 @@ export class AuthService {
     const newHash = await hash(newPassword, this.passwordHashOptions());
 
     return this.transaction(async (client) => {
+      const current = await client.query<UserRow>('select * from users where id=$1 for update', [
+        session.user.id,
+      ]);
+      const account = current.rows[0];
+      if (
+        !account ||
+        account.status !== 'active' ||
+        account.deleted_at ||
+        account.login_method === 'GOOGLE' ||
+        account.password_hash !== passwordHash
+      )
+        throw this.invalidSession();
       await client.query(
         `update users
             set password_hash = $2, password_changed_at = now(),
@@ -365,7 +392,7 @@ export class AuthService {
   ): Promise<{ readonly email: string; readonly token: string } | null> {
     const identifierDigest = this.identifierDigest(identifier);
     const result = await this.pool.query<{ id: string; email: string } & QueryResultRow>(
-      `select id, email from users where lower(email) = lower($1) and status = 'active' limit 1`,
+      `select id, email from users where lower(email) = lower($1) and status = 'active' and login_method<>'GOOGLE' and deleted_at IS NULL limit 1`,
       [identifier],
     );
     const user = result.rows[0];
@@ -406,8 +433,8 @@ export class AuthService {
       `select u.email
          from password_reset_tokens t
          join users u on u.id = t.user_id
-        where t.token_digest = $1 and t.consumed_at is null and t.expires_at > now()
-          and u.status = 'active'`,
+        where t.token_digest = $1 and t.consumed_at is null and t.revoked_at is null and t.expires_at > now()
+          and u.status = 'active' and u.login_method<>'GOOGLE' and u.deleted_at IS NULL`,
       [digest],
     );
     const email = candidate.rows[0]?.email;
@@ -420,8 +447,8 @@ export class AuthService {
         `update password_reset_tokens t
             set consumed_at = now()
            from users u
-          where t.token_digest = $1 and t.consumed_at is null and t.expires_at > now()
-            and u.id = t.user_id and u.status = 'active'
+          where t.token_digest = $1 and t.consumed_at is null and t.revoked_at is null and t.expires_at > now()
+            and u.id = t.user_id and u.status = 'active' and u.login_method<>'GOOGLE' and u.deleted_at IS NULL
         returning t.user_id`,
         [digest],
       );
@@ -446,6 +473,184 @@ export class AuthService {
     });
   }
 
+  isOwner(email: string): boolean {
+    return normalizeGmail(email) === normalizeGmail(this.config.OWNER_EMAIL);
+  }
+
+  async loginWithGoogle(
+    identity: GoogleIdentity,
+    metadata: AuthRequestMetadata,
+  ): Promise<LoginResult> {
+    const client = await this.pool.connect();
+    const identifierDigest = digestSecret(
+      normalizeGmail(identity.email),
+      this.config.SESSION_PEPPER,
+    );
+    try {
+      await client.query('begin');
+      if (!identity.emailVerified || identity.hostedDomain || !isGmail(identity.email))
+        throw new GoogleAuthError('not_gmail');
+      // Serialize aliases and first-owner provisioning across concurrent callbacks.
+      await client.query('select pg_advisory_xact_lock(hashtextextended($1,0))', [
+        normalizeGmail(identity.email),
+      ]);
+      const owner = this.isOwner(identity.email);
+      let result = await client.query<UserRow>(
+        `select * from users where deleted_at IS NULL AND (google_sub=$1 OR app.normalize_gmail(email)=$2) order by (google_sub=$1) desc nulls last, (login_method<>'PASSWORD') desc,created_at,id limit 1 for update`,
+        [identity.sub, normalizeGmail(identity.email)],
+      );
+      let user = result.rows[0];
+      if (user && normalizeGmail(user.email) !== normalizeGmail(identity.email))
+        throw new GoogleAuthError('not_allowed');
+      if (user?.google_sub && user.google_sub !== identity.sub)
+        throw new GoogleAuthError('not_allowed');
+      if (!user && owner) {
+        result = await client.query<UserRow>(
+          `insert into users(email,display_name,account_role,login_method,google_sub) values($1,$2,'super_admin','GOOGLE',$3) returning *`,
+          [this.config.OWNER_EMAIL, identity.name?.trim() || 'Owner', identity.sub],
+        );
+        user = result.rows[0];
+      }
+      if (!user || (!owner && user.login_method === 'PASSWORD'))
+        throw new GoogleAuthError('not_allowed');
+      if (!owner && user.status !== 'active') throw new GoogleAuthError('inactive');
+      await client.query(
+        `update users set google_sub=$2,last_login_at=now(), status=CASE WHEN $3 THEN 'active'::user_status ELSE status END,account_role=CASE WHEN $3 THEN 'super_admin' ELSE account_role END where id=$1`,
+        [user.id, identity.sub, owner],
+      );
+      if (owner) {
+        await client.query("select set_config('app.actor_id',$1,true)", [user.id]);
+        const catalog = await client.query<{ id: string }>(
+          'select id from app.account_workspace_catalog()',
+        );
+        if (!catalog.rows.length) {
+          const initialWorkspaceId = randomUUID();
+          await client.query("select set_config('app.workspace_id',$1,true)", [initialWorkspaceId]);
+          await client.query("insert into workspaces(id,code,name) values($1,'main','Docoo')", [
+            initialWorkspaceId,
+          ]);
+          catalog.rows.push({ id: initialWorkspaceId });
+        }
+        for (const w of catalog.rows) {
+          await client.query("select set_config('app.workspace_id',$1,true)", [w.id]);
+          await client.query(
+            "insert into memberships(workspace_id,user_id,role) values($1,$2,'super_admin') on conflict(workspace_id,user_id) do update set role='super_admin'",
+            [w.id, user.id],
+          );
+        }
+        user = { ...user, account_role: 'super_admin', status: 'active' };
+      }
+      const workspaces = await this.getUserWorkspaces(client, user.id);
+      if (!workspaces.length) throw new GoogleAuthError('not_allowed');
+      const token = createSessionToken();
+      const maxAgeSeconds = Math.min(
+        this.config.SESSION_IDLE_TTL_SECONDS,
+        this.config.SESSION_ABSOLUTE_TTL_SECONDS,
+      );
+      await client.query(
+        `insert into sessions(user_id,token_digest,idle_expires_at,absolute_expires_at,ip_hash,user_agent_hash) values($1,$2,now()+($3::integer*interval '1 second'),now()+($4::integer*interval '1 second'),$5,$6)`,
+        [
+          user.id,
+          digestSecret(token, this.config.SESSION_PEPPER),
+          this.config.SESSION_IDLE_TTL_SECONDS,
+          this.config.SESSION_ABSOLUTE_TTL_SECONDS,
+          this.digestOptional(metadata.ip),
+          this.digestOptional(metadata.userAgent),
+        ],
+      );
+      await this.insertAuthEvent(client, {
+        actorId: user.id,
+        action: 'login.succeeded',
+        identifierDigest,
+        ...this.auditMetadata(metadata),
+      });
+      await client.query(
+        `insert into account_events(actor_id,target_id,action,details) values($1,$1,'auth.google.login','{}')`,
+        [user.id],
+      );
+      await client.query('commit');
+      return { token, maxAgeSeconds, user: this.toAuthUser(user), workspaces };
+    } catch (error) {
+      await client.query('rollback').catch(() => undefined);
+      await this.recordAuthEvent({
+        actorId: null,
+        action: 'login.failed',
+        identifierDigest,
+        ...this.auditMetadata(metadata),
+      });
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async resourceAccess(
+    workspaceId: string,
+    actorId: string,
+    params: Record<string, unknown>,
+  ): Promise<'VIEW' | 'EDIT' | null> {
+    return this.transaction(async (client) => {
+      await client.query(
+        "select set_config('app.workspace_id',$1,true),set_config('app.actor_id',$2,true)",
+        [workspaceId, actorId],
+      );
+      if (typeof params['knowledgeId'] === 'string') {
+        if (!this.isUuid(params['knowledgeId']))
+          throw new BadRequestException('Invalid resource ID');
+        const result = await client.query<{ access: 'VIEW' | 'EDIT' | null }>(
+          'select app.knowledge_access($1,$2) as access',
+          [workspaceId, params['knowledgeId']],
+        );
+        return result.rows[0]?.access ?? null;
+      }
+      let kind = 'project';
+      let id = params['projectId'];
+      if (typeof params['topicId'] === 'string') {
+        kind = 'topic';
+        id = params['topicId'];
+      }
+      if (typeof id !== 'string' && typeof params['sourceId'] === 'string') {
+        const result = await client.query<{ scope_type: string; scope_id: string }>(
+          'select scope_type,scope_id from source_assets where workspace_id=$1 and id=$2',
+          [workspaceId, params['sourceId']],
+        );
+        const source = result.rows[0];
+        if (source && ['project', 'topic'].includes(source.scope_type)) {
+          kind = source.scope_type;
+          id = source.scope_id;
+        }
+      }
+      const lookups: Record<string, string> = {
+        runId: 'select project_id from workflow_runs where workspace_id=$1 and id=$2',
+        batchId: 'select project_id from question_batches where workspace_id=$1 and id=$2',
+        documentId: 'select project_id from documents where workspace_id=$1 and id=$2',
+        solutionId: 'select project_id from solutions where workspace_id=$1 and id=$2',
+        sourceId:
+          "select scope_id as project_id from source_assets where workspace_id=$1 and id=$2 and scope_type='project'",
+        evaluationId:
+          'select d.project_id from evaluations e join documents d on d.id=e.document_id where e.workspace_id=$1 and e.id=$2',
+        findingId:
+          'select d.project_id from evaluation_findings f join evaluations e on e.id=f.evaluation_id join documents d on d.id=e.document_id where f.workspace_id=$1 and f.id=$2',
+      };
+      if (typeof id !== 'string')
+        for (const [key, sql] of Object.entries(lookups)) {
+          const value = params[key];
+          if (typeof value !== 'string') continue;
+          if (!this.isUuid(value)) throw new BadRequestException('Invalid resource ID');
+          const result = await client.query<{ project_id: string }>(sql, [workspaceId, value]);
+          id = result.rows[0]?.project_id;
+          break;
+        }
+      if (typeof id !== 'string') return null;
+      if (!this.isUuid(id)) throw new BadRequestException('Invalid resource ID');
+      const result = await client.query<{ access: 'VIEW' | 'EDIT' | null }>(
+        'select app.resource_access($1,$2,$3) as access',
+        [kind, workspaceId, id],
+      );
+      return result.rows[0]?.access ?? null;
+    });
+  }
+
   assertSameOrigin(metadata: AuthRequestMetadata): void {
     if (metadata.origin !== this.config.WEB_ORIGIN || metadata.fetchSite === 'cross-site') {
       throw new ForbiddenException({
@@ -459,7 +664,7 @@ export class AuthService {
 
   assertPasswordPolicy(password: string, email: string, previousPassword?: string): void {
     const tooShort = [...password].length < PASSWORD_MIN_LENGTH;
-    const tooLong = password.length > PASSWORD_MAX_LENGTH;
+    const tooLong = password.length > 128;
     const sameAsEmail = password.trim().toLowerCase() === email.trim().toLowerCase();
     const unchanged = previousPassword !== undefined && password === previousPassword;
     if (tooShort || tooLong || sameAsEmail || unchanged) {
@@ -642,7 +847,11 @@ export class AuthService {
       id: user.id,
       email: user.email,
       displayName: user.display_name,
-      role: 'super_admin',
+      role: user.account_role ?? 'super_admin',
+      loginMethod: user.login_method ?? 'PASSWORD',
+      hasPassword: !!user.password_hash,
+      isOwner: this.isOwner(user.email),
+      lastLoginAt: user.last_login_at?.toISOString() ?? null,
     };
   }
 

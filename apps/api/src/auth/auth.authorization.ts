@@ -96,6 +96,12 @@ export type MembershipRole = AuthWorkspace['role'];
 export const ROLE_PERMISSIONS: Readonly<Record<MembershipRole, ReadonlySet<WorkspacePermission>>> =
   {
     super_admin: new Set(WORKSPACE_PERMISSIONS),
+    editor: new Set(
+      WORKSPACE_PERMISSIONS.filter((p) => !/^(provider|retention|smart|integration)\./.test(p)),
+    ),
+    viewer: new Set(
+      WORKSPACE_PERMISSIONS.filter((p) => !/^(provider|retention|smart|integration)\./.test(p)),
+    ),
   };
 
 export function roleHasPermission(role: string, permission: WorkspacePermission): boolean {
@@ -183,13 +189,97 @@ export class WorkspacePermissionGuard implements CanActivate {
         detail: 'The workspace was not found.',
       });
     }
-    if (!roleHasPermission(workspace.role, permission)) {
+    if (workspace.role !== session.user.role || !roleHasPermission(workspace.role, permission)) {
       throw new ForbiddenException({
         status: 403,
         title: 'Forbidden',
         code: 'AUTH_PERMISSION_DENIED',
         detail: 'The requested action is not permitted.',
       });
+    }
+
+    if (workspace.role !== 'super_admin') {
+      const params = (request.params ?? {}) as Record<string, unknown>;
+      const body =
+        request.body && typeof request.body === 'object'
+          ? (request.body as Record<string, unknown>)
+          : {};
+      const nestedScope =
+        body['scope'] && typeof body['scope'] === 'object'
+          ? (body['scope'] as Record<string, unknown>)
+          : {};
+      const knowledgeScopes = Array.isArray(body['scopes']) ? body['scopes'] : [];
+      for (const entry of knowledgeScopes) {
+        const scope = entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {};
+        if (
+          !['project', 'topic'].includes(String(scope['type'])) ||
+          typeof scope['id'] !== 'string'
+        )
+          throw new ForbiddenException({ code: 'AUTH_PERMISSION_DENIED' });
+        const granted = await this.authService.resourceAccess(
+          workspace.id,
+          session.user.id,
+          scope['type'] === 'project' ? { projectId: scope['id'] } : { topicId: scope['id'] },
+        );
+        if (granted !== 'EDIT') throw new ForbiddenException({ code: 'AUTH_PERMISSION_DENIED' });
+      }
+      const firstKnowledgeScope = knowledgeScopes[0] as Record<string, unknown> | undefined;
+      const scopeParams: Record<string, unknown> = {
+        ...(firstKnowledgeScope
+          ? { scopeType: firstKnowledgeScope['type'], scopeId: firstKnowledgeScope['id'] }
+          : {}),
+        ...(nestedScope['type']
+          ? { scopeType: nestedScope['type'], scopeId: nestedScope['id'] }
+          : {}),
+        ...((request.query as Record<string, unknown>) ?? {}),
+        ...body,
+        ...params,
+      };
+      if (scopeParams['scopeType'] === 'run') scopeParams['runId'] = scopeParams['scopeId'];
+      if (scopeParams['scopeType'] === 'topic') scopeParams['topicId'] = scopeParams['scopeId'];
+      if (['project', 'agent'].includes(String(scopeParams['scopeType'])))
+        scopeParams['projectId'] = scopeParams['parentProjectId'] ?? scopeParams['scopeId'];
+      const scoped = [
+        'projectId',
+        'topicId',
+        'batchId',
+        'documentId',
+        'sourceId',
+        'knowledgeId',
+        'evaluationId',
+        'findingId',
+        'runId',
+        'sourceAssetId',
+        'uploadIntentId',
+        'knowledgeVersionId',
+        'solutionId',
+        'humanTaskId',
+      ].some((key) => typeof scopeParams[key] === 'string');
+      const platformOnly =
+        /^(provider|retention|smart|integration)\./.test(permission) ||
+        (permission.startsWith('business.') && !scoped) ||
+        (permission.startsWith('audit.') && !scoped) ||
+        (permission === 'workspace.configure' && !scoped) ||
+        (!scoped &&
+          (String(permission) === 'config.configure' ||
+            /^agent_definition\.(update|version|activate)$/.test(permission))) ||
+        ['topic.delete', 'project.delete', 'workflow.override'].includes(permission);
+      if (platformOnly) throw new ForbiddenException({ code: 'AUTH_PERMISSION_DENIED' });
+      const access = scoped
+        ? await this.authService.resourceAccess(workspace.id, session.user.id, scopeParams)
+        : null;
+      if (scoped && !access) throw new NotFoundException({ code: 'AUTH_RESOURCE_NOT_FOUND' });
+      const read =
+        ['GET', 'HEAD', 'OPTIONS'].includes(request.method) || permission.endsWith('.read');
+      const create = ['topic.create', 'project.create'].includes(permission) && !scoped;
+      if (
+        (!read && !create && (scoped ? access !== 'EDIT' : workspace.role !== 'editor')) ||
+        (create && workspace.role !== 'editor')
+      )
+        throw new ForbiddenException({
+          code: 'AUTH_PERMISSION_DENIED',
+          detail: 'Read-only access.',
+        });
     }
 
     request.workspaceAuthorization = { user: session.user, workspace, permission };

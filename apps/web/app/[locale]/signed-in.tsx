@@ -1,15 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type ReactNode } from 'react';
+import type { AccountRole } from '@docoo/contracts';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { messagesFor, type Locale } from '../i18n';
 import { reportMessagesFor } from '../report-messages';
 import { AppShell } from './app-shell';
 
 export interface SessionIdentity {
-  user: { id: string; email: string; displayName: string; role: 'super_admin' };
-  workspaces: { id: string; code: string; name: string; role: 'super_admin' }[];
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    role: AccountRole;
+    isOwner?: boolean;
+    loginMethod?: string;
+    hasPassword?: boolean;
+  };
+  workspaces: { id: string; code: string; name: string; role: AccountRole }[];
+}
+
+const SessionContext = createContext<SessionIdentity | null>(null);
+export function useSessionIdentity() {
+  return useContext(SessionContext);
 }
 
 type State =
@@ -58,6 +72,7 @@ export function SignedIn({
       locale={locale}
       title={title}
       subtitle={subtitle}
+      identity={state.kind === 'ready' ? state.identity : undefined}
       showNavigation={state.kind === 'ready'}
       workspaceId={state.kind === 'ready' ? state.identity.workspaces[0]?.id : undefined}
     >
@@ -71,7 +86,11 @@ export function SignedIn({
           </Link>
         </section>
       )}
-      {state.kind === 'ready' && children(state.identity)}
+      {state.kind === 'ready' && (
+        <SessionContext.Provider value={state.identity}>
+          {children(state.identity)}
+        </SessionContext.Provider>
+      )}
     </AppShell>
   );
 }

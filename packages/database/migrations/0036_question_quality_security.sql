@@ -1,5 +1,5 @@
 -- Tenant isolation, link integrity, state rules, append-only history and grants for the Brain's
--- judgement of the analyst's questions of 0034 (ADR-0024), and the setting that chooses the criteria.
+-- judgement of the analyst's questions of 0035 (ADR-0024), and the setting that chooses the criteria.
 ALTER TABLE question_quality_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE question_quality_reviews FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint

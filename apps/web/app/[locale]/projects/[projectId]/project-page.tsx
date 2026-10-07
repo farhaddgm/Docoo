@@ -8,6 +8,8 @@ import { apiGet, apiSend, ApiError } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { Notice, useAction } from '../../use-action';
+import { ProjectAccessBoundary, useReadOnlyAccess } from '../../resource-access';
+import { useSessionIdentity } from '../../signed-in';
 import { WorkspacePage } from '../../workspace-page';
 import { explainProject } from '../explain';
 import { projectMessages } from '../messages';
@@ -48,7 +50,9 @@ export function ProjectPage({ locale, projectId }: { locale: Locale; projectId: 
   return (
     <WorkspacePage locale={locale} title={text.pageTitle} subtitle={text.pageSubtitle}>
       {(workspaceId) => (
-        <ProjectView locale={locale} workspaceId={workspaceId} projectId={projectId} />
+        <ProjectAccessBoundary projectId={projectId} workspaceId={workspaceId}>
+          <ProjectView locale={locale} workspaceId={workspaceId} projectId={projectId} />
+        </ProjectAccessBoundary>
       )}
     </WorkspacePage>
   );
@@ -67,6 +71,7 @@ function ProjectView({
   projectId: string;
 }) {
   const text = projectPageMessages(locale);
+  const accessReadOnly = useReadOnlyAccess();
   const common = reportMessagesFor(locale);
   const base = `/workspaces/${workspaceId}/projects/${projectId}`;
   const [project, setProject] = useState<ProjectDetail | null>(null);
@@ -145,7 +150,7 @@ function ProjectView({
   const milestone = projectMilestone(project.status, facts);
 
   return (
-    <div className="stack">
+    <div className={accessReadOnly ? 'stack resource-view-only' : 'stack'}>
       <p>
         <Link href={`/${locale}/projects` as Route}>{text.backToList}</Link>
       </p>
@@ -223,15 +228,17 @@ function ProjectView({
             onOpenWorkflow={() => choose('workflow')}
           />
         )}
-        <Lifecycle
-          locale={locale}
-          base={base}
-          project={project}
-          onChanged={(next) => {
-            setProject(next);
-            changed();
-          }}
-        />
+        {!accessReadOnly && (
+          <Lifecycle
+            locale={locale}
+            base={base}
+            project={project}
+            onChanged={(next) => {
+              setProject(next);
+              changed();
+            }}
+          />
+        )}
       </section>
 
       <nav className="section-nav" aria-label={text.sections}>
@@ -269,7 +276,7 @@ function ProjectView({
           locale={locale}
           workspaceId={workspaceId}
           projectId={projectId}
-          readOnly={project.status === 'archived' || project.status === 'deleted'}
+          readOnly={accessReadOnly || project.status === 'archived' || project.status === 'deleted'}
           refreshKey={refreshKey}
           onChanged={reload}
         />
@@ -299,7 +306,7 @@ function ProjectView({
           locale={locale}
           workspaceId={workspaceId}
           projectId={projectId}
-          readOnly={project.status === 'archived' || project.status === 'deleted'}
+          readOnly={accessReadOnly || project.status === 'archived' || project.status === 'deleted'}
           onChanged={changed}
         />
       )}
@@ -316,7 +323,7 @@ function ProjectView({
           locale={locale}
           workspaceId={workspaceId}
           projectId={projectId}
-          readOnly={project.status === 'archived' || project.status === 'deleted'}
+          readOnly={accessReadOnly || project.status === 'archived' || project.status === 'deleted'}
         />
       )}
       {tab === 'agents' && (
@@ -324,7 +331,7 @@ function ProjectView({
           locale={locale}
           workspaceId={workspaceId}
           projectId={projectId}
-          readOnly={project.status === 'archived' || project.status === 'deleted'}
+          readOnly={accessReadOnly || project.status === 'archived' || project.status === 'deleted'}
           refreshKey={refreshKey}
         />
       )}
@@ -333,7 +340,7 @@ function ProjectView({
           locale={locale}
           workspaceId={workspaceId}
           projectId={projectId}
-          readOnly={project.status === 'archived' || project.status === 'deleted'}
+          readOnly={accessReadOnly || project.status === 'archived' || project.status === 'deleted'}
         />
       )}
       {tab === 'timeline' && (
@@ -396,7 +403,10 @@ function Lifecycle({
     else execute(command, '');
   }
 
-  const commands = project.availableCommands;
+  const identity = useSessionIdentity();
+  const commands = project.availableCommands.filter(
+    (command) => command !== 'delete' || identity?.user.role === 'super_admin',
+  );
   if (commands.length === 0) return <Notice notice={notice} />;
 
   return (
@@ -426,6 +436,7 @@ function Lifecycle({
       </div>
       {pending && (
         <form
+          data-write-action
           className="card confirm-panel filter-form"
           aria-labelledby="command-title"
           aria-busy={busy}
@@ -458,6 +469,7 @@ function Lifecycle({
               {busy ? text.working : text.confirm}
             </button>
             <button
+              data-write-action
               className="secondary-button"
               type="button"
               disabled={busy}

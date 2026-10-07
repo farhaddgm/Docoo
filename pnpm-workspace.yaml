@@ -3,6 +3,9 @@ packages:
   - packages/*
 
 minimumReleaseAge: 10080
+# Reviewed security patch for CVE-2026-93749; retain the age gate for all other releases.
+minimumReleaseAgeExclude:
+  - source-map-js@1.2.2
 
 allowBuilds:
   '@scarf/scarf': false
@@ -17,3 +20,6 @@ overrides:
   # One Fastify copy for Nest's adapter and the plugins (patch release, see Dependabot #40/#45).
   fastify: 5.12.5
   '@grpc/grpc-js': '>=1.14.5 <2'
+  # Security patch releases required by the dependency/image release gates.
+  source-map-js: 1.2.2
+  sharp: 0.35.5

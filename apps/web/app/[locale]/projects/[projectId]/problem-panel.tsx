@@ -1,4 +1,5 @@
 'use client';
+import { useReadOnlyAccess } from '../../resource-access';
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
@@ -48,6 +49,7 @@ export function ProblemPanel({
   /** Something the rest of the page shows may have changed (a stage was approved). */
   onChanged: () => void;
 }) {
+  const accessReadOnly = useReadOnlyAccess();
   const text = problemMessages(locale);
   const common = reportMessagesFor(locale);
   const workspaceBase = `/workspaces/${workspaceId}`;
@@ -114,7 +116,7 @@ export function ProblemPanel({
   }
   if (!analysis) return <p role="status">{common.loading}</p>;
 
-  const readOnly = !['active', 'paused'].includes(projectStatus);
+  const readOnly = accessReadOnly || !['active', 'paused'].includes(projectStatus);
   const openBatch = batches.find((batch) => batch.id === analysis.openBatchId) ?? null;
   const closedBatches = batches.filter((batch) => batch.status === 'submitted');
   const answering = analysis.phase === 'answering' && !readOnly;
@@ -339,6 +341,7 @@ export function ProblemPanel({
 
       {openBatch && (
         <form
+          data-write-action
           className="card stack"
           aria-labelledby="batch-heading"
           aria-busy={busy}
@@ -474,6 +477,7 @@ export function ProblemPanel({
                 footer={
                   drafts[question.id] ? (
                     <button
+                      data-write-action
                       type="button"
                       className="primary-button"
                       disabled={busy || drafts[question.id]?.uploading === true}
@@ -530,7 +534,12 @@ export function ProblemPanel({
               </button>
             </div>
           ) : (
-            <form className="field-stack" aria-busy={busy} onSubmit={requestFinish}>
+            <form
+              data-write-action
+              className="field-stack"
+              aria-busy={busy}
+              onSubmit={requestFinish}
+            >
               <label htmlFor="finish-reason">{text.finishReason}</label>
               <input
                 id="finish-reason"

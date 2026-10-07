@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 import { contentSecurityPolicy } from './app/content-security-policy';
 
@@ -7,8 +7,10 @@ import { contentSecurityPolicy } from './app/content-security-policy';
  * environment (the files host differs per deployment), which `next.config.ts` headers cannot
  * do because they are fixed when the image is built.
  */
-export function proxy() {
+export function proxy(request: NextRequest) {
   const response = NextResponse.next();
+  if (request.nextUrl.pathname.endsWith('/auth/login-up'))
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
   response.headers.set('Content-Security-Policy', contentSecurityPolicy());
   return response;
 }

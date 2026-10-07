@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet, query } from '../../api-client';
 import { formatDateTime, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
+import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
 import { projectMessages } from './messages';
 
@@ -58,6 +59,7 @@ export function ProjectsPage({ locale }: { locale: Locale }) {
 
 /** PRJ-001 in the backoffice: every project of the workspace with its status and stage. */
 function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
+  const identity = useSessionIdentity();
   const text = projectMessages(locale);
   const common = reportMessagesFor(locale);
   const base = `/workspaces/${workspaceId}/projects`;
@@ -130,9 +132,14 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                 </option>
               ))}
             </select>
-            <Link className="primary-button link-button" href={`/${locale}/projects/new` as Route}>
-              {text.newProject}
-            </Link>
+            {identity?.user.role !== 'viewer' && (
+              <Link
+                className="primary-button link-button"
+                href={`/${locale}/projects/new` as Route}
+              >
+                {text.newProject}
+              </Link>
+            )}
           </div>
         </div>
         <form

@@ -150,7 +150,13 @@ export function DefinitionCard({
       {deciding && (
         <div className="stack">
           <div className="toolbar" role="group" aria-label={text.definitionTitle}>
-            <button className="primary-button" type="button" disabled={busy} onClick={approve}>
+            <button
+              data-write-action
+              className="primary-button"
+              type="button"
+              disabled={busy}
+              onClick={approve}
+            >
               {text.approve}
             </button>
             <button
@@ -170,7 +176,7 @@ export function DefinitionCard({
             </Link>
           </div>
           {rejecting && (
-            <form className="field-stack" aria-busy={busy} onSubmit={reject}>
+            <form data-write-action className="field-stack" aria-busy={busy} onSubmit={reject}>
               <label htmlFor="definition-feedback">{text.feedback}</label>
               <textarea
                 id="definition-feedback"

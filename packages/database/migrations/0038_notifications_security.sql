@@ -1,4 +1,4 @@
--- Tenant isolation, state rules, grants, the triggers that make the notifications of 0036 and the
+-- Tenant isolation, state rules, grants, the triggers that make the notifications of 0037 and the
 -- settings of the mailer (ADR-0025). Notifications are made by triggers on the tables that hold
 -- the events, so a new place that creates a human task cannot forget to notify.
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
