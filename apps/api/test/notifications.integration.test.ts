@@ -68,9 +68,17 @@ describe.skipIf(!adminUrl || !temporalAddress)('notifications (ADR-0025)', () =>
     // Approving the gate resolves the task: the notification remains but no longer waits.
     const view = await flow.overview(projectId);
     await flow.decide(projectId, flow.stageOf(view, 'research'), 'approve');
+    // Hold at the next human gate so later read-state checks have no background notifications.
+    await flow.waitFor(
+      projectId,
+      flow.waiting('ideation'),
+      'ideation gate before read-state checks',
+    );
+    const resolvedGateIds = new Set(gates.map((item) => item.id));
     const after = (await list('all', '&limit=100'))
       .json<Page>()
-      .items.filter((item) => item.projectId === projectId && item.kind === 'gate_review');
+      .items.filter((item) => resolvedGateIds.has(item.id));
+    expect(after).toHaveLength(gates.length);
     expect(after.every((item) => item.stillWaiting === false)).toBe(true);
   });
 
@@ -175,7 +183,7 @@ describe.skipIf(!adminUrl || !temporalAddress)('notifications (ADR-0025)', () =>
       ).statusCode,
     ).toBe(400);
 
-    // Read all (the workflow goes on in the background, so count right before).
+    // Read all while the workflow waits at the ideation gate.
     const unreadBefore = await unread();
     const everything = await h.request(
       'POST',
@@ -186,14 +194,14 @@ describe.skipIf(!adminUrl || !temporalAddress)('notifications (ADR-0025)', () =>
       },
     );
     expect(everything.statusCode).toBe(200);
-    expect(everything.json<{ marked: number }>().marked).toBeGreaterThanOrEqual(unreadBefore);
+    expect(everything.json<{ marked: number }>().marked).toBe(unreadBefore);
     expect(await unread()).toBe(0);
     expect((await list('unread')).json<Page>().items).toEqual([]);
     const audited = await h.admin.query<{ after: { marked: number } }>(
       `select after from audit_events where workspace_id = $1 and action = 'notification.read_all'`,
       [h.ids.workspaceA],
     );
-    expect(audited.rows.at(-1)!.after.marked).toBeGreaterThanOrEqual(unreadBefore);
+    expect(audited.rows.at(-1)!.after.marked).toBe(unreadBefore);
     // Reading all again marks nothing and writes no audit event.
     const again = await h.request(
       'POST',

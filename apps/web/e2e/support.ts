@@ -28,6 +28,8 @@ export async function signInWithKeyboard(page: Page) {
   await page.keyboard.press('Tab');
   await page.keyboard.type(password);
   await page.keyboard.press('Enter');
+  // The login page briefly renders this heading before its full-page redirect completes.
+  await page.waitForURL('/fa');
   await expect(page.getByRole('heading', { level: 1, name: 'داشبورد Docoo' })).toBeVisible();
 }
 
