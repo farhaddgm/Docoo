@@ -1,0 +1,187 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Requirement traceability gate (docs/06-delivery/01-testing-strategy.md: CI builds the FR/NFR
+// coverage matrix). Every FR-* and NFR-* of the requirement documents must have an entry in
+// qa/traceability.json that says honestly how it is verified:
+//   tested      - an automated test exercises it (at least one evidence file is a test file that
+//                 contains tests; other evidence files only have to exist)
+//   operational - deployment/ops evidence that exists in the repository
+//   waived      - nothing automated covers it yet; a reason is required and the number of
+//                 waivers may never grow past `waiverBudget`
+// Unknown ids, missing ids, missing files and a growing waiver count fail the gate.
+
+export const STATUSES = ['tested', 'operational', 'waived'];
+export const REQUIREMENT_DOCS = [
+  'docs/01-product/02-functional-requirements.md',
+  'docs/01-product/03-non-functional-requirements.md',
+];
+export const MAP_FILE = 'qa/traceability.json';
+export const REPORT_FILE = 'qa/traceability-report.md';
+
+const ID = /^(?:N?FR)-[A-Z]+-\d{3}$/u;
+const TEST_FILE = /(?:\.(?:test|spec)\.(?:ts|tsx|mjs|js)|\.integration\.mjs)$/u;
+const TEST_CALL =
+  /\b(?:it|test|describe)(?:\.[a-zA-Z]+)?\s*\(|assert(?:\.\w+)?\s*\(|^\s*await\s+check\s*\(/mu;
+
+/** The requirement ids a document defines, in document order, as `- **FR-XXX-001:** text`. */
+export function parseRequirements(markdown) {
+  const ids = [];
+  for (const match of markdown.matchAll(/^- \*\*((?:N?FR)-[A-Z]+-\d{3}):/gmu)) {
+    if (!ids.includes(match[1])) ids.push(match[1]);
+  }
+  return ids;
+}
+
+const isInsideRepo = (file) =>
+  typeof file === 'string' &&
+  file !== '' &&
+  !path.isAbsolute(file) &&
+  !path.normalize(file).startsWith('..');
+
+/**
+ * Checks the map against the requirement ids. `files` answers `exists(path)` and
+ * `read(path)`; both are injected so the rules are testable without a checkout.
+ */
+export function evaluate({ ids, map, files }) {
+  const errors = [];
+  const entries = map.requirements ?? {};
+  const budget = map.waiverBudget;
+  const idSet = new Set(ids);
+
+  for (const id of ids) {
+    if (!(id in entries)) errors.push(`${id}: has no entry in ${MAP_FILE}`);
+  }
+  for (const id of Object.keys(entries)) {
+    if (!ID.test(id) || !idSet.has(id)) errors.push(`${id}: is not a requirement of the documents`);
+  }
+
+  const summary = { tested: 0, operational: 0, waived: 0, missing: 0 };
+  for (const id of ids) {
+    const entry = entries[id];
+    if (!entry) {
+      summary.missing += 1;
+      continue;
+    }
+    if (!STATUSES.includes(entry.status)) {
+      errors.push(`${id}: status must be one of ${STATUSES.join(', ')}`);
+      continue;
+    }
+    summary[entry.status] += 1;
+    const evidence = Array.isArray(entry.evidence) ? entry.evidence : [];
+    if (typeof entry.note !== 'string' || entry.note.trim().length < 8) {
+      errors.push(`${id}: needs a note that says in a sentence how it is covered`);
+    }
+    if (entry.status === 'waived') {
+      if (evidence.length > 0) errors.push(`${id}: a waived requirement has no evidence`);
+      continue;
+    }
+    if (evidence.length === 0)
+      errors.push(`${id}: ${entry.status} needs at least one evidence path`);
+    let proof = 0;
+    for (const file of evidence) {
+      if (!isInsideRepo(file) || !files.exists(file)) {
+        errors.push(`${id}: evidence ${file} does not exist in the repository`);
+      } else if (TEST_FILE.test(file) && TEST_CALL.test(files.read(file))) {
+        proof += 1;
+      }
+    }
+    // Supporting files (the code, a workflow, a runbook) may sit next to the proof, but a
+    // `tested` requirement needs at least one real test file; ops evidence is `operational`.
+    if (entry.status === 'tested' && evidence.length > 0 && proof === 0) {
+      errors.push(`${id}: tested needs at least one test file with tests among its evidence`);
+    }
+  }
+
+  if (!Number.isInteger(budget) || budget < 0) {
+    errors.push('waiverBudget must be a non-negative integer');
+  } else if (summary.waived > budget) {
+    errors.push(
+      `${summary.waived} waived requirements exceed the waiverBudget of ${budget}; cover them or, if one truly cannot be covered yet, record why and raise the budget in review`,
+    );
+  }
+  return { errors, summary };
+}
+
+export const familyOf = (id) => id.split('-').slice(0, 2).join('-');
+
+/** The Markdown report of the map: totals, one row per family, and every waiver with its reason. */
+export function renderReport({ ids, map }) {
+  const entries = map.requirements ?? {};
+  const families = new Map();
+  for (const id of ids) {
+    const family = familyOf(id);
+    const row = families.get(family) ?? { tested: 0, operational: 0, waived: 0 };
+    row[entries[id]?.status ?? 'waived'] += 1;
+    families.set(family, row);
+  }
+  const total = { tested: 0, operational: 0, waived: 0 };
+  for (const row of families.values()) {
+    for (const key of Object.keys(total)) total[key] += row[key];
+  }
+  const lines = [
+    '# Requirement traceability',
+    '',
+    `Generated by \`pnpm qa:trace --write\` from ${MAP_FILE}; do not edit.`,
+    '',
+    `**${ids.length}** requirements: **${total.tested}** tested, **${total.operational}** operational, **${total.waived}** waived (budget ${map.waiverBudget}).`,
+    '',
+    '| Family | Tested | Operational | Waived |',
+    '| --- | ---: | ---: | ---: |',
+    ...[...families].map(
+      ([family, row]) => `| ${family} | ${row.tested} | ${row.operational} | ${row.waived} |`,
+    ),
+    '',
+  ];
+  const waived = ids.filter((id) => entries[id]?.status === 'waived');
+  lines.push('## Waived', '');
+  if (waived.length === 0) lines.push('None.', '');
+  for (const id of waived) lines.push(`- **${id}**: ${entries[id].note}`);
+  if (waived.length > 0) lines.push('');
+  return lines.join('\n');
+}
+
+function realFiles(root) {
+  return {
+    exists: (file) => {
+      try {
+        return fs.statSync(path.join(root, file)).isFile();
+      } catch {
+        return false;
+      }
+    },
+    read: (file) => fs.readFileSync(path.join(root, file), 'utf8'),
+  };
+}
+
+export function loadAll(root) {
+  const ids = REQUIREMENT_DOCS.flatMap((doc) =>
+    parseRequirements(fs.readFileSync(path.join(root, doc), 'utf8')),
+  );
+  const map = JSON.parse(fs.readFileSync(path.join(root, MAP_FILE), 'utf8'));
+  return { ids, map, files: realFiles(root) };
+}
+
+function main() {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const write = process.argv.includes('--write');
+  const input = loadAll(root);
+  const { errors, summary } = evaluate(input);
+  const report = renderReport(input);
+  const reportPath = path.join(root, REPORT_FILE);
+  if (write) {
+    fs.writeFileSync(reportPath, report);
+  } else if (!fs.existsSync(reportPath) || fs.readFileSync(reportPath, 'utf8') !== report) {
+    errors.push(`${REPORT_FILE} is out of date; run pnpm qa:trace --write`);
+  }
+  console.log(
+    `${input.ids.length} requirements: ${summary.tested} tested, ${summary.operational} operational, ${summary.waived} waived, ${summary.missing} unmapped`,
+  );
+  if (errors.length > 0) {
+    for (const error of errors) console.error(`- ${error}`);
+    process.exit(1);
+  }
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) main();

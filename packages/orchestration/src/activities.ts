@@ -4,6 +4,7 @@ import { STAGE_ROLE } from '@docoo/domain';
 import { checkCostLimit, ProviderError, retryDelaySeconds } from '@docoo/providers';
 import type { Pool, PoolClient } from 'pg';
 
+import { callableTools, runToolLoop, toolRules, type ToolLoopState } from './agent-tools.js';
 import { createAnalysisActivities, loadDefinitionContext } from './analysis-activities.js';
 import { createWritingActivities, type WritingActivities } from './writing-activities.js';
 import type { AnalysisActivities } from './analysis-activities.js';
@@ -15,7 +16,7 @@ import { finishResearch, prepareResearch, type ResearchRun } from './research-ac
 import type { ProviderRuntime } from './runtime.js';
 import { loadSettings } from './settings.js';
 import { loadAgentVersion, promptDigest, resolveAgentProfile } from './agents.js';
-import { STAGE_SCHEMAS, stagePrompt, STAGES, type Stage } from './stages.js';
+import { STAGE_SCHEMAS, stagePrompt, STAGES, type Stage, type StageContext } from './stages.js';
 import type { ToolCallScope } from './tool-calls.js';
 
 export type { RunRef, StageRef } from './refs.js';
@@ -38,7 +39,9 @@ export type AttemptResult =
       readonly status: 'blocked';
       readonly code: string;
       readonly reason: 'provider_failure' | 'configuration' | 'cost_limit';
-    };
+    }
+  /** The agent asked the administrator something; the stage waits for the answer (ADR-0023). */
+  | { readonly status: 'needs_input'; readonly questionId: string };
 
 export interface OrchestrationActivities extends AnalysisActivities, WritingActivities {
   startRun(ref: RunRef): Promise<{ paused: boolean }>;
@@ -291,6 +294,29 @@ export function createOrchestrationActivities(
           agentDefinitionVersionId: definition.id,
           allowed: definition.tools,
         };
+        // Questions the role put to the administrator in this stage: an open one means the attempt
+        // is still waiting for them; answered ones are part of the data from now on.
+        const questions = (
+          await client.query<{
+            id: string;
+            question: string;
+            status: string;
+            answer: string | null;
+          }>(
+            `select id, question, status, answer from agent_questions where stage_run_id = $1 order by created_at, id`,
+            [ref.stageRunId],
+          )
+        ).rows;
+        const openQuestion = questions.find((item) => item.status === 'open');
+        if (openQuestion) return { needsInput: openQuestion.id } as const;
+        await client.query(
+          `update stage_runs set status = 'running' where id = $1 and status = 'waiting_for_human'`,
+          [ref.stageRunId],
+        );
+        await client.query(
+          `update workflow_runs set status = 'running' where id = $1 and status = 'waiting_for_human'`,
+          [ref.runId],
+        );
         const research: ResearchRun | null =
           stage.stage === 'research'
             ? await prepareResearch(client, {
@@ -309,7 +335,7 @@ export function createOrchestrationActivities(
           STAGE_ROLE[stage.stage],
           config.businessBudgetChars,
         );
-        const prompt = stagePrompt({
+        const promptInput: StageContext = {
           stage: stage.stage,
           definition,
           language: stage.language,
@@ -326,7 +352,12 @@ export function createOrchestrationActivities(
           analysis: analysis ?? undefined,
           knowledge: research ? knowledgePromptItems(research.passages) : undefined,
           business: business?.prompt,
-        });
+          humanAnswers: questions.map((item) => ({ question: item.question, answer: item.answer })),
+        };
+        const prompt = stagePrompt(promptInput);
+        // Tools the model itself may call (ADR-0023): off unless the setting is on, and only those
+        // the pinned definition allows. The ledger and the allowlist apply to every call.
+        const tools = config.agentToolCalling ? callableTools(toolScope, config) : [];
         return {
           attemptId,
           config: { ...config, connectionId, model },
@@ -334,13 +365,17 @@ export function createOrchestrationActivities(
           promptSha256: promptDigest(prompt),
           businessSnapshotId: business?.snapshotId ?? null,
           prompt,
+          promptInput,
           stage: stage.stage,
           toolScope,
           research,
+          tools,
         } as const;
       });
       if ('reuse' in prepared)
         return { status: 'succeeded', outputId: prepared.reuse, reused: true };
+      if ('needsInput' in prepared)
+        return { status: 'needs_input', questionId: prepared.needsInput };
       if ('blocked' in prepared) {
         return {
           status: 'blocked',
@@ -350,23 +385,101 @@ export function createOrchestrationActivities(
       }
 
       try {
+        let prompt = prepared.prompt;
+        let promptSha256 = prepared.promptSha256;
+        let research = prepared.research;
+        const invocation = (purpose: string) => ({
+          workspaceId: ref.workspaceId,
+          projectId: ref.projectId,
+          stageRunId: ref.stageRunId,
+          attemptId: prepared.attemptId,
+          purpose,
+          retryNo: ref.retryNo,
+          agentDefinitionVersionId: prepared.agentDefinitionVersionId,
+          businessSnapshotId: prepared.businessSnapshotId,
+        });
+        if (prepared.tools.length > 0) {
+          // The model may look things up before it answers; what it found goes into the final
+          // prompt as data, and the structured answer is asked for as usual.
+          const maxCalls = prepared.config.agentMaxToolCalls;
+          const rules = toolRules(maxCalls);
+          const loopPrompt = stagePrompt({ ...prepared.promptInput, toolRules: rules });
+          const state: ToolLoopState = {
+            passages: [...(prepared.research?.passages ?? [])],
+            queries: [...(prepared.research?.queries ?? [])],
+            snapshots: [...(prepared.research?.snapshots ?? [])],
+            addedPassages: false,
+          };
+          const specs = prepared.tools.map((tool) => tool.spec(prepared.config));
+          let round = 0;
+          const loop = await runToolLoop({
+            exec: (work) => run(ref.workspaceId, work),
+            invoke: async (messages) => {
+              round += 1;
+              const { response } = await runtime.invoke(
+                {
+                  ...invocation(`stage:${prepared.stage}:tools`),
+                  promptSha256: promptDigest(loopPrompt),
+                },
+                prepared.config.connectionId,
+                {
+                  model: prepared.config.model,
+                  instructions: loopPrompt.instructions,
+                  messages,
+                  tools: specs,
+                  toolChoice: 'auto',
+                  idempotencyKey: `${key}:${ref.retryNo}:tool${round}`,
+                },
+              );
+              return response;
+            },
+            scope: prepared.toolScope,
+            config: prepared.config,
+            tools: prepared.tools,
+            state,
+            messages: [{ role: 'user', content: loopPrompt.message }],
+            maxCalls,
+            affordable: () =>
+              run(ref.workspaceId, async (client) => {
+                const total = (
+                  await client.query<{ total: number | null }>(
+                    `select sum(i.cost_usd)::real as total from model_invocations i
+                     join stage_runs s on s.id = i.stage_run_id where s.run_id = $1`,
+                    [ref.runId],
+                  )
+                ).rows[0]?.total;
+                return (
+                  checkCostLimit(total ?? 0, prepared.config.costLimitUsd).status !== 'exceeded'
+                );
+              }),
+          });
+          if (loop.suspendedFor) return { status: 'needs_input', questionId: loop.suspendedFor };
+          prompt = stagePrompt({
+            ...prepared.promptInput,
+            knowledge:
+              state.passages.length > 0 || prepared.promptInput.knowledge
+                ? knowledgePromptItems(state.passages)
+                : undefined,
+            toolResults: loop.transcript,
+            toolRules: rules,
+          });
+          promptSha256 = promptDigest(prompt);
+          if (research) {
+            research = {
+              ...research,
+              passages: state.passages,
+              queries: state.queries,
+              snapshots: state.snapshots,
+            };
+          }
+        }
         const { response } = await runtime.invoke(
-          {
-            workspaceId: ref.workspaceId,
-            projectId: ref.projectId,
-            stageRunId: ref.stageRunId,
-            attemptId: prepared.attemptId,
-            purpose: `stage:${prepared.stage}`,
-            retryNo: ref.retryNo,
-            agentDefinitionVersionId: prepared.agentDefinitionVersionId,
-            promptSha256: prepared.promptSha256,
-            businessSnapshotId: prepared.businessSnapshotId,
-          },
+          { ...invocation(`stage:${prepared.stage}`), promptSha256 },
           prepared.config.connectionId,
           {
             model: prepared.config.model,
-            instructions: prepared.prompt.instructions,
-            messages: [{ role: 'user', content: prepared.prompt.message }],
+            instructions: prompt.instructions,
+            messages: [{ role: 'user', content: prompt.message }],
             responseSchema: {
               name: `${prepared.stage}_output`,
               schema: STAGE_SCHEMAS[prepared.stage],
@@ -381,8 +494,8 @@ export function createOrchestrationActivities(
           // The research answer is stored with every citation checked against the passages the
           // model was given (the gated `citation_verifier`); other stages store it as returned.
           const content = JSON.stringify(
-            prepared.research
-              ? await finishResearch(client, prepared.toolScope, prepared.research, response.json)
+            research
+              ? await finishResearch(client, prepared.toolScope, research, response.json)
               : response.json,
           );
           const output = (
@@ -679,6 +792,12 @@ export function createOrchestrationActivities(
         await client.query(
           `update human_tasks set status = 'cancelled', resolved_at = now() where project_id = $1 and status = 'pending'`,
           [ref.projectId],
+        );
+        // A question nobody is waiting for any more is closed, so it cannot be answered later.
+        await client.query(
+          `update agent_questions set status = 'dismissed', answered_at = now()
+            where status = 'open' and stage_run_id in (select id from stage_runs where run_id = $1)`,
+          [ref.runId],
         );
         await audit(client, ref.workspaceId, {
           action: 'workflow.cancelled',

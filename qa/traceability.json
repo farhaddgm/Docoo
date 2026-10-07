@@ -1,0 +1,1131 @@
+{
+  "waiverBudget": 18,
+  "requirements": {
+    "FR-AUTH-001": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/auth.integration.test.ts",
+        "apps/web/e2e/main-path.spec.ts",
+        "apps/api/test/auth.service.test.ts"
+      ],
+      "note": "Login, /me, logout and lockout are exercised against the real API and in the browser."
+    },
+    "FR-AUTH-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/auth.integration.test.ts",
+        "apps/api/test/auth.reset-delivery.test.ts"
+      ],
+      "note": "Password change revokes and rotates sessions; single-use reset token, expiry and revoke-all are tested."
+    },
+    "FR-AUTH-003": {
+      "status": "tested",
+      "evidence": ["apps/api/test/auth.authorization.test.ts", "apps/api/test/auth.crypto.test.ts"],
+      "note": "HttpOnly/SameSite cookie with sliding maxAge and token digest are checked; the idle-expiry cutoff itself has no dedicated test."
+    },
+    "FR-AUTH-004": {
+      "status": "tested",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "note": "login.succeeded, login failure, logout, password reset/change and login.locked events are asserted in auth_events."
+    },
+    "FR-AUTH-005": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/authorization-matrix.test.ts",
+        "apps/api/test/auth.authorization.test.ts"
+      ],
+      "note": "Every route is checked against a role-permission matrix; Super Admin gets all, unknown roles none."
+    },
+    "FR-LOC-001": {
+      "status": "tested",
+      "evidence": ["apps/web/app/i18n.test.ts", "apps/web/e2e/main-path.spec.ts"],
+      "note": "Language switch between fa and en is tested in unit and e2e."
+    },
+    "FR-LOC-002": {
+      "status": "tested",
+      "evidence": ["apps/web/e2e/main-path.spec.ts", "apps/web/app/i18n.test.ts"],
+      "note": "RTL for fa and LTR for en is asserted on the html dir attribute, and the session survives the switch."
+    },
+    "FR-LOC-003": {
+      "status": "tested",
+      "evidence": ["apps/web/e2e/project-list.spec.ts", "packages/documents/src/templates.test.ts"],
+      "note": "Project output language is its own field shown independent of UI language and drives document headings; no test flips UI language and asserts output is unchanged."
+    },
+    "FR-LOC-004": {
+      "status": "tested",
+      "evidence": ["apps/web/app/i18n.test.ts"],
+      "note": "Numbers, dates and API error codes are localized from locale-neutral values."
+    },
+    "FR-TOP-001": {
+      "status": "tested",
+      "evidence": ["apps/api/test/topics.integration.test.ts", "apps/web/e2e/core-flow.spec.ts"],
+      "note": "Create with UUID, code, title, description and language is tested; topic attachments are not implemented or tested."
+    },
+    "FR-TOP-002": {
+      "status": "tested",
+      "evidence": ["apps/api/test/topics.integration.test.ts"],
+      "note": "Case-insensitive duplicate code or title returns a sanitized conflict, scoped per workspace."
+    },
+    "FR-TOP-003": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/topics-lifecycle.integration.test.ts",
+        "apps/web/e2e/core-flow.spec.ts"
+      ],
+      "note": "Edit, archive, restore, soft-delete and purge are covered."
+    },
+    "FR-TOP-004": {
+      "status": "waived",
+      "evidence": [],
+      "note": "Flatness is by schema (no parent column) and is only a negative requirement; no test asserts the absence of a hierarchy."
+    },
+    "FR-TOP-005": {
+      "status": "tested",
+      "evidence": ["apps/api/test/topics-lifecycle.integration.test.ts"],
+      "note": "All description versions are kept with reasons; attachments are not implemented so their versions are untested."
+    },
+    "FR-TOP-006": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/topics-lifecycle.integration.test.ts",
+        "apps/web/e2e/core-flow.spec.ts"
+      ],
+      "note": "Dependent projects are listed, deletion is blocked until they are gone, and the project link plus audit trace survive deletion."
+    },
+    "FR-PRJ-001": {
+      "status": "tested",
+      "evidence": ["apps/api/test/projects.integration.test.ts"],
+      "note": "Project gets a UUID and a unique readable code; duplicate code returns 409."
+    },
+    "FR-PRJ-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/projects.integration.test.ts",
+        "apps/api/test/settings.integration.test.ts",
+        "apps/web/e2e/core-flow.spec.ts"
+      ],
+      "note": "Code, title, initial problem, topics and settings are saved via the wizard and API."
+    },
+    "FR-PRJ-003": {
+      "status": "tested",
+      "evidence": ["apps/api/test/projects.integration.test.ts", "apps/web/e2e/core-flow.spec.ts"],
+      "note": "Multiple topics with priority order are saved, reordered and validated for availability."
+    },
+    "FR-PRJ-004": {
+      "status": "tested",
+      "evidence": [
+        "packages/domain/src/project.test.ts",
+        "apps/api/test/projects.integration.test.ts"
+      ],
+      "note": "Documented status transitions are enforced by the state machine and the API."
+    },
+    "FR-PRJ-005": {
+      "status": "tested",
+      "evidence": ["apps/api/test/projects.integration.test.ts"],
+      "note": "Deleted projects stay recoverable for 30 days with purgeAfter shown, then purge with an audit tombstone."
+    },
+    "FR-PRJ-006": {
+      "status": "tested",
+      "evidence": ["apps/api/test/projects.integration.test.ts"],
+      "note": "Clone copies settings and topics without history; secrets exclusion is not asserted explicitly."
+    },
+    "FR-PRJ-007": {
+      "status": "tested",
+      "evidence": [
+        "apps/web/e2e/core-flow.spec.ts",
+        "apps/web/app/[locale]/projects/[projectId]/project-health.test.ts",
+        "apps/api/test/projects.integration.test.ts",
+        "apps/api/test/workflow.integration.test.ts"
+      ],
+      "note": "Stage milestone, pause reason, health, next action and timeline are covered; listing outputs on the page is not specifically asserted."
+    },
+    "FR-CFG-001": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/config.integration.test.ts",
+        "apps/api/test/agents.integration.test.ts"
+      ],
+      "note": "System, workspace, topic and project scopes are tested and agent-in-project via per-project role copies; there is no run-level config scope test."
+    },
+    "FR-CFG-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/config.integration.test.ts",
+        "apps/web/e2e/settings.spec.ts",
+        "apps/api/test/settings.integration.test.ts"
+      ],
+      "note": "Effective values and their source scope are returned and shown in the settings UI and wizard preview."
+    },
+    "FR-CFG-003": {
+      "status": "tested",
+      "evidence": ["apps/api/test/config.integration.test.ts", "apps/web/e2e/settings.spec.ts"],
+      "note": "Append-only versions with actor, reason and audit before/after are tested; a rendered diff is not specifically covered."
+    },
+    "FR-CFG-004": {
+      "status": "tested",
+      "evidence": ["apps/api/test/agents.integration.test.ts", "apps/web/e2e/agents.spec.ts"],
+      "note": "A project copies the default role definition, edits stay in the project and the default is not changed."
+    },
+    "FR-CFG-005": {
+      "status": "tested",
+      "evidence": ["apps/api/test/config.integration.test.ts"],
+      "note": "A snapshot is pinned at activation and later changes apply only at the next boundary; per-call recording of the consumed config version is not asserted."
+    },
+    "FR-CFG-006": {
+      "status": "tested",
+      "evidence": ["apps/api/test/config.integration.test.ts", "apps/web/e2e/settings.spec.ts"],
+      "note": "Restore appends a new sequence and keeps history append-only (update is rejected)."
+    },
+    "FR-AGT-001": {
+      "status": "tested",
+      "evidence": [
+        "packages/domain/src/agents.test.ts",
+        "apps/api/test/agents.integration.test.ts"
+      ],
+      "note": "Six roles each start with an active definition including principles, duties, tools and model."
+    },
+    "FR-AGT-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/agents.integration.test.ts",
+        "packages/domain/src/agents.test.ts",
+        "apps/web/e2e/agents.spec.ts"
+      ],
+      "note": "Principles and duties are versioned, diffed, edited and rolled back independently."
+    },
+    "FR-AGT-003": {
+      "status": "tested",
+      "evidence": ["apps/api/test/agents.integration.test.ts"],
+      "note": "An attempt and its model invocation record the exact definition version and prompt hash; later default changes do not alter them."
+    },
+    "FR-AGT-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/agents.integration.test.ts",
+        "apps/api/test/agent-tools.integration.test.ts"
+      ],
+      "note": "Role output lists are shown without content, and agent retrieval of project materials is limited to its project and stage."
+    },
+    "FR-AGT-005": {
+      "status": "tested",
+      "evidence": [
+        "packages/domain/src/agents.test.ts",
+        "apps/api/test/agents.integration.test.ts",
+        "apps/api/test/agent-tools.integration.test.ts"
+      ],
+      "note": "The tool allowlist stays inside the role ceiling and tools outside the pinned list are never offered or run."
+    },
+    "FR-WF-001": {
+      "status": "tested",
+      "evidence": [
+        "packages/orchestration/src/orchestration.test.ts",
+        "apps/api/test/workflow.integration.test.ts"
+      ],
+      "note": "The fixed five-stage order is asserted in definitions and in a real run."
+    },
+    "FR-WF-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "apps/api/test/research.integration.test.ts",
+        "apps/api/test/reports.integration.test.ts"
+      ],
+      "note": "Audit at knowledge ingest, audited-only retrieval before research, and Brain reports/evaluations are tested; there is no single test of Brain invocation at all three workflow points."
+    },
+    "FR-WF-003": {
+      "status": "tested",
+      "evidence": ["apps/api/test/workflow.integration.test.ts"],
+      "note": "Manual gates by default wait for a human and automatic gates pass through when configured."
+    },
+    "FR-WF-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/workflow.integration.test.ts",
+        "apps/api/test/analysis.integration.test.ts"
+      ],
+      "note": "Pause, resume, cancel and a worker restart keep state and outputs; retry follows the provider retry schedule test."
+    },
+    "FR-WF-005": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/workflow.integration.test.ts",
+        "apps/api/test/agent-tools.integration.test.ts",
+        "apps/api/test/analysis.integration.test.ts"
+      ],
+      "note": "Pending human tasks and agent questions move the run to waiting_for_human."
+    },
+    "FR-WF-006": {
+      "status": "tested",
+      "evidence": ["apps/api/test/workflow.integration.test.ts"],
+      "note": "A repeated command with the same idempotency key creates one review and the workflow replays deterministically."
+    },
+    "FR-WF-007": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/workflow.integration.test.ts",
+        "packages/orchestration/src/orchestration.test.ts"
+      ],
+      "note": "The ten-attempt ceiling and the requirement for a recorded admin decision with reason to go past the limit are tested."
+    },
+    "FR-WF-008": {
+      "status": "tested",
+      "evidence": ["apps/web/e2e/core-flow.spec.ts", "apps/api/test/workflow.integration.test.ts"],
+      "note": "Reviewing a stage output with comment, reject with feedback, edit and approve is tested in e2e and API."
+    },
+    "FR-WF-009": {
+      "status": "tested",
+      "evidence": ["apps/api/test/workflow.integration.test.ts"],
+      "note": "An edit creates a new version and invalidates the earlier approval."
+    },
+    "FR-ANL-001": {
+      "status": "tested",
+      "evidence": [
+        "packages/domain/src/analysis.test.ts",
+        "apps/api/test/analysis.integration.test.ts"
+      ],
+      "note": "Batches never exceed forty questions and repeated questions are dropped."
+    },
+    "FR-ANL-002": {
+      "status": "tested",
+      "evidence": [
+        "packages/domain/src/analysis.test.ts",
+        "apps/api/test/analysis.integration.test.ts"
+      ],
+      "note": "Minimum thirty and maximum three hundred questions are enforced in domain and in a real run."
+    },
+    "FR-ANL-003": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/analysis.integration.test.ts",
+        "packages/domain/src/analysis.test.ts",
+        "apps/web/e2e/core-flow.spec.ts"
+      ],
+      "note": "Text, file, unanswered, irrelevant and later answers are validated and saved."
+    },
+    "FR-ANL-004": {
+      "status": "tested",
+      "evidence": [
+        "packages/domain/src/analysis.test.ts",
+        "apps/api/test/analysis.integration.test.ts"
+      ],
+      "note": "Coverage over the eight required dimensions is graded and gaps block finishing; optional extra dimensions are also tested."
+    },
+    "FR-ANL-005": {
+      "status": "tested",
+      "evidence": ["apps/api/test/analysis.integration.test.ts", "apps/web/e2e/core-flow.spec.ts"],
+      "note": "The problem definition is versioned and needs admin approval; a rejected one returns to the analyst."
+    },
+    "FR-ANL-006": {
+      "status": "tested",
+      "evidence": ["apps/api/test/analysis.integration.test.ts", "apps/web/e2e/core-flow.spec.ts"],
+      "note": "Assumptions and unresolved questions are part of the definition and shown in their own sections."
+    },
+    "FR-ING-001": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/sources.integration.test.ts",
+        "apps/api/test/analysis.integration.test.ts"
+      ],
+      "note": "Presigned file upload, text and policy-checked URL entry are tested, with audio handled as a file."
+    },
+    "FR-ING-002": {
+      "status": "tested",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "note": "MIME sniffing and extraction cover PDF, DOCX, PPTX, XLSX, CSV, TXT, JSON, PNG and WAV; MD and JPG are not separately asserted."
+    },
+    "FR-ING-003": {
+      "status": "tested",
+      "evidence": ["apps/api/test/sources.integration.test.ts"],
+      "note": "The size limit comes from the ingestion.max_file_mb setting and over-limit uploads get 413; the 100MB default value itself is not asserted."
+    },
+    "FR-ING-004": {
+      "status": "tested",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts",
+        "apps/worker-ingestion/src/worker.integration.test.ts"
+      ],
+      "note": "Malware scan (clamd and EICAR), MIME sniff, checksum mismatch and structured metadata extraction are tested."
+    },
+    "FR-ING-005": {
+      "status": "tested",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts",
+        "packages/ingestion/src/transcription.acceptance.test.ts"
+      ],
+      "note": "OCR with page lineage and transcription adapter segments are tested, but OCR and real transcription tests run only when tesseract or an API key exists."
+    },
+    "FR-ING-006": {
+      "status": "tested",
+      "evidence": ["apps/api/test/sources.integration.test.ts"],
+      "note": "A new document version keeps lineage and marks dependent knowledge stale."
+    },
+    "FR-KNO-001": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "packages/knowledge/src/knowledge.test.ts"
+      ],
+      "note": "Items carry a source type (admin_provided and autonomous_research exercised); clue_research is not separately exercised."
+    },
+    "FR-KNO-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "packages/knowledge/src/knowledge.test.ts"
+      ],
+      "note": "KNO-001 asserts provenance, scope, version and confidentiality on a created item."
+    },
+    "FR-KNO-003": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "packages/knowledge/src/knowledge.test.ts"
+      ],
+      "note": "Brain audit of document and claims, including injection rejection and per-claim verdicts, is exercised."
+    },
+    "FR-KNO-004": {
+      "status": "tested",
+      "evidence": [
+        "packages/knowledge/src/knowledge.test.ts",
+        "apps/api/test/knowledge.integration.test.ts"
+      ],
+      "note": "State machine transitions and approve/needs_revision/rejected thresholds are enforced in tests."
+    },
+    "FR-KNO-005": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "packages/knowledge/src/knowledge.test.ts"
+      ],
+      "note": "Review stores the six scores (credibility, relevance, evidence, recency, bias, conflict) and reasons."
+    },
+    "FR-KNO-006": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "apps/api/test/research.integration.test.ts"
+      ],
+      "note": "Unaudited/pending/rejected knowledge is not retrievable; only approved appears, and research retrieval honours it."
+    },
+    "FR-KNO-007": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "packages/knowledge/src/knowledge.test.ts"
+      ],
+      "note": "New version goes to pending with latestReview null and is not retrievable until re-audited."
+    },
+    "FR-KNO-008": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "packages/knowledge/src/knowledge.test.ts",
+        "apps/web/e2e/knowledge.spec.ts"
+      ],
+      "note": "Override requires a reason (API and DB constraint), is marked human and audited as critical."
+    },
+    "FR-KNO-009": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "apps/web/e2e/knowledge.spec.ts",
+        "packages/knowledge/src/knowledge.test.ts"
+      ],
+      "note": "Conflicts are recorded and every retrieval result carries conflictWarnings until resolved."
+    },
+    "FR-KNO-010": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "packages/knowledge/src/knowledge.test.ts"
+      ],
+      "note": "Citations missing publisher, dates or accessed_at are marked incomplete and make research claims uncited/rejected."
+    },
+    "FR-RES-001": {
+      "status": "waived",
+      "evidence": [],
+      "note": "No web research plan (query, language, country, time range, source policy, target count) exists; research stage retrieves approved internal knowledge only (ADR-0017)."
+    },
+    "FR-RES-002": {
+      "status": "waived",
+      "evidence": [],
+      "note": "Unrestricted/whitelist/blacklist research source policy is not implemented; only the ingestion URL allowlist exists, which is not the research policy."
+    },
+    "FR-RES-003": {
+      "status": "waived",
+      "evidence": [],
+      "note": "Findings are not deduplicated into source records; autonomous web research that would produce them is not implemented."
+    },
+    "FR-RES-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/knowledge.integration.test.ts",
+        "apps/api/test/research.integration.test.ts",
+        "packages/orchestration/src/research.test.ts"
+      ],
+      "note": "Knowledge keeps source text, claims and citations separate and research output separates claims from verified evidence; a separate summary field is not asserted."
+    },
+    "FR-RES-005": {
+      "status": "tested",
+      "evidence": ["apps/api/test/research.integration.test.ts"],
+      "note": "RSC-004/008/009 show research.max_queries, knowledge_limit and max_sources settings control retrieval depth; project-scope override is via the generic settings resolver."
+    },
+    "FR-RES-006": {
+      "status": "waived",
+      "evidence": [],
+      "note": "No web access/paywall detection exists; research only reports gaps and missing knowledge, not inaccessible or paywalled sources."
+    },
+    "FR-SOL-001": {
+      "status": "tested",
+      "evidence": ["apps/api/test/documents.integration.test.ts"],
+      "note": "SOL-001 rejects counts of 1 and 21 and incomplete model output; default 5 comes from settings (solution.count)."
+    },
+    "FR-SOL-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/documents.integration.test.ts",
+        "packages/documents/src/documents.test.ts"
+      ],
+      "note": "Generated solutions carry plan, risks and explained scores and incomplete output is refused; every field (assumptions, evidence) is not individually asserted."
+    },
+    "FR-SOL-003": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/documents.integration.test.ts",
+        "packages/documents/src/documents.test.ts"
+      ],
+      "note": "Criteria can be disabled and weights must sum to 100, rejected with SOLUTION_CRITERIA_INVALID."
+    },
+    "FR-SOL-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/documents.integration.test.ts",
+        "packages/documents/src/documents.test.ts"
+      ],
+      "note": "Score per criterion with an explanation of the form raw x weight = value and a total is asserted."
+    },
+    "FR-SOL-005": {
+      "status": "tested",
+      "evidence": ["apps/api/test/documents.integration.test.ts"],
+      "note": "SOL-003 selects multiple solutions and keeps priority order."
+    },
+    "FR-SOL-006": {
+      "status": "tested",
+      "evidence": ["apps/api/test/documents.integration.test.ts"],
+      "note": "Each selected solution gets its own document with an independent lifecycle (draft, submit, approve, lock, supersede)."
+    },
+    "FR-DOC-001": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/settings.integration.test.ts",
+        "packages/documents/src/templates.test.ts"
+      ],
+      "note": "STP-004/005 and level-bounds rule tests validate and serve editable level bounds with system defaults."
+    },
+    "FR-DOC-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/settings.integration.test.ts",
+        "apps/api/test/documents.integration.test.ts"
+      ],
+      "note": "Level resolves from project settings (document.level) and is set per output on document save; agent-level selection is not separately tested."
+    },
+    "FR-DOC-003": {
+      "status": "tested",
+      "evidence": ["packages/documents/src/documents.test.ts"],
+      "note": "countCharacters counts only Unicode letters and numbers after NFC."
+    },
+    "FR-DOC-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/documents.integration.test.ts",
+        "packages/documents/src/documents.test.ts"
+      ],
+      "note": "Out-of-bounds document becomes non_compliant and approve is refused with 409."
+    },
+    "FR-DOC-005": {
+      "status": "tested",
+      "evidence": [
+        "packages/documents/src/documents.test.ts",
+        "packages/documents/src/writing.test.ts"
+      ],
+      "note": "Structured model validation covers headings, paragraphs, lists, tables, citations and charts; figure handled in count/render code but not directly asserted."
+    },
+    "FR-DOC-006": {
+      "status": "tested",
+      "evidence": ["apps/api/test/documents.integration.test.ts"],
+      "note": "DOC-102 covers versions, diff, restore, lock and supersede with append-only history."
+    },
+    "FR-DOC-007": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/documents.integration.test.ts",
+        "packages/documents/src/documents.test.ts"
+      ],
+      "note": "DOCX and PPTX exports are exercised everywhere; PDF only runs where RENDER_PDF is set (it is in CI)."
+    },
+    "FR-DOC-008": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/documents.integration.test.ts",
+        "packages/documents/src/documents.test.ts"
+      ],
+      "note": "Artifacts carry sha256, renderer version and source document version, signed and tamper-detected."
+    },
+    "FR-EVA-001": {
+      "status": "tested",
+      "evidence": ["apps/api/test/documents.integration.test.ts"],
+      "note": "System rubric and project override are versioned (scope/versionNo asserted); provider failure is a technical error."
+    },
+    "FR-EVA-002": {
+      "status": "tested",
+      "evidence": [
+        "packages/documents/src/documents.test.ts",
+        "apps/api/test/documents.integration.test.ts"
+      ],
+      "note": "Evaluation scores each rubric criterion (requirement coverage, evidence, feasibility, etc.) with evidence."
+    },
+    "FR-EVA-003": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/documents.integration.test.ts",
+        "packages/documents/src/documents.test.ts"
+      ],
+      "note": "Failures produce findings with severity, evidence and target stage."
+    },
+    "FR-EVA-004": {
+      "status": "tested",
+      "evidence": ["apps/api/test/documents.integration.test.ts"],
+      "note": "PATCH on a finding changes targetStage while keeping defaultTargetStage; unknown stage rejected."
+    },
+    "FR-EVA-005": {
+      "status": "tested",
+      "evidence": ["apps/api/test/documents.integration.test.ts"],
+      "note": "accepted_with_exception approvalKind and badge are distinct from normal approved."
+    },
+    "FR-BRN-001": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/research.integration.test.ts",
+        "packages/domain/src/role-evaluation.test.ts"
+      ],
+      "note": "Brain evaluation reads each role charter version (principles and duties) the outputs ran with; deterministic charter-v1 rules also apply."
+    },
+    "FR-BRN-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/reports.integration.test.ts",
+        "apps/api/test/research.integration.test.ts"
+      ],
+      "note": "Brain reports charter deviations with clause, role and evidence (REP-002, EVL-002)."
+    },
+    "FR-BRN-003": {
+      "status": "tested",
+      "evidence": ["apps/api/test/reports.integration.test.ts"],
+      "note": "Project-scope and workspace-aggregate Brain reports are generated and listed."
+    },
+    "FR-BRN-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/reports.integration.test.ts",
+        "apps/api/test/research.integration.test.ts"
+      ],
+      "note": "State fingerprint before/after proves Brain reports and evaluations change nothing and only audit report_generated."
+    },
+    "FR-BRN-005": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/reports.integration.test.ts",
+        "apps/api/test/research.integration.test.ts"
+      ],
+      "note": "Recommendations have action, rule and non-empty evidence; model findings need charter clause and real sample."
+    },
+    "FR-AI-001": {
+      "status": "tested",
+      "evidence": [
+        "packages/providers/src/providers.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "note": "OpenAI, Gemini and Anthropic adapters pass the same shared-contract tests."
+    },
+    "FR-AI-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/providers.integration.test.ts",
+        "packages/providers/src/providers.test.ts"
+      ],
+      "note": "Live model catalog is refreshed into a dated snapshot; absence of hardcoded model names is not itself tested."
+    },
+    "FR-AI-003": {
+      "status": "waived",
+      "evidence": [],
+      "note": "Only a common request shape (temperature, output limit) plus generic setting validation exist; no per-provider parameter schema validation is implemented or tested."
+    },
+    "FR-AI-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/providers.integration.test.ts",
+        "packages/providers/src/providers.test.ts"
+      ],
+      "note": "Secret is encrypted, write-only, absent from responses, rows and audit; credentials redacted from error text."
+    },
+    "FR-AI-005": {
+      "status": "tested",
+      "evidence": ["apps/api/test/providers.integration.test.ts"],
+      "note": "Health check returns healthy/invalid status with a sanitised lastError; last-check timestamp not directly asserted."
+    },
+    "FR-AI-006": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/workflow.integration.test.ts",
+        "packages/providers/src/providers.test.ts"
+      ],
+      "note": "Transient failures follow the 5,5,5,10..40s schedule for ten retries, then the project pauses and can resume."
+    },
+    "FR-AI-007": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/workflow.integration.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "note": "Invocations store tokens, latency, finish reason and cost estimate against the project ceiling."
+    },
+    "FR-AI-008": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/workflow.integration.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "note": "Connections default to fallback false and a failing project tries no other connection before pausing."
+    },
+    "FR-AUD-001": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/audit.integration.test.ts",
+        "apps/api/test/documents.integration.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "note": "Audit events carry actor, action, target, before/after, reason, correlation ID and time (export header and action assertions)."
+    },
+    "FR-AUD-002": {
+      "status": "tested",
+      "evidence": ["apps/api/test/audit.integration.test.ts"],
+      "note": "History cannot be altered (append-only trigger) and JSON/CSV export is audited."
+    },
+    "FR-AUD-003": {
+      "status": "tested",
+      "evidence": ["apps/api/test/audit.integration.test.ts"],
+      "note": "Filters by project, action family, severity and time range with paging; a role filter is not covered."
+    },
+    "FR-AUD-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/audit.integration.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "note": "Secrets and confidential project/topic content never appear in audit output."
+    },
+    "FR-AUD-005": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/projects.integration.test.ts",
+        "apps/api/test/topics-lifecycle.integration.test.ts"
+      ],
+      "note": "Retention purge writes a minimal audit tombstone (project.purge/topic.purge) that survives deletion."
+    },
+    "NFR-SEC-001": {
+      "status": "operational",
+      "evidence": [
+        "deploy/caddy/Caddyfile",
+        ".github/workflows/deploy-smoke.yml",
+        "docs/06-delivery/11-production-install.md",
+        "docs/adr/0012-single-server-production-deployment.md"
+      ],
+      "note": "TLS via Caddy automatic HTTPS is verified on a fresh install in Deploy smoke; at-rest protection is envelope-encrypted provider/integration secrets only, while disk/volume encryption is left to the host and not verified."
+    },
+    "NFR-SEC-002": {
+      "status": "tested",
+      "evidence": [
+        "packages/database/test/rls.integration.mjs",
+        "apps/api/test/topics.integration.test.ts",
+        "apps/api/test/authorization-matrix.test.ts",
+        "apps/api/test/auth.authorization.test.ts"
+      ],
+      "note": "RLS read/write/update negative tests run on PostgreSQL 18 in CI and API tests assert cross-workspace and unauthorized access is refused."
+    },
+    "NFR-SEC-003": {
+      "status": "tested",
+      "evidence": [
+        "packages/providers/src/providers.test.ts",
+        "apps/api/test/providers.integration.test.ts",
+        "packages/providers/src/secrets.ts"
+      ],
+      "note": "AES-256-GCM envelope encryption with a per-secret data key wrapped by SECRET_MASTER_KEY from the environment (not the database) is tested, including that the secret never appears in rows or responses; KMS-grade key custody is not tested."
+    },
+    "NFR-SEC-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/auth.service.test.ts",
+        "packages/config/src/environment.test.ts",
+        "apps/api/test/auth.integration.test.ts"
+      ],
+      "note": "Login and password change use @node-rs/argon2 with env-configurable memory/time/parallelism and a tested minimum floor; no test asserts the $argon2id$ prefix or rehash-on-login upgrade."
+    },
+    "NFR-SEC-005": {
+      "status": "tested",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/worker-ingestion/src/worker.integration.test.ts",
+        "packages/ingestion/src/sandbox.ts"
+      ],
+      "note": "Tests show infected/unscannable files stay quarantined and are never parsed, and parsers run in a sandbox without network/writes/child processes with timeout and memory caps; no explicit CPU limit."
+    },
+    "NFR-SEC-006": {
+      "status": "tested",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "packages/ingestion/src/url-fetch.ts"
+      ],
+      "note": "URL guard tests cover private/metadata IPs, scheme/credentials/port policy, DNS answers pointing inside, redirects to private targets and pinned-address fetching."
+    },
+    "NFR-SEC-007": {
+      "status": "tested",
+      "evidence": [
+        "packages/orchestration/src/analysis.test.ts",
+        "packages/knowledge/src/knowledge.test.ts",
+        "apps/api/test/knowledge.integration.test.ts",
+        "packages/orchestration/src/writing.test.ts"
+      ],
+      "note": "Tests assert injected text stays out of the instruction channel (data in <data>, never-follow rule) and injected knowledge is rejected and never retrieved; real-model resistance is not measured."
+    },
+    "NFR-SEC-008": {
+      "status": "waived",
+      "evidence": [],
+      "note": "No ASVS 5.0 L2 control mapping or external audit exists; CI only runs partial gates (Semgrep, Trivy, audit, ZAP DAST, auth probe) and CodeQL is deferred."
+    },
+    "NFR-REL-001": {
+      "status": "operational",
+      "evidence": [
+        "infra/prometheus/rules/slo.yml",
+        "infra/prometheus/rules/slo.test.yml",
+        "infra/grafana/dashboards/docoo-slo.json",
+        "docs/06-delivery/03-observability-and-sre.md"
+      ],
+      "note": "The 99.5% availability SLI, burn-rate alerts and dashboard are defined and promtool-tested in CI, but Prometheus is only in the dev observability profile and the third-party-outage exclusion is not implemented."
+    },
+    "NFR-REL-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/workflow.integration.test.ts",
+        "apps/api/test/writing.integration.test.ts",
+        "apps/api/test/analysis.integration.test.ts"
+      ],
+      "note": "Integration tests on real Temporal prove worker restart loses no workflow, answers or writing progress; deploy-time restarts are not separately tested."
+    },
+    "NFR-REL-003": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/workflow.integration.test.ts",
+        "apps/api/test/analysis.integration.test.ts",
+        "apps/api/test/agents.integration.test.ts",
+        "packages/orchestration/src/orchestration.test.ts"
+      ],
+      "note": "Idempotency-Key replays and deterministic workflow replay are tested for transitions and answers; file and provider-call side effects are covered less directly."
+    },
+    "NFR-REL-004": {
+      "status": "operational",
+      "evidence": [
+        "infra/postgres/pitr-drill.sh",
+        "packages/database/ops/backup-drill.mjs",
+        ".github/workflows/hardening.yml",
+        "infra/postgres/archive-wal.sh"
+      ],
+      "note": "CI runs a WAL-G point-in-time restore drill and a dump/restore drill with measured RTO against a 4h target; production off-host archiving needs owner S3 settings and a real-server restore rehearsal."
+    },
+    "NFR-REL-005": {
+      "status": "operational",
+      "evidence": [
+        ".github/workflows/hardening.yml",
+        "packages/database/ops/backup-drill.mjs",
+        "infra/postgres/pitr-drill.sh",
+        "docs/06-delivery/10-runbooks.md"
+      ],
+      "note": "The Hardening workflow runs the backup/restore and PITR drills nightly into a separate server in CI; restoring the real production backup on another machine is an owner action."
+    },
+    "NFR-REL-006": {
+      "status": "operational",
+      "evidence": [
+        "infra/prometheus/rules/slo.test.yml",
+        "infra/prometheus/rules/slo.yml",
+        ".github/workflows/hardening.yml",
+        "docs/06-delivery/10-runbooks.md"
+      ],
+      "note": "promtool unit tests in CI fire DocooQueueStale and DocooWorkflowFailed; there is no Alertmanager/notification route and no dedicated stuck-workflow age alert."
+    },
+    "NFR-PERF-001": {
+      "status": "operational",
+      "evidence": [
+        "scripts/load/main-path.js",
+        ".github/workflows/hardening.yml",
+        "packages/database/ops/load-seed.mjs"
+      ],
+      "note": "k6 gate asserts p95 < 500ms for dashboard, project and audit reads at 25 VUs over 1,000 projects in CI; the back-office page < 2s target is not measured."
+    },
+    "NFR-PERF-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/workflow.integration.test.ts",
+        "apps/api/test/analysis.integration.test.ts",
+        "apps/web/e2e/main-path.spec.ts"
+      ],
+      "note": "Long work runs as Temporal workflows with stage/progress state shown in the timeline and analysis views (202 for async commands); no test asserts a latency bound on request handlers."
+    },
+    "NFR-PERF-003": {
+      "status": "waived",
+      "evidence": [],
+      "note": "The k6 load test covers 25 concurrent administrators on 1,000 projects but 25 concurrent agent runs are never exercised, and real-provider capacity is owner-dependent."
+    },
+    "NFR-PERF-004": {
+      "status": "waived",
+      "evidence": [],
+      "note": "Workers are separate processes with a configurable ingestion concurrency, but no horizontal-scale test exists and there is no per-provider concurrency setting."
+    },
+    "NFR-PERF-005": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/projects.integration.test.ts",
+        "apps/api/test/audit.integration.test.ts",
+        "apps/api/test/knowledge.integration.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "note": "Cursor pagination with filter-bound cursors is tested for projects, audit events, knowledge and sources; the document list is not separately checked."
+    },
+    "NFR-PERF-006": {
+      "status": "tested",
+      "evidence": ["apps/api/test/knowledge.integration.test.ts"],
+      "note": "The KNO-007 integration test asserts scope and role filters are applied before ranking and that snapshots are repeatable."
+    },
+    "NFR-MNT-001": {
+      "status": "operational",
+      "evidence": [
+        "docs/adr/0001-modular-monolith.md",
+        "pnpm-workspace.yaml",
+        "packages/application/package.json",
+        "packages/application/src/ports.ts"
+      ],
+      "note": "Boundaries are workspace packages with declared dependencies checked implicitly by build/typecheck in CI; there is no explicit dependency-rule linter or architecture test."
+    },
+    "NFR-MNT-002": {
+      "status": "operational",
+      "evidence": [
+        "packages/domain/package.json",
+        "packages/application/src/ports.ts",
+        "docs/adr/0001-modular-monolith.md"
+      ],
+      "note": "The domain package declares no dependencies so pnpm strict resolution makes typecheck fail on any SDK/UI/storage import; no explicit architecture test enforces it."
+    },
+    "NFR-MNT-003": {
+      "status": "tested",
+      "evidence": [
+        ".github/workflows/ci.yml",
+        "packages/database/migrations/meta/_journal.json",
+        "packages/database/src/migrate.ts",
+        "packages/database/test/rls.integration.mjs"
+      ],
+      "note": "CI applies the versioned, forward-only Drizzle migrations to fresh PostgreSQL 18 and runs the RLS suite on the result; Deploy smoke also runs the migrate service; there is no check that applied migrations are never edited."
+    },
+    "NFR-MNT-004": {
+      "status": "tested",
+      "evidence": [
+        "packages/config/src/environment.test.ts",
+        "scripts/security/dast-prepare.mjs",
+        ".github/workflows/hardening.yml",
+        "apps/api/test/schema-compat.test.ts"
+      ],
+      "note": "Environment config is a Zod schema with tests, the API publishes OpenAPI consumed by the ZAP API scan in CI, and structured-output schemas are tested; there is no machine-readable event schema check."
+    },
+    "NFR-MNT-005": {
+      "status": "waived",
+      "evidence": [],
+      "note": "Coverage is only available as an unenforced test:coverage script and no gate requires 100% of security or state-transition branches, though state-machine tests exist."
+    },
+    "NFR-PORT-001": {
+      "status": "operational",
+      "evidence": [
+        "infra/docker/Dockerfile.node",
+        ".github/workflows/security.yml",
+        "deploy/compose.production.yaml",
+        ".github/workflows/deploy-smoke.yml"
+      ],
+      "note": "Service images are built from one Dockerfile with a frozen lockfile and scanned in CI, but base image tags are not digest-pinned and the document and maintenance workers are not in the image matrix."
+    },
+    "NFR-PORT-002": {
+      "status": "operational",
+      "evidence": [
+        ".github/workflows/deploy-smoke.yml",
+        "scripts/deploy/install.test.sh",
+        "deploy/compose.production.yaml",
+        "compose.yaml"
+      ],
+      "note": "Deploy smoke installs the single-server Compose stack on a fresh machine on every PR and checks HTTPS, sign-in, backup and runtime tools; dev Compose is documented and config-checked."
+    },
+    "NFR-PORT-003": {
+      "status": "tested",
+      "evidence": [
+        "apps/worker-ingestion/src/worker.integration.test.ts",
+        ".github/workflows/ci.yml",
+        "deploy/compose.production.yaml"
+      ],
+      "note": "CI runs ingestion and the full app against a generic S3 endpoint (SeaweedFS) and stock PostgreSQL 18 with pgvector; no second S3 vendor is tested."
+    },
+    "NFR-PORT-004": {
+      "status": "operational",
+      "evidence": [
+        "deploy/compose.production.yaml",
+        "docs/adr/0012-single-server-production-deployment.md",
+        "docs/06-delivery/11-production-install.md"
+      ],
+      "note": "Production Compose keeps Postgres, object store, Redis, ClamAV, Temporal and Caddy state in named volumes; no automated test proves containers hold no other persistent state."
+    },
+    "NFR-PORT-005": {
+      "status": "operational",
+      "evidence": [
+        "packages/database/ops/backup-drill.mjs",
+        "docs/06-delivery/10-runbooks.md",
+        "docs/06-delivery/02-deployment-and-operations.md",
+        "infra/postgres/backup-loop.sh"
+      ],
+      "note": "The backup drill exports the full database and a checksummed object manifest and the runbook describes migration; an automated bundle with secrets references and config does not exist."
+    },
+    "NFR-OBS-001": {
+      "status": "waived",
+      "evidence": [],
+      "note": "API logs are Fastify/pino JSON with a request-id and redaction, but tenant, project, workflow, run and attempt IDs are not emitted per log line and no test asserts the fields."
+    },
+    "NFR-OBS-002": {
+      "status": "waived",
+      "evidence": [],
+      "note": "OpenTelemetry auto-instrumentation and a dev-only Tempo/collector profile exist, but no production deployment or test demonstrates a trace from the UI through workflow to a provider call."
+    },
+    "NFR-OBS-003": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/workflow.integration.test.ts",
+        "apps/api/test/reports.integration.test.ts",
+        "infra/prometheus/rules/slo.test.yml",
+        "packages/observability/src/metrics.ts"
+      ],
+      "note": "Tokens, latency, retries, finish reason and cost are recorded per model invocation and reported (tested), and queue age, export and audit-write metrics have promtool-tested rules; token/latency are DB records rather than Prometheus metrics."
+    },
+    "NFR-OBS-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/topics.integration.test.ts",
+        "apps/api/test/smart.test.ts",
+        "packages/providers/src/providers.test.ts",
+        "apps/api/src/main.ts"
+      ],
+      "note": "Tests show audit events store redacted titles, provider errors and failure reports scrub keys, and pino redacts auth headers/secret fields; prompt/problem content absence from logs is by design, not asserted."
+    },
+    "NFR-UX-001": {
+      "status": "waived",
+      "evidence": [],
+      "note": "Playwright runs only on Chromium in CI, so the two latest Chrome, Firefox and Safari versions are not verified."
+    },
+    "NFR-UX-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/web/e2e/support.ts",
+        "apps/web/e2e/main-path.spec.ts",
+        "apps/web/e2e/core-flow.spec.ts",
+        "apps/web/e2e/settings.spec.ts"
+      ],
+      "note": "axe-core with wcag2a, wcag2aa and wcag22aa tags runs on pages across every e2e spec and fails on serious/critical violations; manual and moderate-impact checks are not covered."
+    },
+    "NFR-UX-003": {
+      "status": "tested",
+      "evidence": [
+        "apps/web/e2e/main-path.spec.ts",
+        "apps/web/e2e/support.ts",
+        "apps/web/e2e/core-flow.spec.ts"
+      ],
+      "note": "E2E tests drive sign-in and reporting by keyboard, check skip-link tab order, focus moves and role=status announcements, plus axe label/contrast rules; no screen-reader run."
+    },
+    "NFR-UX-004": {
+      "status": "tested",
+      "evidence": [
+        "apps/web/e2e/main-path.spec.ts",
+        "apps/web/app/i18n.test.ts",
+        "apps/web/e2e/core-flow.spec.ts"
+      ],
+      "note": "Tests assert dir=rtl for Persian, locale-aware number/date formatting, and every e2e flow runs in fa; directional icons, table order and chart mirroring are not specifically asserted."
+    },
+    "NFR-DATA-001": {
+      "status": "waived",
+      "evidence": [],
+      "note": "No configurable retention policy exists; active projects are simply never purged (only deleted ones are), which no test asserts."
+    },
+    "NFR-DATA-002": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/projects.integration.test.ts",
+        "apps/api/test/topics-lifecycle.integration.test.ts"
+      ],
+      "note": "Tests assert a 30-day purgeAfter window, restore within it, 410 after expiry and purge with audit tombstone; legal hold is not implemented, as the requirement allows."
+    },
+    "NFR-DATA-003": {
+      "status": "waived",
+      "evidence": [],
+      "note": "Purge deletes project rows (with audit tombstone, tested) but does not remove object-store files, caches or confirm embeddings are gone."
+    },
+    "NFR-DATA-004": {
+      "status": "waived",
+      "evidence": [],
+      "note": "Provider retention is mentioned in security docs only; adapters do not document it and the UI shows no retention policy."
+    },
+    "NFR-AIQ-001": {
+      "status": "tested",
+      "evidence": [
+        "packages/orchestration/src/orchestration.test.ts",
+        "packages/orchestration/src/analysis.test.ts",
+        "packages/documents/src/documents.test.ts",
+        "apps/api/test/documents.integration.test.ts"
+      ],
+      "note": "Closed output schemas, invalid_output rejection, and document validation/evaluation gates (length, schema, citations, rubric) are tested; a single universal pre-publish policy gate is not asserted."
+    },
+    "NFR-AIQ-002": {
+      "status": "waived",
+      "evidence": [],
+      "note": "The only fixed corpus (qa/acceptance-corpus) covers OCR and speech ingestion, not a Persian/English evaluation set for AI output quality."
+    },
+    "NFR-AIQ-003": {
+      "status": "waived",
+      "evidence": [],
+      "note": "No workflow or release gate runs regression evals on model or prompt changes; Provider acceptance only checks provider contract and schema compatibility."
+    },
+    "NFR-AIQ-004": {
+      "status": "tested",
+      "evidence": [
+        "packages/documents/src/documents.test.ts",
+        "packages/orchestration/src/research.test.ts",
+        "packages/domain/src/role-evaluation.test.ts",
+        "apps/api/test/documents.integration.test.ts"
+      ],
+      "note": "The rubric judge scores requirement coverage, evidence, contradictions and format compliance and research verifies citations against passages (tested with fakes); no fixed benchmark or real-model measurement."
+    },
+    "NFR-AIQ-005": {
+      "status": "tested",
+      "evidence": [
+        "packages/orchestration/src/analysis.test.ts",
+        "packages/orchestration/src/research.test.ts",
+        "apps/api/test/analysis.integration.test.ts"
+      ],
+      "note": "Tests assert unanswered questions are never turned into facts, unverified findings stay visible as unsupported, and special answer states exist; no confidence score is fabricated, but this is not measured on real models."
+    }
+  }
+}

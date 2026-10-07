@@ -91,6 +91,14 @@ notion_sync: true
 
 ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار ایجنت‌ها (FR-AGT-005): `project_id`، `stage_run_id`، `attempt_id`، `role`، `agent_definition_version_id` (کلید ترکیبی با workspace)، `tool` (یکی از ابزارهای شناخته‌شده، CHECK)، `decision` (`allowed|denied`)، `input_sha256` (فقط digest ۶۴ هگزا، CHECK)، `output_ref` (مثلاً `{type: "retrieval_snapshot", id}`)، `result` (شمارش‌ها و شناسه‌ها؛ برای بازیابی `results` و `knowledgeIds`، برای `citation_verifier` شمارش‌های تأیید و `cited[{ref, knowledgeId, versionId}]`)، `latency_ms`، `error_code`. ایندکس GIN روی `result` صفحهٔ «کجا استفاده شد» دانش را می‌دهد.
 
+### agent_questions
+
+پرسشی که یک ایجنت وسط مرحله با ابزار `request_human_input` از ادمین می‌پرسد ([ADR-0023](../adr/0023-agent-tool-calling.md)، مهاجرت 0033 و 0034): `project_id`، `stage_run_id` (کلیدهای ترکیبی با workspace)، `attempt_id`، `role`، `question` (۳ تا ۱۰۰۰ نویسه)، `reason` (تا ۶۰۰)، `status` (`open|answered|dismissed`)، `answer` (تا ۴۰۰۰؛ برای `dismissed` خالی)، `answered_by`، `answered_at`. قید جدول حالت و متن پاسخ را جفت می‌کند؛ trigger هر تغییر یا حذف پرسش بسته را رد می‌کند (پرسش باز فقط از راه ستون‌های پاسخ، که تنها مجوز UPDATE هستند)، و حذف retention مجاز است. متن پرسش و پاسخ محتوای پروژه است و به audit نمی‌رود. کار انسانی متناظر `human_tasks.kind = 'agent_question'` با `payload.questionId` است.
+
+### question_quality_reviews
+
+ارزیابی مدل‌محور پرسش‌های تحلیلگر توسط Brain ([ADR-0024](../adr/0024-analyst-question-quality.md)، مهاجرت 0035 و 0036؛ append-only و RLS): `project_id`، `session_id`، `criteria` (جنبه‌های پرسیده‌شده، ۱ تا ۵)، `question_count` (۱ تا ۳۰۰)، `judge_version_id` (نسخهٔ تعریف Brain)، `model`، `status` (`completed|failed`)، `reason` (`provider_failure|invalid_output` برای `failed`)، `score` (۱ تا ۵)، `summary`، `findings` (حداکثر ۱۵ یافتهٔ `{kind: strength|weakness, criterion, severity, detail, recommendation, questions: [{ref, id, number}]}`؛ هر یافته دست‌کم یک پرسش واقعی را می‌نامد)، `discarded` (یافتهٔ دورریخته)، `invocation_id`، `error_code`، `created_by`. قید جدول می‌گوید `completed` امتیاز و خلاصه دارد و دلیل ندارد و `failed` برعکس. تنظیم `analysis.quality_criteria` جنبه‌ها را انتخاب می‌کند.
+
 ### brain_reports.evaluations
 
 آرایهٔ ارزیابی مدل‌محور نقش‌ها در گزارش Brain (پیش‌فرض `[]`، مثل بقیهٔ ستون‌های گزارش تغییرناپذیر): برای هر نقش `status` (`completed|skipped|failed`)، `reason`، `score` (۱ تا ۵)، `summary`، نسخهٔ منشور سنجیده‌شده، نمونه‌ها (`S#` با شناسهٔ خروجی مرحله)، `findings[]` با `kind`، `severity`، `clauses[]` (بند و متن منشور) و `evidence[]` (`stage_output` با شناسه)، شمار یافته‌های دورریخته، `invocation_id` و `errorCode`. خلاصه در `summary.modelEvaluation`.
@@ -260,6 +268,10 @@ ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار �
 ### walker_issue
 
 `title`، `body` (عین پاسخ ذخیره‌شده)، `status` (`open/in_progress/fixed/wont_fix`)، `note`، `context`، `source_message_id nullable` (یکتا در workspace)، `created_by`.
+
+### notifications
+
+اعلان رویدادی که منتظر انسان است یا تمام شده ([ADR-0025](../adr/0025-notifications.md)، مهاجرت 0037 و 0038؛ RLS): `kind` (نوع کار انسانی، `run_completed`، `writing_succeeded`، `writing_failed`)، `project_id` (کلید ترکیبی با workspace؛ حذف پروژه آن را می‌برد)، `ref_id` (رکورد مرجع: کار انسانی، اجرا یا نگارش)، `payload` (شیء کوچک بدون متن پروژه)، `read_at`/`read_by` (علامت مشترک workspace)، و حسابداری ایمیل `email_status` (`pending|sent|skipped|failed`)، `email_attempts`، `email_claimed_at`، `email_sent_at`. با trigger ساخته می‌شود (`human_tasks`، `workflow_runs`، `document_writings`)؛ `docoo_app` فقط `SELECT`/`INSERT` و `UPDATE` ستونی علامت و ایمیل دارد. تنظیم‌های `notifications.email_enabled` و `notifications.email_kinds` ایمیل را می‌گردانند.
 
 ## audit_event
 

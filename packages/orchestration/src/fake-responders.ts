@@ -1,6 +1,6 @@
 import { OUTLINE_SCHEMA_NAME, SECTION_SCHEMA_NAME } from '@docoo/documents';
-import { ROLE_EVALUATION_SCHEMA_NAME } from '@docoo/domain';
-import type { NormalizedModelRequest } from '@docoo/providers';
+import { QUESTION_QUALITY_SCHEMA_NAME, ROLE_EVALUATION_SCHEMA_NAME } from '@docoo/domain';
+import type { NormalizedModelRequest, ToolCall } from '@docoo/providers';
 
 import { dataOf, fakeAnalystResponder } from './fake-analyst.js';
 
@@ -50,6 +50,54 @@ export function fakeResearchResponder(request: NormalizedModelRequest): unknown 
         : 'The running cost of each approach is not yet known.',
     ],
     conflicts: [],
+  };
+}
+
+/**
+ * Deterministic Brain judge of the analyst's questions: a strength on the first question and, when
+ * there are at least two, a weakness on the last one, each with a question it names.
+ */
+export function fakeQuestionQualityResponder(request: NormalizedModelRequest): unknown {
+  if (request.responseSchema?.name !== QUESTION_QUALITY_SCHEMA_NAME) return null;
+  const persian = isPersian(request);
+  const data = dataOf(request);
+  const questions = records(data['questions']);
+  const criteria = Array.isArray(data['criteria']) ? (data['criteria'] as unknown[]) : [];
+  const first = questions[0]?.['ref'];
+  const last = questions[questions.length - 1]?.['ref'];
+  const findings: unknown[] = [];
+  if (typeof first === 'string' && criteria.includes('decision_relevance')) {
+    findings.push({
+      kind: 'strength',
+      criterion: 'decision_relevance',
+      severity: 'low',
+      detail: persian
+        ? `${first} پاسخی می‌خواهد که تصمیم را عوض می‌کند.`
+        : `${first} asks for an answer that changes a decision.`,
+      recommendation: persian ? 'همین رویه را ادامه بده.' : 'Keep asking questions like this.',
+      questionRefs: [first],
+    });
+  }
+  if (typeof last === 'string' && last !== first && criteria.includes('vague')) {
+    findings.push({
+      kind: 'weakness',
+      criterion: 'vague',
+      severity: 'medium',
+      detail: persian
+        ? `${last} را می‌توان دقیق‌تر پرسید.`
+        : `${last} could be asked more precisely.`,
+      recommendation: persian
+        ? 'معیار یا عدد مورد نظر را در سؤال بیاور.'
+        : 'Name the measure you want.',
+      questionRefs: [last],
+    });
+  }
+  return {
+    score: 4,
+    summary: persian
+      ? 'بیشتر سؤال‌ها به تصمیم‌ها مربوط‌اند.'
+      : 'Most questions bear on a decision.',
+    findings,
   };
 }
 
@@ -261,6 +309,41 @@ export function fakeResponder(request: NormalizedModelRequest): unknown {
     fakeAnalystResponder(request) ??
     fakeResearchResponder(request) ??
     fakeRoleEvaluationResponder(request) ??
+    fakeQuestionQualityResponder(request) ??
     fakeDocumenterResponder(request)
   );
+}
+
+/**
+ * Deterministic tool use for the offline provider: it answers the model self-check's question
+ * (17 times 23) by asking for the calculator, and the model `fake-asks-human` makes the ideator ask
+ * the administrator once; otherwise a pipeline run with tool calling on never calls a tool by
+ * itself. Tests script their own calls.
+ */
+export function fakeToolResponder(request: NormalizedModelRequest): readonly ToolCall[] | null {
+  const first = request.messages[0];
+  // The model named `fake-asks-human` makes the ideator ask the administrator once, so the
+  // question screen can be tried and tested without a real model.
+  if (
+    request.model === 'fake-asks-human' &&
+    (request.instructions ?? '').includes('Your role: ideator.') &&
+    (request.tools?.some((tool) => tool.name === 'request_human_input') ?? false) &&
+    first?.role === 'user' &&
+    request.messages.length === 1 &&
+    !first.content.includes('"humanAnswers"')
+  ) {
+    return [
+      {
+        id: 'call_ask',
+        name: 'request_human_input',
+        arguments: { question: 'What is the budget ceiling?', reason: 'To rank the solutions' },
+      },
+    ];
+  }
+  const asked = first && first.role === 'user' && first.content.includes('17 times 23');
+  const answered = request.messages.some((message) => message.role === 'tool');
+  const offered = request.tools?.some((tool) => tool.name === 'calculator') ?? false;
+  return asked && offered && !answered
+    ? [{ id: 'call_selfcheck', name: 'calculator', arguments: { expression: '17 * 23' } }]
+    : null;
 }

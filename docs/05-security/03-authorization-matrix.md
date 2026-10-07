@@ -139,10 +139,15 @@ notion_sync: true
 | `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/reject`  | `workflow.reject`           |
 | `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/comment` | `project.update`            |
 | `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/edit`    | `project.update`            |
+| `POST /projects/{id}/agent-questions/{questionId}/answer`            | `project.update`            |
 | `POST /projects/{id}/stages/{stageRunId}/attempt-decision`           | `workflow.override`         |
 | `GET /human-tasks`                                                   | `workspace.read`            |
+| `GET /notifications`، `GET /notifications/summary`                   | `workspace.read`            |
+| `POST /notifications/{id}/read`، `POST /notifications/read-all`      | `workspace.read`            |
 | `GET /projects/{id}/analysis`                                        | `project.read`              |
 | `GET /projects/{id}/analysis/question-batches`                       | `project.read`              |
+| `GET /projects/{id}/analysis/question-quality`                       | `project.read`              |
+| `POST /projects/{id}/analysis/question-quality`                      | `project.run`               |
 | `GET /projects/{id}/problem-definitions`                             | `project.read`              |
 | `POST /question-batches/{id}/answers`                                | `analysis.answer`           |
 | `POST /projects/{id}/analysis/finish`                                | `workflow.approve`          |

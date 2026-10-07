@@ -2,6 +2,28 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.22.0] — 2026-10-07
+
+Agents can now call tools themselves, ask the administrator a question in the middle of a stage, and the back office tells the administrator when something waits for them. Every requirement now has an honest, checked status. See [ADR-0023](docs/adr/0023-agent-tool-calling.md), [ADR-0024](docs/adr/0024-analyst-question-quality.md) and [ADR-0025](docs/adr/0025-notifications.md).
+
+### Added
+
+- **Tool calling by the model.** The provider contract carries tools, tool calls and tool results; the OpenAI, Gemini and Anthropic adapters and the offline fake model speak it (`tools` and a response schema are mutually exclusive). A stage's agent may call `knowledge_retrieve`, `project_documents_read`, `calculator` (a hand-written parser, no `eval`) and `request_human_input`. Every call passes a gate (the role's allowlist inside the role ceiling, argument checks, a cap of `agents.max_tool_calls`) and is written to the `agent_tool_calls` ledger, a refused call too. Off unless `agents.tool_calling` is on.
+- **Agents ask the administrator.** `request_human_input` stops the stage until the administrator answers on the workflow tab (`POST /projects/{id}/agent-questions/{id}/answer`); the answer reaches the agent as data, never as instructions (`agents.max_human_questions`). Migrations 0032 to 0034.
+- **Analyst question quality.** In the Problem tab, one click has Brain judge the analyst's questions with a model: a score, weaknesses and strengths with the numbers of the questions they rest on, for the aspects chosen in `analysis.quality_criteria`. A finding without a real question number is discarded and the answers are never sent to the model. Migrations 0035 and 0036.
+- **Notifications.** Database triggers raise a notification for each human task, finished run and finished document writing. A bell in the top bar counts the unread ones and a Notifications page lists them. Email is off by default (`notifications.email_enabled`, `notifications.email_kinds`), names only the kind of event and the project code, and goes out through an outbox with three attempts. Migrations 0037 and 0038.
+- **Requirement traceability gate.** `pnpm qa:trace` (a CI step) checks `qa/traceability.json` against all 154 FR and NFR requirements: 124 tested, 12 operational, 18 waived with a reason; the waiver count cannot grow past its budget.
+- A tenth step of the provider acceptance check exercises tool calling.
+
+### Changed
+
+- The Smart walker links every one of its twelve steps to a page (settings, knowledge sources, knowledge).
+- The retention purge also removes closed (fixed or ignored) error-log entries last seen more than `retention.app_errors_days` ago (default 90); an open entry is never deleted and a trigger makes the purge the only way to delete one (migration 0039). The response gains `appErrors`.
+
+### Fixed
+
+- Security review of the new code (see ADR-0023): an answer whose "go on" signal was lost no longer leaves a stage waiting forever (`workflow/sync` sends it again); a cancelled run closes its open agent questions and a late answer gets `409`; one undeliverable mail recipient no longer blocks the others or causes repeat mail; text inside a prompt's data (an answer, a document, a knowledge passage) can no longer close the `<data>` block early; the calculator no longer treats inherited names such as `constructor` as constants.
+
 ## [0.21.0] — 2026-10-07
 
 Google sign-in and account management now follow Contenter's owner-approved Gmail model. Existing password accounts remain usable through the private password sign-in page.

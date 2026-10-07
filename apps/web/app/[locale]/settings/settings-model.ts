@@ -60,7 +60,11 @@ export const SETTING_GROUPS = [
   { id: 'ai', keys: ['ai.connection_id', 'ai.model'] },
   {
     id: 'analysis',
-    keys: ['analysis.require_risk_dimension', 'analysis.require_out_of_scope_dimension'],
+    keys: [
+      'analysis.require_risk_dimension',
+      'analysis.require_out_of_scope_dimension',
+      'analysis.quality_criteria',
+    ],
   },
   {
     id: 'research',
@@ -84,6 +88,8 @@ export const SETTING_GROUPS = [
       'document.level_bounds',
     ],
   },
+  { id: 'notifications', keys: ['notifications.email_enabled', 'notifications.email_kinds'] },
+  { id: 'agents', keys: ['agents.tool_calling', 'agents.max_tool_calls'] },
   {
     id: 'business',
     keys: ['business.required', 'business.sync_on_start', 'business.prompt_budget_chars'],

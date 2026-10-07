@@ -61,6 +61,7 @@ const messages = {
     waitingKinds: {
       gate_review: 'بازبینی خروجی مرحله',
       attempt_limit: 'سقف تلاش مرحله',
+      agent_question: 'سؤال یک ایجنت',
       provider_blocked: 'خطای ارائه‌دهنده',
     } as Record<string, string>,
     waitingOther: 'نیازمند تصمیم',
@@ -179,6 +180,7 @@ const messages = {
     waitingKinds: {
       gate_review: 'Stage output review',
       attempt_limit: 'Stage attempt limit',
+      agent_question: 'An agent’s question',
       provider_blocked: 'Provider failure',
     } as Record<string, string>,
     waitingOther: 'Needs a decision',

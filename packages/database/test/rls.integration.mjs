@@ -102,6 +102,9 @@ const knowledgeTables = [
   'agent_roles',
   'project_agent_profiles',
   'agent_tool_calls',
+  'agent_questions',
+  'question_quality_reviews',
+  'notifications',
   'contenter_connections',
   'business_snapshots',
   'project_businesses',
@@ -1164,8 +1167,271 @@ try {
   assert.equal(keptSnapshots.rows[0].count, 1, 'snapshots outlive links');
   await admin.query(`DELETE FROM contenter_connections WHERE workspace_id = $1`, [ids.workspaceA]);
 
+  // Questions an agent puts to the administrator (ADR-0023): tenant-scoped, the question is fixed,
+  // an answer can be given once, and the state rules hold.
+  const questionRun = await admin.query(
+    `INSERT INTO workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id)
+     VALUES ($1, $2, 99, $3) RETURNING id`,
+    [ids.workspaceA, ids.projectA, `question-test-run-${ids.workspaceA}`],
+  );
+  const questionStage = await admin.query(
+    `INSERT INTO stage_runs (workspace_id, run_id, project_id, stage, sequence)
+     VALUES ($1, $2, $3, 'analysis', 1) RETURNING id`,
+    [ids.workspaceA, questionRun.rows[0].id, ids.projectA],
+  );
+  const questionSql = `INSERT INTO agent_questions (workspace_id, project_id, stage_run_id, role, question, reason)
+     VALUES ($1, $2, $3, 'analyst', $4, 'to size the budget') RETURNING id`;
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, questionSql, [
+    ids.workspaceB,
+    ids.projectA,
+    questionStage.rows[0].id,
+    'How large is the budget?',
+  ]);
+  const question = await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(questionSql, [
+      ids.workspaceA,
+      ids.projectA,
+      questionStage.rows[0].id,
+      'How large is the budget?',
+    ]),
+  );
+  const questionId = question.rows[0].id;
+  const foreignQuestions = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM agent_questions'),
+  );
+  assert.equal(foreignQuestions.rows[0].count, 0, 'Questions must not leak across tenants.');
+  // A question of this workspace cannot hang on a project of another one.
+  await assert.rejects(
+    admin.query(questionSql, [
+      ids.workspaceB,
+      ids.projectA,
+      questionStage.rows[0].id,
+      'A question across workspaces',
+    ]),
+    (error) => {
+      assert.equal(error.code, '23503', 'the project must be of the same workspace');
+      return true;
+    },
+  );
+  // The question itself never changes; only the answer columns can be written.
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'UPDATE agent_questions SET question = $1 WHERE id = $2',
+    ['A different question', questionId],
+  );
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM agent_questions');
+  // State rules: an answer needs its status and time, an open question has neither.
+  for (const [label, sql] of [
+    ['answer on an open question', `UPDATE agent_questions SET answer = 'x' WHERE id = $1`],
+    [
+      'answered without text',
+      `UPDATE agent_questions SET status = 'answered', answered_at = now() WHERE id = $1`,
+    ],
+    ['unknown status', `UPDATE agent_questions SET status = 'later' WHERE id = $1`],
+    [
+      'dismissed with text',
+      `UPDATE agent_questions SET status = 'dismissed', answer = 'x', answered_at = now() WHERE id = $1`,
+    ],
+  ]) {
+    await assert.rejects(admin.query(sql, [questionId]), (error) => {
+      assert.equal(error.code, '23514', label);
+      return true;
+    });
+  }
+  await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(
+      `UPDATE agent_questions SET status = 'answered', answer = '50,000 USD', answered_by = $2, answered_at = now() WHERE id = $1`,
+      [questionId, ids.actorA],
+    ),
+  );
+  // An answer, once given, is history: it cannot be changed, reopened or deleted.
+  await assert.rejects(
+    admin.query(`UPDATE agent_questions SET answer = 'something else' WHERE id = $1`, [questionId]),
+    (error) => {
+      assert.equal(error.code, 'P0001', 'an answered question is history');
+      return true;
+    },
+  );
+  await assert.rejects(
+    admin.query('DELETE FROM agent_questions WHERE id = $1', [questionId]),
+    (error) => {
+      assert.equal(error.code, 'P0001');
+      return true;
+    },
+  );
+  await admin
+    .query('DELETE FROM workflow_runs WHERE id = $1', [questionRun.rows[0].id])
+    .catch(() => null);
+
+  // The Brain's judgement of the analyst's questions (ADR-0024): tenant-scoped, append-only, with
+  // the state rules of a verdict and of a failure.
+  const qualitySession = await admin.query(
+    `INSERT INTO analysis_sessions (workspace_id, project_id, stage_run_id, minimum_questions, maximum_questions, batch_size)
+     VALUES ($1, $2, $3, 30, 300, 40) RETURNING id`,
+    [ids.workspaceA, ids.projectA, questionStage.rows[0].id],
+  );
+  const qualitySql = `INSERT INTO question_quality_reviews
+       (workspace_id, project_id, session_id, criteria, question_count, model, status, reason, score, summary, findings, created_by)
+     VALUES ($1, $2, $3, '["duplicate"]'::jsonb, $4, 'fake-standard', $5, $6, $7, $8, $9::jsonb, $10) RETURNING id`;
+  const completed = [
+    ids.workspaceA,
+    ids.projectA,
+    qualitySession.rows[0].id,
+    31,
+    'completed',
+    null,
+    4,
+    'Mostly relevant questions.',
+    '[]',
+    ids.actorA,
+  ];
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, qualitySql, [
+    ids.workspaceB,
+    ...completed.slice(1),
+  ]);
+  // Another administrator's name cannot be put on a row.
+  await expectSqlState('42501', ids.workspaceA, ids.actorB, qualitySql, completed);
+  const review = await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(qualitySql, completed),
+  );
+  assert.equal(review.rowCount, 1);
+  const foreignReviews = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM question_quality_reviews'),
+  );
+  assert.equal(foreignReviews.rows[0].count, 0, 'Reviews must not leak across tenants.');
+  await expectSqlState(
+    '42501',
+    ids.workspaceA,
+    ids.actorA,
+    'UPDATE question_quality_reviews SET score = 1',
+  );
+  await assert.rejects(
+    admin.query('UPDATE question_quality_reviews SET score = 1 WHERE id = $1', [review.rows[0].id]),
+    (error) => {
+      assert.equal(error.code, 'P0001', 'a judgement is history for everyone');
+      return true;
+    },
+  );
+  for (const [label, params] of [
+    ['score out of range', [...completed.slice(0, 6), 6, ...completed.slice(7)]],
+    ['a verdict without a summary', [...completed.slice(0, 7), null, ...completed.slice(8)]],
+    [
+      'a verdict that also names a failure',
+      [...completed.slice(0, 5), 'provider_failure', ...completed.slice(6)],
+    ],
+    [
+      'a failure with a score',
+      [...completed.slice(0, 4), 'failed', 'provider_failure', 4, null, '[]', ids.actorA],
+    ],
+    [
+      'a failure with an unknown reason',
+      [...completed.slice(0, 4), 'failed', 'odd', null, null, '[]', ids.actorA],
+    ],
+    ['no questions', [...completed.slice(0, 3), 0, ...completed.slice(4)]],
+    ['findings that are not a list', [...completed.slice(0, 8), '{}', ids.actorA]],
+    ['unknown status', [...completed.slice(0, 4), 'maybe', ...completed.slice(5)]],
+  ]) {
+    await assert.rejects(admin.query(qualitySql, params), (error) => {
+      assert.equal(error.code, '23514', label);
+      return true;
+    });
+  }
+  const failure = await admin.query(qualitySql, [
+    ...completed.slice(0, 4),
+    'failed',
+    'provider_failure',
+    null,
+    null,
+    '[]',
+    ids.actorA,
+  ]);
+  assert.equal(failure.rowCount, 1, 'a failed judgement is a row too');
+  // A project of another workspace cannot be judged here.
+  await assert.rejects(
+    admin.query(qualitySql, [ids.workspaceB, ...completed.slice(1)]),
+    (error) => {
+      assert.equal(error.code, '23503', 'the project must be of the same workspace');
+      return true;
+    },
+  );
+
+  // Notifications (ADR-0025): made by triggers, tenant-scoped, only the read mark and the mail
+  // bookkeeping can change.
+  const notifyDocument = await admin.query(
+    `INSERT INTO documents (workspace_id, project_id, priority, title, level, language) VALUES ($1, $2, 2, 'notify', 1, 'en') RETURNING id`,
+    [ids.workspaceA, ids.projectA],
+  );
+  const notifyWriting = await admin.query(
+    `INSERT INTO document_writings (workspace_id, project_id, document_id, level, template_version, language, temporal_workflow_id)
+     VALUES ($1, $2, $3, 1, 'standard-v1', 'en', 'document-writing-notify') RETURNING id`,
+    [ids.workspaceA, ids.projectA, notifyDocument.rows[0].id],
+  );
+  await admin.query(
+    `UPDATE document_writings SET status = 'failed', error_code = 'provider_failure' WHERE id = $1`,
+    [notifyWriting.rows[0].id],
+  );
+  const fromWriting = await admin.query(
+    `SELECT kind, project_id, payload FROM notifications WHERE ref_id = $1`,
+    [notifyWriting.rows[0].id],
+  );
+  assert.equal(fromWriting.rowCount, 1, 'a failed writing is one notification');
+  assert.equal(fromWriting.rows[0].kind, 'writing_failed');
+  assert.equal(fromWriting.rows[0].project_id, ids.projectA);
+  assert.equal(fromWriting.rows[0].payload.documentId, notifyDocument.rows[0].id);
+  const humanTask = await admin.query(
+    `INSERT INTO human_tasks (workspace_id, project_id, kind, title, payload)
+     VALUES ($1, $2, 'gate_review', 'Review', '{}'::jsonb) RETURNING id`,
+    [ids.workspaceA, ids.projectA],
+  );
+  const fromTask = await admin.query(
+    `SELECT kind, project_id FROM notifications WHERE ref_id = $1`,
+    [humanTask.rows[0].id],
+  );
+  assert.deepEqual(fromTask.rows, [{ kind: 'gate_review', project_id: ids.projectA }]);
+  const visibleToB = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM notifications'),
+  );
+  assert.equal(visibleToB.rows[0].count, 0, 'Notifications must not leak across tenants.');
+  const visibleToA = await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query('SELECT count(*)::int AS count FROM notifications WHERE ref_id = $1', [
+      humanTask.rows[0].id,
+    ]),
+  );
+  assert.equal(visibleToA.rows[0].count, 1);
+  // The event never changes; the read mark and the mail columns do.
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'UPDATE notifications SET kind = $1', [
+    'gate_review',
+  ]);
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM notifications');
+  await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(`UPDATE notifications SET read_at = now(), read_by = $2 WHERE ref_id = $1`, [
+      humanTask.rows[0].id,
+      ids.actorA,
+    ]),
+  );
+  for (const [label, sql] of [
+    ['unknown mail status', `UPDATE notifications SET email_status = 'later' WHERE ref_id = $1`],
+    ['sent without a time', `UPDATE notifications SET email_status = 'sent' WHERE ref_id = $1`],
+    ['a reader without a time', `UPDATE notifications SET read_at = NULL WHERE ref_id = $1`],
+  ]) {
+    await assert.rejects(admin.query(sql, [humanTask.rows[0].id]), (error) => {
+      assert.equal(error.code, '23514', label);
+      return true;
+    });
+  }
+  // The mailer finds workspaces with pending mail without being in any of them.
+  const pending = await withContext(null, null, () =>
+    runtime.query('SELECT workspace_id FROM app.workspaces_with_pending_mail()'),
+  );
+  assert.ok(
+    pending.rows.some((row) => row.workspace_id === ids.workspaceA),
+    'the mailer sees a workspace with pending mail',
+  );
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent, tool-call and Contenter business tables, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent, tool-call, agent-question, question-quality, notification and Contenter business tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {

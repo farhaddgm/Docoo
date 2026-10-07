@@ -423,6 +423,54 @@ describe.skipIf(!adminUrl)('Smart: errors, chat, walker and ledger (SMT-001..004
     expect((await get(smart('/errors/0a1b2c3d-1111-4222-8333-444455556666'))).statusCode).toBe(404);
   });
 
+  it('purges closed errors older than the retention setting and never an open one', async () => {
+    const insert = (fingerprint: string, status: string, days: number) =>
+      h.admin.query(
+        `insert into app_errors (workspace_id, source, category, fingerprint, message, status, last_seen_at)
+         values ($1, 'client', 'ui', $2, 'retention probe', $3::app_error_status, now() - make_interval(days => $4))
+         returning id`,
+        [h.ids.workspaceA, fingerprint, status, days],
+      );
+    const old = [
+      (await insert('ret-fixed-old', 'fixed', 120)).rows[0].id as string,
+      (await insert('ret-ignored-old', 'ignored', 200)).rows[0].id as string,
+    ];
+    const open = (await insert('ret-new-old', 'new', 400)).rows[0].id as string;
+    const recent = (await insert('ret-fixed-recent', 'fixed', 3)).rows[0].id as string;
+    const purge = (dryRun: boolean) =>
+      post(api('/retention/purge'), {
+        reason: 'Retention probe',
+        dryRun,
+      });
+    const remaining = async () =>
+      (
+        await h.admin.query(`select id from app_errors where id = any($1::uuid[])`, [
+          [...old, open, recent],
+        ])
+      ).rows
+        .map((row) => row.id as string)
+        .sort();
+
+    const dry = await purge(true);
+    expect(dry.statusCode, dry.body).toBe(200);
+    expect(dry.json<{ appErrors: number }>().appErrors).toBe(2);
+    expect(await remaining()).toHaveLength(4);
+    const real = await purge(false);
+    expect(real.statusCode, real.body).toBe(200);
+    expect(real.json<{ appErrors: number }>().appErrors).toBe(2);
+    expect(await remaining()).toEqual([open, recent].sort());
+    const audit = await h.admin.query(
+      `select 1 from audit_events where workspace_id = $1 and action = 'retention.purge'`,
+      [h.ids.workspaceA],
+    );
+    expect(audit.rowCount).toBeGreaterThan(0);
+
+    // The database itself refuses any other way to delete an error entry.
+    await expect(h.admin.query('delete from app_errors where id = $1', [open])).rejects.toThrow(
+      /retention purge/u,
+    );
+  });
+
   it('records server 5xx after replying, never 4xx, and never request content', async () => {
     const before = (await get(smart('/errors?source=server'))).json<{ items: unknown[] }>().items
       .length;

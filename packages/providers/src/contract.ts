@@ -26,10 +26,41 @@ export interface ModelDescriptor {
   readonly maxOutputTokens: number | null;
 }
 
+/** A function a model may ask the platform to run (docs/03-ai/01-agent-system.md §6). */
+export interface ToolSpec {
+  readonly name: string;
+  readonly description: string;
+  /** Strict-mode JSON schema of the arguments (see `strictSchemaProblems`). */
+  readonly parameters: JsonSchema;
+}
+
+/** One call the model asked for. `arguments` is the parsed JSON object the model wrote. */
+export interface ToolCall {
+  readonly id: string;
+  readonly name: string;
+  readonly arguments: unknown;
+  /** Opaque provider data that must be sent back with the call (Gemini thought signatures). */
+  readonly providerData?: unknown;
+}
+
 export interface ChatMessage {
   readonly role: 'user' | 'assistant';
   readonly content: string;
+  /** The tool calls an assistant turn made; the next messages answer them. */
+  readonly toolCalls?: readonly ToolCall[] | undefined;
 }
+
+/** The platform's answer to one tool call, sent back so the model can go on. */
+export interface ToolResultMessage {
+  readonly role: 'tool';
+  readonly toolCallId: string;
+  readonly toolName: string;
+  readonly content: string;
+}
+
+export type ConversationMessage = ChatMessage | ToolResultMessage;
+
+export type ToolChoice = 'auto' | 'none' | 'required';
 
 /** A JSON schema object for structured output (subset supported by all three providers). */
 export type JsonSchema = Readonly<Record<string, unknown>>;
@@ -37,7 +68,13 @@ export type JsonSchema = Readonly<Record<string, unknown>>;
 export interface NormalizedModelRequest {
   readonly model: string;
   readonly instructions?: string | undefined;
-  readonly messages: readonly ChatMessage[];
+  readonly messages: readonly ConversationMessage[];
+  /**
+   * Functions the model may call. A request carries tools or a response schema, never both: the
+   * platform first lets the model use tools, then asks for the structured answer in a second call.
+   */
+  readonly tools?: readonly ToolSpec[] | undefined;
+  readonly toolChoice?: ToolChoice | undefined;
   readonly responseSchema?: { readonly name: string; readonly schema: JsonSchema } | undefined;
   readonly maxOutputTokens?: number | undefined;
   readonly temperature?: number | undefined;
@@ -61,6 +98,8 @@ export interface NormalizedModelResponse {
   readonly text: string;
   /** Parsed JSON when a response schema was requested. */
   readonly json: unknown;
+  /** What the model asked to run; empty unless `finishReason` is `tool_call`. */
+  readonly toolCalls: readonly ToolCall[];
   readonly finishReason: FinishReason;
   readonly rawFinishReason: string | null;
   readonly usage: Usage;

@@ -62,6 +62,7 @@ const messages = {
       provider_failure: 'ارائه‌دهندهٔ AI پاسخ نداد',
       configuration: 'اتصال یا مدل AI تنظیم نشده است',
       cost_limit: 'سقف هزینهٔ این پروژه رسیده است',
+      agent_question: 'یک ایجنت از شما سؤال پرسیده است',
     } as Record<string, string>,
     taskHelp: {
       analysis_answers: 'در بخش «مسئله» به پرسش‌ها پاسخ دهید یا برایشان وضعیت بگذارید.',
@@ -72,6 +73,8 @@ const messages = {
       configuration:
         'در صفحهٔ «ارائه‌دهندگان AI» کلید و مدل پیش‌فرض را تنظیم کنید و سپس پروژه را ادامه دهید.',
       cost_limit: 'سقف هزینه را در تنظیمات بالا ببرید یا پروژه را ببندید، سپس ادامه دهید.',
+      agent_question:
+        'در بخش «سؤال ایجنت» پایین همین صفحه پاسخ دهید؛ مرحله با پاسخ شما ادامه می‌یابد.',
     } as Record<string, string>,
     openProviders: 'رفتن به ارائه‌دهندگان AI',
     providerSaid: 'پاسخ ارائه‌دهنده',
@@ -113,6 +116,25 @@ const messages = {
     decisionPass: 'مرحله را با خروجی فعلی بگذران',
     decisionReason: 'دلیل (دست‌کم ۱۰ نویسه)',
     decisionSubmit: 'ثبت تصمیم',
+    questionTitle: 'سؤال ایجنت ({role})',
+    questionHelp:
+      'ایجنت برای ادامهٔ کار به پاسخ شما نیاز دارد. پاسخ شما بخشی از داده‌های همین مرحله می‌شود و ایجنت آن را معتبر می‌داند.',
+    questionWhy: 'چرا لازم است',
+    questionAnswer: 'پاسخ شما',
+    questionSend: 'ارسال پاسخ',
+    questionDecline: 'بدون پاسخ ادامه بده',
+    questionDeclineHelp: 'ایجنت با فرض‌های خودش ادامه می‌دهد و آن‌ها را فرض علامت می‌زند.',
+    questionHistory: 'سؤال‌های ایجنت‌ها',
+    questionAnswered: 'پاسخ داده شد',
+    questionDeclined: 'بدون پاسخ',
+    roles: {
+      analyst: 'تحلیلگر',
+      researcher: 'تحقیق‌کننده',
+      ideator: 'ایده‌پرداز',
+      documenter: 'مستندساز',
+      evaluator: 'ارزیاب',
+      brain: 'Brain',
+    } as Record<string, string>,
     // Output labels
     out: {
       problemStatement: 'بیان مسئله',
@@ -177,6 +199,7 @@ const messages = {
       commented: 'نظر ثبت شد.',
       edited: 'نسخهٔ تازه ذخیره شد و منتظر تأیید است.',
       decided: 'تصمیم ثبت شد.',
+      questionAnswered: 'پاسخ ثبت شد؛ مرحله ادامه می‌یابد.',
     },
     errors: {
       ...rateLimitErrors.fa,
@@ -187,6 +210,8 @@ const messages = {
       WORKFLOW_INVALID_REQUEST: 'اطلاعات واردشده معتبر نیست؛ متن‌ها را بررسی کنید.',
       WORKFLOW_NOT_RUNNING: 'پروژه اجرای زنده‌ای ندارد.',
       WORKFLOW_NO_DECISION_PENDING: 'تصمیمی در انتظار نیست؛ صفحه را به‌روز کنید.',
+      WORKFLOW_QUESTION_CLOSED: 'این سؤال قبلاً پاسخ داده شده است؛ صفحه را به‌روز کنید.',
+      WORKFLOW_QUESTION_NOT_FOUND: 'سؤال پیدا نشد.',
       WORKFLOW_OUTPUT_SUPERSEDED: 'این نسخه جایگزین شده است؛ نسخهٔ فعلی را بازبینی کنید.',
       WORKFLOW_PROJECT_NOT_ACTIVE: 'فقط پروژهٔ فعال گردش‌کار دارد.',
       WORKFLOW_STAGE_NOT_EDITABLE: 'این مرحله اکنون قابل ویرایش نیست.',
@@ -254,6 +279,7 @@ const messages = {
       provider_failure: 'The AI provider did not answer',
       configuration: 'No AI connection or model is configured',
       cost_limit: "The project's cost ceiling was reached",
+      agent_question: 'An agent asked you a question',
     } as Record<string, string>,
     taskHelp: {
       analysis_answers: 'Answer the questions or give them a status in the "Problem" section.',
@@ -264,6 +290,8 @@ const messages = {
       configuration:
         'Set the key and default model on the "AI providers" page, then resume the project.',
       cost_limit: 'Raise the cost ceiling in the settings or close the project, then resume.',
+      agent_question:
+        'Answer in the "Agent question" section lower on this page; the stage goes on with your answer.',
     } as Record<string, string>,
     openProviders: 'Go to AI providers',
     providerSaid: 'The provider said',
@@ -301,6 +329,26 @@ const messages = {
     decisionPass: 'Pass the stage with the current output',
     decisionReason: 'Reason (at least 10 characters)',
     decisionSubmit: 'Record decision',
+    questionTitle: 'Agent question ({role})',
+    questionHelp:
+      'The agent needs your answer to go on. It becomes part of the data of this stage and the agent treats it as authoritative.',
+    questionWhy: 'Why it matters',
+    questionAnswer: 'Your answer',
+    questionSend: 'Send answer',
+    questionDecline: 'Go on without answering',
+    questionDeclineHelp:
+      'The agent goes on with its own assumptions and marks them as assumptions.',
+    questionHistory: 'Questions from the agents',
+    questionAnswered: 'Answered',
+    questionDeclined: 'Not answered',
+    roles: {
+      analyst: 'Analyst',
+      researcher: 'Researcher',
+      ideator: 'Ideator',
+      documenter: 'Documenter',
+      evaluator: 'Evaluator',
+      brain: 'Brain',
+    } as Record<string, string>,
     out: {
       problemStatement: 'Problem statement',
       needStatement: 'The real need',
@@ -365,6 +413,7 @@ const messages = {
       commented: 'The comment was saved.',
       edited: 'The new version was saved and waits for approval.',
       decided: 'The decision was recorded.',
+      questionAnswered: 'Your answer was saved; the stage goes on.',
     },
     errors: {
       ...rateLimitErrors.en,
@@ -375,6 +424,8 @@ const messages = {
       WORKFLOW_INVALID_REQUEST: 'The details are not valid; check the texts.',
       WORKFLOW_NOT_RUNNING: 'The project has no live run.',
       WORKFLOW_NO_DECISION_PENDING: 'No decision is pending; refresh the page.',
+      WORKFLOW_QUESTION_CLOSED: 'This question has already been answered; refresh the page.',
+      WORKFLOW_QUESTION_NOT_FOUND: 'The question was not found.',
       WORKFLOW_OUTPUT_SUPERSEDED: 'This version was replaced; review the current one.',
       WORKFLOW_PROJECT_NOT_ACTIVE: 'Only an active project has a workflow.',
       WORKFLOW_STAGE_NOT_EDITABLE: 'This stage cannot be edited right now.',

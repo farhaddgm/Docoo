@@ -27,6 +27,7 @@ import {
   AGENT_TASK_QUEUE,
   createOrchestrationActivities,
   fakeResponder,
+  fakeToolResponder,
   ProviderRuntime,
   type RunRef,
   type WritingRef,
@@ -48,6 +49,10 @@ import { NativeConnection, Worker } from '@temporalio/worker';
 import { fileURLToPath } from 'node:url';
 
 import { AppModule } from '../../src/app.module.js';
+import {
+  NOTIFICATION_MAIL_TRANSPORT,
+  NotificationMailer,
+} from '../../src/notifications/notification-mailer.js';
 import {
   WORKFLOW_ENGINE,
   type WorkflowEngine,
@@ -71,6 +76,27 @@ export const adminUrl = process.env['DATABASE_TEST_ADMIN_URL'];
 export const webOrigin = 'http://localhost:3000';
 export const testPepper = 'docoo-integration-pepper-with-at-least-32-chars';
 export const password = 'integration-password-1';
+
+/** A mail server stand-in: keeps what was sent and can be made to fail. */
+export class CapturingMailTransport {
+  readonly sent: { from: string; to: string; subject: string; text: string }[] = [];
+  /** Number of the next calls that throw, as an unreachable server would. */
+  failures = 0;
+
+  sendMail(message: { from?: string; to?: string; subject?: string; text?: string }) {
+    if (this.failures > 0) {
+      this.failures -= 1;
+      return Promise.reject(new Error('mail server unreachable'));
+    }
+    this.sent.push({
+      from: String(message.from),
+      to: String(message.to),
+      subject: String(message.subject),
+      text: String(message.text),
+    });
+    return Promise.resolve({});
+  }
+}
 
 export class CapturingResetDelivery implements PasswordResetDelivery {
   readonly messages: PasswordResetMessage[] = [];
@@ -163,6 +189,7 @@ export class TemporalTestRuntime implements WorkflowEngine {
   constructor(private readonly pool: Pool) {
     // The same analyst, researcher and judge the stack uses for provider kind `fake`; tests may script their own.
     this.fake.responder = fakeResponder;
+    this.fake.toolResponder = fakeToolResponder;
   }
   private worker: Worker | null = null;
   private running: Promise<void> | null = null;
@@ -272,6 +299,9 @@ export interface Harness {
   readonly app: NestFastifyApplication;
   readonly admin: Client;
   readonly delivery: CapturingResetDelivery;
+  /** The mail server the notification mailer sends to, and the mailer itself (ticks are driven by tests). */
+  readonly mailbox: CapturingMailTransport;
+  readonly mailer: NotificationMailer;
   readonly objects: MemoryObjectStore;
   readonly ingestion: InlineIngestion;
   readonly engine: RecordingEngine | TemporalTestRuntime;
@@ -390,11 +420,15 @@ export async function createHarness(
     engine = new RecordingEngine();
   }
   const fake = engine instanceof TemporalTestRuntime ? engine.fake : new FakeAdapter();
-  if (!(engine instanceof TemporalTestRuntime)) fake.responder = fakeResponder;
+  if (!(engine instanceof TemporalTestRuntime)) {
+    fake.responder = fakeResponder;
+    fake.toolResponder = fakeToolResponder;
+  }
   const providerRuntime = new ProviderRuntime(runtimePool, masterKeyFromEnv(), (kind, options) =>
     kind === 'fake' ? fake : createAdapter(kind, options),
   );
   const priceCatalog = new StubPriceCatalog({});
+  const mailbox = new CapturingMailTransport();
   const module = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(DATABASE_POOL)
     .useValue(runtimePool)
@@ -410,6 +444,8 @@ export async function createHarness(
     .useValue(providerRuntime)
     .overrideProvider(PRICE_CATALOG)
     .useValue(priceCatalog)
+    .overrideProvider(NOTIFICATION_MAIL_TRANSPORT)
+    .useValue(mailbox)
     .compile();
   const app = module.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
     logger: false,
@@ -462,6 +498,8 @@ export async function createHarness(
     app,
     admin,
     delivery,
+    mailbox,
+    mailer: module.get(NotificationMailer),
     objects,
     ingestion,
     engine,

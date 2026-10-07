@@ -140,23 +140,69 @@ export function assignReferences(
       return true;
     })
     .slice(0, Math.max(0, limit))
-    .map(({ passage, snapshotId }, index) => ({
-      ref: `K${index + 1}`,
-      chunkId: passage.chunkId,
-      knowledgeId: passage.knowledgeId,
-      versionId: passage.versionId,
-      versionNo: passage.versionNo,
-      title: passage.title,
-      confidentiality: passage.confidentiality,
-      text: clip(passage.text, RESEARCH_LIMITS.maxPassageChars),
-      approval: passage.effectiveDecision === 'approved_by_override' ? 'override' : 'audit',
-      auditScore: passage.auditScore,
-      snapshotId,
-      conflicts: passage.conflictWarnings.map((warning) => ({
-        conflictId: warning.conflictId,
-        other: clip(warning.conflictingClaim.text, 300),
-      })),
-    }));
+    .map(({ passage, snapshotId }, index) =>
+      toKnowledgePassage(passage, snapshotId, `K${index + 1}`),
+    );
+}
+
+function toKnowledgePassage(
+  passage: RetrievedPassage,
+  snapshotId: string,
+  ref: string,
+): KnowledgePassage {
+  return {
+    ref,
+    chunkId: passage.chunkId,
+    knowledgeId: passage.knowledgeId,
+    versionId: passage.versionId,
+    versionNo: passage.versionNo,
+    title: passage.title,
+    confidentiality: passage.confidentiality,
+    text: clip(passage.text, RESEARCH_LIMITS.maxPassageChars),
+    approval: passage.effectiveDecision === 'approved_by_override' ? 'override' : 'audit',
+    auditScore: passage.auditScore,
+    snapshotId,
+    conflicts: passage.conflictWarnings.map((warning) => ({
+      conflictId: warning.conflictId,
+      other: clip(warning.conflictingClaim.text, 300),
+    })),
+  };
+}
+
+/**
+ * Adds the passages a model-driven retrieval returned to the ones already numbered, continuing
+ * the references (`K13`, `K14`, …). A passage already known keeps its reference, a passage of a
+ * source beyond `maxSources` or beyond `maxPassages` is left out, and the passages this retrieval
+ * returned (old and new, in rank order) come back so the model sees exactly those.
+ */
+export function addPassages(
+  known: KnowledgePassage[],
+  retrieval: {
+    readonly snapshotId: string;
+    readonly results: readonly RetrievedPassage[];
+  },
+  limits: { readonly maxPassages: number; readonly maxSources: number },
+): KnowledgePassage[] {
+  const returned: KnowledgePassage[] = [];
+  const sources = new Set(known.map((passage) => passage.knowledgeId));
+  for (const passage of retrieval.results) {
+    const existing = known.find((item) => item.chunkId === passage.chunkId);
+    if (existing) {
+      returned.push(existing);
+      continue;
+    }
+    if (known.length >= limits.maxPassages) continue;
+    if (!sources.has(passage.knowledgeId) && sources.size >= limits.maxSources) continue;
+    const added = toKnowledgePassage(passage, retrieval.snapshotId, `K${nextRef(known)}`);
+    known.push(added);
+    sources.add(passage.knowledgeId);
+    returned.push(added);
+  }
+  return returned;
+}
+
+function nextRef(known: readonly KnowledgePassage[]): number {
+  return known.reduce((max, passage) => Math.max(max, Number(passage.ref.slice(1)) || 0), 0) + 1;
 }
 
 /** What the model sees of a passage: no ids, no scores, only what it needs to cite. */

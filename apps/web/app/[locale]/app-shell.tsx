@@ -14,6 +14,7 @@ import {
   type NavigationKey,
 } from '../i18n';
 import { SmartRoot, SmartToggle } from '../smart/smart-root';
+import { NotificationBell } from './notification-bell';
 import type { SessionIdentity } from './signed-in';
 import { ThemeToggle } from '../theme-toggle';
 
@@ -229,6 +230,9 @@ export function AppShell({
               {subtitle && <p>{subtitle}</p>}
             </div>
             <div className="topbar-actions">
+              {showNavigation && workspaceId && (
+                <NotificationBell locale={locale} workspaceId={workspaceId} />
+              )}
               {showNavigation &&
                 workspaceId &&
                 (!identity || identity.user.role === 'super_admin') && (

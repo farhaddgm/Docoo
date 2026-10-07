@@ -11,7 +11,10 @@ const STEP_TARGETS: Readonly<
   Record<string, ((projectId: string | null) => string | null) | undefined>
 > = {
   connect_provider: () => '/providers',
+  configure_ai: () => '/settings',
   create_topic: () => '/topics',
+  add_sources: () => '/knowledge?tab=sources',
+  approve_knowledge: () => '/knowledge',
   create_project: () => '/projects/new',
   activate_project: (projectId) => (projectId ? `/projects/${projectId}` : '/projects'),
   complete_stages: (projectId) => (projectId ? `/projects/${projectId}?tab=workflow` : null),

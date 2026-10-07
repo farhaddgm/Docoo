@@ -96,6 +96,8 @@ notion_sync: true
 - `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/approve|reject|comment|edit` — reject بازخورد لازم دارد و attempt بعدی را می‌سازد؛ edit نسخهٔ جدید می‌سازد و approval/gate نسخهٔ قبلی را `expired` می‌کند؛ بازبینی نسخهٔ جایگزین‌شده `409 WORKFLOW_OUTPUT_SUPERSEDED`.
 - `POST /projects/{id}/stages/{stageRunId}/attempt-decision` — پس از سقف attempt (حداکثر ۱۰، قابل کاهش با `workflow.max_attempts_per_stage`) فقط با تصمیم `extend|pass` و دلیل.
 - `GET /human-tasks?status=pending`.
+- `GET /projects/{id}/analysis/question-quality` (`project.read`) → `{reviews (۱۰ ارزیابی اخیر، تازه‌ترین اول), questionCount}`؛ `POST` همان مسیر (`project.run`، ۲۰۱) پرسش‌های تحلیلگر را با Brain و مدل می‌سنجد و `{review}` برمی‌گرداند. خطای ارائه‌دهنده یا پاسخ نامعتبر مدل به‌صورت review با `status = failed` ذخیره می‌شود؛ `409 AI_NOT_CONFIGURED` و `422 ANALYSIS_NO_QUESTIONS` چیزی ذخیره نمی‌کنند. audit: `analysis.question_quality_reviewed` ([ADR-0024](../adr/0024-analyst-question-quality.md)).
+- `POST /projects/{id}/agent-questions/{questionId}/answer` (`project.update`، پاسخ ۲۰۰) با `{answer: string (۱ تا ۴۰۰۰) | null}`؛ `null` یعنی ادمین نمی‌خواهد پاسخ دهد و ایجنت با فرض ادامه می‌دهد. پرسش را فقط یک‌بار می‌بندد (`409 WORKFLOW_QUESTION_CLOSED`، `404 WORKFLOW_QUESTION_NOT_FOUND` برای پرسش پروژهٔ دیگر یا workspace دیگر)، کار انسانی `agent_question` را حل می‌کند و سیگنال `agentInput` را به workflow می‌فرستد. پاسخ `GET /projects/{id}/workflow` فیلد `agentQuestions` (۳۰ پرسش اخیر با `status` و `answer`) دارد. audit: `workflow.agent_question_asked` و `workflow.agent_question_answered` (فقط نقش، شناسه‌ها و طول متن) ([ADR-0023](../adr/0023-agent-tool-calling.md)).
 - commandهای بازبینی و تصمیم سرآیند `Idempotency-Key` می‌پذیرند؛ تکرار همان کلید پاسخ ذخیره‌شده را با `replayed: true` برمی‌گرداند و کلید تکراری با بدنهٔ متفاوت `409 IDEMPOTENCY_KEY_REUSED` است.
 - gate پیش‌فرض دستی است (`workflow.require_human_approval`)؛ در gate خودکار مرحله بدون human task جلو می‌رود.
 
@@ -210,7 +212,7 @@ notion_sync: true
 
 - `GET /audit-events` (فیلتر project، action یا خانوادهٔ `x.*`، target، actor، severity، بازهٔ زمان)
 - `POST /audit-events/export` (JSON/CSV تا ۵۰۰۰ رویداد؛ خودِ export ممیزی می‌شود)
-- `POST /retention/purge` (حذف دائمی موارد منقضی با tombstone ممیزی)
+- `POST /retention/purge` (حذف دائمی موارد منقضی با tombstone ممیزی؛ پروژه و حوزهٔ حذف‌شده، و خطاهای بستهٔ خطایاب پس از `retention.app_errors_days`؛ پاسخ `appErrors` را هم می‌شمارد)
 - `GET /dashboard?from=&to=`: کارت‌های داشبورد با دادهٔ زنده (بازهٔ مصرف پیش‌فرض ۳۰ روز).
 - `GET /reports/usage?from=&to=&projectId=&groupBy=project|stage|day|model`: token و هزینهٔ برآوردی؛ بازه حداکثر ۴۰۰ روز.
 - `POST /brain-reports` با `{projectId?, from?, to?, modelEvaluation?}` → 201؛ گزارش پروژه یا workspace با `deviations[]` (rule، clause، role، severity، count، detail، evidence) و `recommendations[]`. هیچ وضعیتی تغییر نمی‌کند. با `modelEvaluation: true` (پیش‌فرض false؛ هر نقش یک فراخوانی مدل) گزارش `evaluations[]` هم دارد: برای هر یک از پنج نقش مرحله `status`، `reason`، `score` ۱ تا ۵، `summary`، `charterVersionId`، `samples[]`، `findings[]` (هر یافته با `clauses[]` و `evidence[]` ‌ـ یافتهٔ بی‌شاهد دور ریخته می‌شود)، `discarded` و `errorCode`؛ `summary.modelEvaluation` شمارهٔ نسخهٔ داور و شمارش‌ها را دارد. نقشی که نمی‌تواند سنجیده شود (`no_samples`، `ai_not_configured`، `provider_failure`، `invalid_output`) گزارش را از بین نمی‌برد ([ADR-0017](../adr/0017-research-with-knowledge-and-role-evaluation.md)).
@@ -272,3 +274,12 @@ Cursor opaque، `limit` سقف ۱۰۰، sort allowlist. filter fieldها schema-
 - خطاها: `CONTENTER_NOT_CONFIGURED` (۴۰۹)؛ `CONTENTER_UNREACHABLE`، `CONTENTER_TOKEN_REFUSED`، `CONTENTER_NOT_AVAILABLE`، `CONTENTER_BAD_RESPONSE`، `CONTENTER_ERROR` (۵۰۲)؛ `BUSINESS_NOT_FOUND`، `BUSINESS_LINK_NOT_FOUND`، `BUSINESS_SNAPSHOT_NOT_FOUND` (۴۰۴)؛ `BUSINESS_INVALID_REQUEST` (۴۰۰).
 - پاسخ بررسی زندهٔ سند (`POST /documents/{id}/check`) `termIssues` دارد و گزارش نگارش `report.termIssues`: `[{kind: 'USE'|'AVOID', term, found, count, replaceWith?, note?}]`. اجرای گردش‌کار، نگارش سند و هر تماس مدلی که پروفایل داشت نسخه‌ای را که دیده‌اند در `business_snapshot_id` ثبت می‌کنند (فرهنگ داده).
 - تنظیم‌ها: `business.required` (boolean، پیش‌فرض false)، `business.sync_on_start` (boolean، پیش‌فرض true) و `business.prompt_budget_chars` (integer ۲۰۰۰ تا ۳۰۰۰۰، پیش‌فرض ۱۲۰۰۰)؛ هر سه در scope workspace، موضوع و پروژه.
+
+## ۱۹. اعلان‌ها ([ADR-0025](../adr/0025-notifications.md))
+
+همه با `workspace.read`:
+
+- `GET /notifications/summary` → `{unread}`.
+- `GET /notifications?status=unread|all&cursor=&limit=` → `{items, nextCursor}`؛ هر مورد `id`، `kind`، `projectId`، `projectCode`، `projectTitle`، `payload`، `readAt`، `createdAt` و `stillWaiting` (برای کار انسانی: هنوز منتظر است یا انجام شده؛ برای بقیه `null`) دارد.
+- `POST /notifications/{id}/read` (۲۰۰ `{read: true}`؛ `404 NOTIFICATION_NOT_FOUND`)، `POST /notifications/read-all` (۲۰۰ `{marked}`؛ audit `notification.read_all` فقط وقتی چیزی علامت خورده باشد).
+- پارامتر نامعتبر `400 NOTIFICATION_INVALID_REQUEST`.

@@ -22,6 +22,7 @@ import { DocumentsController } from '../src/documents/documents.controller.js';
 import { ReportsController } from '../src/reports/reports.controller.js';
 import { ConfigController } from '../src/config/config.controller.js';
 import { KnowledgeController } from '../src/knowledge/knowledge.controller.js';
+import { NotificationsController } from '../src/notifications/notifications.controller.js';
 import { ProjectsController } from '../src/projects/projects.controller.js';
 import { ProvidersController } from '../src/providers/providers.controller.js';
 import { SmartController } from '../src/smart/smart.controller.js';
@@ -142,6 +143,14 @@ const expectedMatrix: Record<string, string> = {
     'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/outputs/:outputId/edit':
     'project.update',
+  'GET workspaces/:workspaceId/notifications/summary': 'workspace.read',
+  'GET workspaces/:workspaceId/notifications': 'workspace.read',
+  'POST workspaces/:workspaceId/notifications/read-all': 'workspace.read',
+  'POST workspaces/:workspaceId/notifications/:notificationId/read': 'workspace.read',
+  'GET workspaces/:workspaceId/projects/:projectId/analysis/question-quality': 'project.read',
+  'POST workspaces/:workspaceId/projects/:projectId/analysis/question-quality': 'project.run',
+  'POST workspaces/:workspaceId/projects/:projectId/agent-questions/:questionId/answer':
+    'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/attempt-decision':
     'workflow.override',
   'GET workspaces/:workspaceId/human-tasks': 'workspace.read',
@@ -241,6 +250,7 @@ const controllers = [
   DocumentsController,
   ReportsController,
   SmartController,
+  NotificationsController,
 ];
 
 function routeTable(): Record<string, string | undefined> {

@@ -20,6 +20,7 @@ const editSchema = z
 const decisionSchema = z
   .object({ decision: z.enum(['extend', 'pass']), reason: z.string().trim().min(10).max(1000) })
   .strict();
+const answerSchema = z.object({ answer: z.string().trim().min(1).max(4000).nullable() }).strict();
 const cancelSchema = z.object({ reason: z.string().trim().min(3).max(1000) }).strict();
 const tasksQuery = z
   .object({ status: z.enum(['pending', 'resolved', 'cancelled']).default('pending') })
@@ -223,6 +224,29 @@ export class WorkflowController {
         ...input,
         idempotencyKey: idempotencyKey(request),
       }),
+    };
+  }
+
+  @Post('projects/:projectId/agent-questions/:questionId/answer')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Answer a question an agent asked in a stage, or decline it with a null answer',
+  })
+  @RequireWorkspacePermission('project.update')
+  async answerQuestion(
+    @Req() request: FastifyRequest,
+    @Param('projectId') raw: string,
+    @Param('questionId') question: string,
+    @Body() body: unknown,
+  ) {
+    const input = parse(answerSchema, body);
+    return {
+      answer: await this.workflow.answerAgentQuestion(
+        workspaceContext(request),
+        id(raw),
+        id(question),
+        { answer: input.answer, idempotencyKey: idempotencyKey(request) },
+      ),
     };
   }
 

@@ -3,7 +3,7 @@ import type { Locale } from '../../i18n';
 const messages = {
   fa: {
     title: 'تست کامل مدل',
-    help: 'برای هر نوع فراخوانی که Docoo از مدل می‌خواهد (سؤال‌های تحلیلگر، خروجی هر مرحله، نگارش سند و ارزیابی Brain) یک نمونهٔ کوچک می‌فرستد و می‌خواند که پاسخ مدل قابل‌استفاده است یا نه. نُه فراخوانی کوتاه است و معمولاً چند ده سنت هزینه دارد؛ در صفحهٔ «هزینه و مصرف» هم دیده می‌شود.',
+    help: 'برای هر نوع فراخوانی که Docoo از مدل می‌خواهد (سؤال‌های تحلیلگر، خروجی هر مرحله، نگارش سند، ارزیابی Brain و فراخوانی ابزار) یک نمونهٔ کوچک می‌فرستد و می‌خواند که پاسخ مدل قابل‌استفاده است یا نه. ده فراخوانی کوتاه است و معمولاً چند ده سنت هزینه دارد؛ در صفحهٔ «هزینه و مصرف» هم دیده می‌شود.',
     connection: 'اتصال مورد آزمون',
     model: 'مدل مورد آزمون',
     modelPlaceholder: 'نام مدل',
@@ -41,6 +41,7 @@ const messages = {
       document_outline: 'نگارش سند: طرح',
       document_section: 'نگارش سند: یک بخش',
       role_evaluation: 'ارزیابی نقش‌ها توسط Brain',
+      tool_calling: 'فراخوانی ابزار توسط مدل',
     } as Record<string, string>,
     kinds: {
       auth: 'کلید پذیرفته نشد یا به این مدل دسترسی ندارد.',
@@ -57,11 +58,15 @@ const messages = {
       no_usable_blocks: 'بخش بازگشتی هیچ بلوک قابل‌استفاده‌ای نداشت.',
       invalid_output: 'پاسخ شرایط قرارداد ارزیابی را نداشت.',
       analysis_round_invalid: 'پاسخ تحلیلگر قابل‌خواندن نبود.',
+      no_tool_call: 'مدل ابزار را صدا نزد، با اینکه مجبور به این کار شده بود.',
+      wrong_tool: 'مدل ابزار دیگری را صدا زد.',
+      wrong_tool_arguments: 'آرگومان‌های ابزار درست نبود (ضرب ۱۷ در ۲۳ حساب نشد).',
+      tool_result_not_used: 'مدل از نتیجهٔ ابزار در پاسخ نهایی استفاده نکرد.',
     } as Record<string, string>,
   },
   en: {
     title: 'Full model test',
-    help: 'For every kind of call Docoo asks of a model (analyst questions, the output of each stage, document writing and the Brain’s evaluation) it sends one small case and checks that the model’s answer is usable. Nine short calls, usually a few tens of cents; they also show on the “Cost & usage” page.',
+    help: 'For every kind of call Docoo asks of a model (analyst questions, the output of each stage, document writing, the Brain’s evaluation and calling a tool) it sends one small case and checks that the model’s answer is usable. Ten short checks, usually a few tens of cents; they also show on the “Cost & usage” page.',
     connection: 'Connection to test',
     model: 'Model to test',
     modelPlaceholder: 'Model name',
@@ -98,6 +103,7 @@ const messages = {
       document_outline: 'Document writing: outline',
       document_section: 'Document writing: one part',
       role_evaluation: 'Brain’s role evaluation',
+      tool_calling: 'Tool calling by the model',
     } as Record<string, string>,
     kinds: {
       auth: 'The key was not accepted or has no access to this model.',
@@ -114,6 +120,10 @@ const messages = {
       no_usable_blocks: 'The returned part had no usable block.',
       invalid_output: 'The answer did not meet the evaluation contract.',
       analysis_round_invalid: 'The analyst’s answer could not be read.',
+      no_tool_call: 'The model did not call the tool although it was required to.',
+      wrong_tool: 'The model called a different tool.',
+      wrong_tool_arguments: 'The tool arguments were wrong (17 times 23 was not computed).',
+      tool_result_not_used: 'The model did not use the tool result in its final answer.',
     } as Record<string, string>,
   },
 };

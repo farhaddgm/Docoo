@@ -10,6 +10,7 @@ import { DocumentsModule } from './documents/documents.module.js';
 import { HealthController } from './health.controller.js';
 import { HealthService } from './health.service.js';
 import { KnowledgeModule } from './knowledge/knowledge.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
 import { ProvidersModule } from './providers/providers.module.js';
 import { ReportsModule } from './reports/reports.module.js';
@@ -38,6 +39,7 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
     DocumentsModule,
     ReportsModule,
     SmartModule,
+    NotificationsModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],

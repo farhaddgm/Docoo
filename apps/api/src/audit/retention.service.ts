@@ -4,6 +4,7 @@ import type { QueryResultRow } from 'pg';
 import { writeAudit } from '../common/audit.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
+import { ConfigService } from '../config/config.service.js';
 
 export interface PurgeResult {
   readonly dryRun: boolean;
@@ -11,15 +12,21 @@ export interface PurgeResult {
   readonly topicIds: readonly string[];
   /** Expired topics still referenced by a (deleted) project; purged with that project later. */
   readonly blockedTopicIds: readonly string[];
+  /** Closed error-log entries not seen for `retention.app_errors_days`. */
+  readonly appErrors: number;
 }
 
 /**
- * Permanently removes soft-deleted projects and topics whose recovery window ended.
+ * Permanently removes soft-deleted projects and topics whose recovery window ended, and closed
+ * entries of the Smart error log that are older than the retention setting.
  * Each purge leaves a minimal audit tombstone (FR-AUD-005, FR-PRJ-005).
  */
 @Injectable()
 export class RetentionService {
-  constructor(private readonly database: WorkspaceDatabase) {}
+  constructor(
+    private readonly database: WorkspaceDatabase,
+    private readonly config: ConfigService,
+  ) {}
 
   async purge(
     context: WorkspaceRequestContext,
@@ -63,6 +70,29 @@ export class RetentionService {
         ]);
       }
 
+      const effective = await this.config.resolve(
+        client,
+        context,
+        'workspace',
+        context.workspaceId,
+      );
+      const rawDays = effective.values['retention.app_errors_days'];
+      const days = typeof rawDays === 'number' && rawDays >= 7 ? Math.floor(rawDays) : 90;
+      const errors = await client.query<{ id: string } & QueryResultRow>(
+        `select id from app_errors
+          where workspace_id = $1 and status in ('fixed', 'ignored')
+            and last_seen_at < now() - make_interval(days => $2)
+          for update`,
+        [context.workspaceId, days],
+      );
+      const appErrors = errors.rows.length;
+      if (!dryRun && appErrors > 0) {
+        await client.query(
+          'delete from app_errors where workspace_id = $1 and id = any($2::uuid[])',
+          [context.workspaceId, errors.rows.map((row) => row.id)],
+        );
+      }
+
       if (!dryRun) {
         for (const id of projectIds) {
           await writeAudit(client, context, {
@@ -98,10 +128,11 @@ export class RetentionService {
             projects: projectIds.length,
             topics: topicIds.length,
             blockedTopics: blockedTopicIds.length,
+            appErrors,
           },
         });
       }
-      return { dryRun, projectIds, topicIds, blockedTopicIds };
+      return { dryRun, projectIds, topicIds, blockedTopicIds, appErrors };
     });
   }
 }

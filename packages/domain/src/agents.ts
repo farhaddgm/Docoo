@@ -285,6 +285,15 @@ const bullets = (items: readonly string[]) => items.map((item) => `- ${item}`).j
  * language, and the data rules. A project's own copy of the definition takes the place of the
  * default (the "project overrides" layer), so there is one text per call.
  */
+/**
+ * The user message every role call sends: the data as JSON inside `<data>`. `<` is written as
+ * `\u003c`, so text inside the data (an answer, a document, a knowledge passage) can never
+ * close the block early with a `</data>` of its own; the model reads the same JSON string.
+ */
+export function dataBlock(value: unknown): string {
+  return `<data>${(JSON.stringify(value) ?? 'null').replace(/</gu, '\\u003c')}</data>`;
+}
+
 export function composeInstructions(input: ComposeInput): string {
   return [
     ...PLATFORM_CONTRACT,

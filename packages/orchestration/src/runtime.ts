@@ -17,7 +17,7 @@ import {
 import type { Pool, PoolClient } from 'pg';
 
 import { inWorkspace } from './db.js';
-import { fakeResponder } from './fake-responders.js';
+import { fakeResponder, fakeToolResponder } from './fake-responders.js';
 
 export interface InvocationScope {
   readonly workspaceId: string;
@@ -70,6 +70,7 @@ export const defaultAdapters: AdapterFactory = (kind, options) => {
   if (kind !== 'fake') return createAdapter(kind, options);
   const adapter = new FakeAdapter();
   adapter.responder = fakeResponder;
+  adapter.toolResponder = fakeToolResponder;
   return adapter;
 };
 

@@ -8,6 +8,7 @@ import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { DefinitionCard } from './problem-definition';
+import { QuestionQuality } from './question-quality';
 import { problemMessages } from './problem-messages';
 import {
   emptyDraft,
@@ -319,6 +320,8 @@ export function ProblemPanel({
           )}
         </dl>
       </section>
+
+      {analysis.progress.asked > 0 && <QuestionQuality locale={locale} base={base} />}
 
       {analysis.understanding && (
         <section className="card stack" aria-labelledby="understanding-heading">

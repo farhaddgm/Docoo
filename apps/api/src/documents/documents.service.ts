@@ -27,6 +27,7 @@ import {
 } from '@docoo/documents';
 import type { ObjectStore } from '@docoo/ingestion';
 import { recordDocumentExport } from '@docoo/observability';
+import { dataBlock } from '@docoo/domain';
 import { ProviderRuntime } from '@docoo/orchestration';
 import { ProviderError, type JsonSchema } from '@docoo/providers';
 import type { PoolClient, QueryResultRow } from 'pg';
@@ -714,12 +715,12 @@ export class DocumentsService {
           messages: [
             {
               role: 'user',
-              content: `<data>${JSON.stringify({
+              content: dataBlock({
                 problem: prepared.problem,
                 rubric: prepared.rubric.rubric.criteria,
                 document: prepared.version.content,
                 ...(prepared.company ? { businessProfile: prepared.company.prompt.data } : {}),
-              })}</data>`,
+              }),
             },
           ],
           responseSchema: { name: 'evaluation', schema: judgeSchema(prepared.rubric.rubric) },

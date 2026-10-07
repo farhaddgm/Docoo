@@ -27,6 +27,11 @@ export interface AnswersSignal {
   readonly batchId: string;
 }
 
+/** The administrator answered (or declined) a question an agent asked in a stage (ADR-0023). */
+export interface AgentInputSignal {
+  readonly stageRunId: string;
+}
+
 /** Answer attachments are polled every 15 s for up to 10 minutes before the round goes on without. */
 const ATTACHMENT_POLL_SECONDS = 15;
 const ATTACHMENT_POLL_LIMIT = 40;
@@ -37,6 +42,7 @@ export const cancelSignal = defineSignal<[{ reason: string | null }]>('cancel');
 export const gateSignal = defineSignal<[GateSignal]>('gate');
 export const attemptDecisionSignal = defineSignal<[AttemptDecisionSignal]>('attemptDecision');
 export const answersSignal = defineSignal<[AnswersSignal]>('answers');
+export const agentInputSignal = defineSignal<[AgentInputSignal]>('agentInput');
 export const stateQuery = defineQuery<{
   stage: Stage | null;
   paused: boolean;
@@ -68,6 +74,7 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
   let gate: GateSignal | null = null;
   let decision: AttemptDecisionSignal | null = null;
   const answered = new Set<string>();
+  const agentInputs = new Set<string>();
   let currentStage: Stage | null = null;
   let waiting: string | null = null;
   let currentAttempt = 0;
@@ -89,6 +96,9 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
   });
   setHandler(answersSignal, (input) => {
     answered.add(input.batchId);
+  });
+  setHandler(agentInputSignal, (input) => {
+    agentInputs.add(input.stageRunId);
   });
   setHandler(stateQuery, () => ({
     stage: currentStage,
@@ -212,6 +222,15 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
           const result = await activities.runAttempt({ ...stageRef, attemptNo, retryNo });
           if (result.status === 'succeeded') {
             outputReady = true;
+          } else if (result.status === 'needs_input') {
+            // An agent asked the administrator something: wait for the answer, then run the same
+            // attempt again with it. A signal that came early is already in the set.
+            waiting = 'agent_input';
+            await condition(() => agentInputs.has(stageStart.stageRunId) || cancelled !== null);
+            waiting = null;
+            if (cancelled) return cancel();
+            agentInputs.delete(stageStart.stageRunId);
+            if (!(await whileActive())) return cancel();
           } else if (result.status === 'retry') {
             retryNo += 1;
             await sleep(result.delaySeconds * 1000);
