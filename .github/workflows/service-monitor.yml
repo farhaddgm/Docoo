@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+    inputs:
+      delivery_test:
+        description: Create and close a clearly labelled notification test issue; still check the live service normally.
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -23,4 +28,5 @@ jobs:
         env:
           DOCOO_MONITOR_URL: https://docoo.beeproject.ir
           SECURITY_MONITOR_TOKEN: ${{ secrets.SECURITY_MONITOR_TOKEN }}
+          DOCOO_MONITOR_DELIVERY_TEST: ${{ inputs.delivery_test || 'false' }}
           GITHUB_TOKEN: ${{ github.token }}

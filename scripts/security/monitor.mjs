@@ -113,6 +113,18 @@ async function main() {
     });
     await api(`issues/${existing.number}`, 'PATCH', { state: 'closed', state_reason: 'completed' });
   }
+  if (process.env.DOCOO_MONITOR_DELIVERY_TEST === 'true') {
+    const issue = await api('issues', 'POST', {
+      title: 'Docoo monitor delivery test',
+      body: 'Controlled notification delivery check. This is a test, not a production incident. No account or document information is included.',
+      assignees: [repo.split('/')[0]],
+    });
+    await api(`issues/${issue.number}/comments`, 'POST', {
+      body: 'Controlled recovery check: the test notification was created and assigned successfully. Closing the test.',
+    });
+    await api(`issues/${issue.number}`, 'PATCH', { state: 'closed', state_reason: 'completed' });
+    console.log(JSON.stringify({ deliveryTestIssue: issue.html_url }));
+  }
   console.log(JSON.stringify({ alerts }));
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
