@@ -2,9 +2,9 @@
 doc_id: DOCOO-ACCEPTANCE-TRACEABILITY
 title: طرح پذیرش و ردیابی نیازمندی‌ها
 status: approved-baseline
-version: 1.0.1
+version: 1.1.0
 owner: Product Quality
-last_updated: 2026-09-24
+last_updated: 2026-10-07
 notion_sync: true
 ---
 
@@ -65,3 +65,13 @@ Sign-off شامل version مستندات، commit SHA، image digest، migration
 ## ۵. trace change
 
 هر change request باید requirement IDs affected، test update، migration، doc version و ADR احتمالی را مشخص کند. حذف requirement بدون تصمیم supersede ممنوع است.
+
+## ۴. دروازهٔ ردیابی نیازمندی‌ها
+
+`pnpm qa:trace` (گام CI در job کیفیت) هر `FR-*` و `NFR-*` سندهای نیازمندی را با `qa/traceability.json` تطبیق می‌دهد. هر نیازمندی یک ورودی با وضعیت و یادداشت یک‌جمله‌ای دارد:
+
+- `tested`: دست‌کم یک فایل آزمون واقعی (که خودش آزمون دارد) رفتار را می‌سنجد؛ فایل‌های پشتیبان کنار آن مجازند. شکاف‌های شناخته‌شده در یادداشت نوشته می‌شوند.
+- `operational`: با استقرار، drill، بار، promtool یا فرایند عملیاتی تأیید می‌شود؛ مدرک فایل‌های موجود در مخزن است.
+- `waived`: چیزی آن را خودکار نمی‌سنجد یا پیاده نشده است؛ دلیل صادقانه لازم است.
+
+دروازه fail می‌شود اگر نیازمندی‌ای ورودی نداشته باشد، ورودی‌ای نیازمندی نداشته باشد، مسیر مدرک وجود نداشته باشد، مدرک `tested` فایل آزمونِ دارای آزمون نباشد، یا شمار `waived` از `waiverBudget` بیشتر شود (کم کردن بودجه با پوشش دادن، و بالا بردنش فقط در بازبینی). گزارش تولیدشده در `qa/traceability-report.md` است (`pnpm qa:trace --write`) و کهنه‌بودنش هم خطاست؛ وضعیت فعلی: ۱۵۴ نیازمندی، ۱۲۴ `tested`، ۱۲ `operational`، ۱۸ `waived` (بیشتر: پژوهش وب، سیاست منبع، نگهداری داده‌ها، و ارزیابی کیفیت AI با مدل واقعی).

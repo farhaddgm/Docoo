@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 // Requirement traceability gate (docs/06-delivery/01-testing-strategy.md: CI builds the FR/NFR
 // coverage matrix). Every FR-* and NFR-* of the requirement documents must have an entry in
 // qa/traceability.json that says honestly how it is verified:
-//   tested      - an automated test file exercises it (the file must exist and contain tests)
+//   tested      - an automated test exercises it (at least one evidence file is a test file that
+//                 contains tests; other evidence files only have to exist)
 //   operational - deployment/ops evidence that exists in the repository
 //   waived      - nothing automated covers it yet; a reason is required and the number of
 //                 waivers may never grow past `waiverBudget`
@@ -22,7 +23,7 @@ export const REPORT_FILE = 'qa/traceability-report.md';
 const ID = /^(?:N?FR)-[A-Z]+-\d{3}$/u;
 const TEST_FILE = /(?:\.(?:test|spec)\.(?:ts|tsx|mjs|js)|\.integration\.mjs)$/u;
 const TEST_CALL =
-  /\b(?:it|test|describe)(?:\.[a-zA-Z]+)?\s*\(|assert\s*\(|^\s*await\s+check\s*\(/mu;
+  /\b(?:it|test|describe)(?:\.[a-zA-Z]+)?\s*\(|assert(?:\.\w+)?\s*\(|^\s*await\s+check\s*\(/mu;
 
 /** The requirement ids a document defines, in document order, as `- **FR-XXX-001:** text`. */
 export function parseRequirements(markdown) {
@@ -78,17 +79,18 @@ export function evaluate({ ids, map, files }) {
     }
     if (evidence.length === 0)
       errors.push(`${id}: ${entry.status} needs at least one evidence path`);
+    let proof = 0;
     for (const file of evidence) {
       if (!isInsideRepo(file) || !files.exists(file)) {
         errors.push(`${id}: evidence ${file} does not exist in the repository`);
-        continue;
+      } else if (TEST_FILE.test(file) && TEST_CALL.test(files.read(file))) {
+        proof += 1;
       }
-      if (entry.status !== 'tested') continue;
-      if (!TEST_FILE.test(file)) {
-        errors.push(`${id}: tested evidence ${file} is not a test file`);
-      } else if (!TEST_CALL.test(files.read(file))) {
-        errors.push(`${id}: tested evidence ${file} contains no test`);
-      }
+    }
+    // Supporting files (the code, a workflow, a runbook) may sit next to the proof, but a
+    // `tested` requirement needs at least one real test file; ops evidence is `operational`.
+    if (entry.status === 'tested' && evidence.length > 0 && proof === 0) {
+      errors.push(`${id}: tested needs at least one test file with tests among its evidence`);
     }
   }
 

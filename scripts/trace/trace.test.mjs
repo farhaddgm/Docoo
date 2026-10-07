@@ -49,25 +49,31 @@ describe('requirement traceability (QA-TRACE)', () => {
     assert.ok(errors.some((error) => error.startsWith('FR-GHOST-001: is not a requirement')));
   });
 
-  it('rejects tested evidence that is missing, not a test file, or has no test', () => {
-    for (const [file, present, reason] of [
-      ['a/gone.test.ts', repo, 'does not exist'],
-      ['docs/tls.md', repo, 'is not a test file'],
+  it('rejects tested evidence that is missing or has no real test among it', () => {
+    for (const [evidence, present, reason] of [
+      [['a/gone.test.ts'], repo, 'does not exist'],
+      [['docs/tls.md'], repo, 'needs at least one test file'],
       [
-        'a/empty.test.ts',
+        ['a/empty.test.ts'],
         { ...repo, 'a/empty.test.ts': 'export const x = 1;' },
-        'contains no test',
+        'needs at least one test file',
       ],
-      ['../outside.test.ts', repo, 'does not exist'],
+      [['../outside.test.ts'], repo, 'does not exist'],
     ]) {
       const map = goodMap();
-      map.requirements['FR-AUTH-001'].evidence = [file];
+      map.requirements['FR-AUTH-001'].evidence = evidence;
       const { errors } = evaluate({ ids, map, files: files(present) });
       assert.ok(
         errors.some((error) => error.includes(reason)),
-        `${file}: ${errors.join(' | ')}`,
+        `${evidence}: ${errors.join(' | ')}`,
       );
     }
+  });
+
+  it('lets supporting files sit next to the test that proves a requirement', () => {
+    const map = goodMap();
+    map.requirements['FR-AUTH-001'].evidence = ['docs/tls.md', 'a/login.test.ts'];
+    assert.deepEqual(evaluate({ ids, map, files: files(repo) }).errors, []);
   });
 
   it('needs evidence for tested and operational, and none for waived', () => {

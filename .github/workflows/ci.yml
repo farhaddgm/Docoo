@@ -59,6 +59,8 @@ jobs:
       - run: pnpm build
       - run: pnpm docs:validate
       - run: pnpm qa:corpus
+      - run: pnpm qa:trace
+      - run: pnpm qa:trace
       - run: pnpm docs:test
       - run: pnpm deploy:test
       - run: pnpm docs:sync:plan
