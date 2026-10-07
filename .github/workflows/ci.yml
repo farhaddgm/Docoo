@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 30
     services:
       postgres:
-        image: pgvector/pgvector:0.8.1-pg18
+        image: pgvector/pgvector:0.8.1-pg18@sha256:508c5290cda481d4f5f846446a26e9c1b804766828a394a5861de1b348a18b4c
         env:
           POSTGRES_DB: docoo_ci
           POSTGRES_USER: docoo_admin
@@ -27,11 +27,11 @@ jobs:
           --health-timeout 3s
           --health-retries 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 12.6.0
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24.x
           cache: pnpm
@@ -44,11 +44,11 @@ jobs:
         run: |
           docker run -d --name object-store -p 8333:8333 \
             -e AWS_ACCESS_KEY_ID=docoo-ci -e AWS_SECRET_ACCESS_KEY=docoo-ci-secret \
-            chrislusf/seaweedfs:latest mini -dir=/data
+            chrislusf/seaweedfs:latest@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d mini -dir=/data
           docker run -d --name clamd -p 3310:3310 --entrypoint clamd \
             -v "$GITHUB_WORKSPACE/infra/clamav/test-signatures:/var/lib/clamav:ro" \
-            clamav/clamav:1.4 --foreground=yes
-          docker run -d --name temporal -p 7233:7233 temporalio/temporal:latest \
+            clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23 --foreground=yes
+          docker run -d --name temporal -p 7233:7233 temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e \
             server start-dev --ip 0.0.0.0
       - run: pnpm format:check
       - run: pnpm lint
@@ -62,6 +62,7 @@ jobs:
       - run: pnpm qa:trace
       - run: pnpm qa:trace
       - run: pnpm docs:test
+      - run: pnpm security:test
       - run: pnpm deploy:test
       - run: pnpm docs:sync:plan
       - run: pnpm db:migrate
@@ -144,7 +145,7 @@ jobs:
           S3_FORCE_PATH_STYLE: 'true'
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-reports
           path: |

@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 45
     services:
       postgres:
-        image: pgvector/pgvector:0.8.1-pg18
+        image: pgvector/pgvector:0.8.1-pg18@sha256:508c5290cda481d4f5f846446a26e9c1b804766828a394a5861de1b348a18b4c
         env:
           POSTGRES_DB: docoo_ci
           POSTGRES_USER: docoo_admin
@@ -44,11 +44,11 @@ jobs:
       S3_SECRET_ACCESS_KEY: docoo-ci-secret
       S3_FORCE_PATH_STYLE: 'true'
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 12.6.0
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24.x
           cache: pnpm
@@ -57,14 +57,14 @@ jobs:
       - name: SLO alert rules (SRE-001)
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE/infra/prometheus:/etc/prometheus" --entrypoint promtool \
-            prom/prometheus:latest check config /etc/prometheus/prometheus.yml
+            prom/prometheus:latest@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e check config /etc/prometheus/prometheus.yml
           docker run --rm -v "$GITHUB_WORKSPACE/infra/prometheus/rules:/rules" -w /rules --entrypoint promtool \
-            prom/prometheus:latest test rules slo.test.yml
+            prom/prometheus:latest@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e test rules slo.test.yml
       - name: Prepare the database with the baseline volume
         run: |
           docker run -d --name object-store -p 8333:8333 \
             -e AWS_ACCESS_KEY_ID=docoo-ci -e AWS_SECRET_ACCESS_KEY=docoo-ci-secret \
-            chrislusf/seaweedfs:latest mini -dir=/data
+            chrislusf/seaweedfs:latest@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d mini -dir=/data
           pnpm db:migrate
           psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c \
             "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'docoo_e2e') THEN CREATE ROLE docoo_e2e LOGIN PASSWORD 'docoo-e2e-runtime' IN ROLE docoo_app; END IF; END \$\$;"
@@ -85,14 +85,14 @@ jobs:
       - name: Load test of the main path (SRE-002)
         run: |
           docker run --rm --user "$(id -u):$(id -g)" --network host -v "$GITHUB_WORKSPACE/scripts/load:/scripts:ro" -v "$GITHUB_WORKSPACE/reports:/reports" \
-            grafana/k6:latest run --summary-export=/reports/k6-summary.json /scripts/main-path.js
+            grafana/k6:latest@sha256:e66db15b860113878fa74670e31f5e274830b7b6e42c8bff28b2f2d86a257603 run --summary-export=/reports/k6-summary.json /scripts/main-path.js
       - name: DAST of the web app and the authenticated API (SEC-002)
         run: |
           mkdir -p reports/zap && chmod 777 reports/zap
-          docker run --rm --network host -v "$GITHUB_WORKSPACE/reports/zap:/zap/wrk:rw" zaproxy/zap-stable \
+          docker run --rm --network host -v "$GITHUB_WORKSPACE/reports/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \
             zap-baseline.py -t http://127.0.0.1:3000/fa -I -J web.json -r web.html
           OPTIONS=$(node scripts/security/dast-prepare.mjs reports/zap/openapi.json)
-          docker run --rm --network host -v "$GITHUB_WORKSPACE/reports/zap:/zap/wrk:rw" zaproxy/zap-stable \
+          docker run --rm --network host -v "$GITHUB_WORKSPACE/reports/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \
             zap-api-scan.py -t /zap/wrk/openapi.json -f openapi -I -J api.json -r api.html -z "$OPTIONS"
           python3 scripts/security/zap-gate.py reports/zap/web.json reports/zap/api.json
       - name: Auth-path penetration test with production rate limits (SEC-002)
@@ -127,7 +127,7 @@ jobs:
           IMAGE=docoo-postgres:ci infra/postgres/pitr-drill.sh 2>&1 | tail -5 | tee reports/pitr-drill.txt
       - name: Keep the evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: hardening-reports
           path: |

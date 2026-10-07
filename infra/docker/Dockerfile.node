@@ -1,6 +1,6 @@
 # One image per service: docker build -f infra/docker/Dockerfile.node \
 #   --build-arg PACKAGE=@docoo/api --build-arg START="--import ./dist/instrumentation.js dist/main.js" .
-FROM node:24-bookworm-slim AS builder
+FROM node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS builder
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 WORKDIR /workspace
@@ -12,7 +12,7 @@ ARG PACKAGE
 # dependencies only: build tools (TypeScript, esbuild, test runners) never reach the image.
 RUN pnpm --filter "${PACKAGE}..." build && pnpm --filter "${PACKAGE}" deploy --prod /service
 
-FROM node:24-bookworm-slim AS runner
+FROM node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS runner
 ENV NODE_ENV=production
 # Native tools a service needs at runtime. The ingestion worker is built with
 # SYSTEM_PACKAGES="tesseract-ocr tesseract-ocr-eng tesseract-ocr-fas poppler-utils".

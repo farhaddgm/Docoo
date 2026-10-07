@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: release
@@ -24,8 +25,9 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 65
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - name: Resolve tag
@@ -71,6 +73,11 @@ jobs:
             echo "::error::CHANGELOG.md has no section for ${TAG}."
             exit 1
           fi
+      - name: Require the exact main commit to pass every release gate
+        if: ${{ steps.tag.outputs.skip != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci/release-gate.py
       - name: Create tag
         if: ${{ steps.tag.outputs.create == 'true' }}
         env:
@@ -85,4 +92,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.name }}
-        run: gh release create "${TAG}" --title "Docoo ${TAG}" --notes-file release-notes.md --verify-tag
+        run: gh release create "${TAG}" security-gate.json --title "Docoo ${TAG}" --notes-file release-notes.md --verify-tag

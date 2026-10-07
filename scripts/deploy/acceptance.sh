@@ -176,7 +176,7 @@ collect() {
   record_from "Nightly update" "$(judge_auto_update "$(env_value AUTO_UPDATE)" "$(systemctl is-active docoo-update.timer 2>/dev/null)")"
 
   local smtp=no
-  [ -f "$deploy/.env.production" ] && [ -n "$(sed -n 's/^SMTP_URL=//p' "$deploy/.env.production" | tail -1)" ] && smtp=yes
+  [ -f "$deploy/.env.api" ] && [ -n "$(sed -n 's/^SMTP_URL=//p' "$deploy/.env.api" | tail -1)" ] && smtp=yes
   record_from "Mail" "$(judge_mail "$smtp")"
 }
 

@@ -1,3 +1,4 @@
+import { Parser } from 'htmlparser2';
 import { lookup as dnsLookup } from 'node:dns/promises';
 import http from 'node:http';
 import https from 'node:https';
@@ -147,6 +148,32 @@ export function validateUrl(
  * limited and the body is capped.
  */
 export async function fetchUrl(raw: string, options: UrlFetchOptions): Promise<FetchedUrl> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 20_000);
+  try {
+    return await fetchWithinDeadline(raw, options, controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function abortable<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(new UrlFetchError('url_timeout'));
+    if (signal.aborted) {
+      abort();
+      return;
+    }
+    signal.addEventListener('abort', abort, { once: true });
+    work.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+  });
+}
+
+async function fetchWithinDeadline(
+  raw: string,
+  options: UrlFetchOptions,
+  signal: AbortSignal,
+): Promise<FetchedUrl> {
   const resolve =
     options.resolve ?? ((hostname: string) => dnsLookup(hostname, { all: true, verbatim: true }));
   let current = raw;
@@ -158,9 +185,9 @@ export async function fetchUrl(raw: string, options: UrlFetchOptions): Promise<F
       addresses = [{ address: hostname, family: isIP(hostname) }];
     } else {
       try {
-        addresses = await resolve(hostname);
+        addresses = await abortable(resolve(hostname), signal);
       } catch {
-        throw new UrlFetchError('url_dns_failed');
+        throw new UrlFetchError(signal.aborted ? 'url_timeout' : 'url_dns_failed');
       }
     }
     const allowed = options.addressAllowed ?? isPublicAddress;
@@ -168,7 +195,7 @@ export async function fetchUrl(raw: string, options: UrlFetchOptions): Promise<F
       throw new UrlFetchError('url_private_address');
     }
     const pinned = addresses[0]!;
-    const response = await request(url, pinned, options);
+    const response = await request(url, pinned, options, signal);
     if (response.status >= 300 && response.status < 400 && response.location) {
       current = new URL(response.location, url).toString();
       continue;
@@ -193,6 +220,7 @@ function request(
   url: URL,
   pinned: { address: string; family: number },
   options: UrlFetchOptions,
+  signal: AbortSignal,
 ): Promise<{ status: number; contentType: string; location: string | null; bytes: Uint8Array }> {
   const lookup: LookupFunction = (_hostname, lookupOptions, callback) => {
     if (lookupOptions.all) callback(null, [pinned]);
@@ -204,6 +232,7 @@ function request(
       url,
       {
         method: 'GET',
+        signal,
         lookup,
         agent: false,
         headers: { 'user-agent': 'DocooIngest/1.0', accept: '*/*', 'accept-encoding': 'identity' },
@@ -243,30 +272,107 @@ function request(
     );
     req.on('timeout', () => req.destroy(new UrlFetchError('url_timeout')));
     req.on('error', (error) =>
-      reject(error instanceof UrlFetchError ? error : new UrlFetchError('url_connect_failed')),
+      reject(
+        signal.aborted
+          ? new UrlFetchError('url_timeout')
+          : error instanceof UrlFetchError
+            ? error
+            : new UrlFetchError('url_connect_failed'),
+      ),
     );
     req.end();
   });
 }
 
-/** Readable text of an HTML page: scripts, styles and markup removed, entities decoded. */
+/** Streaming HTML parsing: bounded input/depth/output, entities decoded exactly once. */
 export function htmlToText(html: string): { title: string | null; text: string } {
-  const title = /<title[^>]*>([\s\S]*?)<\/title>/iu.exec(html)?.[1]?.trim() ?? null;
-  const text = html
-    .replace(/<(script|style|noscript|template|svg|iframe)[\s\S]*?<\/\1>/giu, ' ')
-    .replace(/<!--[\s\S]*?-->/gu, ' ')
-    .replace(/<\/(p|div|h[1-6]|li|tr|section|article|br)\s*>|<br\s*\/?>/giu, '\n')
-    .replace(/<[^>]+>/gu, ' ')
-    .replace(/&nbsp;/giu, ' ')
-    .replace(/&amp;/giu, '&')
-    .replace(/&lt;/giu, '<')
-    .replace(/&gt;/giu, '>')
-    .replace(/&quot;/giu, '"')
-    .replace(/&#39;/giu, "'")
-    .replace(/&#(\d+);/gu, (_, code: string) => String.fromCodePoint(Number(code)))
-    .replace(/[ \t]+/gu, ' ')
-    .replace(/ *\n */gu, '\n')
-    .replace(/\n{2,}/gu, '\n\n')
-    .trim();
-  return { title: title ? htmlToText(title).text : null, text };
+  if (html.length > 8 * 1024 * 1024) throw new UrlFetchError('html_too_large');
+  const excluded = new Set(['script', 'style', 'noscript', 'template', 'svg', 'iframe']);
+  const blocks = new Set([
+    'p',
+    'div',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'li',
+    'tr',
+    'section',
+    'article',
+    'br',
+  ]);
+  const chunks: string[] = [];
+  const titleChunks: string[] = [];
+  let depth = 0;
+  let skippedAt = 0;
+  let titleAt = 0;
+  let titleSeen = false;
+  let size = 0;
+  let titleSize = 0;
+  const append = (value: string) => {
+    size += value.length;
+    if (size > 2_000_000) throw new UrlFetchError('html_text_too_large');
+    chunks.push(value);
+  };
+  const parser = new Parser(
+    {
+      onopentag(name) {
+        depth += 1;
+        if (depth > 2048) throw new UrlFetchError('html_too_deep');
+        if (!skippedAt && excluded.has(name)) skippedAt = depth;
+        if (skippedAt) return;
+        if (name === 'title' && !titleSeen) {
+          titleSeen = true;
+          titleAt = depth;
+        }
+        append(name === 'br' ? '\n' : ' ');
+      },
+      ontext(value) {
+        if (skippedAt) return;
+        append(value);
+        if (titleAt && titleSize < 4096) {
+          const part = value.slice(0, 4096 - titleSize);
+          titleChunks.push(part);
+          titleSize += part.length;
+        }
+      },
+      onclosetag(name) {
+        if (skippedAt === depth) skippedAt = 0;
+        else if (!skippedAt) append(blocks.has(name) ? '\n' : ' ');
+        if (titleAt === depth) titleAt = 0;
+        depth -= 1;
+      },
+    },
+    { decodeEntities: true },
+  );
+  parser.end(html);
+  return {
+    title: titleChunks.length ? cleanHtmlWhitespace(titleChunks.join('')) : null,
+    text: cleanHtmlWhitespace(chunks.join('')),
+  };
+}
+
+function cleanHtmlWhitespace(value: string): string {
+  const result: string[] = [];
+  let pendingSpace = false;
+  let newlines = 0;
+  for (const char of value) {
+    if (char === '\n') {
+      pendingSpace = false;
+      if (result.length && newlines < 2) {
+        result.push('\n');
+        newlines += 1;
+      }
+    } else if (/\s/u.test(char)) {
+      if (result.length && newlines === 0) pendingSpace = true;
+    } else {
+      if (pendingSpace) result.push(' ');
+      pendingSpace = false;
+      newlines = 0;
+      result.push(char);
+    }
+  }
+  return result.join('').trim();
 }

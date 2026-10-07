@@ -3,6 +3,8 @@ import { z } from 'zod';
 const emptyStringToUndefined = (value: unknown): unknown => (value === '' ? undefined : value);
 
 export const environmentSchema = z.object({
+  SECURITY_MONITOR_TOKEN: z.string().default(''),
+  BACKUP_CONFIGURED: z.string().default('false'),
   OWNER_EMAIL: z.string().trim().toLowerCase().email().default('farhad.dgm@gmail.com'),
   GOOGLE_CLIENT_ID: z.string().default(''),
   GOOGLE_CLIENT_SECRET: z.string().default(''),

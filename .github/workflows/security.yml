@@ -18,11 +18,11 @@ jobs:
   dependency-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 12.6.0
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24.x
           cache: pnpm
@@ -34,12 +34,12 @@ jobs:
     if: ${{ !github.event.repository.private || vars.CODEQL_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: github/codeql-action/init@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
         with:
           languages: javascript-typescript
-      - uses: github/codeql-action/autobuild@v4
-      - uses: github/codeql-action/analyze@v4
+      - uses: github/codeql-action/autobuild@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+      - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
 
   sast:
     # Free SAST that also works on private repositories without Code Security (SEC-001):
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Fetch the pinned Semgrep rules
         run: |
           git clone --filter=blob:none --no-checkout https://github.com/semgrep/semgrep-rules.git "$RUNNER_TEMP/semgrep-rules"
@@ -58,7 +58,7 @@ jobs:
           find "$RUNNER_TEMP/rules" -name '*.test.*' -delete
       - name: Semgrep
         run: |
-          docker run --rm -v "$GITHUB_WORKSPACE:/src" -v "$RUNNER_TEMP/rules:/rules:ro" -w /src semgrep/semgrep:latest \
+          docker run --rm -v "$GITHUB_WORKSPACE:/src" -v "$RUNNER_TEMP/rules:/rules:ro" -w /src semgrep/semgrep:latest@sha256:32e459968daabe7ab86968184a29109b9564aa00392401156f9788452b42786b \
             semgrep scan --config /rules --severity ERROR --metrics off --error \
               --exclude node_modules --exclude dist --exclude .next --exclude test-results \
               --exclude '*.test.ts' --exclude test
@@ -66,9 +66,10 @@ jobs:
   filesystem-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: aquasecurity/trivy-action@v0.36.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: v0.75.0
           scan-type: fs
           scan-ref: .
           scanners: vuln,secret,misconfig
@@ -77,6 +78,7 @@ jobs:
           exit-code: '1'
 
   container-scan:
+    name: container-scan (${{ matrix.name }})
     # Builds each service image and fails on fixable HIGH/CRITICAL vulnerabilities (SEC-001).
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -87,7 +89,11 @@ jobs:
           - package: '@docoo/api'
             name: api
             start: '--import ./dist/instrumentation.js dist/main.js'
-            # Same runtime packages as deploy/compose.production.yaml (PDF rendering).
+            # PDF rendering runs in its own isolated image.
+            system: ''
+          - package: '@docoo/document-renderer'
+            name: document-renderer
+            start: 'dist/main.js'
             system: 'chromium fonts-noto-core'
           - package: '@docoo/web'
             name: web
@@ -102,7 +108,7 @@ jobs:
             start: 'dist/main.js'
             system: 'tesseract-ocr tesseract-ocr-eng tesseract-ocr-fas poppler-utils'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Build ${{ matrix.name }} image
         run: |
           docker build -f infra/docker/Dockerfile.node \
@@ -112,11 +118,49 @@ jobs:
             -t docoo-${{ matrix.name }}:ci .
       - name: Smoke-test the image entrypoint
         run: docker run --rm --entrypoint node docoo-${{ matrix.name }}:ci -e "process.exit(0)"
-      - uses: aquasecurity/trivy-action@v0.36.0
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: v0.75.0
           scan-type: image
           image-ref: docoo-${{ matrix.name }}:ci
           scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+  infrastructure-scan:
+    name: infrastructure-scan (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: postgres
+            image: docoo-postgres:ci
+          - name: caddy
+            image: caddy:2@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772
+          - name: redis
+            image: redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+          - name: object-store
+            image: chrislusf/seaweedfs:latest@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+          - name: clamav
+            image: clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23
+          - name: temporal
+            image: temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+          - name: object-backup
+            image: rclone/rclone:latest@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build PostgreSQL runtime image
+        if: matrix.name == 'postgres'
+        run: docker build -t docoo-postgres:ci infra/postgres
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.75.0
+          scan-type: image
+          image-ref: ${{ matrix.image }}
+          scanners: vuln
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'

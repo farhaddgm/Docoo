@@ -25,7 +25,9 @@ if (existsSync(localEnv)) process.loadEnvFile(localEnv);
 
 const sourceUrl = process.env.BACKUP_SOURCE_URL ?? process.env.DATABASE_ADMIN_URL;
 if (!sourceUrl) throw new Error('BACKUP_SOURCE_URL or DATABASE_ADMIN_URL is required.');
-const image = process.env.BACKUP_PG_IMAGE ?? 'pgvector/pgvector:0.8.1-pg18';
+const image =
+  process.env.BACKUP_PG_IMAGE ??
+  'pgvector/pgvector:0.8.1-pg18@sha256:508c5290cda481d4f5f846446a26e9c1b804766828a394a5861de1b348a18b4c';
 const restorePort = Number(process.env.RESTORE_PORT ?? 55432);
 const rtoTargetSeconds = Number(process.env.RTO_TARGET_SECONDS ?? 4 * 3600);
 const stamp = new Date().toISOString().replace(/[:.]/gu, '-');

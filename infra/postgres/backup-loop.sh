@@ -15,6 +15,7 @@ while true; do
     wal-g delete retain FULL "$retain" --confirm || true
     echo "{\"event\":\"backup.completed\",\"seconds\":$(( $(date +%s) - started )),\"at\":$(date +%s)}"
     date +%s > /tmp/last-backup-success
+    date +%s > /heartbeat/database-success
   else
     echo '{"event":"backup.failed"}' >&2
   fi

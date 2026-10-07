@@ -8,10 +8,16 @@ import { contentSecurityPolicy } from './app/content-security-policy';
  * do because they are fixed when the image is built.
  */
 export function proxy(request: NextRequest) {
-  const response = NextResponse.next();
+  const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64');
+  const policy = contentSecurityPolicy(process.env, nonce);
+  const headers = new Headers(request.headers);
+  headers.set('x-nonce', nonce);
+  headers.set('Content-Security-Policy', policy);
+  const response = NextResponse.next({ request: { headers } });
+  response.headers.set('Cache-Control', 'private, no-store');
   if (request.nextUrl.pathname.endsWith('/auth/login-up'))
     response.headers.set('X-Robots-Tag', 'noindex, nofollow');
-  response.headers.set('Content-Security-Policy', contentSecurityPolicy());
+  response.headers.set('Content-Security-Policy', policy);
   return response;
 }
 

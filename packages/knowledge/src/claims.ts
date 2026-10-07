@@ -46,13 +46,26 @@ const MAX_LENGTH = 600;
 /** Sentence ranges of a text, split on Latin and Persian terminators and line breaks. */
 export function sentenceRanges(text: string): { start: number; end: number }[] {
   const ranges: { start: number; end: number }[] = [];
-  const terminator = /[.!?؟۔]+(?=\s|$)|\n+/gu;
   let start = 0;
-  let match: RegExpExecArray | null;
-  while ((match = terminator.exec(text)) !== null) {
-    const end = match[0].startsWith('\n') ? match.index : match.index + match[0].length;
-    pushTrimmed(text, start, end, ranges);
-    start = match.index + match[0].length;
+  // Scan each punctuation run once. A failing lookahead after a long run must not
+  // retry at every character (the previous regex had quadratic backtracking).
+  for (let index = 0; index < text.length;) {
+    const char = text[index]!;
+    if (char === '\n') {
+      pushTrimmed(text, start, index, ranges);
+      while (text[index] === '\n') index += 1;
+      start = index;
+    } else if ('.!?؟۔'.includes(char)) {
+      do {
+        index += 1;
+      } while (index < text.length && '.!?؟۔'.includes(text[index]!));
+      if (index === text.length || /\s/u.test(text[index]!)) {
+        pushTrimmed(text, start, index, ranges);
+        start = index;
+      }
+    } else {
+      index += 1;
+    }
   }
   pushTrimmed(text, start, text.length, ranges);
   return ranges;

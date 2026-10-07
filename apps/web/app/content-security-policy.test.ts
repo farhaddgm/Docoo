@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { contentSecurityPolicy, uploadOrigin } from './content-security-policy';
 
 describe('content security policy', () => {
+  it('authorizes only scripts carrying the server nonce in production', () => {
+    const policy = contentSecurityPolicy({ NODE_ENV: 'production' }, 'test-nonce');
+    expect(policy).toContain("script-src 'self' 'nonce-test-nonce'");
+    expect(policy).not.toContain("'unsafe-eval'");
+  });
   it('is same-origin only without a files host', () => {
     const policy = contentSecurityPolicy({});
     expect(policy).toContain("connect-src 'self';");
@@ -17,7 +22,8 @@ describe('content security policy', () => {
     });
     expect(policy).toContain("connect-src 'self' https://files.example.test;");
     // Nothing else is opened up.
-    expect(policy).toContain("script-src 'self' 'unsafe-inline';");
+    expect(policy).toContain("script-src 'self';");
+    expect(policy).not.toContain("script-src 'self' 'unsafe-inline'");
     expect(policy).toContain("img-src 'self' data: blob:;");
     expect(policy).not.toContain('bucket');
   });
