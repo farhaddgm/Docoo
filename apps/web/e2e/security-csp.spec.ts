@@ -18,7 +18,7 @@ test('production CSP uses unpredictable per-response nonces and blocks an inject
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/fa/auth/login');
-  await expect(page.locator('main')).toBeVisible();
+  await expect(page.locator('.auth-card')).toBeVisible();
   const blocked = await page.evaluate(
     () =>
       new Promise<boolean>((resolve) => {

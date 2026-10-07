@@ -115,6 +115,7 @@ services:
       dockerfile: Dockerfile.patched
       args:
         BASE_IMAGE: redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+        RUNTIME_USER: redis
     image: docoo-redis:${DOCOO_VERSION:-local}
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes']
@@ -131,6 +132,14 @@ services:
     volumes: [object-data:/data]
 
   object-backup:
+    user: '999:999'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs: ['/tmp:rw,nosuid,nodev,size=128m,mode=1777']
+    mem_limit: 512m
+    pids_limit: 64
+    cpus: 0.5
     networks: [backend, egress]
     # Mirrors uploads and artifacts to the off-host backup bucket every BACKUP_INTERVAL_HOURS.
     build:
@@ -172,6 +181,7 @@ services:
       dockerfile: Dockerfile.patched
       args:
         BASE_IMAGE: clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23
+        RUNTIME_USER: clamav
     image: docoo-clamav:${DOCOO_VERSION:-local}
     restart: unless-stopped
     volumes: [clamav-data:/var/lib/clamav]
@@ -184,10 +194,10 @@ services:
       dockerfile: Dockerfile.patched
       args:
         BASE_IMAGE: temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+        RUNTIME_USER: temporal
     image: docoo-temporal:${DOCOO_VERSION:-local}
     restart: unless-stopped
     command: ['server', 'start-dev', '--ip', '0.0.0.0', '--db-filename', '/data/temporal.db']
-    user: root
     volumes: [temporal-data:/data]
 
   migrate:

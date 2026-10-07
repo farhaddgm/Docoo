@@ -9,3 +9,5 @@ FROM rclone/rclone:latest@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e3
 USER root
 RUN apk upgrade --no-cache
 COPY --from=builder /out/rclone /usr/local/bin/rclone
+ENV HOME=/tmp XDG_CONFIG_HOME=/tmp/.config XDG_CACHE_HOME=/tmp/.cache RCLONE_CONFIG=/dev/null
+USER 999:999

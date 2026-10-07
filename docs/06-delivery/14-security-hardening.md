@@ -12,6 +12,8 @@ Workers use separate non-superuser logins. Migration 0040 prevents those logins 
 
 Only Caddy joins the external edge network. Data services use internal networks; PDF rendering has a separate internal network shared only with the API. Only processes requiring external services get an egress network. The renderer has no database, object-store, session, Google or master-key credentials. Chromium's JavaScript and requests are disabled; its `--no-sandbox` process runs within the restricted non-root container. Container restrictions do not replace the Chromium sandbox.
 
+Redis, Temporal, the scanner and the object-backup tool also run as non-root users. The installer adjusts ownership of only the existing Docoo Temporal and signature volumes before starting those images. PostgreSQL and object-backup share UID 999 for the heartbeat volume.
+
 Application containers enforce resource limits and read-only roots with bounded temporary storage. The renderer accepts one job at a time and returns 429 while busy. Increase limits only after measuring actual workloads and available host resources. Readiness, rather than liveness, controls API health during deployment.
 
 ## Independent monitoring and mail
