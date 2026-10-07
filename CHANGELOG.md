@@ -2,6 +2,24 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.21.0] — 2026-10-07
+
+Agents can now call tools themselves, ask the administrator a question in the middle of a stage, and the back office tells the administrator when something waits for them. Every requirement now has an honest, checked status. See [ADR-0023](docs/adr/0023-agent-tool-calling.md), [ADR-0024](docs/adr/0024-analyst-question-quality.md) and [ADR-0025](docs/adr/0025-notifications.md).
+
+### Added
+
+- **Tool calling by the model.** The provider contract carries tools, tool calls and tool results; the OpenAI, Gemini and Anthropic adapters and the offline fake model speak it (`tools` and a response schema are mutually exclusive). A stage's agent may call `knowledge_retrieve`, `project_documents_read`, `calculator` (a hand-written parser, no `eval`) and `request_human_input`. Every call passes a gate (the role's allowlist inside the role ceiling, argument checks, a cap of `agents.max_tool_calls`) and is written to the `agent_tool_calls` ledger, a refused call too. Off unless `agents.tool_calling` is on.
+- **Agents ask the administrator.** `request_human_input` stops the stage until the administrator answers on the workflow tab (`POST /projects/{id}/agent-questions/{id}/answer`); the answer reaches the agent as data, never as instructions (`agents.max_human_questions`). Migrations 0031 to 0033.
+- **Analyst question quality.** In the Problem tab, one click has Brain judge the analyst's questions with a model: a score, weaknesses and strengths with the numbers of the questions they rest on, for the aspects chosen in `analysis.quality_criteria`. A finding without a real question number is discarded and the answers are never sent to the model. Migrations 0034 and 0035.
+- **Notifications.** Database triggers raise a notification for each human task, finished run and finished document writing. A bell in the top bar counts the unread ones and a Notifications page lists them. Email is off by default (`notifications.email_enabled`, `notifications.email_kinds`), names only the kind of event and the project code, and goes out through an outbox with three attempts. Migrations 0036 and 0037.
+- **Requirement traceability gate.** `pnpm qa:trace` (a CI step) checks `qa/traceability.json` against all 154 FR and NFR requirements: 124 tested, 12 operational, 18 waived with a reason; the waiver count cannot grow past its budget.
+- A tenth step of the provider acceptance check exercises tool calling.
+
+### Changed
+
+- The Smart walker links every one of its twelve steps to a page (settings, knowledge sources, knowledge).
+- The retention purge also removes closed (fixed or ignored) error-log entries last seen more than `retention.app_errors_days` ago (default 90); an open entry is never deleted and a trigger makes the purge the only way to delete one (migration 0038). The response gains `appErrors`.
+
 ## [0.20.0] — 2026-10-06
 
 Model prices can be read from a public catalog instead of being typed in. See [ADR-0022](docs/adr/0022-model-prices-from-public-catalog.md). Nothing is saved on its own: the administrator sees each price next to the current one and chooses.
