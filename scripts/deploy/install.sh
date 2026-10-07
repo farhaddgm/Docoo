@@ -32,9 +32,12 @@ secret() { openssl rand -base64 "${1:-32}" | tr -d '\n'; }
 alnum() { openssl rand -hex "${1:-24}"; }
 
 install_docker() {
+  if ! command -v python3 >/dev/null 2>&1; then
+    apt-get update -y && apt-get install -y python3
+  fi
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then return; fi
   say "Installing Docker…"
-  apt-get update -y && apt-get install -y ca-certificates curl openssl
+  apt-get update -y && apt-get install -y ca-certificates curl openssl python3
   curl -fsSL https://get.docker.com | sh
   systemctl enable --now docker
 }
@@ -204,7 +207,15 @@ wait_healthy() { # 0 when the API reports healthy within ten minutes
 
 start() {
   say "Building and starting Docoo (the first time takes 10–20 minutes)…"
+  docker run --rm --user 0 -v "$root:/workspace" -w /workspace node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 node scripts/deploy/prepare-secrets.mjs deploy
   "${compose[@]}" build
+  # Existing persistent data may have been created by root in pre-v0.23 images.
+  # Only these two Docoo volumes are touched; no application secret is mounted.
+  docker run --rm --network none --user 0 --cap-drop ALL --cap-add CHOWN \
+    --mount type=volume,source=docoo_temporal-data,target=/temporal \
+    --mount type=volume,source=docoo_clamav-data,target=/clamav \
+    --entrypoint sh "docoo-temporal:${DOCOO_VERSION:-local}" \
+    -c 'chown -R 1000:1000 /temporal && chown -R 100:101 /clamav'
   "${compose[@]}" up -d
   wait_healthy && return
   "${compose[@]}" logs --tail 50 migrate api
@@ -293,6 +304,9 @@ update() {
   latest=${DOCOO_UPDATE_REF:-$(latest_release)}
   running=$(env_value DOCOO_VERSION)
   ensure_disk_space "$running" || exit "$exit_no_space"
+  if [ -n "$latest" ] && [ -z "${DOCOO_UPDATE_REF:-}" ]; then
+    python3 "$root/scripts/deploy/verify-release.py" "$latest" "$(git -C "$root" rev-list -n 1 "$latest")"
+  fi
   [ -n "$latest" ] && git -C "$root" checkout --quiet "$latest"
   sed -i "s/^DOCOO_VERSION=.*/DOCOO_VERSION=${latest:-local}/" "$deploy/.env"
   set -a; . "$deploy/.env"; set +a

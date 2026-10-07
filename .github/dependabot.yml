@@ -9,3 +9,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: docker
+    directories:
+      - /infra/docker
+      - /infra/postgres
+      - /deploy
+      - /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

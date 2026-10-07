@@ -22,6 +22,7 @@ export class SecretKeyError extends Error {}
 export interface MasterKey {
   readonly id: string;
   readonly key: Buffer;
+  readonly previous?: ReadonlyMap<string, Buffer>;
 }
 
 export function masterKeyFromEnv(env: NodeJS.ProcessEnv = process.env): MasterKey | null {
@@ -30,7 +31,26 @@ export function masterKeyFromEnv(env: NodeJS.ProcessEnv = process.env): MasterKe
   const key = Buffer.from(raw, 'base64');
   if (key.length !== 32)
     throw new SecretKeyError('SECRET_MASTER_KEY must be 32 bytes, base64 encoded.');
+  const previous = new Map<string, Buffer>();
+  const history: unknown = JSON.parse(env['SECRET_PREVIOUS_MASTER_KEYS'] ?? '{}');
+  if (
+    !history ||
+    typeof history !== 'object' ||
+    Array.isArray(history) ||
+    Object.keys(history).length > 5
+  )
+    throw new SecretKeyError('Invalid previous master key configuration.');
+  for (const [id, value] of Object.entries(history)) {
+    if (
+      typeof value !== 'string' ||
+      !/^[A-Za-z0-9_-]{1,100}$/u.test(id) ||
+      Buffer.from(value, 'base64').length !== 32
+    )
+      throw new SecretKeyError('Invalid previous master key configuration.');
+    previous.set(id, Buffer.from(value, 'base64'));
+  }
   return {
+    previous,
     id:
       env['SECRET_MASTER_KEY_ID'] ??
       `mk-${createHash('sha256').update(key).digest('hex').slice(0, 8)}`,
@@ -89,10 +109,12 @@ export function decryptSecret(
   master: MasterKey,
   context: string,
 ): string {
-  if (encrypted.keyId !== master.id)
-    throw new SecretKeyError('The secret was sealed with a different master key.');
+  const wrappingKey =
+    encrypted.keyId === master.id ? master.key : master.previous?.get(encrypted.keyId);
+  if (!wrappingKey)
+    throw new SecretKeyError('The secret was sealed with an unavailable master key.');
   const dataKey = open(
-    master.key,
+    wrappingKey,
     { data: encrypted.wrappedKey, iv: encrypted.wrapIv, tag: encrypted.wrapTag },
     `${context}|key`,
   );
@@ -115,4 +137,31 @@ export function sanitizeError(message: string, secrets: readonly string[] = []):
     .replace(/(sk|key|AIza|xai|ant)[-_A-Za-z0-9]{12,}/gu, '[REDACTED]')
     .replace(/(bearer\s+)[^\s"']+/giu, '$1[REDACTED]')
     .slice(0, 300);
+}
+
+/** Change only the envelope wrapping: plaintext provider credentials never leave the cipher. */
+export function rewrapSecret(
+  encrypted: EncryptedSecret,
+  master: MasterKey,
+  context: string,
+): EncryptedSecret {
+  const oldKey = encrypted.keyId === master.id ? master.key : master.previous?.get(encrypted.keyId);
+  if (!oldKey) throw new SecretKeyError('The previous master key is unavailable.');
+  const dataKey = open(
+    oldKey,
+    { data: encrypted.wrappedKey, iv: encrypted.wrapIv, tag: encrypted.wrapTag },
+    `${context}|key`,
+  );
+  try {
+    const wrapped = seal(master.key, dataKey, `${context}|key`);
+    return {
+      ...encrypted,
+      wrappedKey: wrapped.data,
+      wrapIv: wrapped.iv,
+      wrapTag: wrapped.tag,
+      keyId: master.id,
+    };
+  } finally {
+    dataKey.fill(0);
+  }
 }

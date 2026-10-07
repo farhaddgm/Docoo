@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { errorMessage, problemCode, type Locale } from '../i18n';
 import type { SessionIdentity } from './signed-in';
 
@@ -12,6 +12,22 @@ export function AccountSecurity({
   user: SessionIdentity['user'];
 }) {
   const fa = locale === 'fa';
+  const [emailConfigured, setEmailConfigured] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!user.isOwner) return;
+    let active = true;
+    void fetch('/api/me/security-status', { cache: 'no-store' })
+      .then(async (response) => {
+        if (response.ok && active)
+          setEmailConfigured(
+            ((await response.json()) as { emailConfigured: boolean }).emailConfigured,
+          );
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [user.isOwner]);
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -83,6 +99,13 @@ export function AccountSecurity({
   return (
     <section className="card security-card">
       <h2>{fa ? 'حساب و امنیت' : 'Account and security'}</h2>
+      {emailConfigured === false && (
+        <p role="status" className="notice">
+          {fa
+            ? 'ارسال ایمیل هنوز راه‌اندازی نشده است. لینک بازیابی رمز باید از پشتیبانی دریافت شود. هشدارهای پایش سرویس در GitHub ثبت می‌شوند.'
+            : 'Email delivery is not configured. Request password recovery from the operator. Service monitoring alerts are recorded in GitHub.'}
+        </p>
+      )}
       <dl className="account-profile">
         <dt>{fa ? 'ایمیل' : 'Email'}</dt>
         <dd dir="ltr">{user.email}</dd>

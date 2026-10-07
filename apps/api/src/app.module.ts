@@ -8,6 +8,7 @@ import { ConfigModule } from './config/config.module.js';
 import { CoreModule } from './core.module.js';
 import { DocumentsModule } from './documents/documents.module.js';
 import { HealthController } from './health.controller.js';
+import { SecurityHealthController } from './security-health.controller.js';
 import { HealthService } from './health.service.js';
 import { KnowledgeModule } from './knowledge/knowledge.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
@@ -41,7 +42,7 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
     SmartModule,
     NotificationsModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, SecurityHealthController],
   providers: [HealthService],
 })
 export class AppModule {}

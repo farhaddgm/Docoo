@@ -5,11 +5,16 @@ name: docoo
 
 x-app: &app
   restart: unless-stopped
-  env_file: .env.production
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  pids_limit: 256
+  mem_limit: 2g
+  cpus: 1.0
+  tmpfs: ['/tmp:rw,nosuid,nodev,size=512m,mode=1777']
   environment: &app-env
     NODE_ENV: production
     WEB_ORIGIN: https://${DOMAIN}
-    DATABASE_URL: postgresql://docoo_runtime:${POSTGRES_RUNTIME_PASSWORD}@postgres:5432/docoo
     REDIS_URL: redis://redis:6379
     TEMPORAL_ADDRESS: temporal:7233
     CLAMD_HOST: clamav
@@ -20,6 +25,7 @@ x-app: &app
     S3_ACCESS_KEY_ID: docoo
     S3_FORCE_PATH_STYLE: 'true'
     TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
+    NODE_OPTIONS: --max-old-space-size=768
   logging:
     driver: json-file
     options: { max-size: 20m, max-file: '5' }
@@ -34,7 +40,8 @@ x-walg: &walg
 
 services:
   caddy:
-    image: caddy:2
+    networks: [default, frontend, files]
+    image: caddy:2@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772
     restart: unless-stopped
     ports: ['80:80', '443:443']
     environment:
@@ -48,6 +55,8 @@ services:
     depends_on: [web, api, object-store]
 
   postgres:
+    # Preserve the existing outbound WAL-G archive path; no host ports are published.
+    networks: [backend, egress]
     build: ../infra/postgres
     image: docoo-postgres:${DOCOO_VERSION:-local}
     restart: unless-stopped
@@ -78,6 +87,7 @@ services:
       retries: 30
 
   backup:
+    networks: [backend, egress]
     image: docoo-postgres:${DOCOO_VERSION:-local}
     pull_policy: never
     restart: unless-stopped
@@ -94,17 +104,26 @@ services:
       BACKUP_RETAIN_FULL: ${BACKUP_RETAIN_FULL:-7}
     volumes:
       - postgres-data:/var/lib/postgresql:ro
+      - backup-heartbeat:/heartbeat
     depends_on:
       postgres: { condition: service_healthy }
 
   redis:
-    image: redis:7.4-alpine
+    networks: [backend]
+    build:
+      context: ../infra/docker
+      dockerfile: Dockerfile.patched
+      args:
+        BASE_IMAGE: redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+        RUNTIME_USER: redis
+    image: docoo-redis:${DOCOO_VERSION:-local}
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes']
     volumes: [redis-data:/data]
 
   object-store:
-    image: chrislusf/seaweedfs:latest
+    networks: [backend, files]
+    image: chrislusf/seaweedfs:latest@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
     restart: unless-stopped
     command: ['mini', '-dir=/data']
     environment:
@@ -113,8 +132,20 @@ services:
     volumes: [object-data:/data]
 
   object-backup:
+    user: '999:999'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs: ['/tmp:rw,nosuid,nodev,size=128m,mode=1777']
+    mem_limit: 512m
+    pids_limit: 64
+    cpus: 0.5
+    networks: [backend, egress]
     # Mirrors uploads and artifacts to the off-host backup bucket every BACKUP_INTERVAL_HOURS.
-    image: rclone/rclone:latest
+    build:
+      context: ../infra/docker
+      dockerfile: Dockerfile.rclone
+    image: docoo-object-backup:${DOCOO_VERSION:-local}
     restart: unless-stopped
     entrypoint: ['/bin/sh', '-c']
     command:
@@ -122,7 +153,7 @@ services:
         if [ -z "$$BACKUP_S3_PREFIX" ]; then echo 'object-backup: backups not configured'; exec sleep infinity; fi
         dest="$${BACKUP_S3_PREFIX#s3://}/objects"
         while true; do
-          rclone sync src:docoo "dst:$$dest" --checksum && echo '{"event":"object_backup.completed"}'
+          rclone sync src:docoo "dst:$$dest" --checksum && date +%s > /heartbeat/objects-success && echo '{"event":"object_backup.completed"}'
           sleep $$(( $${BACKUP_INTERVAL_HOURS:-24} * 3600 ))
         done
     environment:
@@ -139,39 +170,65 @@ services:
       RCLONE_CONFIG_DST_REGION: ${BACKUP_S3_REGION:-us-east-1}
       RCLONE_CONFIG_DST_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:-}
       RCLONE_CONFIG_DST_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
+    volumes: [backup-heartbeat:/heartbeat]
     depends_on: [object-store]
 
   clamav:
+    networks: [backend, egress]
     # Official signatures, refreshed by freshclam inside the container.
-    image: clamav/clamav:1.4
+    build:
+      context: ../infra/docker
+      dockerfile: Dockerfile.patched
+      args:
+        BASE_IMAGE: clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23
+        RUNTIME_USER: clamav
+    image: docoo-clamav:${DOCOO_VERSION:-local}
     restart: unless-stopped
     volumes: [clamav-data:/var/lib/clamav]
 
   temporal:
+    networks: [backend]
     # Single-node Temporal with a persistent SQLite store, sized for the private beta.
-    image: temporalio/temporal:latest
+    build:
+      context: ../infra/docker
+      dockerfile: Dockerfile.patched
+      args:
+        BASE_IMAGE: temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+        RUNTIME_USER: temporal
+    image: docoo-temporal:${DOCOO_VERSION:-local}
     restart: unless-stopped
     command: ['server', 'start-dev', '--ip', '0.0.0.0', '--db-filename', '/data/temporal.db']
-    user: root
     volumes: [temporal-data:/data]
 
   migrate:
     <<: *app
+    env_file: [{ path: .env.api, format: raw }]
+    networks: [backend]
     image: docoo-api:${DOCOO_VERSION:-local}
     pull_policy: never
     restart: 'no'
     environment:
       <<: *app-env
       DATABASE_ADMIN_URL: postgresql://docoo_admin:${POSTGRES_PASSWORD}@postgres:5432/docoo
-    command: ['sh', '-c', 'exec node node_modules/@docoo/database/dist/src/migrate.js']
+      POSTGRES_AGENT_PASSWORD: ${POSTGRES_AGENT_PASSWORD}
+      POSTGRES_INGESTION_PASSWORD: ${POSTGRES_INGESTION_PASSWORD}
+    command:
+      [
+        'sh',
+        '-c',
+        'node node_modules/@docoo/database/dist/src/migrate.js && exec node scripts/configure-worker-roles.mjs',
+      ]
     depends_on:
       postgres: { condition: service_healthy }
 
   api:
     <<: *app
+    volumes: [backup-heartbeat:/run/docoo-backup:ro]
+    networks: [frontend, backend, renderer, egress]
     # Google credentials belong only to the API, never to the browser or workers.
     env_file:
-      - path: .env.production
+      - path: .env.api
+        format: raw
       - path: .env.google
         required: false
     build:
@@ -180,11 +237,10 @@ services:
       args:
         PACKAGE: '@docoo/api'
         START: --import ./dist/instrumentation.js dist/main.js
-        SYSTEM_PACKAGES: chromium fonts-noto-core
     image: docoo-api:${DOCOO_VERSION:-local}
     environment:
       <<: *app-env
-      PLAYWRIGHT_CHROMIUM_EXECUTABLE: /usr/bin/chromium
+      PDF_RENDERER_URL: http://document-renderer:4100
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_started }
@@ -195,7 +251,7 @@ services:
           'CMD',
           'node',
           '-e',
-          "fetch('http://127.0.0.1:4000/v1/health/live').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+          "fetch('http://127.0.0.1:4000/v1/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
@@ -203,6 +259,18 @@ services:
 
   web:
     <<: *app
+    env_file: [{ path: .env.web, format: raw }]
+    environment:
+      NODE_ENV: production
+      S3_PUBLIC_ENDPOINT: https://${FILES_DOMAIN}
+      NODE_OPTIONS: --max-old-space-size=512
+    networks: [frontend]
+    mem_limit: 1g
+    tmpfs:
+      [
+        '/tmp:rw,nosuid,nodev,size=128m,mode=1777',
+        '/service/.next/cache:rw,nosuid,nodev,size=128m,uid=1000,gid=1000',
+      ]
     build:
       context: ..
       dockerfile: infra/docker/Dockerfile.node
@@ -214,6 +282,8 @@ services:
 
   worker-agent:
     <<: *app
+    env_file: [{ path: .env.worker-agent, format: raw }]
+    networks: [backend, egress]
     build:
       context: ..
       dockerfile: infra/docker/Dockerfile.node
@@ -225,6 +295,8 @@ services:
 
   worker-ingestion:
     <<: *app
+    env_file: [{ path: .env.worker-ingestion, format: raw }]
+    networks: [backend, egress]
     build:
       context: ..
       dockerfile: infra/docker/Dockerfile.node
@@ -235,6 +307,47 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
 
+  document-renderer:
+    <<: *app
+    env_file: [{ path: .env.document-renderer, format: raw }]
+    environment:
+      NODE_ENV: production
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE: /usr/bin/chromium
+      HOME: /tmp
+      NODE_OPTIONS: --max-old-space-size=512
+    networks: [renderer]
+    shm_size: 256m
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.node
+      args:
+        PACKAGE: '@docoo/document-renderer'
+        SYSTEM_PACKAGES: chromium fonts-noto-core
+    image: docoo-document-renderer:${DOCOO_VERSION:-local}
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4100/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+networks:
+  default:
+  frontend:
+    internal: true
+  backend:
+    internal: true
+  files:
+    internal: true
+  renderer:
+    internal: true
+  egress:
+
 volumes:
   caddy-data:
   caddy-config:
@@ -243,3 +356,4 @@ volumes:
   object-data:
   clamav-data:
   temporal-data:
+  backup-heartbeat:

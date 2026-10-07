@@ -25,7 +25,7 @@ jobs:
       matrix:
         mode: [direct, edge]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - name: Free disk space on the runner
@@ -41,7 +41,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/edge"
           printf 'other.localhost {\n\trespond "other site"\n}\n' > "$RUNNER_TEMP/edge/Caddyfile"
           docker run -d --name existing-proxy -p 80:80 -p 443:443 \
-            -v "$RUNNER_TEMP/edge/Caddyfile:/etc/caddy/Caddyfile" caddy:2
+            -v "$RUNNER_TEMP/edge/Caddyfile:/etc/caddy/Caddyfile" caddy:2@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772
       - name: Install the production stack (unattended)
         env:
           DOCOO_UNATTENDED: '1'
@@ -121,7 +121,14 @@ jobs:
         run: |
           set -euo pipefail
           c=(sudo docker compose --project-directory deploy -f deploy/compose.production.yaml)
-          "${c[@]}" exec -T api /usr/bin/chromium --version
+          "${c[@]}" exec -T document-renderer /usr/bin/chromium --version
+          "${c[@]}" exec -T api node --input-type=module -e '
+            import {renderPdf} from "@docoo/documents";
+            const pdf=await renderPdf("<h1>Isolated PDF</h1>",{documentId:"00000000-0000-4000-8000-000000000000",version:1,createdAt:"2026-10-07"});
+            if (Buffer.from(pdf).subarray(0,5).toString()!=="%PDF-") process.exit(1);
+            console.log("Authenticated isolated PDF rendering passed: "+pdf.length+" bytes");'
+          "${c[@]}" exec -T web node -e 'for(const k of ["DATABASE_URL","SESSION_PEPPER","SECRET_MASTER_KEY","GOOGLE_CLIENT_SECRET","S3_SECRET_ACCESS_KEY"]) if(process.env[k]) process.exit(1)'
+          "${c[@]}" exec -T worker-ingestion node -e 'for(const k of ["SESSION_PEPPER","SECRET_MASTER_KEY","GOOGLE_CLIENT_SECRET"]) if(process.env[k]) process.exit(1)'
           "${c[@]}" exec -T worker-ingestion tesseract --list-langs | grep -x fas
           curl -sk -o /dev/null -w 'files host %{http_code}\n' https://files.localhost/
           # The browser uploads answer files straight to this host from the app's own origin.
@@ -137,10 +144,10 @@ jobs:
         run: |
           set -euo pipefail
           c=(sudo docker compose --project-directory deploy -f deploy/compose.production.yaml)
-          sudo docker run --rm --network docoo_default \
+          sudo docker run --rm --network docoo_backend \
             -e RCLONE_CONFIG_S_TYPE=s3 -e RCLONE_CONFIG_S_PROVIDER=Other -e RCLONE_CONFIG_S_ENDPOINT=http://object-store:8333 \
             -e RCLONE_CONFIG_S_ACCESS_KEY_ID=docoo -e RCLONE_CONFIG_S_SECRET_ACCESS_KEY=deploy-smoke-object-secret \
-            rclone/rclone:latest mkdir s:docoo-backups
+            rclone/rclone:latest@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5 mkdir s:docoo-backups
           "${c[@]}" restart backup object-backup
           for i in $(seq 1 60); do
             "${c[@]}" logs backup | grep -q backup.completed && break
@@ -148,6 +155,12 @@ jobs:
           done
           "${c[@]}" logs backup | tail -5
           "${c[@]}" exec -T backup wal-g backup-list
+          "${c[@]}" exec -T api node -e '
+            const fs=require("node:fs");
+            const last=Number(fs.readFileSync("/run/docoo-backup/database-success","utf8"));
+            if(!Number.isFinite(last)||Date.now()/1000-last>600) process.exit(1);
+            console.log("Database backup heartbeat is readable by the restricted API");'
+
           "${c[@]}" exec -T postgres psql -U docoo_admin -d docoo -tAc "select pg_switch_wal()" >/dev/null
           sleep 10
           "${c[@]}" exec -T postgres psql -U docoo_admin -d docoo -tAc \

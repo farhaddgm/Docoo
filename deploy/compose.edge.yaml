@@ -8,3 +8,5 @@ services:
     networks:
       default:
         aliases: [docoo-edge]
+      frontend: {}
+      files: {}

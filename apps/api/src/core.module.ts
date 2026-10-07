@@ -19,6 +19,7 @@ import { API_CONFIG, DATABASE_POOL } from './tokens.js';
         new Pool({
           connectionString: config.DATABASE_URL,
           max: 10,
+          connectionTimeoutMillis: 5000,
           application_name: 'docoo-api',
           statement_timeout: 15_000,
         }),

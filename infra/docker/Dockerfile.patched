@@ -1,0 +1,15 @@
+# Preserve the upstream entrypoint while applying available OS security patches.
+ARG BASE_IMAGE=redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+FROM ${BASE_IMAGE}
+USER root
+ARG RUNTIME_USER=redis
+RUN apk upgrade --no-cache && \
+    if id clamav >/dev/null 2>&1; then \
+      mkdir -p /run/clamav /run/lock && \
+      chown -R clamav:clamav /run/clamav /etc/clamav /var/lib/clamav && \
+      ln -sf /run/lock /var/lock && \
+      sed -i '/^chown -R clamav:clamav/d; /ln -f -s/d' /init; \
+    elif id temporal >/dev/null 2>&1; then \
+      mkdir -p /data && chown temporal:temporal /data; \
+    fi
+USER ${RUNTIME_USER}

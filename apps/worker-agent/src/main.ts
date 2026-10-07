@@ -61,6 +61,7 @@ async function main(): Promise<void> {
   const worker = await Worker.create({
     connection,
     namespace: process.env['TEMPORAL_NAMESPACE'] ?? 'default',
+    maxConcurrentActivityTaskExecutions: Number(process.env['AGENT_CONCURRENCY'] ?? 4),
     taskQueue: AGENT_TASK_QUEUE,
     workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
     activities: createOrchestrationActivities(pool, new ProviderRuntime(pool, masterKey)),

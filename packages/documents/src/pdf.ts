@@ -10,12 +10,65 @@ export class RendererUnavailableError extends Error {}
  * comes from `PLAYWRIGHT_CHROMIUM_EXECUTABLE` or the Playwright browser cache.
  */
 export async function renderPdf(html: string, meta: RenderMeta): Promise<Uint8Array> {
+  const endpoint = process.env['PDF_RENDERER_URL'];
+  if (!endpoint) {
+    if (process.env['NODE_ENV'] === 'production')
+      throw new RendererUnavailableError('Isolated PDF renderer is not configured.');
+    return renderPdfLocally(html, meta);
+  }
+  const token = process.env['PDF_RENDERER_TOKEN'];
+  if (!token || token.length < 32)
+    throw new RendererUnavailableError('PDF renderer authentication is not configured.');
+  try {
+    const response = await fetch(new URL('/render', endpoint), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ html, meta }),
+      signal: AbortSignal.timeout(35_000),
+      redirect: 'error',
+    });
+    if (
+      !response.ok ||
+      response.headers.get('content-type') !== 'application/pdf' ||
+      !response.body
+    )
+      throw new Error('Invalid renderer response');
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    const reader = response.body.getReader();
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        const chunk: unknown = part.value;
+        if (!(chunk instanceof Uint8Array)) throw new Error('Invalid PDF chunk');
+        size += chunk.length;
+        if (size > 20 * 1024 * 1024) {
+          await reader.cancel();
+          throw new Error('PDF too large');
+        }
+        chunks.push(chunk);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    const pdf = Buffer.concat(chunks);
+    if (!pdf.subarray(0, 5).equals(Buffer.from('%PDF-'))) throw new Error('Invalid PDF');
+    return pdf;
+  } catch {
+    throw new RendererUnavailableError('Isolated PDF rendering failed.');
+  }
+}
+
+/** Only the isolated renderer (or a development test) calls Chromium directly. */
+export async function renderPdfLocally(html: string, meta: RenderMeta): Promise<Uint8Array> {
   const { chromium } = await import('playwright-core');
   const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'] || undefined;
   let browser;
   try {
     browser = await chromium.launch({
       headless: true,
+      timeout: 10_000,
       ...(executablePath ? { executablePath } : {}),
       args: ['--no-sandbox'],
     });
@@ -24,9 +77,13 @@ export async function renderPdf(html: string, meta: RenderMeta): Promise<Uint8Ar
       error instanceof Error ? error.message.split('\n')[0] : 'chromium unavailable',
     );
   }
+  const deadline = setTimeout(() => {
+    void browser.close().catch(() => undefined);
+  }, 25_000);
   try {
     const context = await browser.newContext({ javaScriptEnabled: false, offline: true });
     const page = await context.newPage();
+    page.setDefaultTimeout(10_000);
     await page.route('**/*', (route) =>
       route.request().url().startsWith('data:') ? route.continue() : route.abort(),
     );
@@ -44,6 +101,7 @@ export async function renderPdf(html: string, meta: RenderMeta): Promise<Uint8Ar
     });
     return new Uint8Array(pdf);
   } finally {
+    clearTimeout(deadline);
     await browser.close();
   }
 }

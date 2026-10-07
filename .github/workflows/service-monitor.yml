@@ -1,0 +1,33 @@
+name: Service security monitor
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      delivery_test:
+        description: Create and close a clearly labelled notification test issue; still check the live service normally.
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+  issues: write
+concurrency:
+  group: service-security-monitor
+  cancel-in-progress: false
+jobs:
+  monitor:
+    if: github.event_name == 'workflow_dispatch' || vars.SECURITY_MONITOR_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.x
+      - run: node scripts/security/monitor.mjs
+        env:
+          DOCOO_MONITOR_URL: https://docoo.beeproject.ir
+          SECURITY_MONITOR_TOKEN: ${{ secrets.SECURITY_MONITOR_TOKEN }}
+          DOCOO_MONITOR_DELIVERY_TEST: ${{ inputs.delivery_test || 'false' }}
+          GITHUB_TOKEN: ${{ github.token }}

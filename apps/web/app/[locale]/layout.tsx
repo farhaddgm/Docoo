@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
 
 import '@fontsource-variable/vazirmatn/wght.css';
@@ -28,6 +29,7 @@ export default async function RootLayout({
   children,
   params,
 }: Readonly<{ children: ReactNode; params: Promise<{ locale: string }> }>) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
@@ -35,7 +37,7 @@ export default async function RootLayout({
     // The theme script sets data-theme on <html> before React hydrates it.
     <html lang={locale} dir={direction(locale)} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>{children}</body>
     </html>

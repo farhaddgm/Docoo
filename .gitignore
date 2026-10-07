@@ -24,3 +24,6 @@ test-results
 deploy/.env
 deploy/.env.production
 deploy/.admin
+
+__pycache__/
+*.pyc

@@ -1,0 +1,14 @@
+# Rebuild the reviewed release with the patched gRPC dependency and current Go runtime.
+FROM golang:1.27-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS builder
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOPROXY="https://proxy.golang.org|direct" GOFLAGS=-mod=mod GOMAXPROCS=2
+RUN apk add --no-cache git
+ADD --checksum=sha256:7c2ceafb4e4204c04469bee42f8c852a4ffd0019090d0095261225ce403c4845 https://codeload.github.com/rclone/rclone/tar.gz/687d264b689b8c49a67e2e52a8a5e0caa01c04ce /tmp/source.tgz
+WORKDIR /source
+RUN tar -xzf /tmp/source.tgz --strip-components=1 -C /source && rm /tmp/source.tgz
+RUN go get google.golang.org/grpc@v1.84.0 && go build -p 2 -trimpath -buildvcs=false -ldflags '-s -w' -o /out/rclone .
+FROM rclone/rclone:latest@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+USER root
+RUN apk upgrade --no-cache
+COPY --from=builder /out/rclone /usr/local/bin/rclone
+ENV HOME=/tmp XDG_CONFIG_HOME=/tmp/.config XDG_CACHE_HOME=/tmp/.cache RCLONE_CONFIG=/dev/null
+USER 999:999

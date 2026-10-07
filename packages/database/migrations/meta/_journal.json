@@ -281,6 +281,13 @@
       "when": 1791317948884,
       "tag": "0039_app_errors_retention",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791360000000,
+      "tag": "0040_security_monitor",
+      "breakpoints": true
     }
   ]
 }

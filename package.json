@@ -1,6 +1,6 @@
 {
   "name": "docoo",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "private": true,
   "description": "Docoo product and engineering monorepo",
   "license": "UNLICENSED",
@@ -35,7 +35,8 @@
     "stack:up": "docker compose up -d postgres redis object-store temporal temporal-ui malware-scanner",
     "stack:observability": "docker compose --profile observability up -d",
     "stack:down": "docker compose down",
-    "owner:check": "node scripts/owner/check-github.mjs"
+    "owner:check": "node scripts/owner/check-github.mjs",
+    "security:test": "node --test scripts/deploy/prepare-secrets.test.mjs scripts/security/monitor.test.mjs && python3 scripts/deploy/verify-release.test.py"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
