@@ -104,6 +104,7 @@ const knowledgeTables = [
   'agent_tool_calls',
   'agent_questions',
   'question_quality_reviews',
+  'notifications',
   'contenter_connections',
   'business_snapshots',
   'project_businesses',
@@ -1356,8 +1357,81 @@ try {
     },
   );
 
+  // Notifications (ADR-0025): made by triggers, tenant-scoped, only the read mark and the mail
+  // bookkeeping can change.
+  const notifyDocument = await admin.query(
+    `INSERT INTO documents (workspace_id, project_id, priority, title, level, language) VALUES ($1, $2, 2, 'notify', 1, 'en') RETURNING id`,
+    [ids.workspaceA, ids.projectA],
+  );
+  const notifyWriting = await admin.query(
+    `INSERT INTO document_writings (workspace_id, project_id, document_id, level, template_version, language, temporal_workflow_id)
+     VALUES ($1, $2, $3, 1, 'standard-v1', 'en', 'document-writing-notify') RETURNING id`,
+    [ids.workspaceA, ids.projectA, notifyDocument.rows[0].id],
+  );
+  await admin.query(
+    `UPDATE document_writings SET status = 'failed', error_code = 'provider_failure' WHERE id = $1`,
+    [notifyWriting.rows[0].id],
+  );
+  const fromWriting = await admin.query(
+    `SELECT kind, project_id, payload FROM notifications WHERE ref_id = $1`,
+    [notifyWriting.rows[0].id],
+  );
+  assert.equal(fromWriting.rowCount, 1, 'a failed writing is one notification');
+  assert.equal(fromWriting.rows[0].kind, 'writing_failed');
+  assert.equal(fromWriting.rows[0].project_id, ids.projectA);
+  assert.equal(fromWriting.rows[0].payload.documentId, notifyDocument.rows[0].id);
+  const humanTask = await admin.query(
+    `INSERT INTO human_tasks (workspace_id, project_id, kind, title, payload)
+     VALUES ($1, $2, 'gate_review', 'Review', '{}'::jsonb) RETURNING id`,
+    [ids.workspaceA, ids.projectA],
+  );
+  const fromTask = await admin.query(
+    `SELECT kind, project_id FROM notifications WHERE ref_id = $1`,
+    [humanTask.rows[0].id],
+  );
+  assert.deepEqual(fromTask.rows, [{ kind: 'gate_review', project_id: ids.projectA }]);
+  const visibleToB = await withContext(ids.workspaceB, ids.actorB, () =>
+    runtime.query('SELECT count(*)::int AS count FROM notifications'),
+  );
+  assert.equal(visibleToB.rows[0].count, 0, 'Notifications must not leak across tenants.');
+  const visibleToA = await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query('SELECT count(*)::int AS count FROM notifications WHERE ref_id = $1', [
+      humanTask.rows[0].id,
+    ]),
+  );
+  assert.equal(visibleToA.rows[0].count, 1);
+  // The event never changes; the read mark and the mail columns do.
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'UPDATE notifications SET kind = $1', [
+    'gate_review',
+  ]);
+  await expectSqlState('42501', ids.workspaceA, ids.actorA, 'DELETE FROM notifications');
+  await withContext(ids.workspaceA, ids.actorA, () =>
+    runtime.query(`UPDATE notifications SET read_at = now(), read_by = $2 WHERE ref_id = $1`, [
+      humanTask.rows[0].id,
+      ids.actorA,
+    ]),
+  );
+  for (const [label, sql] of [
+    ['unknown mail status', `UPDATE notifications SET email_status = 'later' WHERE ref_id = $1`],
+    ['sent without a time', `UPDATE notifications SET email_status = 'sent' WHERE ref_id = $1`],
+    ['a reader without a time', `UPDATE notifications SET read_at = NULL WHERE ref_id = $1`],
+  ]) {
+    await assert.rejects(admin.query(sql, [humanTask.rows[0].id]), (error) => {
+      assert.equal(error.code, '23514', label);
+      return true;
+    });
+  }
+  // The mailer finds workspaces with pending mail without being in any of them.
+  const pending = await withContext(null, null, () =>
+    runtime.query('SELECT workspace_id FROM app.workspaces_with_pending_mail()'),
+  );
+  assert.ok(
+    pending.rows.some((row) => row.workspace_id === ids.workspaceA),
+    'the mailer sees a workspace with pending mail',
+  );
+
   console.log(
-    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent, tool-call, agent-question, question-quality and Contenter business tables, and auth workspace lookup.',
+    'RLS integration passed: PostgreSQL 18 migration, tenant reads/writes, link integrity, audit, config history, knowledge, ingestion, orchestration, document, document-writing, analysis, agent, tool-call, agent-question, question-quality, notification and Contenter business tables, and auth workspace lookup.',
   );
 } finally {
   if (runtime) {

@@ -274,3 +274,12 @@ Cursor opaque، `limit` سقف ۱۰۰، sort allowlist. filter fieldها schema-
 - خطاها: `CONTENTER_NOT_CONFIGURED` (۴۰۹)؛ `CONTENTER_UNREACHABLE`، `CONTENTER_TOKEN_REFUSED`، `CONTENTER_NOT_AVAILABLE`، `CONTENTER_BAD_RESPONSE`، `CONTENTER_ERROR` (۵۰۲)؛ `BUSINESS_NOT_FOUND`، `BUSINESS_LINK_NOT_FOUND`، `BUSINESS_SNAPSHOT_NOT_FOUND` (۴۰۴)؛ `BUSINESS_INVALID_REQUEST` (۴۰۰).
 - پاسخ بررسی زندهٔ سند (`POST /documents/{id}/check`) `termIssues` دارد و گزارش نگارش `report.termIssues`: `[{kind: 'USE'|'AVOID', term, found, count, replaceWith?, note?}]`. اجرای گردش‌کار، نگارش سند و هر تماس مدلی که پروفایل داشت نسخه‌ای را که دیده‌اند در `business_snapshot_id` ثبت می‌کنند (فرهنگ داده).
 - تنظیم‌ها: `business.required` (boolean، پیش‌فرض false)، `business.sync_on_start` (boolean، پیش‌فرض true) و `business.prompt_budget_chars` (integer ۲۰۰۰ تا ۳۰۰۰۰، پیش‌فرض ۱۲۰۰۰)؛ هر سه در scope workspace، موضوع و پروژه.
+
+## ۱۹. اعلان‌ها ([ADR-0025](../adr/0025-notifications.md))
+
+همه با `workspace.read`:
+
+- `GET /notifications/summary` → `{unread}`.
+- `GET /notifications?status=unread|all&cursor=&limit=` → `{items, nextCursor}`؛ هر مورد `id`، `kind`، `projectId`، `projectCode`، `projectTitle`، `payload`، `readAt`، `createdAt` و `stillWaiting` (برای کار انسانی: هنوز منتظر است یا انجام شده؛ برای بقیه `null`) دارد.
+- `POST /notifications/{id}/read` (۲۰۰ `{read: true}`؛ `404 NOTIFICATION_NOT_FOUND`)، `POST /notifications/read-all` (۲۰۰ `{marked}`؛ audit `notification.read_all` فقط وقتی چیزی علامت خورده باشد).
+- پارامتر نامعتبر `400 NOTIFICATION_INVALID_REQUEST`.

@@ -1931,6 +1931,41 @@ export const questionQualityReviews = pgTable(
 );
 
 /**
+ * Something that needs the administrator's attention or has finished (ADR-0025): a task waiting
+ * for them (a gate, a question, an attempt limit, a blocked run) or a result (a run completed, a
+ * document written). Rows are made by triggers on the tables that hold the events, so no code
+ * path can forget one, and hold ids only, never project text. Read state is shared by the
+ * workspace (version one has one administrator role); email is sent from an outbox.
+ */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    /** `gate_review`, `agent_question`, … (the kind of the human task) or `run_completed`, `writing_succeeded`, `writing_failed`. */
+    kind: text('kind').notNull(),
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+    /** The human task, run or document the notification is about. */
+    refId: uuid('ref_id'),
+    payload: jsonb('payload')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    readBy: uuid('read_by').references(() => users.id, { onDelete: 'set null' }),
+    /** `pending` until the mailer sends it, skips it (mail off or not configured) or gives up. */
+    emailStatus: text('email_status').notNull().default('pending'),
+    emailAttempts: integer('email_attempts').notNull().default(0),
+    emailClaimedAt: timestamp('email_claimed_at', { withTimezone: true }),
+    emailSentAt: timestamp('email_sent_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('notifications_workspace_idx').on(table.workspaceId, table.createdAt),
+    index('notifications_project_idx').on(table.projectId),
+  ],
+);
+
+/**
  * One run of the documenter on a document (ADR-0019, FR-AGT-001): the plan with its length
  * budgets, the subsections written so far, the references it cited and, at the end, the report.
  * The row is the progress the screen shows and what lets a restarted worker pick up where it

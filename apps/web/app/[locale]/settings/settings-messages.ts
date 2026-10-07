@@ -36,6 +36,10 @@ const messages = {
         title: 'اسناد',
         help: 'سطح طول و قالب پیش‌فرض اسناد خروجی.',
       },
+      notifications: {
+        title: 'اعلان‌ها',
+        help: 'اعلان‌ها همیشه در برنامه هستند؛ اینجا می‌توانید ارسال ایمیل (نیازمند SMTP روی سرور) و رویدادهایی را که ایمیل می‌شوند انتخاب کنید. ایمیل فقط نوع رویداد و کد پروژه را دارد.',
+      },
       agents: {
         title: 'ابزارهای ایجنت‌ها',
         help: 'اجازهٔ فراخوانی ابزار توسط خود مدل (فقط ابزارهایی که نقش اجازه دارد) و سقف فراخوانی برای هر پاسخ. هر فراخوانی در دفتر ابزارها ثبت می‌شود.',
@@ -88,6 +92,18 @@ const messages = {
     reset: 'بازگشت انجام شد؛ «{key}» دوباره مقدار ارث‌برده را می‌گیرد.',
     restored: 'نسخه بازگردانده شد؛ «{key}» تغییر کرد.',
     enumLabels: {
+      'notifications.email_kinds': {
+        gate_review: 'بازبینی خروجی مرحله',
+        analysis_answers: 'پرسش‌های تحلیلگر',
+        agent_question: 'سؤال ایجنت',
+        attempt_limit: 'سقف تلاش مرحله',
+        provider_failure: 'خطای ارائه‌دهندهٔ AI',
+        configuration: 'تنظیم‌نبودن AI',
+        cost_limit: 'سقف هزینه',
+        run_completed: 'اجرای کامل‌شده',
+        writing_succeeded: 'نگارش سند تمام شد',
+        writing_failed: 'نگارش سند ناموفق بود',
+      },
       'analysis.quality_criteria': {
         decision_relevance: 'اثر پاسخ بر تصمیم',
         leading: 'القای راه‌حل',
@@ -175,6 +191,10 @@ const messages = {
         title: 'Documents',
         help: 'The default length level and template of output documents.',
       },
+      notifications: {
+        title: 'Notifications',
+        help: 'Notifications are always in the app; here you choose whether they are also emailed (needs SMTP on the server) and which events. A mail names the kind of event and the project code only.',
+      },
       agents: {
         title: 'Agent tools',
         help: 'Let the model itself call the tools its role is allowed, and how many calls one answer may use. Every call is recorded in the tool ledger.',
@@ -227,6 +247,18 @@ const messages = {
     reset: 'Reset; "{key}" takes the inherited value again.',
     restored: 'Version restored; "{key}" changed.',
     enumLabels: {
+      'notifications.email_kinds': {
+        gate_review: 'Stage output review',
+        analysis_answers: 'Analyst questions',
+        agent_question: 'Agent question',
+        attempt_limit: 'Stage attempt limit',
+        provider_failure: 'AI provider failure',
+        configuration: 'AI not configured',
+        cost_limit: 'Cost limit',
+        run_completed: 'Run completed',
+        writing_succeeded: 'Document written',
+        writing_failed: 'Document writing failed',
+      },
       'analysis.quality_criteria': {
         decision_relevance: 'Bearing of the answer on a decision',
         leading: 'Steering to a solution',

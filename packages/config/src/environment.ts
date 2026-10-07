@@ -39,6 +39,8 @@ export const environmentSchema = z.object({
       .optional(),
   ),
   MAIL_FROM: z.string().min(3).default('Docoo <no-reply@localhost>'),
+  /** How often the API sends the emails of notifications (ADR-0025); a mail is at most this late. */
+  NOTIFICATION_MAIL_INTERVAL_SECONDS: z.coerce.number().int().min(10).max(3600).default(60),
   /**
    * Where the "get prices from the public catalog" button reads from (https only). Empty means
    * LiteLLM's public price catalog; set it to a mirror when the server may not reach GitHub. https only

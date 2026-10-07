@@ -269,6 +269,10 @@ ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار �
 
 `title`، `body` (عین پاسخ ذخیره‌شده)، `status` (`open/in_progress/fixed/wont_fix`)، `note`، `context`، `source_message_id nullable` (یکتا در workspace)، `created_by`.
 
+### notifications
+
+اعلان رویدادی که منتظر انسان است یا تمام شده ([ADR-0025](../adr/0025-notifications.md)، مهاجرت 0036 و 0037؛ RLS): `kind` (نوع کار انسانی، `run_completed`، `writing_succeeded`، `writing_failed`)، `project_id` (کلید ترکیبی با workspace؛ حذف پروژه آن را می‌برد)، `ref_id` (رکورد مرجع: کار انسانی، اجرا یا نگارش)، `payload` (شیء کوچک بدون متن پروژه)، `read_at`/`read_by` (علامت مشترک workspace)، و حسابداری ایمیل `email_status` (`pending|sent|skipped|failed`)، `email_attempts`، `email_claimed_at`، `email_sent_at`. با trigger ساخته می‌شود (`human_tasks`، `workflow_runs`، `document_writings`)؛ `docoo_app` فقط `SELECT`/`INSERT` و `UPDATE` ستونی علامت و ایمیل دارد. تنظیم‌های `notifications.email_enabled` و `notifications.email_kinds` ایمیل را می‌گردانند.
+
 ## audit_event
 
 `event_id`, `workspace_id`, `actor_type/id`, `action`, `target_type/id/version`, `occurred_at`, `correlation_id`, `ip_hash`, `reason`, `before_digest`, `after_digest`, `metadata_redacted`.

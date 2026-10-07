@@ -197,3 +197,6 @@ documents:
   - path: docs/adr/0024-analyst-question-quality.md
     doc_id: DOCOO-ADR-0024
     section: ADRs
+  - path: docs/adr/0025-notifications.md
+    doc_id: DOCOO-ADR-0025
+    section: ADRs

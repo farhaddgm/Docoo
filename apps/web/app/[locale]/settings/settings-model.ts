@@ -88,6 +88,7 @@ export const SETTING_GROUPS = [
       'document.level_bounds',
     ],
   },
+  { id: 'notifications', keys: ['notifications.email_enabled', 'notifications.email_kinds'] },
   { id: 'agents', keys: ['agents.tool_calling', 'agents.max_tool_calls'] },
   {
     id: 'business',

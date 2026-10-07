@@ -14,6 +14,7 @@ import {
   type NavigationKey,
 } from '../i18n';
 import { SmartRoot, SmartToggle } from '../smart/smart-root';
+import { NotificationBell } from './notification-bell';
 import { ThemeToggle } from '../theme-toggle';
 
 /** Pages that exist; the others stay visible but disabled until their slice ships. */
@@ -205,6 +206,9 @@ export function AppShell({
               {subtitle && <p>{subtitle}</p>}
             </div>
             <div className="topbar-actions">
+              {showNavigation && workspaceId && (
+                <NotificationBell locale={locale} workspaceId={workspaceId} />
+              )}
               {showNavigation && workspaceId && (
                 <SmartToggle locale={locale} workspaceId={workspaceId} />
               )}
