@@ -1,6 +1,6 @@
 # WAL-G v3.0.9 from verified source, with patched gRPC and a current Go runtime.
 FROM golang:1.27-bookworm@sha256:8d48e12ec56735e9358640898b9d9b9fcca110612ed8a5567438c0a1baa24e66 AS builder
-ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOFLAGS=-mod=mod GOMAXPROCS=2 GOEXPERIMENT=jsonv2
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOPROXY="https://proxy.golang.org|direct" GOFLAGS=-mod=mod GOMAXPROCS=2 GOEXPERIMENT=jsonv2
 ADD --checksum=sha256:011fd76c0b0e0558bf5daa34d25973f13a500843e9ab1134c8ea396db5df613f https://codeload.github.com/wal-g/wal-g/tar.gz/3e493188db28335fb93a45bd680c6ff8fc3028c1 /tmp/source.tgz
 WORKDIR /source
 RUN tar -xzf /tmp/source.tgz --strip-components=1 -C /source && rm /tmp/source.tgz
