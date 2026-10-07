@@ -22,6 +22,7 @@ concurrency:
 
 jobs:
   sync:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -33,6 +34,22 @@ jobs:
         with:
           node-version: 24.x
           cache: pnpm
+      - name: Restore durable sync state
+        id: state
+        run: |
+          branch=codex/notion-sync-state
+          if git ls-remote --exit-code --heads origin "refs/heads/$branch" > /dev/null; then
+            git fetch --no-tags origin "refs/heads/$branch"
+            parent="$(git rev-parse FETCH_HEAD)"
+            git show "$parent:docs/_meta/notion-state.json" > /tmp/docoo-notion-state.json
+            node -e "JSON.parse(require('node:fs').readFileSync('/tmp/docoo-notion-state.json', 'utf8'))"
+            cp /tmp/docoo-notion-state.json docs/_meta/notion-state.json
+            echo "parent=$parent" >> "$GITHUB_OUTPUT"
+          else
+            status=$?
+            if [ "$status" != 2 ]; then exit "$status"; fi
+            echo 'No dedicated state branch yet; using the reviewed repository state.'
+          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm docs:validate
       - run: pnpm docs:test
@@ -57,17 +74,26 @@ jobs:
         run: node scripts/notion/sync.mjs ${{ inputs.force && '--force' || '' }}
       - name: Record sync state
         if: ${{ always() && steps.connector.outputs.enabled == 'true' && steps.publish.outcome != 'skipped' }}
+        env:
+          STATE_PARENT: ${{ steps.state.outputs.parent }}
         run: |
-          if git diff --quiet -- docs/_meta/notion-state.json; then
-            echo 'No state changes to record.'
-            exit 0
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          state_index="$(mktemp)"
+          trap 'rm -f "$state_index"' EXIT
+          export GIT_INDEX_FILE="$state_index"
+          git read-tree --empty
           git add docs/_meta/notion-state.json
-          git commit -m "docs: record Notion sync for ${GITHUB_SHA::7}"
-          for attempt in 1 2 3; do
-            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
-            sleep $((attempt * 5))
-          done
-          exit 1
+          tree="$(git write-tree)"
+          if [ -n "$STATE_PARENT" ]; then
+            if [ "$(git rev-parse "$STATE_PARENT^{tree}")" = "$tree" ]; then
+              echo 'No state changes to record.'
+              exit 0
+            fi
+            commit="$(git commit-tree "$tree" -p "$STATE_PARENT" -m "docs: record Notion sync for ${GITHUB_SHA::7}")"
+          else
+            commit="$(git commit-tree "$tree" -m "docs: record Notion sync for ${GITHUB_SHA::7}")"
+          fi
+          # This branch contains only sync metadata, never application code. A normal
+          # fast-forward push also refuses concurrent changes; main remains protected.
+          git push origin "$commit:refs/heads/codex/notion-sync-state"
