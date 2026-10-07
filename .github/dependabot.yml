@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Match pnpm's existing 10080-minute release-age policy for version updates.
+    # Dependabot security updates do not use this cooldown.
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
   - package-ecosystem: github-actions
     directory: /
