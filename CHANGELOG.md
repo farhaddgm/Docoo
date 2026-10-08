@@ -10,6 +10,7 @@ Production PDF rendering now requires Chromium's internal sandbox, and updates v
 
 - Enable Chromium's user-namespace and seccomp-BPF sandboxes inside the restricted PDF container. Startup verifies the actual browser sandbox before opening the health port; unsupported hosts fail closed. The container still drops all capabilities and blocks privilege escalation.
 - Sign release evidence with the GitHub release workflow's short-lived Sigstore identity. The installer checks its signature, issuer, workflow identity and commit, the signed source archive digest, and all four successful main-branch gates before checking out or building an update. Cosign's executable version and SHA-256 are pinned.
+- Update Next.js to 16.3.8 for the image-optimization SSRF advisory GHSA-cjq9-62q9-8jv4. The patch meets the existing seven-day release-age policy; no new exception is added. Docoo does not configure remote image patterns required by the advisory's exploit scenario.
 
 ### Operations
 
