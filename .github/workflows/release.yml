@@ -17,6 +17,7 @@ on:
 permissions:
   contents: write
   actions: read
+  id-token: write
 
 concurrency:
   group: release
@@ -78,6 +79,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python3 scripts/ci/release-gate.py
+      - name: Sign release evidence using the GitHub workflow identity
+        if: ${{ steps.tag.outputs.skip != 'true' }}
+        run: |
+          python3 - <<'PY'
+          import importlib.util
+          spec = importlib.util.spec_from_file_location('release_verify', 'scripts/deploy/verify-release.py')
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          module.cosign_binary()
+          PY
+          "$HOME/.cache/docoo-release-verifier/cosign-v3.1.3-amd64" sign-blob --yes --bundle security-gate.sigstore.json security-gate.json
+          python3 - <<'PY'
+          import importlib.util, json, os, pathlib
+          spec = importlib.util.spec_from_file_location('release_verify', 'scripts/deploy/verify-release.py')
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          body = pathlib.Path('security-gate.json').read_bytes()
+          manifest = json.loads(body)
+          module.verify_signature(body, pathlib.Path('security-gate.sigstore.json').read_bytes(), manifest['tag'], os.environ['GITHUB_SHA'])
+          if module.source_digest('.', os.environ['GITHUB_SHA']) != manifest['sourceArchiveSha256']:
+              raise SystemExit('Signed source digest mismatch')
+          print('Release signature and source digest verified before publication.')
+          PY
       - name: Create tag
         if: ${{ steps.tag.outputs.create == 'true' }}
         env:
@@ -92,4 +116,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.name }}
-        run: gh release create "${TAG}" security-gate.json --title "Docoo ${TAG}" --notes-file release-notes.md --verify-tag
+        run: gh release create "${TAG}" security-gate.json security-gate.sigstore.json --title "Docoo ${TAG}" --notes-file release-notes.md --verify-tag

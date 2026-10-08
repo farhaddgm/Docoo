@@ -4,6 +4,33 @@ export const PDF_TEMPLATE_VERSION = 'pdf-print-v1';
 
 export class RendererUnavailableError extends Error {}
 
+async function launchChromium() {
+  const { chromium } = await import('playwright-core');
+  const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'] || undefined;
+  return chromium.launch({
+    headless: true,
+    timeout: 10_000,
+    chromiumSandbox: process.env['NODE_ENV'] === 'production',
+    ...(executablePath ? { executablePath } : {}),
+  });
+}
+
+/** Production refuses to start unless Chromium reports its namespace and seccomp sandboxes. */
+export async function verifyChromiumSandbox(): Promise<void> {
+  const browser = await launchChromium();
+  try {
+    const page = await browser.newPage();
+    await page.goto('chrome://sandbox', { timeout: 10_000 });
+    const status = await page.locator('body').innerText();
+    for (const feature of ['PID namespaces', 'Network namespaces', 'Seccomp-BPF sandbox']) {
+      if (!new RegExp(`${feature}\\s+Yes`, 'u').test(status))
+        throw new RendererUnavailableError('Chromium sandbox is unavailable.');
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
 /**
  * PDF through headless Chromium (05-document-pipeline §7): JavaScript disabled, no network
  * (every request is aborted), deterministic header/footer with page numbers. The executable
@@ -62,16 +89,9 @@ export async function renderPdf(html: string, meta: RenderMeta): Promise<Uint8Ar
 
 /** Only the isolated renderer (or a development test) calls Chromium directly. */
 export async function renderPdfLocally(html: string, meta: RenderMeta): Promise<Uint8Array> {
-  const { chromium } = await import('playwright-core');
-  const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'] || undefined;
   let browser;
   try {
-    browser = await chromium.launch({
-      headless: true,
-      timeout: 10_000,
-      ...(executablePath ? { executablePath } : {}),
-      args: ['--no-sandbox'],
-    });
+    browser = await launchChromium();
   } catch (error) {
     throw new RendererUnavailableError(
       error instanceof Error ? error.message.split('\n')[0] : 'chromium unavailable',

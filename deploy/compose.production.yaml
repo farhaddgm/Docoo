@@ -309,11 +309,16 @@ services:
 
   document-renderer:
     <<: *app
+    init: true
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=../infra/chromium/seccomp.json
     env_file: [{ path: .env.document-renderer, format: raw }]
     environment:
       NODE_ENV: production
       PLAYWRIGHT_CHROMIUM_EXECUTABLE: /usr/bin/chromium
-      HOME: /tmp
+      XDG_CONFIG_HOME: /tmp/chromium-config
+      XDG_CACHE_HOME: /tmp/chromium-cache
       NODE_OPTIONS: --max-old-space-size=512
     networks: [renderer]
     shm_size: 256m

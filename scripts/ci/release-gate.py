@@ -1,5 +1,5 @@
 """Wait for successful main-branch gates on the exact release commit."""
-import json, os, pathlib, time, urllib.request
+import hashlib, json, os, pathlib, subprocess, time, urllib.request
 REQUIRED = ['ci.yml', 'security.yml', 'hardening.yml', 'deploy-smoke.yml']
 repo = os.environ['GITHUB_REPOSITORY']
 sha = os.environ['GITHUB_SHA']
@@ -20,7 +20,11 @@ for attempt in range(180):
         if run['conclusion']!='success': raise SystemExit('Release blocked: '+workflow+' did not pass.')
         evidence.append({'workflow':workflow,'runId':run['id']})
     if len(evidence)==len(REQUIRED):
-        pathlib.Path('security-gate.json').write_text(json.dumps({'schema':1,'repository':repo,'tag':'v'+version,'commit':sha,'checks':evidence},indent=2)+'\n')
+        digest=hashlib.sha256()
+        with subprocess.Popen(['git','archive','--format=tar',sha],stdout=subprocess.PIPE) as process:
+            for chunk in iter(lambda:process.stdout.read(1024*1024),b''): digest.update(chunk)
+            if process.wait()!=0: raise SystemExit('Release blocked: source archive failed.')
+        pathlib.Path('security-gate.json').write_text(json.dumps({'schema':1,'repository':repo,'tag':'v'+version,'commit':sha,'sourceArchiveSha256':digest.hexdigest(),'checks':evidence},indent=2)+'\n')
         print('All release gates passed on the exact main commit.');break
     time.sleep(20)
 else: raise SystemExit('Release blocked: gates did not finish before the deadline.')
