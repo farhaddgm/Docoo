@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "15cf107b3d5e01dce0d4f13cae94181429a04a84"
+    "source_commit": "f1121c0f8cf97ea60ff4ddaf9d536a0dda1b0579"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,7 +62,7 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-07T15:35:58.830Z",
+    "synced_at": "2026-10-08T11:03:02.898Z",
     "created": 0,
     "updated": 1,
     "unchanged": 65,
@@ -750,16 +750,16 @@
     "DOCOO-PRODUCTION-INSTALL": {
       "path": "docs/06-delivery/11-production-install.md",
       "section": "06 Delivery & Operations",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "status": "active",
       "owner": "Platform & Operations",
-      "checksum_sha256": "95b26223d7ac240956681b912b1c19ba9630c0dc7fd0dd410c4936c0087bb187",
+      "checksum_sha256": "e5b2ea688723a042de6fd9c9f69cdab7d1ba99a5fa031e87b24173d5556c9d55",
       "notion_page_id": "3ee5a24a-6668-81c0-853a-d51dd68270a3",
       "notion_page_url": "https://app.notion.com/p/3ee5a24a666881c0853ad51dd68270a3",
       "index_row_page_id": "3ee5a24a-6668-81fb-9c08-eb1c6d2c8c58",
       "index_row_page_url": "https://app.notion.com/p/3ee5a24a666881fb9c08eb1c6d2c8c58",
-      "synced_commit": "48171e97b32685a2d61ebe41ba0a9f748722e215",
-      "synced_at": "2026-10-06T04:12:06.257Z"
+      "synced_commit": "f1121c0f8cf97ea60ff4ddaf9d536a0dda1b0579",
+      "synced_at": "2026-10-08T11:03:02.898Z"
     },
     "DOCOO-ADR-0012": {
       "path": "docs/adr/0012-single-server-production-deployment.md",
