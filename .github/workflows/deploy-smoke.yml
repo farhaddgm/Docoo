@@ -122,6 +122,14 @@ jobs:
           set -euo pipefail
           c=(sudo docker compose --project-directory deploy -f deploy/compose.production.yaml)
           "${c[@]}" exec -T document-renderer /usr/bin/chromium --version
+          "${c[@]}" exec -T document-renderer node --input-type=module -e '
+            import {verifyChromiumSandbox} from "@docoo/documents";
+            await verifyChromiumSandbox();
+            console.log("Chromium PID/network namespaces and seccomp-BPF sandbox verified");'
+          "${c[@]}" exec -T api node --input-type=module -e '
+            const response=await fetch(new URL("/render",process.env.PDF_RENDERER_URL),{method:"POST",body:"{}"});
+            if(response.status!==401) process.exit(1);
+            console.log("Unauthenticated renderer access refused");'
           "${c[@]}" exec -T api node --input-type=module -e '
             import {renderPdf} from "@docoo/documents";
             const pdf=await renderPdf("<h1>Isolated PDF</h1>",{documentId:"00000000-0000-4000-8000-000000000000",version:1,createdAt:"2026-10-07"});

@@ -2,6 +2,19 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.24.0] — 2026-10-08
+
+Production PDF rendering now requires Chromium's internal sandbox, and updates verify a cryptographic release signature before using the source.
+
+### Changed
+
+- Enable Chromium's user-namespace and seccomp-BPF sandboxes inside the restricted PDF container. Startup verifies the actual browser sandbox before opening the health port; unsupported hosts fail closed. The container still drops all capabilities and blocks privilege escalation.
+- Sign release evidence with the GitHub release workflow's short-lived Sigstore identity. The installer checks its signature, issuer, workflow identity and commit, the signed source archive digest, and all four successful main-branch gates before checking out or building an update. Cosign's executable version and SHA-256 are pinned.
+
+### Operations
+
+- New installers reject older unsigned release evidence. Existing v0.23 installations must verify the first signed release with its new verifier before upgrading. See [the hardening runbook](docs/06-delivery/14-security-hardening.md).
+
 ## [0.23.0] — 2026-10-07
 
 Production security hardening: readiness checks the database, development uses a separate Compose project, and PDF generation runs in a restricted service without application credentials.
