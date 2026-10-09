@@ -26,6 +26,8 @@ import {
 import {
   AGENT_TASK_QUEUE,
   createOrchestrationActivities,
+  createDecisionResearchActivities,
+  type DecisionResearchRef,
   fakeResponder,
   fakeToolResponder,
   ProviderRuntime,
@@ -212,7 +214,10 @@ export class TemporalTestRuntime implements WorkflowEngine {
       connection: this.native,
       taskQueue: this.taskQueue,
       workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
-      activities: createOrchestrationActivities(this.pool, runtime, { delayScale: 0.002 }),
+      activities: {
+        ...createOrchestrationActivities(this.pool, runtime, { delayScale: 0.002 }),
+        ...createDecisionResearchActivities(this.pool),
+      },
     });
     this.running = this.worker.run();
   }
@@ -244,6 +249,19 @@ export class TemporalTestRuntime implements WorkflowEngine {
     this.started.push(workflowId);
     try {
       await this.client.workflow.start('documentWritingWorkflow', {
+        taskQueue: this.taskQueue,
+        workflowId,
+        args: [ref],
+      });
+    } catch (error) {
+      if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
+    }
+  }
+
+  async startDecisionResearch(workflowId: string, ref: DecisionResearchRef): Promise<void> {
+    this.started.push(workflowId);
+    try {
+      await this.client.workflow.start('decisionResearchWorkflow', {
         taskQueue: this.taskQueue,
         workflowId,
         args: [ref],

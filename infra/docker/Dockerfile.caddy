@@ -1,0 +1,12 @@
+# Keep Caddy 2.11.7 and its runtime layout; rebuild with the patched Go standard library.
+FROM golang:1.27.2-alpine@sha256:85dc1069ac644ea3c527b177303a406eb3358192816cd7f9e5848eb658851673 AS builder
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOPROXY="https://proxy.golang.org|direct" GOMAXPROCS=2
+ADD --checksum=sha256:e86c49311c0c9f7e9b3b80527f0139e5739dfe28effeaa41c444dd743f0bbd7e https://codeload.github.com/caddyserver/caddy/tar.gz/72dd0fb067f6d7826c7f79907670ba4a713bfe37 /tmp/source.tgz
+WORKDIR /source
+RUN tar -xzf /tmp/source.tgz --strip-components=1 -C /source && rm /tmp/source.tgz
+RUN go build -p 2 -trimpath -buildvcs=false -ldflags '-s -w -X github.com/caddyserver/caddy/v2.CustomVersion=v2.11.7' -o /out/caddy ./cmd/caddy
+FROM caddy:2@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772
+RUN apk upgrade --no-cache && adduser -D -u 1000 caddy && \
+    mkdir -p /data /config && chown -R caddy:caddy /data /config
+COPY --from=builder /out/caddy /usr/bin/caddy
+USER caddy

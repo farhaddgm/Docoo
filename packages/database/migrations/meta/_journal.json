@@ -288,6 +288,13 @@
       "when": 1791360000000,
       "tag": "0040_security_monitor",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791558572312,
+      "tag": "0041_decision_intelligence",
+      "breakpoints": true
     }
   ]
 }

@@ -58,6 +58,14 @@ export function QuestionEditor({
   footer?: ReactNode;
 }) {
   const text = problemMessages(locale);
+  const priorities: Record<string, [string, string]> = {
+    unresolved_area: ['حوزهٔ بی‌پاسخ', 'Unanswered area'],
+    area_already_covered: ['حوزهٔ پاسخ‌داده‌شده', 'Area already covered'],
+    decision_criterion: ['مرتبط با معیار تصمیم', 'Matches decision criterion'],
+    decision_assumption: ['مرتبط با فرض تصمیم', 'Matches decision assumption'],
+    duplicate_answered_question: ['مشابه پرسش پاسخ‌داده‌شده', 'Duplicates answered question'],
+    follow_up: ['نیازمند پیگیری', 'Needs follow-up'],
+  };
   const id = useId();
   const picker = useRef<HTMLInputElement>(null);
   const heading = `${id}-heading`;
@@ -65,6 +73,12 @@ export function QuestionEditor({
   const title = (
     <h4 id={heading}>
       {label}{' '}
+      {question.priority && (
+        <span className="badge">
+          {locale === 'fa' ? 'اولویت اطلاعات' : 'Information priority'}:{' '}
+          {formatNumber(locale, question.priority.score)}
+        </span>
+      )}
       <span className="badge">{text.categories[question.category] ?? question.category}</span>
     </h4>
   );
@@ -77,6 +91,21 @@ export function QuestionEditor({
         <p className="question-text" dir="auto">
           {question.text}
         </p>
+        {question.priority && (
+          <details>
+            <summary>{locale === 'fa' ? 'دلیل اولویت' : 'Priority explanation'}</summary>
+            <p>
+              {question.priority.reasons
+                .map((reason) => priorities[reason]?.[locale === 'fa' ? 0 : 1] ?? reason)
+                .join(' · ')}
+            </p>
+            {question.priority.references.map((ref) => (
+              <p key={ref.id} dir="auto">
+                {ref.text}
+              </p>
+            ))}
+          </details>
+        )}
         {saved && (
           <p>
             <span className={`badge answer-${saved}`}>
@@ -141,6 +170,9 @@ export function QuestionEditor({
       <p className="question-text" dir="auto">
         {question.text}
       </p>
+      {question.priority && (
+        <p className="muted">{question.priority.references.map((ref) => ref.text).join(' · ')}</p>
+      )}
       {question.followUpOf !== null && (
         <p className="muted">
           {text.followUpOf.replace('{n}', formatNumber(locale, question.followUpOf))}

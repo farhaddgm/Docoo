@@ -14,7 +14,7 @@ notion_sync: true
 
 ## زمینه
 
-مرحلهٔ تحقیق فعلی فقط دانش `approved` داخلی را از دروازهٔ ابزار بازیابی می‌کند ([ADR-0017](0017-research-with-knowledge-and-role-evaluation.md)). نوع سوم منبع دانش یعنی «تحقیق خودکار» ([حاکمیت دانش](../03-ai/03-knowledge-and-brain.md)) و بندهای `FR-RES-001`، `002`، `003` و `006` پیاده نشده‌اند و در `qa/traceability.json` waiver دارند.
+مرحلهٔ تحقیق فعلی فقط دانش `approved` داخلی را از دروازهٔ ابزار بازیابی می‌کند ([ADR-0017](0017-research-with-knowledge-and-role-evaluation.md)). نسخهٔ 0.25.0 پژوهش تطبیقی با بودجه را روی همین شواهد داخلی تأییدشده افزود (`packages/orchestration/src/adaptive-research.ts`) و قرارداد `ProjectResearchPlan` را در `packages/contracts/src/project-research-workflow.ts` ساخت؛ اما **هیچ دسترسی زندهٔ وب** (جست‌وجو یا خواندن صفحه) در آن نیست و آداپتر وب غیرفعال مانده است. این ADR فقط شکاف وب را می‌بندد و آنچه 0.25.0 ساخته را دوباره نمی‌سازد. نوع سوم منبع دانش یعنی «تحقیق خودکار» ([حاکمیت دانش](../03-ai/03-knowledge-and-brain.md)) و بندهای `FR-RES-001`، `002`، `003` و `006` پیاده نشده‌اند و در `qa/traceability.json` waiver دارند.
 
 بخشی از زیرساخت از قبل هست و باید بازاستفاده شود، نه دوباره ساخته شود:
 
@@ -33,11 +33,11 @@ notion_sync: true
 
 ### ۲. برنامهٔ پژوهش (FR-RES-001)
 
-`research_plan` نسخه‌دار در تنظیمات پروژه: `queries[]` (خروجی ایجنت، قابل‌ویرایش ادمین)، `language`، `country`، `time_range`، `source_policy` و `target_count`. ایجنت پیشنهاد می‌دهد و ادمین می‌تواند پیش از اجرا ببیند و ویرایش کند. سقف‌ها در تنظیمات می‌آید (تعداد query، تعداد fetch، بایت کل) تا هزینه و زمان پیش‌بینی‌پذیر باشد و زیر سقف هزینهٔ [ADR-0020](0020-real-provider-readiness.md) بماند.
+برنامهٔ پژوهش از قبل وجود دارد: `ProjectResearchPlan` (نسخهٔ ۱) با `query`، `language`، `knowledgeSourceTypes`، `country`، `timeRange`، `sourcePolicy`، `targetCount`، `similarSampleCount`، `depth`، `sourceLanguages` و `adaptive`. این ADR طرح تازه‌ای نمی‌سازد و همان را مبنا می‌گیرد. تنها افزودهٔ پیشنهادی یک بلوک اختیاری برای **بودجهٔ دسترسی وب** است (حداکثر تعداد query، تعداد fetch و بایت کل) تا هزینه و زمان پیش‌بینی‌پذیر بماند و زیر سقف هزینهٔ [ADR-0020](0020-real-provider-readiness.md) بماند. اینکه این بلوک داخل `adaptive` بیاید یا کنار آن، به شکستن epic به story واگذار می‌شود. ایجنت query را پیشنهاد می‌دهد و ادمین پیش از اجرا می‌بیند و ویرایش می‌کند.
 
 ### ۳. سیاست منبع (FR-RES-002)
 
-`unrestricted | whitelist | blacklist` روی میزبان، قبل از fetch و بعد از هر redirect اعمال می‌شود. `unrestricted` یعنی هر میزبان **عمومی**، نه هر مقصد: محافظ SSRF موجود در هر سه حالت فعال می‌ماند و قابل‌خاموش‌شدن نیست.
+قرارداد `sourcePolicy` (`unrestricted | whitelist | blacklist` با فهرست دامنه) از قبل در طرح هست و `captureAdaptiveEvidence` آن را روی claimهای داخلی اعمال می‌کند. شکاف باقی‌مانده اعمال همان سیاست روی **میزبان fetch زنده** است: قبل از fetch و بعد از هر redirect. `unrestricted` یعنی هر میزبان **عمومی**، نه هر مقصد: محافظ SSRF موجود در هر سه حالت فعال می‌ماند و قابل‌خاموش‌شدن نیست.
 
 ### ۴. یافته ← source record ← claim ← ممیزی (FR-RES-003، FR-RES-004)
 

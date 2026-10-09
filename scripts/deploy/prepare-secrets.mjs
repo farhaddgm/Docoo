@@ -31,6 +31,10 @@ export function serviceEnvironments(settings, app) {
   // silently inherited by the browser-facing web process or an unrelated worker.
   const apiKeys = [
     ...shared,
+    'KNOWLEDGE_EMBEDDING_ENABLED',
+    'KNOWLEDGE_EMBEDDING_ALLOW_INTERNAL',
+    'KNOWLEDGE_EMBEDDING_API_KEY',
+    'KNOWLEDGE_EMBEDDING_MODEL',
     'WEB_ORIGIN',
     'API_PORT',
     'LOG_LEVEL',

@@ -212,3 +212,6 @@ documents:
   - path: docs/adr/0026-web-research-adapter.md
     doc_id: DOCOO-ADR-0026
     section: ADRs
+  - path: docs/01-product/08-advanced-ideas-benchmark.md
+    doc_id: DOCOO-ADVANCED-IDEAS-BENCHMARK
+    section: 01 Product

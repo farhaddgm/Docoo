@@ -11,6 +11,11 @@ export interface Attachment {
 }
 
 export interface Question {
+  priority?: {
+    score: number;
+    reasons: string[];
+    references: { id: string; text: string; kind: string }[];
+  };
   id: string;
   batchId: string;
   batchNo: number;

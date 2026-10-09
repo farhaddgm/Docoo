@@ -146,6 +146,11 @@ function ProjectView({
     );
   }
 
+  const intelligenceLink = (
+    <Link href={`/${locale}/projects/${projectId}/intelligence` as Route}>
+      {locale === 'fa' ? 'شواهد و تصمیم' : 'Evidence and decisions'}
+    </Link>
+  );
   const health = projectHealth(project, facts);
   const milestone = projectMilestone(project.status, facts);
 
@@ -155,6 +160,7 @@ function ProjectView({
         <Link href={`/${locale}/projects` as Route}>{text.backToList}</Link>
       </p>
 
+      {intelligenceLink}
       <section className="card" aria-labelledby="project-heading">
         <h2 id="project-heading" dir="auto">
           <span dir="ltr">{project.code}</span> — {project.title}
