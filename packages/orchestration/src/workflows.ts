@@ -9,6 +9,10 @@ import {
 
 import type { OrchestrationActivities, RunRef, StageRef } from './activities.js';
 import { STAGES, type Stage } from './stages.js';
+import type {
+  DecisionResearchRef,
+  createDecisionResearchActivities,
+} from './decision-research-activities.js';
 import type { WritingActivities, WritingRef } from './writing-activities.js';
 
 export interface GateSignal {
@@ -407,4 +411,18 @@ export async function documentWritingWorkflow(
   if (finished.status === 'cancelled') return cancel();
   if (finished.status === 'failed') return { status: 'failed' };
   return { status: 'succeeded' };
+}
+
+// Separate workflow keeps existing project histories and their command sequence unchanged.
+export async function decisionResearchWorkflow(ref: DecisionResearchRef) {
+  const research = proxyActivities<ReturnType<typeof createDecisionResearchActivities>>({
+    startToCloseTimeout: '2 minutes',
+    retry: { maximumAttempts: 5 },
+  });
+  try {
+    return await research.runDecisionResearch(ref);
+  } catch {
+    await research.failDecisionResearch(ref);
+    throw new Error('Decision research failed');
+  }
 }

@@ -1,0 +1,179 @@
+{
+  "date": "2026-10-09",
+  "version": "0.25.0",
+  "synthetic": true,
+  "queries": [
+    {
+      "language": "fa",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "fa",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "en",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "en",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "fa",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "fa",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "en",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "en",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "fa",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "fa",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "en",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "en",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "fa",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "fa",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "en",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "en",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "fa",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "fa",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "en",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "en",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "fa",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "fa",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "language": "en",
+      "mode": "hybrid",
+      "recall": 1,
+      "ndcg": 1
+    },
+    {
+      "language": "en",
+      "mode": "lexical",
+      "recall": 0.5,
+      "ndcg": 0.6131471927654584
+    }
+  ],
+  "summary": {
+    "fa": {
+      "lexical": {
+        "recallAt10": 0.5,
+        "ndcgAt10": 0.6131471927654584
+      },
+      "hybrid": {
+        "recallAt10": 1,
+        "ndcgAt10": 1
+      }
+    },
+    "en": {
+      "lexical": {
+        "recallAt10": 0.5,
+        "ndcgAt10": 0.6131471927654584
+      },
+      "hybrid": {
+        "recallAt10": 1,
+        "ndcgAt10": 1
+      }
+    }
+  },
+  "conflicts": {
+    "syntheticPairs": 8,
+    "truePositives": 4,
+    "falsePositives": 0,
+    "falseNegatives": 0
+  }
+}

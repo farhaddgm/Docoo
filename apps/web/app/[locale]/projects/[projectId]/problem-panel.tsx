@@ -78,7 +78,14 @@ export function ProblemPanel({
     // A slow earlier read must not replace a newer one.
     if (sequence !== latestLoad.current) return;
     setAnalysis(overview.analysis);
-    setBatches(listed.batches);
+    setBatches(
+      listed.batches.map((batch) => ({
+        ...batch,
+        questions: [...batch.questions].sort(
+          (a, b) => (b.priority?.score ?? 0) - (a.priority?.score ?? 0) || a.number - b.number,
+        ),
+      })),
+    );
     setVersions(defined.definitions);
     setFailed(false);
   }, [base]);

@@ -203,3 +203,6 @@ documents:
   - path: docs/adr/0025-notifications.md
     doc_id: DOCOO-ADR-0025
     section: ADRs
+  - path: docs/01-product/08-advanced-ideas-benchmark.md
+    doc_id: DOCOO-ADVANCED-IDEAS-BENCHMARK
+    section: 01 Product

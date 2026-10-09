@@ -41,3 +41,6 @@ export function documentWritingWorkflowId(writingId: string): string {
   return `document-writing-${writingId}`;
 }
 export * from './business.js';
+export * from './decision-evidence.js';
+export * from './adaptive-research.js';
+export * from './decision-research-activities.js';

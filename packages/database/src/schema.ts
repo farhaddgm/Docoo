@@ -2151,3 +2151,101 @@ export const accountEvents = pgTable('account_events', {
   details: jsonb('details').notNull().default({}),
   occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const projectEvidenceLinks = pgTable(
+  'project_evidence_links',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id),
+    targetType: text('target_type').notNull(),
+    targetVersionId: uuid('target_version_id').notNull(),
+    blockIndex: integer('block_index'),
+    assertion: text('assertion').notNull(),
+    claimId: uuid('claim_id')
+      .notNull()
+      .references(() => claims.id),
+    citation: jsonb('citation').notNull(),
+    relation: text('relation').notNull(),
+    applicabilityReviewed: boolean('applicability_reviewed').notNull(),
+    reason: text('reason').notNull(),
+    actorId: uuid('actor_id').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('project_evidence_links_idempotency_uq').on(
+      table.workspaceId,
+      table.projectId,
+      table.idempotencyKey,
+    ),
+  ],
+);
+
+export const projectConflictSuggestionReviews = pgTable(
+  'project_conflict_suggestion_reviews',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id),
+    claimAId: uuid('claim_a_id')
+      .notNull()
+      .references(() => claims.id),
+    claimBId: uuid('claim_b_id')
+      .notNull()
+      .references(() => claims.id),
+    fingerprint: text('fingerprint').notNull(),
+    decision: text('decision').notNull(),
+    applicabilityCondition: text('applicability_condition'),
+    reason: text('reason').notNull(),
+    actorId: uuid('actor_id').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('project_conflict_suggestion_reviews_idempotency_uq').on(
+      table.workspaceId,
+      table.projectId,
+      table.idempotencyKey,
+    ),
+  ],
+);
+
+export const projectResearchIntelligenceReports = pgTable(
+  'project_research_intelligence_reports',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id),
+    actorId: uuid('actor_id').notNull(),
+    plan: jsonb('plan').notNull(),
+    planHash: text('plan_hash').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    status: text('status').default('queued').notNull(),
+    report: jsonb('report'),
+    manifest: jsonb('manifest'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex('project_research_intelligence_reports_idempotency_uq').on(
+      table.workspaceId,
+      table.projectId,
+      table.idempotencyKey,
+    ),
+  ],
+);

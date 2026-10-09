@@ -554,6 +554,9 @@ importers:
 
   packages/orchestration:
     dependencies:
+      '@docoo/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@docoo/documents':
         specifier: workspace:*
         version: link:../documents

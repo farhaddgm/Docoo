@@ -5,3 +5,5 @@ export * from './project.js';
 export * from './role-evaluation.js';
 export * from './calculator.js';
 export * from './question-quality.js';
+export * from './knowledge-intelligence.js';
+export * from './question-priority.js';
