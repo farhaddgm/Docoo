@@ -41,7 +41,10 @@ x-walg: &walg
 services:
   caddy:
     networks: [default, frontend, files]
-    image: caddy:2@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772
+    build:
+      context: ../infra/docker
+      dockerfile: Dockerfile.caddy
+    image: docoo-caddy:${DOCOO_VERSION:-local}
     restart: unless-stopped
     ports: ['80:80', '443:443']
     environment:
@@ -123,7 +126,10 @@ services:
 
   object-store:
     networks: [backend, files]
-    image: chrislusf/seaweedfs:latest@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    build:
+      context: ../infra/docker
+      dockerfile: Dockerfile.seaweedfs
+    image: docoo-object-store:${DOCOO_VERSION:-local}
     restart: unless-stopped
     command: ['mini', '-dir=/data']
     environment:
@@ -191,10 +197,7 @@ services:
     # Single-node Temporal with a persistent SQLite store, sized for the private beta.
     build:
       context: ../infra/docker
-      dockerfile: Dockerfile.patched
-      args:
-        BASE_IMAGE: temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
-        RUNTIME_USER: temporal
+      dockerfile: Dockerfile.temporal
     image: docoo-temporal:${DOCOO_VERSION:-local}
     restart: unless-stopped
     command: ['server', 'start-dev', '--ip', '0.0.0.0', '--db-filename', '/data/temporal.db']
