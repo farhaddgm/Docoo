@@ -210,12 +210,15 @@ start() {
   docker run --rm --user 0 -v "$root:/workspace" -w /workspace node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 node scripts/deploy/prepare-secrets.mjs deploy
   "${compose[@]}" build
   # Existing persistent data may have been created by root in pre-v0.23 images.
-  # Only these two Docoo volumes are touched; no application secret is mounted.
-  docker run --rm --network none --user 0 --cap-drop ALL --cap-add CHOWN \
+  # Only named Docoo volumes are touched; no application secret is mounted.
+  docker run --rm --network none --user 0 --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE \
     --mount type=volume,source=docoo_temporal-data,target=/temporal \
     --mount type=volume,source=docoo_clamav-data,target=/clamav \
+    --mount type=volume,source=docoo_caddy-data,target=/caddy-data \
+    --mount type=volume,source=docoo_caddy-config,target=/caddy-config \
+    --mount type=volume,source=docoo_object-data,target=/objects \
     --entrypoint sh "docoo-temporal:${DOCOO_VERSION:-local}" \
-    -c 'chown -R 1000:1000 /temporal && chown -R 100:101 /clamav'
+    -c 'chown -R 1000:1000 /temporal /caddy-data /caddy-config /objects && chown -R 100:101 /clamav'
   "${compose[@]}" up -d
   wait_healthy && return
   "${compose[@]}" logs --tail 50 migrate api

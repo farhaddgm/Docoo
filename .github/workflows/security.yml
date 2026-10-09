@@ -139,11 +139,11 @@ jobs:
           - name: postgres
             image: docoo-postgres:ci
           - name: caddy
-            image: caddy:2@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772
+            image: docoo-caddy:ci
           - name: redis
             image: docoo-redis:ci
           - name: object-store
-            image: chrislusf/seaweedfs:latest@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+            image: docoo-object-store:ci
           - name: clamav
             image: docoo-clamav:ci
           - name: temporal
@@ -163,7 +163,13 @@ jobs:
         run: docker build -f infra/docker/Dockerfile.patched --build-arg BASE_IMAGE=clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23 --build-arg RUNTIME_USER=clamav -t docoo-clamav:ci infra/docker
       - name: Build patched temporal runtime
         if: matrix.name == 'temporal'
-        run: docker build -f infra/docker/Dockerfile.patched --build-arg BASE_IMAGE=temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e --build-arg RUNTIME_USER=temporal -t docoo-temporal:ci infra/docker
+        run: docker build -f infra/docker/Dockerfile.temporal -t docoo-temporal:ci infra/docker
+      - name: Build patched Caddy runtime
+        if: matrix.name == 'caddy'
+        run: docker build -f infra/docker/Dockerfile.caddy -t docoo-caddy:ci infra/docker
+      - name: Build patched object-store runtime
+        if: matrix.name == 'object-store'
+        run: docker build -f infra/docker/Dockerfile.seaweedfs -t docoo-object-store:ci infra/docker
       - name: Build patched object backup runtime
         if: matrix.name == 'object-backup'
         run: docker build -f infra/docker/Dockerfile.rclone -t docoo-object-backup:ci infra/docker

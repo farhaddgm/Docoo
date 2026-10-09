@@ -2,6 +2,21 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.25.0] — 2026-10-09
+
+Project decision intelligence: bilingual retrieval, evidence and decision provenance, explainable question priorities, human conflict review, evidence sufficiency and bounded adaptive research.
+
+### Added
+
+- A Persian/English project intelligence page with hybrid and lexical search, exact quotes, a version-pinned evidence graph and manual applicability review. Restricted content stays local; remote embeddings require explicit server configuration and consent for internal content.
+- Conservative conflict suggestions with immutable human reviews, and evidence assessments that expose unknown independence, freshness and applicability rather than a probability of truth.
+- Explainable ordering of analysis questions without changing identifiers, question counts or the existing analysis workflow.
+- Durable adaptive research on the existing Temporal worker, with coverage and visit budgets, pinned manifests, idempotent execution and revalidation of current access and approval when reading reports. Migration 0041 is additive; prior application images remain compatible.
+
+### Security
+
+- Rebuild the current Caddy, SeaweedFS, Temporal, WAL-G and rclone sources with pinned Go 1.27.2 to address CVE-2026-78667 and CVE-2026-97031. Production installation and image gates use the same patched images.
+
 ## [0.24.0] — 2026-10-08
 
 Production PDF rendering now requires Chromium's internal sandbox, and updates verify a cryptographic release signature before using the source.

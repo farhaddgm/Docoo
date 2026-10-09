@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import {
   ANALYSIS_LIMITS,
+  prioritizeAnalysisQuestions,
   analysisProgress,
   checkAnswer,
   coverageGaps,
@@ -128,6 +129,72 @@ export class AnalysisService {
     private readonly commands: CommandRunner,
   ) {}
 
+  private async prioritize(
+    client: PoolClient,
+    projectId: string,
+    questions: ReturnType<typeof toQuestion>[],
+  ) {
+    const criteria = (
+      await client.query<{ id: string; criteria: unknown[] }>(
+        `select id,criteria from solution_criteria_versions where project_id=$1 order by version_no desc limit 1`,
+        [projectId],
+      )
+    ).rows[0];
+    const output = (
+      await client.query<{ id: string; content: Record<string, unknown> }>(
+        `select o.id,o.content from stage_outputs o join stage_runs s on s.id=o.stage_run_id join workflow_runs r on r.id=s.run_id where r.project_id=$1 and s.stage='analysis' order by o.created_at desc,o.id desc limit 1`,
+        [projectId],
+      )
+    ).rows[0];
+    const text = (v: unknown) =>
+      typeof v === 'string'
+        ? v
+        : typeof v === 'object' && v !== null
+          ? Object.values(v)
+              .filter((x): x is string => typeof x === 'string')
+              .join(' ')
+          : '';
+    const refs = [
+      ...(criteria?.criteria ?? []).slice(0, 100).map((c, i) => ({
+        id: `criterion:${criteria!.id}:${i}`,
+        text: text(c),
+        kind: 'criterion' as const,
+      })),
+      ...(Array.isArray(output?.content['assumptions']) ? output.content['assumptions'] : [])
+        .slice(0, 100)
+        .map((a: unknown, i: number) => ({
+          id: `assumption:${output!.id}:${i}`,
+          text: text(a),
+          kind: 'assumption' as const,
+        })),
+    ];
+    const aliases: Record<string, string> = {
+      goal: 'goals',
+      constraint: 'constraints',
+      risk: 'risks',
+      stakeholder: 'stakeholders',
+      time: 'timeline',
+    };
+    return prioritizeAnalysisQuestions(
+      questions.map((q) => ({
+        ...q,
+        ordinal: q.number,
+        coverageArea: aliases[q.category] ?? q.category,
+        answer:
+          q.status === 'open'
+            ? null
+            : { ...q.answer, status: q.status, text: q.answer?.text ?? null },
+      })),
+      refs.filter((r) => r.kind === 'criterion').map((r) => r.text),
+      refs,
+    )
+      .map((q) => ({
+        ...questions.find((original) => original.id === q.id)!,
+        priority: q.priority,
+      }))
+      .sort((a, b) => a.number - b.number);
+  }
+
   // ------------------------------------------------------------------ reads
 
   /** Progress, coverage, the analyst's reading, contradictions, follow-ups and the definition. */
@@ -144,6 +211,7 @@ export class AnalysisService {
               )
             ).rows.map(toQuestion)
           : [];
+        const prioritized = await this.prioritize(client, projectId, questions);
         const progress = analysisProgress(questions);
         // The run's own configuration says whether risk and out-of-scope must also be asked.
         const settings = current?.run_id
@@ -233,7 +301,7 @@ export class AnalysisService {
               description: entry['description'],
               status: entry['status'],
             })),
-            followUps: questions.filter((question) => question.status === 'later'),
+            followUps: prioritized.filter((question) => question.status === 'later'),
             definition,
           },
         };
@@ -265,10 +333,11 @@ export class AnalysisService {
             [current.session_id],
           )
         ).rows.map(toQuestion);
+        const prioritized = await this.prioritize(client, projectId, questions);
         return {
           batches: batches.map((batch) => ({
             ...batch,
-            questions: questions.filter((question) => question.batchId === batch.id),
+            questions: prioritized.filter((question) => question.batchId === batch.id),
           })),
         };
       },

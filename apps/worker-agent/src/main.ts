@@ -4,6 +4,7 @@ import { startTelemetry } from '@docoo/observability';
 import {
   AGENT_TASK_QUEUE,
   createOrchestrationActivities,
+  createDecisionResearchActivities,
   ProviderRuntime,
 } from '@docoo/orchestration';
 import { masterKeyFromEnv } from '@docoo/providers';
@@ -64,7 +65,10 @@ async function main(): Promise<void> {
     maxConcurrentActivityTaskExecutions: Number(process.env['AGENT_CONCURRENCY'] ?? 4),
     taskQueue: AGENT_TASK_QUEUE,
     workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
-    activities: createOrchestrationActivities(pool, new ProviderRuntime(pool, masterKey)),
+    activities: {
+      ...createOrchestrationActivities(pool, new ProviderRuntime(pool, masterKey)),
+      ...createDecisionResearchActivities(pool),
+    },
   });
   log('info', 'worker.ready', { taskQueue: AGENT_TASK_QUEUE });
   const stop = (): void => {
