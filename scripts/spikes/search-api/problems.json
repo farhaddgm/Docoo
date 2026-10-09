@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "note": "پنج مسئلهٔ نمونهٔ فارسی/انگلیسی برای مقایسهٔ ارائه‌دهندگان جست‌وجو. فقط عبارت‌های عمومی؛ هیچ دادهٔ مشتری در این فایل نیست.",
+  "problems": [
+    {
+      "id": "fa-market-entry",
+      "language": "fa",
+      "country": "IR",
+      "query": "تحلیل بازار ابزارهای مدیریت پروژه برای استارتاپ‌های ایرانی و رقبای اصلی"
+    },
+    {
+      "id": "fa-pricing",
+      "language": "fa",
+      "country": "IR",
+      "query": "مدل‌های قیمت‌گذاری اشتراکی نرم‌افزار SaaS برای بازار ایران"
+    },
+    {
+      "id": "fa-regulation",
+      "language": "fa",
+      "country": "IR",
+      "query": "الزامات قانونی نگهداری داده‌های کاربران برای سرویس‌های آنلاین در ایران"
+    },
+    {
+      "id": "en-retention",
+      "language": "en",
+      "country": "US",
+      "query": "SaaS customer churn reduction strategies for B2B subscription products case studies"
+    },
+    {
+      "id": "en-build-vs-buy",
+      "language": "en",
+      "country": "US",
+      "query": "build versus buy decision framework for enterprise software platforms"
+    }
+  ]
+}

@@ -23,7 +23,7 @@
     "docs:validate": "node scripts/validate-notion-manifest.mjs",
     "qa:corpus": "node scripts/validate-corpus.mjs qa/acceptance-corpus/v0",
     "qa:trace": "node scripts/trace/trace.mjs",
-    "docs:test": "node --test \"scripts/notion/*.test.mjs\" \"scripts/owner/*.test.mjs\" \"scripts/trace/*.test.mjs\"",
+    "docs:test": "node --test \"scripts/notion/*.test.mjs\" \"scripts/owner/*.test.mjs\" \"scripts/trace/*.test.mjs\" \"scripts/spikes/**/*.test.mjs\"",
     "deploy:test": "bash scripts/deploy/install.test.sh && bash scripts/deploy/acceptance.test.sh",
     "docs:sync": "node scripts/notion/sync.mjs",
     "docs:sync:plan": "node scripts/notion/sync.mjs --dry-run",

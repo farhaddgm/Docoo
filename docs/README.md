@@ -74,6 +74,9 @@ notion_sync: true
 35. [راهنمای سادهٔ نصب روی سرور](06-delivery/11-production-install.md) — نصب یک‌فرمانه، HTTPS، کلید AI، به‌روزرسانی و پشتیبان.
 36. [پذیرش private beta با شاهد](06-delivery/12-private-beta-acceptance.md) — سه ابزار فقط‌خواندنی (GitHub، provider، سرور)، وضعیت‌ها و بلوک امضا.
 
+- [تحقیق بازار، بنچ‌مارک و پیشنهادهای بهبود](06-delivery/15-product-research-and-improvement-proposals.md) — وضع فعلی، شکاف‌ها، رقبا و ۱۵ پیشنهاد با Issue؛ وضعیت proposed.
+- [پروتکل spike جست‌وجوی وب](06-delivery/16-search-api-spike.md) — روش و معیار مقایسهٔ ارائه‌دهندگان؛ اجرا نشده.
+
 ### ۷. یکپارچه‌سازی‌ها
 
 37. [همگام‌سازی Notion و GitHub](07-integrations/01-notion-and-github.md) — مخزن خصوصی، انتشار یک‌طرفه و کنترل تعارض.
@@ -106,6 +109,7 @@ notion_sync: true
 61. [ADR-0023: فراخوانی ابزار توسط خود مدل: دروازه، دفتر ثبت، خواندن مواد پروژه، ماشین‌حساب و پرسش از ادمین](adr/0023-agent-tool-calling.md)
 62. [ADR-0024: ارزیابی کیفیت پرسش‌های تحلیلگر توسط Brain با مدل](adr/0024-analyst-question-quality.md)
 63. [ADR-0025: اعلان‌ها: ساخت با trigger، زنگ و صفحهٔ اعلان‌ها، و ایمیل اختیاری با صندوق خروجی](adr/0025-notifications.md)
+64. [ADR-0026: تحقیق وب: adapter جست‌وجو و خواندن، سیاست منبع و ورود یافته‌ها از صف ممیزی Brain](adr/0026-web-research-adapter.md) — پیشنهادی.
 
 ## وضعیت اسناد
 

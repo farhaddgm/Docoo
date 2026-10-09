@@ -128,6 +128,12 @@ documents:
   - path: docs/06-delivery/13-google-accounts.md
     doc_id: DOCOO-DEL-0013
     section: 06 Delivery & Operations
+  - path: docs/06-delivery/15-product-research-and-improvement-proposals.md
+    doc_id: DOCOO-PRODUCT-PROPOSALS
+    section: 06 Delivery & Operations
+  - path: docs/06-delivery/16-search-api-spike.md
+    doc_id: DOCOO-SEARCH-API-SPIKE
+    section: 06 Delivery & Operations
   - path: docs/adr/0001-modular-monolith.md
     doc_id: DOCOO-ADR-0001
     section: ADRs
@@ -202,6 +208,9 @@ documents:
     section: ADRs
   - path: docs/adr/0025-notifications.md
     doc_id: DOCOO-ADR-0025
+    section: ADRs
+  - path: docs/adr/0026-web-research-adapter.md
+    doc_id: DOCOO-ADR-0026
     section: ADRs
   - path: docs/01-product/08-advanced-ideas-benchmark.md
     doc_id: DOCOO-ADVANCED-IDEAS-BENCHMARK
