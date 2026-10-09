@@ -6,5 +6,7 @@ WORKDIR /source
 RUN tar -xzf /tmp/source.tgz --strip-components=1 -C /source && rm /tmp/source.tgz
 RUN go build -p 2 -trimpath -buildvcs=false -ldflags '-s -w -X github.com/caddyserver/caddy/v2.CustomVersion=v2.11.7' -o /out/caddy ./cmd/caddy
 FROM caddy:2@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772
-RUN apk upgrade --no-cache
+RUN apk upgrade --no-cache && adduser -D -u 1000 caddy && \
+    mkdir -p /data /config && chown -R caddy:caddy /data /config
 COPY --from=builder /out/caddy /usr/bin/caddy
+USER caddy

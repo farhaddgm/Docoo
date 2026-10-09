@@ -8,3 +8,4 @@ RUN go build -p 2 -trimpath -buildvcs=false -ldflags '-s -w -X github.com/seawee
 FROM chrislusf/seaweedfs:latest@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
 RUN apk upgrade --no-cache
 COPY --from=builder /out/weed /usr/bin/weed
+USER seaweed
