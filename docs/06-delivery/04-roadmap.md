@@ -2,9 +2,9 @@
 doc_id: DOCOO-ROADMAP
 title: نقشه راه توسعه Docoo
 status: proposed
-version: 1.9.0
+version: 1.10.0
 owner: Product & Engineering
-last_updated: 2026-10-07
+last_updated: 2026-10-09
 notion_sync: true
 ---
 
@@ -138,6 +138,8 @@ workflow پس از kill/deploy ادامه یابد و provider outage state را
 14. ~~**اعلان‌ها**~~ — انجام شد در 0.22.0 ([ADR-0025](../adr/0025-notifications.md)): زنگ، صفحه و ایمیل اختیاری.
 15. ~~**دروازهٔ ردیابی نیازمندی‌ها و باقی‌ماندهٔ اسمارت**~~ — انجام شد در 0.22.0: `pnpm qa:trace`، صفحهٔ مقصد برای هر ۱۲ گام واکر و پاک‌سازی نگهداری خطاهای بستهٔ خطایاب.
 16. **آنچه به مالک یا تصمیم بعدی وابسته است** — ابزارهای جست‌وجو و خواندن وب (و با آن بندهای `FR-RES-*` که در `qa/traceability.json` waiver دارند)، رونویسی صوت واقعی، اجرای کیفیت با مدل واقعی، و حذف فایل‌های object-store و cache هنگام purge (`NFR-DATA-003`).
+
+17. **پیشنهادهای بهبود پس از بررسی بازار** — [سند ۱۵](15-product-research-and-improvement-proposals.md) پانزده پیشنهاد (SPK-001 و PRP-01..14) را با Issue، وابستگی و ترتیب پیشنهادی ثبت می‌کند؛ هیچ‌کدام تصویب نشده است. تحقیق وب در [ADR-0026](../adr/0026-web-research-adapter.md) و spike جست‌وجو در [سند ۱۶](16-search-api-spike.md) آمده است؛ بند ۱۶ بالا (ابزارهای جست‌وجو و خواندن وب) به این‌ها وابسته است.
 
 ## spikeهای لازم
 
