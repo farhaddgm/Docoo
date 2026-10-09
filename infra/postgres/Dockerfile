@@ -10,7 +10,7 @@ RUN go get google.golang.org/grpc@v1.84.0 && go build -p 2 -trimpath -buildvcs=f
 
 # PostgreSQL 18 + pgvector with WAL-G for continuous WAL archiving and point-in-time
 # recovery (NFR-REL-004: RPO 15 minutes). Archiving is active once WALG_S3_PREFIX is set.
-FROM pgvector/pgvector:0.8.1-pg18@sha256:508c5290cda481d4f5f846446a26e9c1b804766828a394a5861de1b348a18b4c
+FROM pgvector/pgvector:0.8.7-pg18@sha256:2358fcba361ed2233a5ed81b5fe4ca779ccb304120ce531a3bf51c0ed7e2bc11
 RUN apt-get update && apt-get upgrade -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/* /usr/local/bin/gosu
 COPY --from=builder /out/wal-g /usr/local/bin/wal-g
