@@ -211,7 +211,7 @@ start() {
   "${compose[@]}" build
   # Existing persistent data may have been created by root in pre-v0.23 images.
   # Only named Docoo volumes are touched; no application secret is mounted.
-  docker run --rm --network none --user 0 --cap-drop ALL --cap-add CHOWN \
+  docker run --rm --network none --user 0 --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE \
     --mount type=volume,source=docoo_temporal-data,target=/temporal \
     --mount type=volume,source=docoo_clamav-data,target=/clamav \
     --mount type=volume,source=docoo_caddy-data,target=/caddy-data \
