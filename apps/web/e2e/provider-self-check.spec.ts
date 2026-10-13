@@ -63,9 +63,17 @@ test.describe('model self-check (AI-006)', () => {
       { provider: 'fake', name: `E2E self-check refused ${Date.now()}` },
     );
     await page.goto('/fa/providers');
+    await expect(page.getByLabel(text.model, { exact: true })).toHaveValue('fake-standard');
+    await page.getByLabel(text.model, { exact: true }).fill('');
     await page.getByLabel(text.connection, { exact: true }).selectOption(created.connection.id);
+    await expect(page.getByLabel(text.model, { exact: true })).toHaveValue('');
+    await expect(page.getByRole('button', { name: text.start })).toBeDisabled();
     await page.getByLabel(text.model, { exact: true }).fill('fake-refused-model');
+    const requested = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/self-check'),
+    );
     await page.getByRole('button', { name: text.start }).click();
+    expect((await requested).postDataJSON()).toMatchObject({ model: 'fake-refused-model' });
 
     await expect(page.getByText(/مرحله از .* ناموفق بود/u)).toBeVisible({ timeout: 120_000 });
     const table = page.getByRole('table', { name: text.caption });
@@ -74,6 +82,8 @@ test.describe('model self-check (AI-006)', () => {
     await expect(table.getByText(/does not support structured output/u).first()).toBeVisible();
     await expect(table.getByText(text.kinds['invalid_request']!).first()).toBeVisible();
     await expect(page.getByLabel(text.report)).toContainText('fake_model_refused');
+    await page.getByLabel(text.model, { exact: true }).fill('fake-standard');
+    await expect(page.getByLabel(text.report)).toContainText('· fake-refused-model ·');
     await expectNoSeriousA11yViolations(page);
   });
 
