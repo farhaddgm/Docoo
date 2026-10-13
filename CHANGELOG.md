@@ -9,6 +9,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - Preview solution ranks and joint winners across integer criterion-weight ranges. Other enabled weights are redistributed proportionally to total 100, with equal shares when their original total is zero; saved criteria remain unchanged.
 - Record final selections with a required decision reason and a reason for each rejected alternative. The append-only decision journal pins the solution set, full criterion snapshot and score inputs, with the actor and time. Stale selections and insufficient resource access are rejected.
 
+### Fixed
+
+- Preserve user edits in the model self-check form while defaults load. Each run and its report retain the tested connection, model, steps and start time even when form values change afterward.
+
 ### Documentation
 
 - Align the baseline with the account roles, resource grants and Google OIDC released in v0.21.0. ADR-0027 records the existing behavior, including VIEW/EDIT grants and owner controls.

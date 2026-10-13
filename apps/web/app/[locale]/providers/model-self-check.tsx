@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { apiGet, apiSend } from '../../api-client';
 import { formatNumber, type Locale } from '../../i18n';
@@ -53,24 +53,41 @@ export function ModelSelfCheck({
   const [stoppedAuth, setStoppedAuth] = useState(false);
   const [finished, setFinished] = useState(false);
   const [copyNotice, setCopyNotice] = useState('');
+  const connectionEdited = useRef(false);
+  const modelEdited = useRef(false);
+  const [tested, setTested] = useState<{
+    model: string;
+    provider: string;
+    steps: string[];
+    startedAt: string;
+  } | null>(null);
 
   // Start from the model in use.
   useEffect(() => {
-    if (!connectionId && current.connectionId) setConnectionId(current.connectionId);
-    if (!model && current.model) setModel(current.model);
-  }, [current, connectionId, model]);
+    if (!running && !connectionEdited.current && current.connectionId)
+      setConnectionId(current.connectionId);
+    if (!running && !modelEdited.current && current.model) setModel(current.model);
+  }, [current, running]);
   useEffect(() => {
+    let active = true;
+    setSteps([]);
     if (!connectionId) return;
     apiGet<{ steps: string[] }>(`${base}/provider-connections/${connectionId}/self-check`)
-      .then((result) => setSteps(result.steps))
+      .then((result) => {
+        if (active) setSteps(result.steps);
+      })
       .catch(() => undefined);
+    return () => {
+      active = false;
+    };
   }, [base, connectionId]);
 
   const selected = connections.find((item) => item.id === connectionId);
   const suggestions = connectionId
     ? (modelIds[connections.find((item) => item.id === connectionId)?.id ?? ''] ?? [])
     : [];
-  const done = steps.flatMap((step) => {
+  const resultSteps = tested?.steps ?? [];
+  const done = resultSteps.flatMap((step) => {
     const row = rows[step];
     return row?.state === 'done' ? [row.result] : [];
   });
@@ -78,20 +95,28 @@ export function ModelSelfCheck({
 
   async function run() {
     if (running || !connectionId || model.trim() === '') return;
+    const request = {
+      connectionId,
+      model: model.trim(),
+      provider: selected?.provider ?? '',
+      steps: [...steps],
+      startedAt: new Date().toISOString(),
+    };
+    setTested(request);
     setRunning(true);
     setFinished(false);
     setStoppedAuth(false);
     setCopyNotice('');
-    setRows(Object.fromEntries(steps.map((step) => [step, { state: 'waiting' }])));
-    for (const step of steps) {
+    setRows(Object.fromEntries(request.steps.map((step) => [step, { state: 'waiting' }])));
+    for (const step of request.steps) {
       setRows((all) => ({ ...all, [step]: { state: 'running' } }));
       let result: Result;
       try {
         result = (
           await apiSend<{ result: Result }>(
             'POST',
-            `${base}/provider-connections/${connectionId}/self-check`,
-            { model: model.trim(), step, language: locale },
+            `${base}/provider-connections/${request.connectionId}/self-check`,
+            { model: request.model, step, language: locale },
           )
         ).result;
       } catch {
@@ -143,7 +168,7 @@ export function ModelSelfCheck({
   };
 
   const report = [
-    `Docoo model self-check · ${selected?.provider ?? ''} · ${model.trim()} · ${new Date().toISOString()}`,
+    `Docoo model self-check · ${tested?.provider ?? ''} · ${tested?.model ?? ''} · ${tested?.startedAt ?? ''}`,
     ...done.map((item) =>
       [
         item.step,
@@ -179,7 +204,11 @@ export function ModelSelfCheck({
           id="selfcheck-connection"
           value={connectionId}
           disabled={running}
-          onChange={(event) => setConnectionId(event.target.value)}
+          onChange={(event) => {
+            connectionEdited.current = true;
+            setSteps([]);
+            setConnectionId(event.target.value);
+          }}
         >
           <option value="">—</option>
           {connections.map((item) => (
@@ -197,7 +226,10 @@ export function ModelSelfCheck({
           disabled={running}
           placeholder={text.modelPlaceholder}
           autoComplete="off"
-          onChange={(event) => setModel(event.target.value)}
+          onChange={(event) => {
+            modelEdited.current = true;
+            setModel(event.target.value);
+          }}
         />
         <datalist id="selfcheck-model-options">
           {suggestions.map((item) => (
@@ -218,6 +250,7 @@ export function ModelSelfCheck({
 
       {Object.keys(rows).length > 0 && (
         <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="selfcheck-title">
+          <p>{fill(text.testedModel, { model: tested?.model ?? '' })}</p>
           <table>
             <caption className="visually-hidden">{text.caption}</caption>
             <thead>
@@ -231,7 +264,7 @@ export function ModelSelfCheck({
               </tr>
             </thead>
             <tbody>
-              {steps.map((step) => {
+              {resultSteps.map((step) => {
                 const row = rows[step];
                 const result = row?.state === 'done' ? row.result : null;
                 return (
@@ -273,16 +306,16 @@ export function ModelSelfCheck({
 
       <div role="status" aria-live="polite">
         {stoppedAuth && <p className="notice error">{text.stoppedAuth}</p>}
-        {finished && failed === 0 && done.length === steps.length && (
+        {finished && failed === 0 && done.length === resultSteps.length && (
           <p className="notice ok">
-            {fill(text.allPassed, { n: formatNumber(locale, steps.length) })}
+            {fill(text.allPassed, { n: formatNumber(locale, resultSteps.length) })}
           </p>
         )}
         {finished && failed > 0 && (
           <p className="notice error">
             {fill(text.someFailed, {
               failed: formatNumber(locale, failed),
-              n: formatNumber(locale, steps.length),
+              n: formatNumber(locale, resultSteps.length),
             })}
           </p>
         )}
