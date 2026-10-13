@@ -191,6 +191,15 @@ describe.skipIf(!adminUrl || !temporalAddress)(
           detail.json<{ stage: { outputs: { content: Record<string, unknown> }[] } }>().stage
             .outputs[0]!.content,
         ).toBeTypeOf('object');
+        if (stage === 'evaluation')
+          expect(
+            detail.json<{ stage: { outputs: { content: Record<string, unknown> }[] } }>().stage
+              .outputs[0]!.content['evaluationScope'],
+          ).toEqual({
+            artifact: 'workflow-outline',
+            documentationSchema: 'documentation_output',
+            finalDocumentApproval: false,
+          });
         expect((await decide(projectId, stageView, 'approve')).statusCode).toBe(200);
       }
       view = await waitFor(

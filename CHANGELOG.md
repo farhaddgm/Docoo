@@ -2,6 +2,13 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.26.1] — 2026-10-13
+
+### Fixed
+
+- Send the approved problem definition and its immutable version to solution generation and document evaluation; detailed initial drafts use the approved statement. Reject model results when their problem changes during the call, and limit definition lookup to the same project under RLS.
+- Identify workflow evaluation as an outline review, preserving findings and explicitly leaving final-document approval pending. A selected-solution document is evaluated at its own scope; final rubric thresholds and approval gates remain enforced.
+
 ## [0.26.0] — 2026-10-13
 
 ### Added

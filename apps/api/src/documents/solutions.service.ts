@@ -24,6 +24,7 @@ import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { ConfigService } from '../config/config.service.js';
 import { PROVIDER_RUNTIME } from '../providers/providers.service.js';
 import { insertDocumentVersion, levelBoundsFrom, settingText } from './document-store.js';
+import { assertCurrentProblem, projectProblem } from './project-problem.js';
 
 const SCORE_KEYS = DEFAULT_CRITERIA.map((criterion) => criterion.key);
 
@@ -192,6 +193,7 @@ export class SolutionsService {
       const company = await this.business.roleBusiness(client, context, projectId, 'ideator');
       return {
         project,
+        problem: await projectProblem(client, projectId),
         count,
         connectionId,
         model,
@@ -228,7 +230,9 @@ export class SolutionsService {
             {
               role: 'user',
               content: dataBlock({
-                problem: prepared.project.initial_problem,
+                problem: prepared.problem.statement,
+                problemDefinition: prepared.problem.definition,
+                problemVersionId: prepared.problem.versionId,
                 title: prepared.project.title,
                 ideation: prepared.ideation,
                 ...(prepared.company ? { businessProfile: prepared.company.prompt.data } : {}),
@@ -255,6 +259,7 @@ export class SolutionsService {
     }
     return this.database.run(context, async (client) => {
       await this.assertProject(client, projectId, true);
+      await assertCurrentProblem(client, projectId, prepared.problem);
       const set = (
         await client.query<{ id: string }>(
           `insert into solution_sets (workspace_id, project_id, requested_count, origin, invocation_id, created_by)
@@ -286,7 +291,12 @@ export class SolutionsService {
         targetType: 'project',
         targetId: projectId,
         projectId,
-        after: { setId: set.id, count: prepared.count, invocationId },
+        after: {
+          setId: set.id,
+          count: prepared.count,
+          invocationId,
+          problemVersionId: prepared.problem.versionId,
+        },
       });
       return this.list(client, projectId);
     });
@@ -372,6 +382,7 @@ export class SolutionsService {
     }
     return this.database.run(context, async (client) => {
       const project = await this.assertProject(client, projectId, true);
+      const problem = await projectProblem(client, projectId);
       const latest = (
         await client.query<{ id: string }>(
           'select id from solution_sets where project_id = $1 order by created_at desc, id desc limit 1',
@@ -429,6 +440,7 @@ export class SolutionsService {
           );
         snapshot = {
           setId: latest.id,
+          problemVersionId: problem.versionId,
           criteriaVersionId: criteria.versionId,
           criteria: criteria.criteria,
           selected: input.solutionIds.map((solutionId, i) => ({
@@ -512,7 +524,7 @@ export class SolutionsService {
           template,
           {
             ...solution,
-            problem: project.initial_problem,
+            problem: problem.statement,
             score: scoreSolution(solution.score_inputs, criteria.criteria),
           },
           project.output_language,
