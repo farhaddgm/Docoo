@@ -1,0 +1,2613 @@
+{
+  "schema": 1,
+  "standard": "OWASP ASVS",
+  "version": "5.0.0",
+  "targetLevel": 2,
+  "source": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.csv",
+  "sourceSha256": "98c8fe911b9edb403af8ee05d3ce8201ecac2659e313b053890a62847cdcf680",
+  "reviewDate": "2026-10-13",
+  "certification": false,
+  "controls": [
+    {
+      "id": "v5.0.0-V1.1.1",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.1",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.1.2",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.1",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.2.1",
+      "level": 1,
+      "chapter": "V1",
+      "section": "V1.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.2.2",
+      "level": 1,
+      "chapter": "V1",
+      "section": "V1.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.2.3",
+      "level": 1,
+      "chapter": "V1",
+      "section": "V1.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.2.4",
+      "level": 1,
+      "chapter": "V1",
+      "section": "V1.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.2.5",
+      "level": 1,
+      "chapter": "V1",
+      "section": "V1.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.2.6",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.2.7",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.2.8",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.2.9",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.1",
+      "level": 1,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.2",
+      "level": 1,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.3",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.4",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.5",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.6",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.7",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.8",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.9",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.10",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.3.11",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.4.1",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.4",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.4.2",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.4",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.4.3",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.4",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.5.1",
+      "level": 1,
+      "chapter": "V1",
+      "section": "V1.5",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V1.5.2",
+      "level": 2,
+      "chapter": "V1",
+      "section": "V1.5",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/html-security.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.1.1",
+      "level": 1,
+      "chapter": "V2",
+      "section": "V2.1",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.1.2",
+      "level": 2,
+      "chapter": "V2",
+      "section": "V2.1",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.1.3",
+      "level": 2,
+      "chapter": "V2",
+      "section": "V2.1",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.2.1",
+      "level": 1,
+      "chapter": "V2",
+      "section": "V2.2",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.2.2",
+      "level": 1,
+      "chapter": "V2",
+      "section": "V2.2",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.2.3",
+      "level": 2,
+      "chapter": "V2",
+      "section": "V2.2",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.3.1",
+      "level": 1,
+      "chapter": "V2",
+      "section": "V2.3",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.3.2",
+      "level": 2,
+      "chapter": "V2",
+      "section": "V2.3",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.3.3",
+      "level": 2,
+      "chapter": "V2",
+      "section": "V2.3",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.3.4",
+      "level": 2,
+      "chapter": "V2",
+      "section": "V2.3",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V2.4.1",
+      "level": 2,
+      "chapter": "V2",
+      "section": "V2.4",
+      "status": "review-required",
+      "evidence": ["packages/contracts/src/index.ts", "apps/api/test/workflow.integration.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.2.1",
+      "level": 1,
+      "chapter": "V3",
+      "section": "V3.2",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.2.2",
+      "level": 1,
+      "chapter": "V3",
+      "section": "V3.2",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.3.1",
+      "level": 1,
+      "chapter": "V3",
+      "section": "V3.3",
+      "status": "gap",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Session cookies currently use docoo_session rather than the required secure/host name prefix."
+    },
+    {
+      "id": "v5.0.0-V3.3.2",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.3",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.3.3",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.3",
+      "status": "gap",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Session cookies currently use docoo_session rather than the required secure/host name prefix."
+    },
+    {
+      "id": "v5.0.0-V3.3.4",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.3",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.4.1",
+      "level": 1,
+      "chapter": "V3",
+      "section": "V3.4",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.4.2",
+      "level": 1,
+      "chapter": "V3",
+      "section": "V3.4",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.4.3",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.4",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.4.4",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.4",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.4.5",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.4",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.4.6",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.4",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.5.1",
+      "level": 1,
+      "chapter": "V3",
+      "section": "V3.5",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.5.2",
+      "level": 1,
+      "chapter": "V3",
+      "section": "V3.5",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.5.3",
+      "level": 1,
+      "chapter": "V3",
+      "section": "V3.5",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.5.4",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.5",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.5.5",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.5",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.7.1",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.7",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V3.7.2",
+      "level": 2,
+      "chapter": "V3",
+      "section": "V3.7",
+      "status": "review-required",
+      "evidence": ["apps/web/proxy.ts", "apps/api/test/auth.authorization.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V4.1.1",
+      "level": 1,
+      "chapter": "V4",
+      "section": "V4.1",
+      "status": "review-required",
+      "evidence": ["apps/api/src/main.ts", "apps/api/test/authorization-matrix.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V4.1.2",
+      "level": 2,
+      "chapter": "V4",
+      "section": "V4.1",
+      "status": "review-required",
+      "evidence": ["apps/api/src/main.ts", "apps/api/test/authorization-matrix.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V4.1.3",
+      "level": 2,
+      "chapter": "V4",
+      "section": "V4.1",
+      "status": "review-required",
+      "evidence": ["apps/api/src/main.ts", "apps/api/test/authorization-matrix.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V4.2.1",
+      "level": 2,
+      "chapter": "V4",
+      "section": "V4.2",
+      "status": "review-required",
+      "evidence": ["apps/api/src/main.ts", "apps/api/test/authorization-matrix.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V4.3.1",
+      "level": 2,
+      "chapter": "V4",
+      "section": "V4.3",
+      "status": "not-applicable",
+      "evidence": ["apps/api/src/main.ts", "apps/api/test/authorization-matrix.test.ts"],
+      "reason": "The public application API is REST; it exposes no GraphQL or WebSocket endpoint."
+    },
+    {
+      "id": "v5.0.0-V4.3.2",
+      "level": 2,
+      "chapter": "V4",
+      "section": "V4.3",
+      "status": "not-applicable",
+      "evidence": ["apps/api/src/main.ts", "apps/api/test/authorization-matrix.test.ts"],
+      "reason": "The public application API is REST; it exposes no GraphQL or WebSocket endpoint."
+    },
+    {
+      "id": "v5.0.0-V4.4.1",
+      "level": 1,
+      "chapter": "V4",
+      "section": "V4.4",
+      "status": "not-applicable",
+      "evidence": ["apps/api/src/main.ts", "apps/api/test/authorization-matrix.test.ts"],
+      "reason": "The public application API is REST; it exposes no GraphQL or WebSocket endpoint."
+    },
+    {
+      "id": "v5.0.0-V4.4.2",
+      "level": 2,
+      "chapter": "V4",
+      "section": "V4.4",
+      "status": "not-applicable",
+      "evidence": ["apps/api/src/main.ts", "apps/api/test/authorization-matrix.test.ts"],
+      "reason": "The public application API is REST; it exposes no GraphQL or WebSocket endpoint."
+    },
+    {
+      "id": "v5.0.0-V4.4.3",
+      "level": 2,
+      "chapter": "V4",
+      "section": "V4.4",
+      "status": "not-applicable",
+      "evidence": ["apps/api/src/main.ts", "apps/api/test/authorization-matrix.test.ts"],
+      "reason": "The public application API is REST; it exposes no GraphQL or WebSocket endpoint."
+    },
+    {
+      "id": "v5.0.0-V4.4.4",
+      "level": 2,
+      "chapter": "V4",
+      "section": "V4.4",
+      "status": "not-applicable",
+      "evidence": ["apps/api/src/main.ts", "apps/api/test/authorization-matrix.test.ts"],
+      "reason": "The public application API is REST; it exposes no GraphQL or WebSocket endpoint."
+    },
+    {
+      "id": "v5.0.0-V5.1.1",
+      "level": 2,
+      "chapter": "V5",
+      "section": "V5.1",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V5.2.1",
+      "level": 1,
+      "chapter": "V5",
+      "section": "V5.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V5.2.2",
+      "level": 1,
+      "chapter": "V5",
+      "section": "V5.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V5.2.3",
+      "level": 2,
+      "chapter": "V5",
+      "section": "V5.2",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V5.3.1",
+      "level": 1,
+      "chapter": "V5",
+      "section": "V5.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V5.3.2",
+      "level": 1,
+      "chapter": "V5",
+      "section": "V5.3",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V5.4.1",
+      "level": 2,
+      "chapter": "V5",
+      "section": "V5.4",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V5.4.2",
+      "level": 2,
+      "chapter": "V5",
+      "section": "V5.4",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V5.4.3",
+      "level": 2,
+      "chapter": "V5",
+      "section": "V5.4",
+      "status": "review-required",
+      "evidence": [
+        "packages/ingestion/src/ingestion.test.ts",
+        "apps/api/test/sources.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.1.1",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.1",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.1.2",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.1",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.1.3",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.1",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.1",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.2",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.3",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.4",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.5",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.6",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.7",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.8",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.9",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.10",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.11",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.2.12",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.3.1",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.3",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.3.2",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.3",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.3.3",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.3",
+      "status": "gap",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Password-only access exists and Docoo does not enforce MFA. Rate limits and lockout do not establish L2 compliance."
+    },
+    {
+      "id": "v5.0.0-V6.3.4",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.3",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.4.1",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.4.2",
+      "level": 1,
+      "chapter": "V6",
+      "section": "V6.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.4.3",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.4.4",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.5.1",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.5",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.5.2",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.5",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.5.3",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.5",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.5.4",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.5",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.5.5",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.5",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.6.1",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.6",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.6.2",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.6",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.6.3",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.6",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.8.1",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.8",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.8.2",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.8",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.8.3",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.8",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V6.8.4",
+      "level": 2,
+      "chapter": "V6",
+      "section": "V6.8",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.1.1",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.1",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.1.2",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.1",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.1.3",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.1",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.2.1",
+      "level": 1,
+      "chapter": "V7",
+      "section": "V7.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.2.2",
+      "level": 1,
+      "chapter": "V7",
+      "section": "V7.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.2.3",
+      "level": 1,
+      "chapter": "V7",
+      "section": "V7.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.2.4",
+      "level": 1,
+      "chapter": "V7",
+      "section": "V7.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.3.1",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.3",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.3.2",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.3",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.4.1",
+      "level": 1,
+      "chapter": "V7",
+      "section": "V7.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.4.2",
+      "level": 1,
+      "chapter": "V7",
+      "section": "V7.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.4.3",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.4.4",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.4.5",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.5.1",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.5",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.5.2",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.5",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.6.1",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.6",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V7.6.2",
+      "level": 2,
+      "chapter": "V7",
+      "section": "V7.6",
+      "status": "review-required",
+      "evidence": ["apps/api/test/auth.integration.test.ts", "apps/api/test/auth.service.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V8.1.1",
+      "level": 1,
+      "chapter": "V8",
+      "section": "V8.1",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.authorization.test.ts",
+        "packages/database/test/rls.integration.mjs"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V8.1.2",
+      "level": 2,
+      "chapter": "V8",
+      "section": "V8.1",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.authorization.test.ts",
+        "packages/database/test/rls.integration.mjs"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V8.2.1",
+      "level": 1,
+      "chapter": "V8",
+      "section": "V8.2",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.authorization.test.ts",
+        "packages/database/test/rls.integration.mjs"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V8.2.2",
+      "level": 1,
+      "chapter": "V8",
+      "section": "V8.2",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.authorization.test.ts",
+        "packages/database/test/rls.integration.mjs"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V8.2.3",
+      "level": 2,
+      "chapter": "V8",
+      "section": "V8.2",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.authorization.test.ts",
+        "packages/database/test/rls.integration.mjs"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V8.3.1",
+      "level": 1,
+      "chapter": "V8",
+      "section": "V8.3",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.authorization.test.ts",
+        "packages/database/test/rls.integration.mjs"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V8.4.1",
+      "level": 2,
+      "chapter": "V8",
+      "section": "V8.4",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.authorization.test.ts",
+        "packages/database/test/rls.integration.mjs"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V9.1.1",
+      "level": 1,
+      "chapter": "V9",
+      "section": "V9.1",
+      "status": "review-required",
+      "evidence": ["apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V9.1.2",
+      "level": 1,
+      "chapter": "V9",
+      "section": "V9.1",
+      "status": "review-required",
+      "evidence": ["apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V9.1.3",
+      "level": 1,
+      "chapter": "V9",
+      "section": "V9.1",
+      "status": "review-required",
+      "evidence": ["apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V9.2.1",
+      "level": 1,
+      "chapter": "V9",
+      "section": "V9.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V9.2.2",
+      "level": 2,
+      "chapter": "V9",
+      "section": "V9.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V9.2.3",
+      "level": 2,
+      "chapter": "V9",
+      "section": "V9.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V9.2.4",
+      "level": 2,
+      "chapter": "V9",
+      "section": "V9.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/google-oauth.test.ts"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V10.1.1",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.1",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V10.1.2",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.1",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V10.2.1",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.2",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V10.2.2",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.2",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V10.3.1",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.3",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.3.2",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.3",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.3.3",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.3",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.3.4",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.3",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.1",
+      "level": 1,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.2",
+      "level": 1,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.3",
+      "level": 1,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.4",
+      "level": 1,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.5",
+      "level": 1,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.6",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.7",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.8",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.9",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.10",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.4.11",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.4",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.5.1",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.5",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V10.5.2",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.5",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V10.5.3",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.5",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V10.5.4",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.5",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V10.5.5",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.5",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V10.6.1",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.6",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.6.2",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.6",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.7.1",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.7",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.7.2",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.7",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V10.7.3",
+      "level": 2,
+      "chapter": "V10",
+      "section": "V10.7",
+      "status": "not-applicable",
+      "evidence": [
+        "apps/api/test/google-oauth.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
+      ],
+      "reason": "Docoo is an OIDC relying-party client, not an OAuth resource/authorization server or OpenID provider."
+    },
+    {
+      "id": "v5.0.0-V11.1.1",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.1",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.1.2",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.1",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.2.1",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.2",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.2.2",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.2",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.2.3",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.2",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.3.1",
+      "level": 1,
+      "chapter": "V11",
+      "section": "V11.3",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.3.2",
+      "level": 1,
+      "chapter": "V11",
+      "section": "V11.3",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.3.3",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.3",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.4.1",
+      "level": 1,
+      "chapter": "V11",
+      "section": "V11.4",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.4.2",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.4",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.4.3",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.4",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.4.4",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.4",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.5.1",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.5",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V11.6.1",
+      "level": 2,
+      "chapter": "V11",
+      "section": "V11.6",
+      "status": "review-required",
+      "evidence": [
+        "apps/api/test/auth.crypto.test.ts",
+        "apps/api/test/providers.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V12.1.1",
+      "level": 1,
+      "chapter": "V12",
+      "section": "V12.1",
+      "status": "review-required",
+      "evidence": ["docs/06-delivery/14-security-hardening.md", "deploy/compose.production.yaml"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V12.1.2",
+      "level": 2,
+      "chapter": "V12",
+      "section": "V12.1",
+      "status": "review-required",
+      "evidence": ["docs/06-delivery/14-security-hardening.md", "deploy/compose.production.yaml"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V12.1.3",
+      "level": 2,
+      "chapter": "V12",
+      "section": "V12.1",
+      "status": "review-required",
+      "evidence": ["docs/06-delivery/14-security-hardening.md", "deploy/compose.production.yaml"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V12.2.1",
+      "level": 1,
+      "chapter": "V12",
+      "section": "V12.2",
+      "status": "review-required",
+      "evidence": ["docs/06-delivery/14-security-hardening.md", "deploy/compose.production.yaml"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V12.2.2",
+      "level": 1,
+      "chapter": "V12",
+      "section": "V12.2",
+      "status": "review-required",
+      "evidence": ["docs/06-delivery/14-security-hardening.md", "deploy/compose.production.yaml"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V12.3.1",
+      "level": 2,
+      "chapter": "V12",
+      "section": "V12.3",
+      "status": "gap",
+      "evidence": ["docs/06-delivery/14-security-hardening.md", "deploy/compose.production.yaml"],
+      "reason": "Production internal services use isolated Docker networks; authenticated encryption for all service links has not been demonstrated."
+    },
+    {
+      "id": "v5.0.0-V12.3.2",
+      "level": 2,
+      "chapter": "V12",
+      "section": "V12.3",
+      "status": "gap",
+      "evidence": ["docs/06-delivery/14-security-hardening.md", "deploy/compose.production.yaml"],
+      "reason": "Production internal services use isolated Docker networks; authenticated encryption for all service links has not been demonstrated."
+    },
+    {
+      "id": "v5.0.0-V12.3.3",
+      "level": 2,
+      "chapter": "V12",
+      "section": "V12.3",
+      "status": "gap",
+      "evidence": ["docs/06-delivery/14-security-hardening.md", "deploy/compose.production.yaml"],
+      "reason": "Production internal services use isolated Docker networks; authenticated encryption for all service links has not been demonstrated."
+    },
+    {
+      "id": "v5.0.0-V12.3.4",
+      "level": 2,
+      "chapter": "V12",
+      "section": "V12.3",
+      "status": "gap",
+      "evidence": ["docs/06-delivery/14-security-hardening.md", "deploy/compose.production.yaml"],
+      "reason": "Production internal services use isolated Docker networks; authenticated encryption for all service links has not been demonstrated."
+    },
+    {
+      "id": "v5.0.0-V13.1.1",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.1",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.2.1",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.2",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.2.2",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.2",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.2.3",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.2",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.2.4",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.2",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.2.5",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.2",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.3.1",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.3",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.3.2",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.3",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.4.1",
+      "level": 1,
+      "chapter": "V13",
+      "section": "V13.4",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.4.2",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.4",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.4.3",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.4",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.4.4",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.4",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V13.4.5",
+      "level": 2,
+      "chapter": "V13",
+      "section": "V13.4",
+      "status": "review-required",
+      "evidence": [".github/workflows/security.yml", "scripts/deploy/prepare-secrets.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V14.1.1",
+      "level": 2,
+      "chapter": "V14",
+      "section": "V14.1",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/02-audit-and-compliance.md",
+        "apps/api/test/decision-intelligence.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V14.1.2",
+      "level": 2,
+      "chapter": "V14",
+      "section": "V14.1",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/02-audit-and-compliance.md",
+        "apps/api/test/decision-intelligence.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V14.2.1",
+      "level": 1,
+      "chapter": "V14",
+      "section": "V14.2",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/02-audit-and-compliance.md",
+        "apps/api/test/decision-intelligence.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V14.2.2",
+      "level": 2,
+      "chapter": "V14",
+      "section": "V14.2",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/02-audit-and-compliance.md",
+        "apps/api/test/decision-intelligence.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V14.2.3",
+      "level": 2,
+      "chapter": "V14",
+      "section": "V14.2",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/02-audit-and-compliance.md",
+        "apps/api/test/decision-intelligence.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V14.2.4",
+      "level": 2,
+      "chapter": "V14",
+      "section": "V14.2",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/02-audit-and-compliance.md",
+        "apps/api/test/decision-intelligence.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V14.3.1",
+      "level": 1,
+      "chapter": "V14",
+      "section": "V14.3",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/02-audit-and-compliance.md",
+        "apps/api/test/decision-intelligence.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V14.3.2",
+      "level": 2,
+      "chapter": "V14",
+      "section": "V14.3",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/02-audit-and-compliance.md",
+        "apps/api/test/decision-intelligence.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V14.3.3",
+      "level": 2,
+      "chapter": "V14",
+      "section": "V14.3",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/02-audit-and-compliance.md",
+        "apps/api/test/decision-intelligence.integration.test.ts"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.1.1",
+      "level": 1,
+      "chapter": "V15",
+      "section": "V15.1",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.1.2",
+      "level": 2,
+      "chapter": "V15",
+      "section": "V15.1",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.1.3",
+      "level": 2,
+      "chapter": "V15",
+      "section": "V15.1",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.2.1",
+      "level": 1,
+      "chapter": "V15",
+      "section": "V15.2",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.2.2",
+      "level": 2,
+      "chapter": "V15",
+      "section": "V15.2",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.2.3",
+      "level": 2,
+      "chapter": "V15",
+      "section": "V15.2",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.3.1",
+      "level": 1,
+      "chapter": "V15",
+      "section": "V15.3",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.3.2",
+      "level": 2,
+      "chapter": "V15",
+      "section": "V15.3",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.3.3",
+      "level": 2,
+      "chapter": "V15",
+      "section": "V15.3",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.3.4",
+      "level": 2,
+      "chapter": "V15",
+      "section": "V15.3",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.3.5",
+      "level": 2,
+      "chapter": "V15",
+      "section": "V15.3",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.3.6",
+      "level": 2,
+      "chapter": "V15",
+      "section": "V15.3",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V15.3.7",
+      "level": 2,
+      "chapter": "V15",
+      "section": "V15.3",
+      "status": "review-required",
+      "evidence": [
+        "docs/05-security/01-security-and-threat-model.md",
+        ".github/workflows/security.yml"
+      ],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.1.1",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.1",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.2.1",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.2.2",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.2.3",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.2.4",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.2.5",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.2",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.3.1",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.3",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.3.2",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.3",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.3.3",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.3",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.3.4",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.3",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.4.1",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.4.2",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.4.3",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.4",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.5.1",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.5",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.5.2",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.5",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V16.5.3",
+      "level": 2,
+      "chapter": "V16",
+      "section": "V16.5",
+      "status": "review-required",
+      "evidence": ["apps/api/test/audit.integration.test.ts", "scripts/security/monitor.test.mjs"],
+      "reason": "Inspect this exact requirement against the referenced controls; no ASVS compliance is asserted."
+    },
+    {
+      "id": "v5.0.0-V17.1.1",
+      "level": 2,
+      "chapter": "V17",
+      "section": "V17.1",
+      "status": "not-applicable",
+      "evidence": [],
+      "reason": "Docoo does not implement WebRTC, TURN, media or signaling."
+    },
+    {
+      "id": "v5.0.0-V17.2.1",
+      "level": 2,
+      "chapter": "V17",
+      "section": "V17.2",
+      "status": "not-applicable",
+      "evidence": [],
+      "reason": "Docoo does not implement WebRTC, TURN, media or signaling."
+    },
+    {
+      "id": "v5.0.0-V17.2.2",
+      "level": 2,
+      "chapter": "V17",
+      "section": "V17.2",
+      "status": "not-applicable",
+      "evidence": [],
+      "reason": "Docoo does not implement WebRTC, TURN, media or signaling."
+    },
+    {
+      "id": "v5.0.0-V17.2.3",
+      "level": 2,
+      "chapter": "V17",
+      "section": "V17.2",
+      "status": "not-applicable",
+      "evidence": [],
+      "reason": "Docoo does not implement WebRTC, TURN, media or signaling."
+    },
+    {
+      "id": "v5.0.0-V17.2.4",
+      "level": 2,
+      "chapter": "V17",
+      "section": "V17.2",
+      "status": "not-applicable",
+      "evidence": [],
+      "reason": "Docoo does not implement WebRTC, TURN, media or signaling."
+    },
+    {
+      "id": "v5.0.0-V17.3.1",
+      "level": 2,
+      "chapter": "V17",
+      "section": "V17.3",
+      "status": "not-applicable",
+      "evidence": [],
+      "reason": "Docoo does not implement WebRTC, TURN, media or signaling."
+    },
+    {
+      "id": "v5.0.0-V17.3.2",
+      "level": 2,
+      "chapter": "V17",
+      "section": "V17.3",
+      "status": "not-applicable",
+      "evidence": [],
+      "reason": "Docoo does not implement WebRTC, TURN, media or signaling."
+    }
+  ]
+}

@@ -2,9 +2,9 @@
 doc_id: DOCOO-AUTHORIZATION-MATRIX
 title: ماتریس مجوز endpointهای control plane
 status: active
-version: 1.4.0
+version: 1.5.0
 owner: Security & Engineering
-last_updated: 2026-10-04
+last_updated: 2026-10-13
 notion_sync: true
 ---
 
@@ -28,10 +28,9 @@ notion_sync: true
 
 ## نقش‌ها
 
-| نقش           | permissionها                      |
-| ------------- | --------------------------------- |
-| `super_admin` | همهٔ permissionهای workspace      |
-| هر نقش دیگر   | هیچ؛ تا زمان تعریف صریح در ماتریس |
+ماتریس جاری در [نقش‌ها و مجوزها](../01-product/04-roles-and-permissions.md) ثبت شده است: `super_admin` همهٔ permissionهای workspace دارد؛ `editor` و `viewer` ابتدا از permissionهای مدیریت platform کنار گذاشته می‌شوند، سپس scope و grant `READ`/`EDIT` روی منبع بررسی می‌شود. `viewer` اجازهٔ ساخت منبع ندارد. grant `EDIT` می‌تواند تغییر منبع را برای هر دو نقش غیرمدیر مجاز کند؛ عنوان نقش جایگزین grant نیست. نقش ناشناخته هیچ مجوزی ندارد.
+
+مدیریت حساب‌ها و Google allowlist از مسیرهای جداگانهٔ Accounts انجام می‌شود و کنترل Super Admin/مالک دارد؛ این کنترل‌ها در `google-accounts.integration.test.ts` آزموده می‌شوند. جدول endpointهای زیر مربوط به مسیرهای workspace است.
 
 ## endpointها
 

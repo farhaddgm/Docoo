@@ -2,9 +2,9 @@
 doc_id: DOCOO-FOUNDATION-VISION
 title: چشم‌انداز و راهبرد محصول Docoo
 status: approved-baseline
-version: 1.0.0
+version: 1.1.0
 owner: Product
-last_updated: 2026-09-24
+last_updated: 2026-10-13
 notion_sync: true
 ---
 
@@ -35,7 +35,7 @@ Docoo این شکاف‌ها را با یک workflow بادوام، تفکیک �
 
 ## کاربر اصلی نسخهٔ اول
 
-کاربر اصلی `Super Admin` است: فردی که حوزه‌ها، پروژه‌ها، دانش، اصول ایجنت‌ها، مدل‌ها، gateها و خروجی‌ها را مدیریت می‌کند. محصول باید از روز نخست برای اضافه‌شدن نقش‌های editor، reviewer و viewer آماده باشد، اما UI و سیاست نسخهٔ اول نباید پیچیدگی نقش‌های آینده را تحمیل کند.
+کاربر اصلی `Super Admin` است: فردی که حوزه‌ها، پروژه‌ها، دانش، اصول ایجنت‌ها، مدل‌ها، gateها و خروجی‌ها را مدیریت می‌کند. نقش‌های editor و viewer و دسترسی صریح منابع اکنون در محصول فعال‌اند؛ reviewer مستقل همچنان توسعهٔ آینده است ([ADR-0027](../adr/0027-current-access-baseline.md)).
 
 ## سناریوی مرجع
 

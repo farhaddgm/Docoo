@@ -2,9 +2,9 @@
 doc_id: DOCOO-DOC-INDEX
 title: فهرست مرجع مستندات Docoo
 status: active
-version: 0.3.2
+version: 1.1.0
 owner: Product & Architecture
-last_updated: 2026-10-06
+last_updated: 2026-10-13
 notion_sync: true
 ---
 
@@ -128,3 +128,6 @@ notion_sync: true
 هر تغییر معنادار باید شناسهٔ تصمیم، دلیل، اثر، تاریخ و مالک داشته باشد. تغییر در اصول ایجنت، وظایف، rubric، سیاست دانش، مدل، تنظیمات پروژه یا قالب سند باید نسخهٔ جدید ایجاد کند؛ بازنویسی بی‌ردپا ممنوع است.
 
 - [بنچ‌مارک ۲۰ ایده و شش قابلیت منتخب](01-product/08-advanced-ideas-benchmark.md)
+
+- [ADR-0027: خط مبنای جاری دسترسی](adr/0027-current-access-baseline.md)
+- [نگاشت ASVS 5.0.0 L2 و شکاف‌های باز](05-security/04-asvs-5-l2-control-map.md)
