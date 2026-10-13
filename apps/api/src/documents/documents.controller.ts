@@ -58,6 +58,18 @@ const generateSchema = z.object({ count: z.number().int().min(2).max(20).optiona
 const selectSchema = z
   .object({ solutionIds: z.array(z.string().uuid()).min(1).max(20), reason: reason.optional() })
   .strict();
+const sensitivitySchema = z
+  .object({ criterionKey: z.string().min(1).max(64), weight: z.number().int().min(0).max(100) })
+  .strict();
+const decisionSchema = z
+  .object({
+    setId: z.string().uuid(),
+    criteriaVersionId: z.string().uuid().nullable(),
+    solutionIds: z.array(z.string().uuid()).min(1).max(20),
+    reason,
+    rejected: z.array(z.object({ solutionId: z.string().uuid(), reason }).strict()).max(20),
+  })
+  .strict();
 const editSchema = z
   .object({
     content: z.record(z.string(), z.unknown()),
@@ -199,6 +211,54 @@ export class DocumentsController {
   @RequireWorkspacePermission('project.read')
   async solutionList(@Req() request: FastifyRequest, @Param('projectId') raw: string) {
     return { solutionSet: await this.solutions.solutions(workspaceContext(request), id(raw)) };
+  }
+
+  @Post('projects/:projectId/solutions/sensitivity')
+  @HttpCode(200)
+  @RequireWorkspacePermission('project.read')
+  async sensitivity(
+    @Req() request: FastifyRequest,
+    @Param('projectId') raw: string,
+    @Body() body: unknown,
+  ) {
+    return {
+      sensitivity: await this.solutions.sensitivity(
+        workspaceContext(request),
+        id(raw),
+        parse(sensitivitySchema, body),
+      ),
+    };
+  }
+
+  @Get('projects/:projectId/solution-decisions')
+  @RequireWorkspacePermission('project.read')
+  async decisions(@Req() request: FastifyRequest, @Param('projectId') raw: string) {
+    return { decisions: await this.solutions.decisions(workspaceContext(request), id(raw)) };
+  }
+
+  @Post('projects/:projectId/solution-decisions')
+  @HttpCode(201)
+  @RequireWorkspacePermission('workflow.approve')
+  async recordDecision(
+    @Req() request: FastifyRequest,
+    @Param('projectId') raw: string,
+    @Body() body: unknown,
+  ) {
+    const input = parse(decisionSchema, body);
+    return {
+      selection: await this.solutions.select(workspaceContext(request), id(raw), {
+        solutionIds: input.solutionIds.map((v) => v.toLowerCase()),
+        reason: input.reason,
+        decision: {
+          setId: input.setId.toLowerCase(),
+          criteriaVersionId: input.criteriaVersionId?.toLowerCase() ?? null,
+          rejected: input.rejected.map((r) => ({
+            solutionId: r.solutionId.toLowerCase(),
+            reason: r.reason,
+          })),
+        },
+      }),
+    };
   }
 
   @Post('projects/:projectId/solution-selections')

@@ -32,9 +32,10 @@
       "status": "tested",
       "evidence": [
         "apps/api/test/authorization-matrix.test.ts",
-        "apps/api/test/auth.authorization.test.ts"
+        "apps/api/test/auth.authorization.test.ts",
+        "apps/api/test/google-accounts.integration.test.ts"
       ],
-      "note": "Every route is checked against a role-permission matrix; Super Admin gets all, unknown roles none."
+      "note": "Workspace membership, super_admin/editor/viewer permissions, owner controls and per-resource VIEW/EDIT grants are implemented; unknown roles are denied."
     },
     "FR-LOC-001": {
       "status": "tested",
@@ -806,7 +807,7 @@
     "NFR-SEC-008": {
       "status": "waived",
       "evidence": [],
-      "note": "No ASVS 5.0 L2 control mapping or external audit exists; CI only runs partial gates (Semgrep, Trivy, audit, ZAP DAST, auth probe) and CodeQL is deferred."
+      "note": "ASVS 5.0.0 L1/L2 inventory and evidence mapping exist in qa/security/asvs-5.0-l2.json. MFA, cookie prefixes and service TLS have explicit gaps; independent L2 verification remains uncompleted. CodeQL is active via advanced setup and required PR protection."
     },
     "NFR-REL-001": {
       "status": "operational",

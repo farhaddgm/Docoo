@@ -1,18 +1,28 @@
 ---
 doc_id: DOCOO-ROLES-PERMISSIONS
 title: نقش‌های انسانی و مدل دسترسی
-status: proposed
-version: 1.0.1
+status: approved-baseline
+version: 1.1.0
 owner: Product & Security
-last_updated: 2026-09-24
+last_updated: 2026-10-13
 notion_sync: true
 ---
 
 # نقش‌های انسانی و مدل دسترسی
 
-## نسخهٔ اول
+## خط مبنای جاری
 
-تنها نقش انسانی `SUPER_ADMIN` است. این نقش می‌تواند تمام منابع داخل workspace خود را مدیریت کند، providerها را پیکربندی کند، Brain را override کند، پروژه را عبور دهد و داده را حذف کند. وجود یک نقش به معنای حذف authorization نیست؛ هر endpoint همچنان permission صریح بررسی می‌کند.
+[ADR-0027](../adr/0027-current-access-baseline.md) محدودیت تاریخی «فقط یک Super Admin» را با قابلیت منتشرشده در v0.21.0 جایگزین می‌کند. نقش‌های ذخیره‌شده `super_admin`، `editor` و `viewer` هستند. عضویت workspace و اجازهٔ منبع جداگانه بررسی می‌شوند؛ صرف داشتن نقش به معنی دیدن همهٔ پروژه‌ها نیست.
+
+| نقش           | رفتار جاری                                                                                                                                                                    |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `super_admin` | مدیریت workspace و منابع آن؛ مدیریت دسترسی Google و منابع فقط برای مالک شناخته‌شدهٔ برنامه مجاز است.                                                                          |
+| `editor`      | ساخت پروژه/حوزه؛ خواندن و تغییر منابعی که اجازهٔ کافی دارند. پیکربندی provider، retention، Smart و integration، حذف پروژه/حوزه و workflow override مجاز نیست.                 |
+| `viewer`      | ساخت پروژه/حوزه مجاز نیست؛ دسترسی به منابع به grant صریح `VIEW` یا `EDIT` وابسته است. `VIEW` تغییر را رد می‌کند؛ grant `EDIT` در پیاده‌سازی جاری اجازهٔ تغییر منبع را می‌دهد. |
+
+سازندهٔ منبع دسترسی `EDIT` دارد. منابع وابسته مانند سند، run و نسخهٔ دانش از پروژه/حوزهٔ مربوط مجوز می‌گیرند. منابع فاقد grant برای کاربر غیرمدیر با 404 مخفی می‌شوند. تغییر نقش، عضویت یا وضعیت حساب نشست‌ها را revoke می‌کند. حساب مالک حذف یا غیرفعال نمی‌شود.
+
+ورود Google از حساب‌های ثبت‌شده و فعال استفاده می‌کند؛ scopeها فقط `openid email profile` هستند. ورود Google هیچ مجوز Drive یا Docs به برنامه نمی‌دهد. MFA، SAML و SCIM همچنان خارج از خط مبنا هستند.
 
 ## permissionهای پایه
 
@@ -37,18 +47,9 @@ notion_sync: true
 4. worker فقط permission لازم برای task خود را دارد؛ document worker نباید provider secret تحقیق را بخواند.
 5. support یا developer نباید با حساب production admin کار کند.
 
-## مدل آینده
+## توسعهٔ آینده
 
-Schema از ابتدا role، permission، membership و resource scope دارد تا نقش‌های زیر بدون بازطراحی داده افزوده شوند:
-
-- Workspace Admin
-- Project Editor
-- Reviewer/Approver
-- Viewer/Auditor
-- Knowledge Curator
-- Provider Administrator
-
-این نقش‌ها در UI نسخهٔ اول فعال نیستند و نباید معیار پذیرش را گسترش دهند.
+Reviewer، Knowledge Curator و Provider Administrator نقش‌های مستقل پیاده‌سازی‌شده نیستند. افزودن آن‌ها نیازمند permission، RLS، آزمون منفی و تغییر نسخهٔ baseline است.
 
 ## policy evaluation
 

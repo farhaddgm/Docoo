@@ -2,9 +2,9 @@
 doc_id: DOCOO-AUTHORIZATION-MATRIX
 title: ماتریس مجوز endpointهای control plane
 status: active
-version: 1.4.0
+version: 1.5.0
 owner: Security & Engineering
-last_updated: 2026-10-04
+last_updated: 2026-10-13
 notion_sync: true
 ---
 
@@ -28,10 +28,9 @@ notion_sync: true
 
 ## نقش‌ها
 
-| نقش           | permissionها                      |
-| ------------- | --------------------------------- |
-| `super_admin` | همهٔ permissionهای workspace      |
-| هر نقش دیگر   | هیچ؛ تا زمان تعریف صریح در ماتریس |
+ماتریس جاری در [نقش‌ها و مجوزها](../01-product/04-roles-and-permissions.md) ثبت شده است: `super_admin` همهٔ permissionهای workspace دارد؛ `editor` و `viewer` ابتدا از permissionهای مدیریت platform کنار گذاشته می‌شوند، سپس scope و grant `VIEW`/`EDIT` روی منبع بررسی می‌شود. `viewer` اجازهٔ ساخت منبع ندارد. grant `EDIT` می‌تواند تغییر منبع را برای هر دو نقش غیرمدیر مجاز کند؛ عنوان نقش جایگزین grant نیست. نقش ناشناخته هیچ مجوزی ندارد.
+
+مدیریت حساب‌ها و Google allowlist از مسیرهای جداگانهٔ Accounts انجام می‌شود و کنترل Super Admin/مالک دارد؛ این کنترل‌ها در `google-accounts.integration.test.ts` آزموده می‌شوند. جدول endpointهای زیر مربوط به مسیرهای workspace است.
 
 ## endpointها
 
@@ -226,3 +225,13 @@ notion_sync: true
 
 - قفل تدریجی حساب پس از ۵ تلاش ناموفق می‌تواند توسط مهاجم برای قفل‌کردن ادمین استفاده شود؛ پاسخ عمومی، rate limit، سقف ۲۴ ساعت و مسیر reset/CLI این ریسک را محدود می‌کنند.
 - مسیر reset برای ایمیل موجود چند insert بیشتر دارد؛ تفاوت زمانی کوچک است و پاسخ و کد آن یکسان می‌ماند.
+
+## تحلیل حساسیت و دفتر تصمیم (#143)
+
+| مسیر                                               | permission                         |
+| -------------------------------------------------- | ---------------------------------- |
+| `POST /projects/{projectId}/solutions/sensitivity` | `project.read` (محاسبه بدون تغییر) |
+| `GET /projects/{projectId}/solution-decisions`     | `project.read`                     |
+| `POST /projects/{projectId}/solution-decisions`    | `workflow.approve` و grant EDIT    |
+
+ثبت تصمیم به مجموعهٔ راه‌حل و نسخهٔ معیارها سنجاق است؛ تغییر هم‌زمان با 409 رد می‌شود. دلیل تصمیم و همهٔ گزینه‌های ردشده اجباری است. snapshot و actor/زمان در audit فقط‌افزودنی ثبت می‌شوند؛ نگاشت شواهد ASVS این routeها نیازمند بررسی همان کنترل‌های دسترسی است.

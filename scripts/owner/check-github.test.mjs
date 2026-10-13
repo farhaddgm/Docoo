@@ -286,6 +286,19 @@ test('a provider acceptance run that never happened is a to-do', async () => {
   );
 });
 
+test('an unfinished or unreadable CI run is not reported as passing', async () => {
+  for (const response of [
+    ok({ workflow_runs: [{ status: 'in_progress', conclusion: null, html_url: 'https://x/ci' }] }),
+    { status: 403, body: {} },
+  ]) {
+    const api = healthy({ '/actions/workflows/ci.yml/runs?branch=main&per_page=1': response });
+    assert.equal(
+      by(await runChecks({ repo: 'o/r', api, lang: 'en' }), 'Actions runs').status,
+      'UNKNOWN',
+    );
+  }
+});
+
 test('an unreadable repository stops at once, and an API that throws is "unknown"', async () => {
   const gone = await runChecks({
     repo: 'o/r',

@@ -89,8 +89,8 @@ declare module 'fastify' {
 export type MembershipRole = AuthWorkspace['role'];
 
 /**
- * Role → permission matrix (FR-AUTH-005). Version 1 only has Super Admin, who holds
- * every workspace permission; future roles are added here without touching routes.
+ * Role → permission matrix (FR-AUTH-005). Resource grants are checked by the guard
+ * below; editor/viewer do not receive platform configuration permissions.
  * See docs/05-security/03-authorization-matrix.md.
  */
 export const ROLE_PERMISSIONS: Readonly<Record<MembershipRole, ReadonlySet<WorkspacePermission>>> =

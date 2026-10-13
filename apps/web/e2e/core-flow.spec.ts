@@ -617,6 +617,13 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     ).toBeVisible();
     await expect(articles.first().getByText(solutionText.outOf)).toBeVisible();
 
+    await page.locator('#sensitivity-weight').focus();
+    await page.locator('#sensitivity-weight').press('Home');
+    await page.getByRole('button', { name: 'محاسبهٔ رتبه‌ها' }).click();
+    await expect(
+      page.getByRole('table', { name: 'رتبه در وزن آزمایشی' }).locator('tbody tr'),
+    ).toHaveCount(3);
+
     await articles.nth(0).getByRole('button', { name: solutionText.addToSelection }).click();
     await articles.nth(2).getByRole('button', { name: solutionText.addToSelection }).click();
     const selection = page.locator('.priority-list > li');
@@ -626,11 +633,15 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       .getByRole('button', { name: new RegExp(solutionText.moveUp, 'u') })
       .click();
     await page.locator('#selection-reason').fill('دو گزینهٔ برتر');
+    await page.locator('input[id^="reject-"]').fill('این گزینه ریسک بیشتری دارد');
     await page.getByRole('button', { name: solutionText.select }).click();
     await expect(
       page.getByRole('status').filter({ hasText: solutionText.done.selected }),
     ).toBeVisible();
     await expect(page.getByText(/انتخاب‌شده با اولویت/u)).toHaveCount(2);
+    await expect(page.locator('#decision-journal-title')).toBeVisible();
+    await expect(page.getByText('این گزینه ریسک بیشتری دارد')).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
 
     // Documents: one per selected solution, in priority order.
     await page.getByRole('button', { name: detail.tabs.documents, exact: true }).click();

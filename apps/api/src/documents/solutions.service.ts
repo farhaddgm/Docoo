@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   buildDocument,
+  analyzeWeightSensitivity,
   criteriaProblem,
   DEFAULT_CRITERIA,
   scoreSolution,
@@ -25,6 +26,12 @@ import { PROVIDER_RUNTIME } from '../providers/providers.service.js';
 import { insertDocumentVersion, levelBoundsFrom, settingText } from './document-store.js';
 
 const SCORE_KEYS = DEFAULT_CRITERIA.map((criterion) => criterion.key);
+
+export interface DecisionSnapshotInput {
+  readonly setId: string;
+  readonly criteriaVersionId: string | null;
+  readonly rejected: readonly { solutionId: string; reason: string }[];
+}
 
 export function solutionSchema(count: number): JsonSchema {
   const list = { type: 'array', items: { type: 'string' }, minItems: 1 };
@@ -121,7 +128,7 @@ export class SolutionsService {
     const problem = criteriaProblem(input.criteria);
     if (problem) throw badRequest('SOLUTION_CRITERIA_INVALID', problem);
     return this.database.run(context, async (client) => {
-      await this.assertProject(client, projectId);
+      await this.assertProject(client, projectId, true);
       const next = (
         await client.query<{ next: number }>(
           'select coalesce(max(version_no), 0) + 1 as next from solution_criteria_versions where project_id = $1',
@@ -247,6 +254,7 @@ export class SolutionsService {
       );
     }
     return this.database.run(context, async (client) => {
+      await this.assertProject(client, projectId, true);
       const set = (
         await client.query<{ id: string }>(
           `insert into solution_sets (workspace_id, project_id, requested_count, origin, invocation_id, created_by)
@@ -291,17 +299,79 @@ export class SolutionsService {
     });
   }
 
+  async sensitivity(
+    context: WorkspaceRequestContext,
+    projectId: string,
+    input: { criterionKey: string; weight: number },
+  ) {
+    return this.database.run(
+      context,
+      async (client) => {
+        await this.assertProject(client, projectId);
+        const set = await this.list(client, projectId);
+        if (set.items.length < 2) throw conflict('SOLUTION_NONE', 'Generate solutions first.');
+        try {
+          return {
+            setId: set.setId,
+            criteriaVersionId: set.criteria.versionId,
+            ...analyzeWeightSensitivity(
+              set.items.map((s) => ({ id: s.id, inputs: s.scoreInputs })),
+              set.criteria.criteria,
+              input.criterionKey,
+              input.weight,
+            ),
+          };
+        } catch (error) {
+          throw badRequest(
+            'SOLUTION_SENSITIVITY_INVALID',
+            error instanceof Error ? error.message : 'Invalid preview.',
+          );
+        }
+      },
+      { snapshot: true },
+    );
+  }
+
+  async decisions(context: WorkspaceRequestContext, projectId: string) {
+    return this.database.run(context, async (client) => {
+      await this.assertProject(client, projectId);
+      const result = await client.query<{
+        id: string;
+        actor_id: string | null;
+        actor_name: string | null;
+        occurred_at: string;
+        reason: string;
+        snapshot: unknown;
+      }>(
+        `select a.id, a.actor_id, u.display_name as actor_name, ${isoColumn('a.occurred_at', 'occurred_at')}, a.reason, a.after as snapshot
+         from audit_events a left join memberships m on m.workspace_id=a.workspace_id and m.user_id=a.actor_id
+         left join users u on u.id=m.user_id
+         where a.project_id=$1 and a.action='solution.decision_recorded'
+         order by a.occurred_at desc, a.id desc limit 50`,
+        [projectId],
+      );
+      return result.rows.map((r) => ({
+        id: r.id,
+        actorId: r.actor_id,
+        actorName: r.actor_name,
+        recordedAt: r.occurred_at,
+        reason: r.reason,
+        snapshot: r.snapshot,
+      }));
+    });
+  }
+
   /** FR-SOL-005/006: ordered selection; every selected solution gets its own document lifecycle. */
   async select(
     context: WorkspaceRequestContext,
     projectId: string,
-    input: { solutionIds: string[]; reason?: string | undefined },
+    input: { solutionIds: string[]; reason?: string | undefined; decision?: DecisionSnapshotInput },
   ) {
     if (new Set(input.solutionIds).size !== input.solutionIds.length) {
       throw badRequest('SOLUTION_SELECTION_INVALID', 'A solution can be selected only once.');
     }
     return this.database.run(context, async (client) => {
-      const project = await this.assertProject(client, projectId);
+      const project = await this.assertProject(client, projectId, true);
       const latest = (
         await client.query<{ id: string }>(
           'select id from solution_sets where project_id = $1 order by created_at desc, id desc limit 1',
@@ -331,9 +401,53 @@ export class SolutionsService {
         );
       }
       const criteria = await this.currentCriteria(client, projectId);
-      await client.query(
+      let snapshot: Record<string, unknown> | null = null;
+      if (input.decision) {
+        if (
+          input.decision.setId !== latest.id ||
+          input.decision.criteriaVersionId !== criteria.versionId
+        )
+          throw conflict(
+            'SOLUTION_DECISION_STALE',
+            'Solutions or criteria changed; reload before recording the decision.',
+          );
+        if (!input.reason || input.reason.trim().length < 3)
+          throw badRequest('SOLUTION_DECISION_INVALID', 'A decision reason is required.');
+        const set = await this.list(client, projectId);
+        const rejectedIds = set.items
+          .filter((s) => !input.solutionIds.includes(s.id))
+          .map((s) => s.id);
+        const submitted = input.decision.rejected;
+        if (
+          submitted.length !== rejectedIds.length ||
+          new Set(submitted.map((r) => r.solutionId)).size !== submitted.length ||
+          submitted.some((r) => !rejectedIds.includes(r.solutionId) || r.reason.trim().length < 3)
+        )
+          throw badRequest(
+            'SOLUTION_DECISION_INVALID',
+            'Provide a reason for each rejected alternative in this set.',
+          );
+        snapshot = {
+          setId: latest.id,
+          criteriaVersionId: criteria.versionId,
+          criteria: criteria.criteria,
+          selected: input.solutionIds.map((solutionId, i) => ({
+            solutionId,
+            priority: i + 1,
+            ordinal: set.items.find((s) => s.id === solutionId)!.ordinal,
+          })),
+          rejected: submitted.map((r) => ({
+            solutionId: r.solutionId,
+            ordinal: set.items.find((s) => s.id === r.solutionId)!.ordinal,
+            reason: r.reason.trim(),
+          })),
+          scoreInputs: Object.fromEntries(set.items.map((s) => [s.id, s.scoreInputs])),
+          ranking: set.items.map((s) => ({ solutionId: s.id, score: s.score.total })),
+        };
+      }
+      const selection = await client.query<{ id: string }>(
         `insert into solution_selections (workspace_id, project_id, set_id, selected, criteria_version_id, reason, created_by)
-         values ($1, $2, $3, $4::jsonb, $5, $6, $7)`,
+         values ($1, $2, $3, $4::jsonb, $5, $6, $7) returning id`,
         [
           context.workspaceId,
           projectId,
@@ -346,6 +460,15 @@ export class SolutionsService {
           context.actorId,
         ],
       );
+      if (snapshot)
+        await writeAudit(client, context, {
+          action: 'solution.decision_recorded',
+          targetType: 'solution_selection',
+          targetId: selection.rows[0]!.id,
+          projectId,
+          reason: input.reason ?? null,
+          after: { ...snapshot, decisionId: selection.rows[0]!.id },
+        });
       const effective = await this.config.resolve(client, context, 'project', projectId);
       const level = Math.min(
         5,
@@ -493,19 +616,23 @@ export class SolutionsService {
       : { versionId: null, versionNo: 0, criteria: [...DEFAULT_CRITERIA] };
   }
 
-  private async assertProject(client: PoolClient, projectId: string) {
+  private async assertProject(client: PoolClient, projectId: string, write = false) {
     const project = (
       await client.query<{
         id: string;
         title: string;
         initial_problem: string;
         output_language: 'fa' | 'en';
+        status: string;
       }>(
-        'select id, title, initial_problem, output_language from projects where id = $1 and deleted_at is null',
+        'select id, title, initial_problem, output_language, status from projects where id = $1 and deleted_at is null' +
+          (write ? ' for update' : ''),
         [projectId],
       )
     ).rows[0];
     if (!project) throw notFound('PROJECT_NOT_FOUND', 'The project was not found.');
+    if (write && project.status === 'archived')
+      throw conflict('PROJECT_ARCHIVED', 'Restore the project before changing its decisions.');
     return project;
   }
 }

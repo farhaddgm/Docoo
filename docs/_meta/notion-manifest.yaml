@@ -215,3 +215,9 @@ documents:
   - path: docs/01-product/08-advanced-ideas-benchmark.md
     doc_id: DOCOO-ADVANCED-IDEAS-BENCHMARK
     section: 01 Product
+  - path: docs/adr/0027-current-access-baseline.md
+    doc_id: DOCOO-ADR-0027
+    section: ADRs
+  - path: docs/05-security/04-asvs-5-l2-control-map.md
+    doc_id: DOCOO-ASVS-L2-MAP
+    section: 05 Security

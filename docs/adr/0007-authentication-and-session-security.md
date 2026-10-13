@@ -2,9 +2,9 @@
 doc_id: DOCOO-ADR-0007
 title: ADR-0007 نشست و امنیت احراز هویت
 status: accepted
-version: 1.0.0
+version: 1.1.0
 owner: Security & Engineering
-last_updated: 2026-09-24
+last_updated: 2026-10-13
 notion_sync: true
 ---
 
@@ -12,7 +12,7 @@ notion_sync: true
 
 ## زمینه
 
-نسخهٔ اول backoffice فقط Super Admin دارد، اما باید از ابتدا در برابر سرقت token، reset abuse، CSRF و log شدن secret مقاوم باشد. JWT در localStorage برای این پنل انتخاب مناسبی نیست چون revoke فوری، چرخش نشست و کنترل logout همه‌جا را سخت می‌کند.
+محدودیت تاریخی تک‌ادمین طبق [ADR-0027](0027-current-access-baseline.md) با حساب‌های مدیریت‌شده و Google OIDC گسترش یافته است. بک‌آفیس باید از ابتدا در برابر سرقت token، reset abuse، CSRF و log شدن secret مقاوم باشد. JWT در localStorage برای این پنل انتخاب مناسبی نیست چون revoke فوری، چرخش نشست و کنترل logout همه‌جا را سخت می‌کند.
 
 ## تصمیم
 

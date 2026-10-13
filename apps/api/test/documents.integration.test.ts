@@ -137,6 +137,180 @@ describe.skipIf(!adminUrl)('solutions, documents and evaluation (SOL-*, DOC-*, E
     await h?.close();
   });
 
+  it('PRP-07: previews without mutation, rejects stale decisions and journals pinned reasons with actor/time', async () => {
+    const projectId = await project('decision-journal');
+    const generated = await post(`/projects/${projectId}/solutions/generate`, { count: 3 });
+    const set = generated.json<{
+      solutionSet: {
+        setId: string;
+        criteria: { versionId: string | null; criteria: unknown[] };
+        items: { id: string }[];
+      };
+    }>().solutionSet;
+    const otherCookie = await h.login(h.emails.b);
+    expect(
+      (
+        await h.request('GET', api(`/projects/${projectId}/solution-decisions`), {
+          cookie: otherCookie,
+        })
+      ).statusCode,
+    ).toBe(404);
+    expect(
+      (
+        await h.request('POST', api(`/projects/${projectId}/solutions/sensitivity`), {
+          payload: { criterionKey: 'impact', weight: 0 },
+        })
+      ).statusCode,
+    ).toBe(401);
+    const preview = await post(`/projects/${projectId}/solutions/sensitivity`, {
+      criterionKey: 'impact',
+      weight: 0,
+    });
+    expect(preview.statusCode, preview.body).toBe(200);
+    expect(
+      preview.json<{
+        sensitivity: {
+          setId: string;
+          preview: { criteria: { enabled: boolean; weight: number }[] };
+          intervals: unknown[];
+        };
+      }>().sensitivity,
+    ).toMatchObject({ setId: set.setId });
+    const afterPreview = await h.request('GET', api(`/projects/${projectId}/solution-criteria`), {
+      cookie,
+    });
+    expect(afterPreview.json<{ criteria: unknown }>().criteria).toEqual(set.criteria);
+    expect(
+      (
+        await post(`/projects/${projectId}/solutions/sensitivity`, {
+          criterionKey: 'unknown',
+          weight: 50,
+        })
+      ).statusCode,
+    ).toBe(400);
+    const decision = {
+      setId: set.setId,
+      criteriaVersionId: set.criteria.versionId,
+      solutionIds: [set.items[0]!.id],
+      reason: 'Measured impact outweighs higher delivery cost.',
+      rejected: set.items
+        .slice(1)
+        .map((s) => ({ solutionId: s.id, reason: 'Higher risk than the selected alternative.' })),
+    };
+    expect(
+      (await post(`/projects/${projectId}/solution-decisions`, { ...decision, reason: '' }))
+        .statusCode,
+    ).toBe(400);
+    expect(
+      (await post(`/projects/${projectId}/solution-decisions`, { ...decision, rejected: [] }))
+        .statusCode,
+    ).toBe(400);
+    expect(
+      (
+        await post(`/projects/${projectId}/solution-decisions`, {
+          ...decision,
+          setId: h.ids.workspaceB,
+        })
+      ).statusCode,
+    ).toBe(409);
+    const saved = await post(`/projects/${projectId}/solution-decisions`, decision);
+    expect(saved.statusCode, saved.body).toBe(201);
+    const journal = await h.request('GET', api(`/projects/${projectId}/solution-decisions`), {
+      cookie,
+    });
+    const events = journal.json<{
+      decisions: {
+        actorId: string;
+        recordedAt: string;
+        reason: string;
+        snapshot: { criteria: unknown; selected: unknown[]; rejected: unknown[] };
+      }[];
+    }>().decisions;
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ actorId: h.ids.userA, reason: decision.reason });
+    expect(Date.parse(events[0]!.recordedAt)).not.toBeNaN();
+    expect(events[0]!.snapshot.criteria).toEqual(set.criteria.criteria);
+    expect(events[0]!.snapshot.selected).toEqual([
+      { solutionId: set.items[0]!.id, priority: 1, ordinal: 1 },
+    ]);
+    expect(events[0]!.snapshot.rejected).toHaveLength(2);
+    const changed = structuredClone(set.criteria.criteria) as { key: string; weight: number }[];
+    changed.find((c) => c.key === 'impact')!.weight += 5;
+    changed.find((c) => c.key === 'cost')!.weight -= 5;
+    expect(
+      (
+        await h.request('PUT', api(`/projects/${projectId}/solution-criteria`), {
+          cookie,
+          payload: { criteria: changed, reason: 'Different weights' },
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect((await post(`/projects/${projectId}/solution-decisions`, decision)).statusCode).toBe(
+      409,
+    );
+    const unchanged = await h.request('GET', api(`/projects/${projectId}/solution-decisions`), {
+      cookie,
+    });
+    expect(unchanged.json<{ decisions: unknown[] }>().decisions).toEqual(events);
+    // A real viewer membership with READ can preview, but cannot record a decision.
+    await h.admin.query("update users set account_role='viewer' where id=$1", [h.ids.userB]);
+    await h.admin.query("update memberships set role='viewer' where user_id=$1", [h.ids.userB]);
+    await h.admin.query(
+      "insert into memberships(workspace_id,user_id,role) values($1,$2,'viewer')",
+      [h.ids.workspaceA, h.ids.userB],
+    );
+    await h.admin.query(
+      "insert into resource_access(workspace_id,user_id,kind,resource_id,access,granted_by) values($1,$2,'project',$3,'VIEW',$4)",
+      [h.ids.workspaceA, h.ids.userB, projectId, h.ids.userA],
+    );
+    try {
+      const viewer = await h.login(h.emails.b);
+      expect(
+        (
+          await h.request('POST', api(`/projects/${projectId}/solutions/sensitivity`), {
+            cookie: viewer,
+            payload: { criterionKey: 'impact', weight: 50 },
+          })
+        ).statusCode,
+      ).toBe(200);
+      expect(
+        (
+          await h.request('GET', api(`/projects/${projectId}/solution-decisions`), {
+            cookie: viewer,
+          })
+        ).statusCode,
+      ).toBe(200);
+      expect(
+        (
+          await h.request('POST', api(`/projects/${projectId}/solution-decisions`), {
+            cookie: viewer,
+            payload: decision,
+          })
+        ).statusCode,
+      ).toBe(403);
+      await h.admin.query('delete from resource_access where workspace_id=$1 and user_id=$2', [
+        h.ids.workspaceA,
+        h.ids.userB,
+      ]);
+      expect(
+        (
+          await h.request('GET', api(`/projects/${projectId}/solution-decisions`), {
+            cookie: viewer,
+          })
+        ).statusCode,
+      ).toBe(404);
+    } finally {
+      await h.admin.query('delete from memberships where workspace_id=$1 and user_id=$2', [
+        h.ids.workspaceA,
+        h.ids.userB,
+      ]);
+      await h.admin.query("update users set account_role='super_admin' where id=$1", [h.ids.userB]);
+      await h.admin.query("update memberships set role='super_admin' where user_id=$1", [
+        h.ids.userB,
+      ]);
+    }
+  });
+
   it('SOL-002/003: criteria are versioned, weights must add up to 100 and scores are explained', async () => {
     const projectId = await project('criteria');
     const initial = await h.request('GET', api(`/projects/${projectId}/solution-criteria`), {

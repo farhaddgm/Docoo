@@ -2,9 +2,9 @@
 doc_id: DOCOO-FOUNDATION-SCOPE
 title: دامنه نسخه اول و اصول طراحی Docoo
 status: approved-baseline
-version: 1.0.0
+version: 1.1.0
 owner: Product & Architecture
-last_updated: 2026-09-24
+last_updated: 2026-10-13
 notion_sync: true
 ---
 
@@ -14,7 +14,8 @@ notion_sync: true
 
 ### مدیریت پایه
 
-- ورود امن ادمین کل با گذرواژه.
+- ورود امن حساب‌های مدیریت‌شده با گذرواژه و Google OIDC برای حساب‌های مجاز؛ بدون ثبت‌نام خودکار.
+- نقش‌های `super_admin`، `editor` و `viewer`، عضویت workspace و دسترسی `VIEW`/`EDIT` به پروژه/حوزه طبق [ADR-0027](../adr/0027-current-access-baseline.md).
 - تنظیم زبان فارسی/انگلیسی.
 - داشبورد وضعیت پروژه‌ها، اجراها، خطاها و gateهای منتظر اقدام.
 - تنظیم و health check کلیدهای API مالک سامانه.
@@ -64,7 +65,7 @@ notion_sync: true
 ## ۲. خارج از دامنهٔ نسخهٔ اول
 
 - self-service signup، billing و subscription.
-- چند ادمین هم‌زمان، editor/viewer واقعی و دعوت کاربر.
+- ثبت‌نام عمومی و دعوت self-service؛ ساخت حساب و اعطای دسترسی توسط مدیر انجام می‌شود.
 - MFA، SSO/SAML و SCIM.
 - اپلیکیشن native موبایل.
 - آموزش یا fine-tune مدل پایه با دادهٔ مشتری؛ نسخهٔ اول از prompt، retrieval و policy استفاده می‌کند.
