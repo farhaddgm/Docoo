@@ -5,7 +5,7 @@ RUN apk add --no-cache git
 ADD --checksum=sha256:7c2ceafb4e4204c04469bee42f8c852a4ffd0019090d0095261225ce403c4845 https://codeload.github.com/rclone/rclone/tar.gz/687d264b689b8c49a67e2e52a8a5e0caa01c04ce /tmp/source.tgz
 WORKDIR /source
 RUN tar -xzf /tmp/source.tgz --strip-components=1 -C /source && rm /tmp/source.tgz
-RUN go get google.golang.org/grpc@v1.84.0 && go build -p 2 -trimpath -buildvcs=false -ldflags '-s -w' -o /out/rclone .
+RUN go get google.golang.org/grpc@v1.84.0 golang.org/x/net@v0.60.0 && go build -p 2 -trimpath -buildvcs=false -ldflags '-s -w' -o /out/rclone .
 FROM rclone/rclone:latest@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
 USER root
 RUN apk upgrade --no-cache

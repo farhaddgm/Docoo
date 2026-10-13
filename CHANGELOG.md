@@ -2,6 +2,13 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.25.1] — 2026-10-13
+
+### Security
+
+- Rebuild Caddy, SeaweedFS, Temporal, WAL-G and rclone with `golang.org/x/net` v0.60.0 to address CVE-2026-78669. The Go runtime and application source revisions stay pinned; the mandatory image scans remain enabled.
+- Recognize advanced CodeQL using an analysis on the current main commit, check all 20 required PR gates even when a job has not run, and report the latest Security failure. A successful provider-acceptance workflow without its credentials is reported as unverified.
+
 ## [0.25.0] — 2026-10-09
 
 Project decision intelligence: bilingual retrieval, evidence and decision provenance, explainable question priorities, human conflict review, evidence sufficiency and bounded adaptive research.

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { ACCEPTANCE_SECRETS, render, runChecks } from './check-github.mjs';
+import { ACCEPTANCE_SECRETS, REQUIRED_PR_CHECKS, render, runChecks } from './check-github.mjs';
 
 const ok = (body) => ({ status: 200, body });
 const job = (overrides = {}) => ({
@@ -20,7 +20,7 @@ function healthy(overrides = {}) {
     '/commits/abc/check-runs?per_page=100': ok({
       check_runs: [{ name: 'quality' }, { name: 'sast' }],
     }),
-    '/branches/main/protection': ok({ required_status_checks: { contexts: ['quality', 'sast'] } }),
+    '/branches/main/protection': ok({ required_status_checks: { contexts: REQUIRED_PR_CHECKS } }),
     '/code-scanning/default-setup': ok({
       state: 'configured',
       languages: ['javascript-typescript'],
@@ -29,6 +29,16 @@ function healthy(overrides = {}) {
     '/actions/runs/1/jobs': ok({ jobs: [job(), job()] }),
     '/actions/workflows/ci.yml/runs?branch=main&per_page=1': ok({
       workflow_runs: [{ status: 'completed', conclusion: 'success', html_url: 'https://x/ci' }],
+    }),
+    '/actions/workflows/security.yml/runs?branch=main&per_page=1': ok({
+      workflow_runs: [
+        {
+          head_sha: 'abc',
+          status: 'completed',
+          conclusion: 'success',
+          html_url: 'https://x/security',
+        },
+      ],
     }),
     '/actions/secrets?per_page=100': ok({
       secrets: ACCEPTANCE_SECRETS.map((secret) => ({ name: secret.name })),
@@ -47,7 +57,7 @@ test('a repository with everything in place passes with exit code 0', async () =
   const outcome = await runChecks({ repo: 'o/r', api: healthy(), lang: 'en' });
   assert.deepEqual([...new Set(outcome.results.map((result) => result.status))], ['PASS']);
   assert.equal(outcome.exitCode, 0);
-  assert.match(outcome.summary, /6 passed, 0 for the owner, 0 failed, 0 unknown/u);
+  assert.match(outcome.summary, /7 passed, 0 for the owner, 0 failed, 0 unknown/u);
 });
 
 test('no branch protection is an action for the owner, with the steps', async () => {
@@ -95,8 +105,11 @@ test('a plan that cannot protect a private repository is explained', async () =>
   assert.match(line.message, /GitHub Pro/u);
 });
 
-test('CodeQL off, or not visible, is an action for the owner', async () => {
-  const off = healthy({ '/code-scanning/default-setup': ok({ state: 'not-configured' }) });
+test('CodeQL off is an action, while unreadable configuration is unknown', async () => {
+  const off = healthy({
+    '/code-scanning/default-setup': ok({ state: 'not-configured' }),
+    '/code-scanning/analyses?ref=refs%2Fheads%2Fmain&per_page=100': ok([]),
+  });
   assert.equal(
     by(await runChecks({ repo: 'o/r', api: off, lang: 'en' }), 'CodeQL').status,
     'ACTION',
@@ -104,13 +117,111 @@ test('CodeQL off, or not visible, is an action for the owner', async () => {
   const hidden = healthy({ '/code-scanning/default-setup': { status: 404, body: {} } });
   assert.equal(
     by(await runChecks({ repo: 'o/r', api: hidden, lang: 'en' }), 'CodeQL').status,
-    'ACTION',
+    'UNKNOWN',
   );
   const odd = healthy({ '/code-scanning/default-setup': { status: 500, body: {} } });
   assert.equal(
     by(await runChecks({ repo: 'o/r', api: odd, lang: 'en' }), 'CodeQL').status,
     'UNKNOWN',
   );
+});
+
+test('advanced CodeQL proves an analysis on the exact default branch commit', async () => {
+  const analysis = {
+    id: 42,
+    commit_sha: 'abc',
+    ref: 'refs/heads/main',
+    tool: { name: 'CodeQL' },
+    error: '',
+  };
+  const api = (analyses) =>
+    healthy({
+      '/code-scanning/default-setup': ok({ state: 'not-configured' }),
+      '/code-scanning/analyses?ref=refs%2Fheads%2Fmain&per_page=100': ok(analyses),
+    });
+  const line = by(await runChecks({ repo: 'o/r', api: api([analysis]), lang: 'en' }), 'CodeQL');
+  assert.equal(line.status, 'PASS');
+  assert.match(line.message, /analysis 42.*abc/u);
+  for (const change of [
+    { commit_sha: 'old' },
+    { ref: 'refs/pull/1/merge' },
+    { tool: { name: 'Someone calling their tool CodeQL-ish' } },
+    { error: 'upload failed' },
+  ]) {
+    assert.equal(
+      by(
+        await runChecks({ repo: 'o/r', api: api([{ ...analysis, ...change }]), lang: 'en' }),
+        'CodeQL',
+      ).status,
+      'ACTION',
+    );
+  }
+  assert.equal(
+    by(
+      await runChecks({
+        repo: 'o/r',
+        api: api([analysis, { ...analysis, id: 43, error: 'failed' }]),
+        lang: 'en',
+      }),
+      'CodeQL',
+    ).status,
+    'ACTION',
+  );
+});
+
+test('a new failing scheduled security scan cannot be hidden by old passing CI', async () => {
+  const api = healthy({
+    '/actions/workflows/security.yml/runs?branch=main&per_page=1': ok({
+      workflow_runs: [
+        {
+          head_sha: 'abc',
+          status: 'completed',
+          conclusion: 'failure',
+          html_url: 'https://x/security',
+        },
+      ],
+    }),
+  });
+  const outcome = await runChecks({ repo: 'o/r', api, lang: 'en' });
+  assert.equal(by(outcome, 'Latest Security run').status, 'FAIL');
+  assert.equal(outcome.exitCode, 1);
+});
+
+test('a green acceptance workflow without keys does not certify live providers', async () => {
+  const api = healthy({ '/actions/secrets?per_page=100': ok({ secrets: [] }) });
+  const line = by(
+    await runChecks({ repo: 'o/r', api, lang: 'en' }),
+    'Latest Provider acceptance run',
+  );
+  assert.equal(line.status, 'ACTION');
+  assert.match(line.message, /unverified/u);
+});
+
+test('main-only checks do not become PR requirements, but absent PR jobs remain required', async () => {
+  const api = healthy({
+    '/commits/abc/check-runs?per_page=100': ok({
+      check_runs: [
+        ...REQUIRED_PR_CHECKS.map((name) => ({ name })),
+        ...['monitor', 'acceptance', 'sync', 'release'].map((name) => ({ name })),
+      ],
+    }),
+  });
+  assert.equal(
+    by(await runChecks({ repo: 'o/r', api, lang: 'en' }), 'Default branch protection').status,
+    'PASS',
+  );
+  const missing = healthy({
+    '/branches/main/protection': ok({
+      required_status_checks: { contexts: REQUIRED_PR_CHECKS.filter((name) => name !== 'codeql') },
+    }),
+    '/commits/abc/check-runs?per_page=100': ok({ check_runs: [] }),
+  });
+  const line = by(
+    await runChecks({ repo: 'o/r', api: missing, lang: 'en' }),
+    'Default branch protection',
+  );
+  assert.equal(line.status, 'ACTION');
+  assert.match(line.message, /codeql/u);
 });
 
 test('jobs that end at once without a step mean Actions cannot start (exit code 1)', async () => {

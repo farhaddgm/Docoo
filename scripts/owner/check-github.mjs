@@ -19,6 +19,27 @@ export const ACCEPTANCE_SECRETS = [
   { name: 'TRANSCRIPTION_API_KEY', purpose: 'speech-to-text acceptance (ING-005, #53)' },
 ];
 
+// PR gates from ci.yml, hardening.yml, deploy-smoke.yml and security.yml.
+// Release, monitoring, docs sync and credential-dependent acceptance run separately.
+// Keep this policy in sync when adding a mandatory PR job; do not infer it from
+// whichever checks happen to be present on the latest main commit.
+export const REQUIRED_PR_CHECKS = [
+  'quality',
+  'hardening',
+  'install (direct)',
+  'install (edge)',
+  'dependency-audit',
+  'codeql',
+  'sast',
+  'filesystem-scan',
+  ...['api', 'web', 'worker-agent', 'worker-ingestion', 'document-renderer'].map(
+    (name) => `container-scan (${name})`,
+  ),
+  ...['postgres', 'redis', 'clamav', 'temporal', 'caddy', 'object-store', 'object-backup'].map(
+    (name) => `infrastructure-scan (${name})`,
+  ),
+];
+
 const text = {
   fa: {
     repo: 'مخزن',
@@ -36,8 +57,9 @@ const text = {
       'حفاظت هست؛ این بررسی‌های CI الزامی نیستند: {checks}. اگر می‌خواهید جلوی ادغام را بگیرند اضافه‌شان کنید.',
     codeql: 'CodeQL',
     codeqlOk: 'فعال است ({languages}).',
+    codeqlAdvanced: 'فعال از طریق workflow؛ تحلیل CodeQL شمارهٔ {id} روی commit فعلی {sha}.',
     codeqlOff:
-      'CodeQL فعال نیست. Settings → Code security → Code scanning → Set up → Default را بزنید (#89).',
+      'تحلیل موفق CodeQL برای commit فعلی دیده نشد. پیکربندی Default یا workflow پیشرفتهٔ Security را بررسی کنید (#89).',
     codeqlUnknown: 'وضعیت CodeQL با این کلید دیده نمی‌شود (کد {status}).',
     actions: 'اجرای Actions',
     actionsOk: 'آخرین اجرای CI روی {branch}: {conclusion}.',
@@ -45,6 +67,8 @@ const text = {
       'کارهای Actions در همان ثانیهٔ اول و بدون هیچ گام شکست می‌خورند ({run}). معمولاً سقف هزینه یا اعتبار Actions تمام شده یا runner داده نمی‌شود: Settings → Billing and plans را ببینید.',
     actionsRed: 'آخرین اجرای CI روی {branch} شکست خورده است: {url}',
     actionsNone: 'هنوز اجرایی دیده نشد.',
+    security: 'آخرین اجرای Security',
+    securityResult: '{conclusion}: {url}',
     secrets: 'کلیدهای پذیرش provider',
     secretsOk: 'تنظیم‌شده: {present}.',
     secretsMissing:
@@ -55,6 +79,8 @@ const text = {
     acceptance: 'آخرین اجرای Provider acceptance',
     acceptanceOk: '{conclusion}: {url}',
     acceptanceNone: 'هنوز اجرا نشده؛ Actions → Provider acceptance → Run workflow.',
+    acceptanceUnverified:
+      'workflow موفق است ولی کلیدهای پذیرش کامل نیستند؛ موفقیت آزمون واقعی تأیید نشده: {url}',
     unknownApi: 'خوانده نشد (کد {status}).',
     summary: '{pass} موفق، {action} اقدام برای مالک، {fail} ناموفق، {unknown} نامشخص.',
     sources: { PASS: 'موفق', ACTION: 'اقدام', FAIL: 'ناموفق', UNKNOWN: 'نامشخص' },
@@ -75,7 +101,9 @@ const text = {
       'Protection exists; these CI checks are not required: {checks}. Add them if they should block a merge.',
     codeql: 'CodeQL',
     codeqlOk: 'On ({languages}).',
-    codeqlOff: 'CodeQL is off. Settings → Code security → Code scanning → Set up → Default (#89).',
+    codeqlAdvanced: 'On via workflow; CodeQL analysis {id} on the current commit {sha}.',
+    codeqlOff:
+      'No successful CodeQL analysis was found for the current commit. Check Default setup or the advanced Security workflow (#89).',
     codeqlUnknown: 'CodeQL cannot be seen with this token (status {status}).',
     actions: 'Actions runs',
     actionsOk: 'Latest CI run on {branch}: {conclusion}.',
@@ -83,6 +111,8 @@ const text = {
       'Actions jobs fail within the first second with no steps ({run}). Usually the Actions spending limit or credit is used up or no runner is assigned: see Settings → Billing and plans.',
     actionsRed: 'The latest CI run on {branch} failed: {url}',
     actionsNone: 'No run seen yet.',
+    security: 'Latest Security run',
+    securityResult: '{conclusion}: {url}',
     secrets: 'Provider acceptance secrets',
     secretsOk: 'Set: {present}.',
     secretsMissing:
@@ -93,6 +123,8 @@ const text = {
     acceptance: 'Latest Provider acceptance run',
     acceptanceOk: '{conclusion}: {url}',
     acceptanceNone: 'Never run; Actions → Provider acceptance → Run workflow.',
+    acceptanceUnverified:
+      'The workflow passed but acceptance keys are incomplete; real tests are unverified: {url}',
     unknownApi: 'Could not be read (status {status}).',
     summary: '{pass} passed, {action} for the owner, {fail} failed, {unknown} unknown.',
     sources: { PASS: 'PASS', ACTION: 'ACTION', FAIL: 'FAIL', UNKNOWN: 'UNKNOWN' },
@@ -134,22 +166,20 @@ export async function runChecks({ repo, api, lang = 'fa' }) {
     }),
   );
 
-  // Branch protection and the checks CI actually produces on the default branch.
+  // Missing jobs must still be required, even if they never ran on this commit.
   const latestCommit = await get(`/commits/${branch}`);
   const sha = latestCommit.body?.sha;
-  const runs = sha
-    ? await get(`/commits/${sha}/check-runs?per_page=100`)
-    : { status: 0, body: null };
-  const produced = [...new Set((runs.body?.check_runs ?? []).map((run) => run.name))];
   const protection = await get(`/branches/${branch}/protection`);
   if (protection.status === 200) {
     const required = [
-      ...(protection.body.required_status_checks?.contexts ?? []),
-      ...(protection.body.required_status_checks?.checks ?? []).map((check) => check.context),
+      ...new Set([
+        ...(protection.body.required_status_checks?.contexts ?? []),
+        ...(protection.body.required_status_checks?.checks ?? []).map((check) => check.context),
+      ]),
     ];
     if (required.length === 0) add(t.protection, 'ACTION', t.protectionNoChecks);
     else {
-      const missing = produced.filter((name) => !required.includes(name));
+      const missing = REQUIRED_PR_CHECKS.filter((name) => !required.includes(name));
       add(
         t.protection,
         missing.length > 0 ? 'ACTION' : 'PASS',
@@ -176,12 +206,37 @@ export async function runChecks({ repo, api, lang = 'fa' }) {
       'PASS',
       fill(t.codeqlOk, { languages: (codeql.body.languages ?? []).join(', ') }),
     );
-  } else if (codeql.status === 200) {
-    add(t.codeql, 'ACTION', t.codeqlOff);
-  } else if (codeql.status === 404 || codeql.status === 403) {
-    add(t.codeql, 'ACTION', t.codeqlOff);
   } else {
-    add(t.codeql, 'UNKNOWN', fill(t.codeqlUnknown, { status: codeql.status }));
+    // Advanced setup deliberately leaves default setup disabled. Use the code
+    // scanning API, rather than trusting a check that merely calls itself CodeQL.
+    const analyses = await get(
+      `/code-scanning/analyses?ref=${encodeURIComponent(`refs/heads/${branch}`)}&per_page=100`,
+    );
+    const current =
+      Array.isArray(analyses.body) &&
+      analyses.body
+        .filter(
+          (analysis) =>
+            sha &&
+            analysis.commit_sha === sha &&
+            analysis.ref === `refs/heads/${branch}` &&
+            analysis.tool?.name === 'CodeQL' &&
+            !analysis.analysis_key?.includes('pull_request'),
+        )
+        .sort((a, b) => b.id - a.id)[0];
+    if (analyses.status === 200 && current && !current.error) {
+      add(t.codeql, 'PASS', fill(t.codeqlAdvanced, { id: current.id, sha }));
+    } else if (codeql.status === 200 && analyses.status === 200 && sha) {
+      add(t.codeql, 'ACTION', t.codeqlOff);
+    } else {
+      add(
+        t.codeql,
+        'UNKNOWN',
+        fill(t.codeqlUnknown, {
+          status: analyses.status !== 200 ? analyses.status : latestCommit.status,
+        }),
+      );
+    }
   }
 
   // Can Actions start a job at all? A run whose jobs end at once without a step cannot.
@@ -222,7 +277,25 @@ export async function runChecks({ repo, api, lang = 'fa' }) {
     }
   }
 
+  const security = await get(`/actions/workflows/security.yml/runs?branch=${branch}&per_page=1`);
+  const lastSecurity = security.body?.workflow_runs?.[0];
+  add(
+    t.security,
+    lastSecurity?.status === 'completed' && lastSecurity.head_sha === sha
+      ? lastSecurity.conclusion === 'success'
+        ? 'PASS'
+        : 'FAIL'
+      : 'UNKNOWN',
+    lastSecurity
+      ? fill(t.securityResult, {
+          conclusion: lastSecurity.conclusion ?? lastSecurity.status,
+          url: lastSecurity.html_url,
+        })
+      : fill(t.unknownApi, { status: security.status }),
+  );
+
   const secrets = await get('/actions/secrets?per_page=100');
+  let acceptanceKeysPresent = false;
   if (secrets.status === 200) {
     const names = new Set((secrets.body.secrets ?? []).map((secret) => secret.name));
     const present = ACCEPTANCE_SECRETS.filter((secret) => names.has(secret.name)).map(
@@ -231,6 +304,7 @@ export async function runChecks({ repo, api, lang = 'fa' }) {
     const missing = ACCEPTANCE_SECRETS.filter((secret) => !names.has(secret.name)).map(
       (s) => s.name,
     );
+    acceptanceKeysPresent = missing.length === 0;
     if (present.length === 0) add(t.secrets, 'ACTION', t.secretsNone);
     else if (missing.length > 0) {
       add(
@@ -248,11 +322,16 @@ export async function runChecks({ repo, api, lang = 'fa' }) {
   if (lastAcceptance) {
     add(
       t.acceptance,
-      lastAcceptance.conclusion === 'success' ? 'PASS' : 'ACTION',
-      fill(t.acceptanceOk, {
-        conclusion: lastAcceptance.conclusion ?? lastAcceptance.status,
-        url: lastAcceptance.html_url,
-      }),
+      lastAcceptance.conclusion === 'success' && acceptanceKeysPresent ? 'PASS' : 'ACTION',
+      fill(
+        lastAcceptance.conclusion === 'success' && !acceptanceKeysPresent
+          ? t.acceptanceUnverified
+          : t.acceptanceOk,
+        {
+          conclusion: lastAcceptance.conclusion ?? lastAcceptance.status,
+          url: lastAcceptance.html_url,
+        },
+      ),
     );
   } else {
     add(t.acceptance, 'ACTION', t.acceptanceNone);
