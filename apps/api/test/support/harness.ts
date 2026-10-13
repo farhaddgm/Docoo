@@ -187,6 +187,7 @@ export class TemporalTestRuntime implements WorkflowEngine {
   readonly taskQueue = `${AGENT_TASK_QUEUE}-test-${randomBytes(4).toString('hex')}`;
   fakeScript: FakeScript = () => null;
   readonly fake = new FakeAdapter((request, call) => this.fakeScript(request, call));
+  afterWritingBlocked: ((ref: WritingRef) => Promise<void>) | null = null;
 
   constructor(private readonly pool: Pool) {
     // The same analyst, researcher and judge the stack uses for provider kind `fake`; tests may script their own.
@@ -210,12 +211,17 @@ export class TemporalTestRuntime implements WorkflowEngine {
     const runtime = new ProviderRuntime(this.pool, null, (kind, options) =>
       kind === 'fake' ? this.fake : createAdapter(kind, options),
     );
+    const activities = createOrchestrationActivities(this.pool, runtime, { delayScale: 0.002 });
     this.worker = await Worker.create({
       connection: this.native,
       taskQueue: this.taskQueue,
       workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
       activities: {
-        ...createOrchestrationActivities(this.pool, runtime, { delayScale: 0.002 }),
+        ...activities,
+        writingBlock: async (ref: Parameters<typeof activities.writingBlock>[0]) => {
+          await activities.writingBlock(ref);
+          await this.afterWritingBlocked?.(ref);
+        },
         ...createDecisionResearchActivities(this.pool),
       },
     });

@@ -1,6 +1,8 @@
 import { defaultDefinition } from '@docoo/domain';
-import { fakeResponder } from '@docoo/orchestration';
+import { documentWritingWorkflowId, fakeResponder } from '@docoo/orchestration';
 import { ProviderError, type NormalizedModelRequest } from '@docoo/providers';
+import { Worker } from '@temporalio/worker';
+import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { TemporalTestRuntime } from './support/harness.js';
@@ -245,6 +247,7 @@ describe.skipIf(!adminUrl || !temporalAddress)(
     afterEach(() => {
       temporal.fake.responder = fakeResponder;
       temporal.fakeScript = () => null;
+      temporal.afterWritingBlocked = null;
     });
     afterAll(async () => {
       await h?.close();
@@ -617,6 +620,111 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       const again = await startWriting(third.documentId, { level: 1 });
       expect((await waitForWriting(third.documentId, again.writing.id)).status).toBe('succeeded');
     });
+
+    it.each(['resume', 'resumeThenCancel'] as const)(
+      'DOC-W8R: %s received before writingBlock completes is preserved and the history replays',
+      async (command) => {
+        const { documentId } = await documentFor('w8-race');
+        let release!: () => void;
+        const barrier = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        let held = false;
+        temporal.afterWritingBlocked = async (ref) => {
+          if (ref.documentId === documentId && !held) {
+            held = true;
+            await barrier;
+          }
+        };
+        temporal.fakeScript = (request) => {
+          if (request.responseSchema?.name === 'document_section')
+            throw new ProviderError('auth', 'bad_key');
+          return null;
+        };
+        try {
+          const started = await startWriting(documentId, { level: 1 });
+          await expect.poll(() => held, { timeout: 15_000 }).toBe(true);
+          const paused = await waitForWriting(
+            documentId,
+            started.writing.id,
+            (item) => item.status === 'paused',
+          );
+          expect(paused.blockCode).toBe('bad_key');
+          temporal.fakeScript = () => null;
+          await post(`/documents/${documentId}/writings/${paused.id}/resume`, {}, 200);
+          const workflowId = documentWritingWorkflowId(paused.id);
+          const handle = temporal.client.workflow.getHandle(workflowId);
+          // Wait for the workflow to process the signal while the activity is still held.
+          await expect
+            .poll(
+              async () => {
+                const events = (await handle.fetchHistory()).events ?? [];
+                const signal = events.find(
+                  (event) =>
+                    event.workflowExecutionSignaledEventAttributes?.signalName === 'resume',
+                );
+                return (
+                  signal !== undefined &&
+                  events.some(
+                    (event) =>
+                      event.workflowTaskCompletedEventAttributes !== undefined &&
+                      Number(event.eventId) > Number(signal.eventId),
+                  )
+                );
+              },
+              { timeout: 15_000 },
+            )
+            .toBe(true);
+          if (command === 'resumeThenCancel') {
+            await post(
+              `/documents/${documentId}/writings/${paused.id}/cancel`,
+              { reason: 'Cancel while the pause activity is completing' },
+              200,
+            );
+            await expect
+              .poll(
+                async () => {
+                  const events = (await handle.fetchHistory()).events ?? [];
+                  const signal = events.find(
+                    (event) =>
+                      event.workflowExecutionSignaledEventAttributes?.signalName === 'cancel',
+                  );
+                  return (
+                    signal !== undefined &&
+                    events.some(
+                      (event) =>
+                        event.workflowTaskCompletedEventAttributes !== undefined &&
+                        Number(event.eventId) > Number(signal.eventId),
+                    )
+                  );
+                },
+                { timeout: 15_000 },
+              )
+              .toBe(true);
+          }
+          release();
+          const done = await waitForWriting(documentId, paused.id);
+          expect(done.status, JSON.stringify(done)).toBe(
+            command === 'resume' ? 'succeeded' : 'cancelled',
+          );
+          expect(done.blockCode).toBeNull();
+          if (command === 'resumeThenCancel') expect(done.resultVersionId).toBeNull();
+          await handle.result();
+          await expect(
+            Worker.runReplayHistory(
+              {
+                workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
+              },
+              await handle.fetchHistory(),
+              workflowId,
+            ),
+          ).resolves.toBeUndefined();
+        } finally {
+          release();
+          temporal.afterWritingBlocked = null;
+        }
+      },
+    );
 
     it('DOC-W9: a restart of the worker in the middle of a writing resumes at the last finished subsection', async () => {
       const { documentId } = await documentFor('w9');

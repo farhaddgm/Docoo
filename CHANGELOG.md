@@ -12,6 +12,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 ### Fixed
 
 - Preserve content before the first heading on the PPTX title slide, including the incomplete-draft warning.
+- Preserve writing-resume signals received while the pause activity completes; retain replay compatibility with existing Temporal histories.
 
 ## [0.26.2] — 2026-10-13
 
