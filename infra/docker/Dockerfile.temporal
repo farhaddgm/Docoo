@@ -1,5 +1,6 @@
 # Temporal CLI 1.9.1 (same embedded server/UI) rebuilt with patched Go.
 FROM golang:1.27.2-alpine@sha256:85dc1069ac644ea3c527b177303a406eb3358192816cd7f9e5848eb658851673 AS builder
+RUN apk add --no-cache git
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOPROXY="https://proxy.golang.org|direct" GOMAXPROCS=2
 ADD --checksum=sha256:2417fbc1348cc3b3e5b01166ebe4c40938d779505d8e119b2ed77bb3d6ae965c https://codeload.github.com/temporalio/cli/tar.gz/1de87a9f26991bf4f5c0a5ff96f2cea8d7a3cbde /tmp/source.tgz
 WORKDIR /source
