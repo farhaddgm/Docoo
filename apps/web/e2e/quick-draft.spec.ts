@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { documentMessages } from '../app/[locale]/projects/[projectId]/document-messages';
 import { editorMessages } from '../app/[locale]/projects/[projectId]/editor-messages';
+import { problemMessages } from '../app/[locale]/projects/[projectId]/problem-messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
 import { wizardMessages } from '../app/[locale]/projects/new/wizard-messages';
 import { quickDraftMessages } from '../app/[locale]/projects/quick-draft-messages';
@@ -65,13 +66,11 @@ test('an optional quick draft continues to full analysis with the original answe
     .click();
   await expect(page.locator('#batch-heading')).toBeVisible({ timeout: 60_000 });
   const firstQuestion = page.locator('#batch-question-1');
-  await firstQuestion
-    .locator('input[type="file"]')
-    .setInputFiles({
-      name: 'quick-survey.txt',
-      mimeType: 'text/plain',
-      buffer: Buffer.from('Synthetic anonymous survey attachment; no customer data.'),
-    });
+  await firstQuestion.locator('input[type="file"]').setInputFiles({
+    name: 'quick-survey.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('Synthetic anonymous survey attachment; no customer data.'),
+  });
   await expect(
     firstQuestion.getByRole('listitem').filter({ hasText: 'quick-survey.txt' }),
   ).toBeVisible({ timeout: 30_000 });
@@ -164,4 +163,12 @@ test('an optional quick draft continues to full analysis with the original answe
     (b) => b.questions,
   );
   for (const question of before) expect(after.find((q) => q.id === question.id)).toEqual(question);
+  await completeAnalysis(page);
+  await page
+    .locator('details > summary')
+    .filter({ hasText: problemMessages('fa').versionsTitle })
+    .click();
+  await expect(
+    page.locator('details[open] li').filter({ hasText: quickDraftMessages('fa').warning }),
+  ).toBeVisible();
 });

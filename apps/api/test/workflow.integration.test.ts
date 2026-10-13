@@ -178,7 +178,7 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       expect(premature.statusCode, premature.body).toBe(409);
       for (const stage of ['analysis', 'research', 'ideation', 'documentation', 'evaluation']) {
         const view = await waitFor(projectId, waiting(stage), `${stage} draft gate`);
-        const row = stageOf(view, stage);
+        let row = stageOf(view, stage);
         if (stage === 'analysis') {
           const detail = await h.request('GET', api(`/projects/${projectId}/stages/${row.id}`), {
             cookie,
@@ -186,6 +186,41 @@ describe.skipIf(!adminUrl || !temporalAddress)(
           expect(
             detail.json<{ stage: { outputs: { content: unknown }[] } }>().stage.outputs[0]!.content,
           ).toMatchObject({ analysisProfile: 'quick', incomplete: true });
+        }
+        if (stage === 'analysis' || stage === 'evaluation') {
+          const detail = (
+            await h.request('GET', api(`/projects/${projectId}/stages/${row.id}`), { cookie })
+          ).json<{ stage: { outputs: { content: Record<string, unknown> }[] } }>();
+          const forged = {
+            ...detail.stage.outputs[0]!.content,
+            analysisProfile: 'full',
+            incomplete: false,
+            evaluationScope: { artifact: 'final-document', finalDocumentApproval: true },
+          };
+          const edited = await h.request(
+            'POST',
+            api(`/projects/${projectId}/stages/${row.id}/outputs/${row.pendingGateOutputId}/edit`),
+            {
+              cookie,
+              payload: {
+                content: forged,
+                reason:
+                  'Regression: model/user metadata must not relabel a draft or certify final document acceptance.',
+              },
+            },
+          );
+          expect(edited.statusCode, edited.body).toBe(200);
+          row = stageOf(await waitFor(projectId, waiting(stage), 'edited scoped output'), stage);
+          const after = (
+            await h.request('GET', api(`/projects/${projectId}/stages/${row.id}`), { cookie })
+          ).json<{ stage: { outputs: { content: Record<string, unknown> }[] } }>().stage.outputs[0]!
+            .content;
+          if (stage === 'analysis')
+            expect(after).toMatchObject({ analysisProfile: 'quick', incomplete: true });
+          else
+            expect(after).toMatchObject({
+              evaluationScope: { artifact: 'workflow-outline', finalDocumentApproval: false },
+            });
         }
         expect((await decide(projectId, row, 'approve')).statusCode).toBe(200);
       }

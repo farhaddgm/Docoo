@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 
 import { apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { quickDraftMessages } from '../quick-draft-messages';
 import { DefinitionView } from './definition-view';
 import { problemMessages } from './problem-messages';
 import type { Contradiction, Definition, DefinitionVersion } from './problem-types';
@@ -224,6 +225,9 @@ export function DefinitionCard({
                 >
                   {text.definitionStatuses[version.status] ?? version.status}
                 </span>
+                {version.content['analysisProfile'] === 'quick' && (
+                  <span className="badge state-paused">{quickDraftMessages(locale).warning}</span>
+                )}
                 {version.approved && (
                   <span className="badge state-approved">{text.approvedMark}</span>
                 )}{' '}

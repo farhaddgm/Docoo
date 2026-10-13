@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
 
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { projectWorkflowId, STAGES } from '@docoo/orchestration';
+import {
+  projectWorkflowId,
+  scopeAnalysisDefinition,
+  scopeOutlineEvaluation,
+  STAGES,
+} from '@docoo/orchestration';
 import type { PoolClient, QueryResultRow } from 'pg';
 
 import { BusinessService } from '../business/business.service.js';
@@ -575,7 +580,18 @@ export class WorkflowService {
             'Only an output waiting for review can be edited.',
           );
         }
-        const content = JSON.stringify(input.content);
+        let scoped = input.content;
+        if (stage.stage === 'analysis') {
+          const profile = (
+            await client.query<{ analysis_profile: 'full' | 'quick' }>(
+              'select analysis_profile from workflow_runs where id=$1',
+              [stage.run_id],
+            )
+          ).rows[0]?.analysis_profile;
+          if (!profile) throw notFound('WORKFLOW_RUN_NOT_FOUND', 'The workflow run was not found.');
+          scoped = scopeAnalysisDefinition(scoped, profile);
+        } else if (stage.stage === 'evaluation') scoped = scopeOutlineEvaluation(scoped);
+        const content = JSON.stringify(scoped);
         const created = (
           await client.query<{ id: string; version_no: number }>(
             `insert into stage_outputs (workspace_id, stage_run_id, version_no, content, content_sha256, origin, edited_from_id, created_by)
