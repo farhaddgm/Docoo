@@ -6,6 +6,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Fixed
 
+- Install Git only in Go build stages so cold module resolution can use the configured direct VCS fallback; runtime images and pinned Go/source versions stay unchanged.
 - Check installation/update disk capacity before changing configuration or source, serialize image builds, and keep a disk reserve between services. Unknown capacity refuses a build.
 - Restore exact source and private settings after a failed manual update so the next nightly check retries. Failed builds leave running containers alone; startup failures restore the previous runtime.
 - Share the install/update lock and limit automatic cleanup to unused production Docoo image tags, preserving helpers, containers and rollback. Remove global image/build-cache pruning and use retained images for rollback without rebuilding them.
