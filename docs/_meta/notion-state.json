@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "b5124cd76ba5d41ff66f5434c967926b8ecf05ef"
+    "source_commit": "bd3a7abed889eee2915b704a06414cdb247a2981"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-13T07:43:48.793Z",
+    "synced_at": "2026-10-13T15:24:06.496Z",
     "created": 0,
-    "updated": 3,
-    "unchanged": 69,
+    "updated": 1,
+    "unchanged": 71,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -890,16 +890,16 @@
     "DOCOO-ADR-0019": {
       "path": "docs/adr/0019-document-writing-and-structured-editor.md",
       "section": "ADRs",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "accepted",
       "owner": "Product & Engineering",
-      "checksum_sha256": "97d9f8c3cda140e724b6fd5b5d2c0fe87be5e2f9621653621dc0c66eb43c8e85",
+      "checksum_sha256": "05336954547c78def612601f5939c964173c6467298146636beef9716b24dd75",
       "notion_page_id": "3f05a24a-6668-8107-81f9-d79da8dbaff3",
       "notion_page_url": "https://app.notion.com/p/3f05a24a6668810781f9d79da8dbaff3",
       "index_row_page_id": "3f05a24a-6668-815f-a4dd-ef0e11b5f6b5",
       "index_row_page_url": "https://app.notion.com/p/3f05a24a6668815fa4ddef0e11b5f6b5",
-      "synced_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d",
-      "synced_at": "2026-10-05T05:25:38.438Z"
+      "synced_commit": "bd3a7abed889eee2915b704a06414cdb247a2981",
+      "synced_at": "2026-10-13T15:24:06.496Z"
     },
     "DOCOO-ADR-0020": {
       "path": "docs/adr/0020-real-provider-readiness.md",
