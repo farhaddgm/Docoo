@@ -215,6 +215,19 @@ export const NO_KNOWLEDGE_RULES: readonly string[] = [
   'No approved knowledge is available for this project. Leave every evidence list and the conflicts list empty, say honestly in source where each finding comes from, and list what could not be established in gaps.',
 ];
 
+/** This fixed workflow reviews the plan; final documents have their own pinned evaluation. */
+export const OUTLINE_EVALUATION_SCOPE = {
+  artifact: 'workflow-outline',
+  documentationSchema: 'documentation_output',
+  finalDocumentApproval: false,
+} as const;
+
+export function scopeOutlineEvaluation(output: unknown): Record<string, unknown> {
+  if (!output || typeof output !== 'object' || Array.isArray(output))
+    throw new Error('Invalid evaluation output.');
+  return { ...output, evaluationScope: OUTLINE_EVALUATION_SCOPE };
+}
+
 /**
  * Builds the provider request of one stage attempt. Content and instructions stay in
  * separate channels: project data is quoted as data, never as instructions.
@@ -231,6 +244,12 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
           ? KNOWLEDGE_RULES
           : NO_KNOWLEDGE_RULES
         : []),
+      ...(context.stage === 'evaluation'
+        ? [
+            'The documentation_output artifact is an outline. Review its coverage, consistency, groundedness and planned safeguards against the approved upstream stages. Preserve concrete findings within that scope.',
+            'Do not fail an outline merely because a completed document or executed pilot is not present. State final document evaluation and owner approval are pending; do not claim either. Actual document versions are evaluated separately against their pinned rubric.',
+          ]
+        : []),
       ...(context.business?.rules ?? []),
       ...(context.toolRules ?? []),
       ...(context.humanAnswers && context.humanAnswers.length > 0 ? HUMAN_ANSWER_RULES : []),
@@ -242,6 +261,7 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
     topics: context.topics,
     previousStages: context.previous,
     reviewerFeedback: context.feedback,
+    ...(context.stage === 'evaluation' ? { evaluationTarget: OUTLINE_EVALUATION_SCOPE } : {}),
     ...(context.analysis
       ? {
           questionsAndAnswers: context.analysis.transcript,

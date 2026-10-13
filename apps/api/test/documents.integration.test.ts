@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { SYSTEM_RUBRIC } from '@docoo/documents';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { adminUrl, createHarness, type Harness } from './support/harness.js';
 
@@ -135,6 +135,132 @@ describe.skipIf(!adminUrl)('solutions, documents and evaluation (SOL-*, DOC-*, E
 
   afterAll(async () => {
     await h?.close();
+  });
+
+  it('uses the approved analysis in actual solution/evaluation requests and the first draft', async () => {
+    const projectId = await project('approved-problem');
+    await setting('document.default_template', 'detailed', 'project', projectId);
+    const definition = {
+      problemStatement: 'Approved synthetic problem: use an anonymous survey proxy.',
+      constraints: ['The margin floor is 58.8%; no individual tracking.'],
+      unresolved: ['Expected causal uplift is unknown.'],
+    };
+    const run = await h.admin.query<{ id: string }>(
+      `insert into workflow_runs (workspace_id,project_id,run_no,temporal_workflow_id)
+       values ($1,$2,1,$3) returning id`,
+      [h.ids.workspaceA, projectId, `approved-definition-${projectId}`],
+    );
+    const stage = await h.admin.query<{ id: string }>(
+      `insert into stage_runs (workspace_id,project_id,run_id,stage,sequence,status)
+       values ($1,$2,$3,'analysis',1,'completed') returning id`,
+      [h.ids.workspaceA, projectId, run.rows[0]!.id],
+    );
+    const output = await h.admin.query<{ id: string }>(
+      `insert into stage_outputs (workspace_id,stage_run_id,version_no,content,content_sha256,origin)
+       values ($1,$2,1,$3::jsonb,$4,'model') returning id`,
+      [
+        h.ids.workspaceA,
+        stage.rows[0]!.id,
+        JSON.stringify(definition),
+        createHash('sha256').update(JSON.stringify(definition)).digest('hex'),
+      ],
+    );
+    const versionId = output.rows[0]!.id;
+    await h.admin.query('update projects set approved_problem_version_id=$2 where id=$1', [
+      projectId,
+      versionId,
+    ]);
+    const requests: string[] = [];
+    const original = h.fake.responder;
+    h.fake.responder = (request) => {
+      requests.push(request.messages[0]!.content);
+      return request.responseSchema?.name === 'evaluation' ? judge(95) : original(request);
+    };
+    try {
+      const generated = await post(`/projects/${projectId}/solutions/generate`, { count: 2 });
+      expect(generated.statusCode, generated.body).toBe(201);
+      expect(requests[0]).toContain(definition.problemStatement);
+      expect(requests[0]).toContain(definition.constraints[0]);
+      expect(requests[0]).toContain(versionId);
+      const items = generated.json<{ solutionSet: { items: { id: string }[] } }>().solutionSet
+        .items;
+      const selected = await post(`/projects/${projectId}/solution-selections`, {
+        solutionIds: [items[0]!.id],
+      });
+      expect(selected.statusCode, selected.body).toBe(201);
+      const docs = await h.request('GET', api(`/projects/${projectId}/documents`), { cookie });
+      const id = docs.json<{ items: { id: string }[] }>().items[0]!.id;
+      const draft = await document(id);
+      expect(JSON.stringify(draft.currentVersion.content)).toContain(definition.problemStatement);
+      const evaluation = await post(`/documents/${id}/evaluate`);
+      expect(evaluation.statusCode, evaluation.body).toBe(201);
+      expect(requests.at(-1)).toContain(definition.constraints[0]);
+      expect(requests.at(-1)).toContain(versionId);
+
+      // A model response about an older initial problem must not become a saved result.
+      const invoke = h.fake.invoke.bind(h.fake);
+      const spy = vi.spyOn(h.fake, 'invoke').mockImplementationOnce(async (request) => {
+        const response = await invoke(request);
+        await h.admin.query(
+          'update projects set approved_problem_version_id=null,initial_problem=$2 where id=$1',
+          [projectId, 'A different synthetic problem after the provider call.'],
+        );
+        return response;
+      });
+      try {
+        const stale = await post(`/projects/${projectId}/solutions/generate`, { count: 2 });
+        expect(stale.statusCode, stale.body).toBe(409);
+        expect(stale.json<{ code: string }>().code).toBe('PROJECT_PROBLEM_CHANGED');
+      } finally {
+        spy.mockRestore();
+      }
+      const sets = await h.admin.query('select id from solution_sets where project_id=$1', [
+        projectId,
+      ]);
+      expect(sets.rowCount).toBe(1);
+
+      // Even a malformed same-tenant pointer cannot expose another project's definition.
+      const otherProjectId = await project('different-project-definition');
+      await h.admin.query('update projects set approved_problem_version_id=$2 where id=$1', [
+        otherProjectId,
+        versionId,
+      ]);
+      const before = requests.length;
+      const wrongProject = await post(`/projects/${otherProjectId}/solutions/generate`, {
+        count: 2,
+      });
+      expect(wrongProject.statusCode, wrongProject.body).toBe(404);
+      expect(requests).toHaveLength(before);
+    } finally {
+      h.fake.responder = original;
+    }
+  });
+
+  it('falls back to initial input and rejects an initial-problem edit during evaluation', async () => {
+    const { projectId, documents } = await documentsFor('initial-problem-context');
+    const invoke = h.fake.invoke.bind(h.fake);
+    const requests: string[] = [];
+    const spy = vi.spyOn(h.fake, 'invoke').mockImplementationOnce(async (request) => {
+      requests.push(request.messages[0]!.content);
+      const response = await invoke(request);
+      await h.admin.query('update projects set initial_problem=$2 where id=$1', [
+        projectId,
+        'Changed during evaluation.',
+      ]);
+      return response;
+    });
+    try {
+      const stale = await post(`/documents/${documents[0]!.id}/evaluate`);
+      expect(stale.statusCode, stale.body).toBe(409);
+      expect(stale.json<{ code: string }>().code).toBe('PROJECT_PROBLEM_CHANGED');
+      expect(requests[0]).toContain('"problemVersionId":null');
+      const saved = await h.admin.query('select id from evaluations where document_id=$1', [
+        documents[0]!.id,
+      ]);
+      expect(saved.rowCount).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('PRP-07: previews without mutation, rejects stale decisions and journals pinned reasons with actor/time', async () => {

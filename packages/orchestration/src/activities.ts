@@ -16,7 +16,14 @@ import { finishResearch, prepareResearch, type ResearchRun } from './research-ac
 import type { ProviderRuntime } from './runtime.js';
 import { loadSettings } from './settings.js';
 import { loadAgentVersion, promptDigest, resolveAgentProfile } from './agents.js';
-import { STAGE_SCHEMAS, stagePrompt, STAGES, type Stage, type StageContext } from './stages.js';
+import {
+  STAGE_SCHEMAS,
+  stagePrompt,
+  scopeOutlineEvaluation,
+  STAGES,
+  type Stage,
+  type StageContext,
+} from './stages.js';
 import type { ToolCallScope } from './tool-calls.js';
 
 export type { RunRef, StageRef } from './refs.js';
@@ -496,7 +503,9 @@ export function createOrchestrationActivities(
           const content = JSON.stringify(
             research
               ? await finishResearch(client, prepared.toolScope, research, response.json)
-              : response.json,
+              : prepared.stage === 'evaluation'
+                ? scopeOutlineEvaluation(response.json)
+                : response.json,
           );
           const output = (
             await client.query<{ id: string }>(
