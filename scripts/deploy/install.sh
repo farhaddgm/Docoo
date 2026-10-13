@@ -205,10 +205,33 @@ wait_healthy() { # 0 when the API reports healthy within ten minutes
   return 1
 }
 
+build_images() {
+  local services service free
+  # Explicit service calls serialize builds even when Compose delegates to Buildx Bake.
+  # migrate shares the API image: build each image only once.
+  services=$("${compose[@]}" config --format json | python3 -c '
+import json,sys
+seen=set()
+for name,service in json.load(sys.stdin)["services"].items():
+ if "build" in service and service.get("image",name) not in seen:
+  seen.add(service.get("image",name)); print(name)
+') || return 1
+  [ -n "$services" ] || { say "No buildable Docoo services found."; return 1; }
+  while read -r service; do
+    free=$(docker_free_gb)
+    if [[ ! "$free" =~ ^[0-9]+$ ]] || [ "$free" -lt "$build_reserve_gb" ]; then
+      say "Not enough known disk space to build $service (free: ${free:-unknown} GB; reserve: $build_reserve_gb GB)."
+      return "$exit_no_space"
+    fi
+    "${compose[@]}" build "$service" || return
+  done <<< "$services"
+}
+
 start() {
+  ensure_disk_space "$(env_value DOCOO_VERSION)" || return "$exit_no_space"
   say "Building and starting Docoo (the first time takes 10–20 minutes)…"
-  docker run --rm --user 0 -v "$root:/workspace" -w /workspace node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 node scripts/deploy/prepare-secrets.mjs deploy
-  "${compose[@]}" build
+  docker run --rm --user 0 -v "$root:/workspace" -w /workspace node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 node scripts/deploy/prepare-secrets.mjs deploy || return
+  build_images || return
   # Existing persistent data may have been created by root in pre-v0.23 images.
   # Only named Docoo volumes are touched; no application secret is mounted.
   docker run --rm --network none --user 0 --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE \
@@ -218,11 +241,13 @@ start() {
     --mount type=volume,source=docoo_caddy-config,target=/caddy-config \
     --mount type=volume,source=docoo_object-data,target=/objects \
     --entrypoint sh "docoo-temporal:${DOCOO_VERSION:-local}" \
-    -c 'chown -R 1000:1000 /temporal /caddy-data /caddy-config /objects && chown -R 100:101 /clamav'
-  "${compose[@]}" up -d
+    -c 'chown -R 1000:1000 /temporal /caddy-data /caddy-config /objects && chown -R 100:101 /clamav' || return
+  if [ -n "${DOCOO_UPDATE_BACKUP_DIR:-}" ]; then touch "$DOCOO_UPDATE_BACKUP_DIR/up-attempted" || return; fi
+  "${compose[@]}" up -d || return
   wait_healthy && return
   "${compose[@]}" logs --tail 50 migrate api
-  fail "The API did not become healthy; see the logs above."
+  say "The API did not become healthy; see the logs above."
+  return 1
 }
 
 create_admin() {
@@ -247,9 +272,10 @@ create_admin() {
 # ---- disk space ---------------------------------------------------------------------------
 # Building the images needs several GB, and every release leaves its images and build cache
 # behind. A full disk used to stop an update in the middle of the build (after the checkout
-# had already moved to the new release). Now the space is checked first, old images and build
-# cache are cleared, and an update that still cannot fit stops before changing anything.
-min_free_gb=${DOCOO_MIN_FREE_GB:-10}
+# had already moved to the new release). Capacity is checked before changes; only unused
+# older production tags are eligible for cleanup. Builds keep a reserve and run serially.
+min_free_gb=${DOCOO_MIN_FREE_GB:-24}
+build_reserve_gb=${DOCOO_BUILD_RESERVE_GB:-5}
 exit_no_space=75 # `update` exits with this when nothing was changed for lack of disk space
 
 docker_free_gb() { # whole GB free where Docker keeps its data
@@ -259,65 +285,116 @@ docker_free_gb() { # whole GB free where Docker keeps its data
   df -Pk "$dir" | awk 'NR == 2 { printf "%d", $4 / 1048576 }'
 }
 
-# Removes docoo-* images of releases other than the ones named; an image a container still
-# uses is refused by Docker and stays.
+# Only exact production repository names are eligible; helpers and other applications stay.
+# Never untag an image used by any running or stopped container, even if it has other tags.
 remove_old_images() { # remove_old_images KEEP_VERSION...
-  local image keep
+  local image keep repository image_id used_ids container_ids
+  local -a container_list=()
+  container_ids=$(docker ps -aq) || return 1
+  used_ids=""
+  if [ -n "$container_ids" ]; then
+    mapfile -t container_list <<< "$container_ids"
+    used_ids=$(docker inspect --format '{{.Image}}' "${container_list[@]}") || return 1
+  fi
   while read -r image; do
+    repository=${image%:*}
+    case "$repository" in
+      docoo-api|docoo-web|docoo-worker-agent|docoo-worker-ingestion|docoo-postgres|docoo-temporal|docoo-redis|docoo-clamav|docoo-object-store|docoo-caddy|docoo-document-renderer|docoo-object-backup) ;;
+      *) continue ;;
+    esac
+    [[ "${image##*:}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || continue
     for keep in "$@"; do [ "${image##*:}" = "$keep" ] && continue 2; done
+    image_id=$(docker image inspect --format '{{.Id}}' "$image" 2>/dev/null) || continue
+    if printf '%s\n' "$used_ids" | grep -Fxq "$image_id"; then continue; fi
     docker rmi "$image" >/dev/null 2>&1 || true
-  done < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^docoo-' || true)
+  done < <(docker images --format '{{.Repository}}:{{.Tag}}')
 }
 
-# light: after a good update, drop leftovers (the build cache of the last day stays for a fast
-# rollback). deep: before an update that does not fit, drop all build cache.
+# Shared-host build caches have no reliable project ownership label. Never prune them or
+# dangling images globally. Only unused production tags outside current/rollback are removed.
 tidy_docker() { # tidy_docker light|deep KEEP_VERSION...
-  local mode=$1
   shift
-  docker image prune -f >/dev/null 2>&1 || true
   remove_old_images "$@"
-  if [ "$mode" = deep ]; then
-    docker builder prune -f >/dev/null 2>&1 || true
-  else
-    docker builder prune -f --filter until=24h >/dev/null 2>&1 || true
-  fi
-  return 0
 }
 
 ensure_disk_space() { # ensure_disk_space RUNNING_VERSION: 0 when an update fits
   local free
   free=$(docker_free_gb)
-  # Unknown free space is not a reason to refuse the update.
-  [ -z "$free" ] || [ "$free" -ge "$min_free_gb" ] && return 0
-  say "Only ${free} GB free for Docker (an update needs about ${min_free_gb} GB); clearing old images and build cache…"
+  if [[ ! "$free" =~ ^[0-9]+$ ]]; then
+    say "Cannot determine free disk space; refusing the build before changes."
+    return 1
+  fi
+  [ "$free" -ge "$min_free_gb" ] && return 0
+  say "Only ${free} GB free for Docker (an update needs about ${min_free_gb} GB); removing unused older Docoo production images…"
   tidy_docker deep "$@"
   free=$(docker_free_gb)
-  [ -z "$free" ] || [ "$free" -ge "$min_free_gb" ] && return 0
+  [[ "$free" =~ ^[0-9]+$ ]] && [ "$free" -ge "$min_free_gb" ] && return 0
   printf '\n\033[31mError: only %s GB are free where Docker keeps its data; an update needs about %s GB.\033[0m\n' "$free" "$min_free_gb" >&2
   printf 'Nothing was changed and Docoo keeps running. Free some disk space (or enlarge the disk), then run:\n  sudo %s/scripts/deploy/install.sh update\n' "$root" >&2
   printf 'فضای خالی دیسک برای به‌روزرسانی کافی نیست (%s گیگابایت خالی، حدود %s لازم است). چیزی تغییر نکرد و Docoo همچنان کار می‌کند؛ فضا باز کنید و دوباره اجرا کنید.\n' "$free" "$min_free_gb" >&2
   return 1
 }
 
+# Every file prepare-secrets/edge setup may create is snapshotted with private permissions.
+update_state_files=(.env .env.production .env.api .env.worker-agent .env.worker-ingestion
+  .env.postgres .env.temporal .env.redis .env.object-store .env.backup .env.object-backup
+  .env.google .env.document-renderer .env.web .env.caddy compose.edge.yaml)
+
+restore_update_state() {
+  local backup=$1 file
+  for file in "${update_state_files[@]}"; do
+    if [ -f "$backup/$file" ]; then cp -p "$backup/$file" "$deploy/$file" || return;
+    else rm -f "$deploy/$file" || return; fi
+  done
+}
+
+apply_update() {
+  local latest=$1
+  [ -z "$latest" ] || git -C "$root" checkout --quiet "$latest" || return
+  sed -i "s/^DOCOO_VERSION=.*/DOCOO_VERSION=${latest:-local}/" "$deploy/.env" || return
+  set -a; . "$deploy/.env"; set +a
+  use_edge || return
+  start || return
+  attach_edge || return
+}
+
 update() {
   say "Updating to the latest release…"
-  git -C "$root" fetch --tags --quiet
-  local latest running
-  # DOCOO_UPDATE_REF pins another commit (used by the Deploy smoke test of a pull request).
+  git -C "$root" fetch --tags --quiet || return
+  local latest running previous_commit backup file status
   latest=${DOCOO_UPDATE_REF:-$(latest_release)}
   running=$(env_value DOCOO_VERSION)
-  ensure_disk_space "$running" || exit "$exit_no_space"
+  ensure_disk_space "$running" || return "$exit_no_space"
   if [ -n "$latest" ] && [ -z "${DOCOO_UPDATE_REF:-}" ]; then
-    python3 "$root/scripts/deploy/verify-release.py" "$latest" "$(git -C "$root" rev-list -n 1 "$latest")"
+    python3 "$root/scripts/deploy/verify-release.py" "$latest" "$(git -C "$root" rev-list -n 1 "$latest")" || return
   fi
-  [ -n "$latest" ] && git -C "$root" checkout --quiet "$latest"
-  sed -i "s/^DOCOO_VERSION=.*/DOCOO_VERSION=${latest:-local}/" "$deploy/.env"
-  set -a; . "$deploy/.env"; set +a
-  use_edge
-  start
-  attach_edge
-  tidy_docker light "${latest:-local}" "$running"
-  say "Docoo is now on ${latest:-the current checkout}."
+  git -C "$root" diff --quiet && git -C "$root" diff --cached --quiet || {
+    say "Local tracked changes prevent an update; source and settings are unchanged."; return 1;
+  }
+  previous_commit=$(git -C "$root" rev-parse HEAD) || return
+  backup=$(mktemp -d "$deploy/.env.update-rollback.XXXXXX") || return
+  chmod 700 "$backup" || return
+  for file in "${update_state_files[@]}"; do
+    if [ -f "$deploy/$file" ]; then cp -p "$deploy/$file" "$backup/$file" || return; fi
+  done
+  printf '%s\n' "$previous_commit" > "$backup/previous-commit"
+  local DOCOO_UPDATE_BACKUP_DIR=$backup
+  if apply_update "$latest"; then
+    tidy_docker light "${latest:-local}" "$running" || say "Old-image cleanup was skipped; the updated service is healthy."
+    rm -rf "$backup"
+    say "Docoo is now on ${latest:-the current checkout}."
+    return 0
+  else status=$?; fi
+  # A failed build leaves running containers alone. If up was attempted, restore retained
+  # images without a new compilation. Keep the private snapshot for incident recovery.
+  git -C "$root" checkout --quiet "$previous_commit" || return 1
+  restore_update_state "$backup" || return 1
+  if [ -f "$backup/up-attempted" ]; then
+    rollback "$running" || { say "Rollback needs operator recovery; private snapshot: $backup"; return 1; }
+    git -C "$root" checkout --quiet "$previous_commit" || return 1
+  fi
+  say "Update failed; previous source and private settings restored. Snapshot: $backup"
+  return "$status"
 }
 
 # ---- nightly update ----------------------------------------------------------------------
@@ -424,11 +501,12 @@ rollback() { # rollback VERSION
   local previous=$1
   if [ -z "$previous" ] || [ "$previous" = local ]; then return 1; fi
   git -C "$root" checkout --quiet "$previous" || return 1
-  set_env DOCOO_VERSION "$previous"
+  set_env DOCOO_VERSION "$previous" || return
   set -a; . "$deploy/.env"; set +a
-  detect_edge
-  use_edge
-  "${compose[@]}" build && "${compose[@]}" up -d && wait_healthy
+  detect_edge || return
+  use_edge || return
+  # A retained rollback image needs no compilation (important after a low-disk failure).
+  "${compose[@]}" up -d --no-build && wait_healthy
 }
 
 scheduled_update() {
@@ -475,7 +553,9 @@ scheduled_update() {
 # ---- entry points -------------------------------------------------------------------------
 
 install_main() {
+  take_lock_wait || fail "Another installation or update is still running."
   install_docker
+  ensure_disk_space "$(env_value DOCOO_VERSION)" || return "$exit_no_space"
   detect_edge
   configure
   set -a; . "$deploy/.env"; set +a

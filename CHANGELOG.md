@@ -2,6 +2,14 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.26.2] — 2026-10-13
+
+### Fixed
+
+- Check installation/update disk capacity before changing configuration or source, serialize image builds, and keep a disk reserve between services. Unknown capacity refuses a build.
+- Restore exact source and private settings after a failed manual update so the next nightly check retries. Failed builds leave running containers alone; startup failures restore the previous runtime.
+- Share the install/update lock and limit automatic cleanup to unused production Docoo image tags, preserving helpers, containers and rollback. Remove global image/build-cache pruning and use retained images for rollback without rebuilding them.
+
 ## [0.26.1] — 2026-10-13
 
 ### Fixed

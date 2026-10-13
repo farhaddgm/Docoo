@@ -145,21 +145,31 @@ say() { :; }
 docker() { # a recorder for the Docker commands the tidy-up runs
   case "$1" in
     info) echo /tmp ;;
-    images) printf '%s\n' docoo-api:v0.12.0 docoo-api:v0.11.0 docoo-api:v0.10.0 docoo-web:v0.9.0 docoo-postgres:local other-app:v0.9.0 ;;
+    ps) printf '%s\n' running-container stopped-container ;;
+    inspect) printf '%s\n' sha256:running-image sha256:stopped-image ;;
+    images) printf '%s\n' docoo-api:v0.12.0 docoo-api:v0.11.0 docoo-api:v0.10.0 docoo-web:v0.9.0 docoo-postgres:local docoo-api:v0.8.0 docoo-web:v0.8.0 docoo-issues-deploy-helper:20261013 other-app:v0.9.0 ;;
     rmi) removed+=("$2") ;;
-    image | builder) cleared+=("$*") ;;
+    image)
+      if [ "$2" = inspect ]; then
+        case "${@: -1}" in
+          docoo-api:v0.8.0) echo sha256:running-image ;;
+          docoo-web:v0.8.0) echo sha256:stopped-image ;;
+          *) echo "sha256:${@: -1}" ;;
+        esac
+      else cleared+=("$*"); fi ;;
+    builder) cleared+=("$*") ;;
   esac
 }
 removed=(); cleared=()
 remove_old_images v0.12.0 v0.11.0
-assert_eq 'docoo-api:v0.10.0 docoo-web:v0.9.0 docoo-postgres:local' "${removed[*]}" 'old images: other releases go, the two kept stay, other apps are never touched'
+assert_eq 'docoo-api:v0.10.0 docoo-web:v0.9.0' "${removed[*]}" 'old images: other releases go, the two kept stay, other apps are never touched'
 removed=(); remove_old_images local
 assert_eq 'docoo-api:v0.12.0 docoo-api:v0.11.0 docoo-api:v0.10.0 docoo-web:v0.9.0' "${removed[*]}" 'old images: a clone of main keeps its local images'
 
 removed=(); cleared=(); tidy_docker light v0.12.0 v0.11.0
-assert_contains "${cleared[*]}" 'builder prune -f --filter' 'tidy light: keeps the last day of build cache'
+assert_eq '' "${cleared[*]}" 'tidy light: no global image or builder prune'
 removed=(); cleared=(); tidy_docker deep v0.11.0
-assert_eq 'image prune -f;builder prune -f' "$(IFS=';'; echo "${cleared[*]}")" 'tidy deep: drops all build cache'
+assert_eq '' "${cleared[*]}" 'tidy deep: no global image or builder prune'
 
 assert_eq 1 "$(docker_free_gb | grep -Ec '^[0-9]+$')" 'free space: a whole number of GB'
 
@@ -167,6 +177,8 @@ queue=$(mktemp); log=$(mktemp); tidied=0
 # One free-space reading per call, popped from a file because the callers run it in $( ).
 docker_free_gb() { head -1 "$queue"; sed -i 1d "$queue"; }
 tidy_docker() { tidied=$((tidied + 1)); }
+assert_eq 24 "$min_free_gb" 'default build capacity protects full infrastructure builds'
+assert_eq 5 "$build_reserve_gb" 'remaining build reserve'
 min_free_gb=10
 readings() { printf '%s\n' "$@" >"$queue"; }
 readings 25; tidied=0; ensure_disk_space v0.11.0 >/dev/null; status=$?
@@ -179,8 +191,102 @@ readings 3 4; tidied=0; ensure_disk_space v0.11.0 >"$log" 2>&1; status=$?
 assert_eq 1 "$status" 'still too little space: refuses'
 assert_contains "$(cat "$log")" 'only 4 GB are free' 'still too little space: says how much is free'
 assert_contains "$(cat "$log")" 'Nothing was changed' 'still too little space: says nothing changed'
-readings ''; ensure_disk_space v0.11.0 >/dev/null; status=$?
-assert_eq 0 "$status" 'free space unknown: does not block the update'
+readings ''; tidied=0; ensure_disk_space v0.11.0 >/dev/null; status=$?
+assert_eq 1 "$status" 'unknown capacity refuses the build'
+assert_eq 0 "$tidied" 'unknown capacity performs no cleanup'
+# Serial service calls remain bounded even when Compose delegates to Bake; duplicate image
+# targets (migrate/API) and services without a build are omitted.
+compose=(docker compose)
+docker() {
+  if [ "$2" = config ]; then
+    printf '%s\n' '{"services":{"api":{"build":{},"image":"docoo-api:v1"},"migrate":{"build":{},"image":"docoo-api:v1"},"web":{"build":{},"image":"docoo-web:v1"},"redis":{"image":"redis:7"}}}'
+  elif [ "$2" = build ]; then
+    assert_eq 3 "$#" 'one build target per call'
+    builds+=("$3")
+  fi
+}
+builds=(); readings 20 15; build_images; status=$?
+assert_eq 0 "$status" 'serial builds succeed with capacity'
+assert_eq 'api web' "${builds[*]}" 'serial build order and shared image deduplication'
+builds=(); readings 5 4; build_images >"$log" 2>&1; status=$?
+assert_eq 75 "$status" 'remaining reserve stops before next build'
+assert_eq 'api' "${builds[*]}" 'no second build started below reserve'
+builds=(); readings ''; build_images >"$log" 2>&1; status=$?
+assert_eq 75 "$status" 'unknown reserve stops builds'
+assert_eq '' "${builds[*]}" 'no build started with unknown reserve'
+
+# Initial install shares the updater lock and refuses before configuration/firewall changes.
+steps=()
+take_lock_wait() { steps+=(lock); }
+install_docker() { steps+=(docker); }
+ensure_disk_space() { steps+=(disk); return 1; }
+configure() { steps+=(configure); }
+install_main >"$log" 2>&1; status=$?
+assert_eq 75 "$status" 'initial install refuses low space'
+assert_eq 'lock docker disk' "${steps[*]}" 'lock and capacity before configuration'
+# Manual update failure restores actual files and source metadata; a failed build does not
+# recreate any container. Only the Docker/Git network side effects are replaced.
+fixture=$(mktemp -d); deploy="$fixture/deploy"; root="$fixture"; mkdir -p "$deploy"
+printf 'previous-commit\n' > "$fixture/head"
+printf 'DOCOO_VERSION=v0.11.0\n' > "$deploy/.env"
+printf 'TEST_SECRET=original-fixture-secret\n' > "$deploy/.env.production"
+chmod 600 "$deploy/.env" "$deploy/.env.production"
+git() {
+  case "$3" in
+    fetch|diff) return 0 ;;
+    rev-parse) cat "$fixture/head" ;;
+    checkout) printf '%s\n' "${@: -1}" > "$fixture/head" ;;
+  esac
+}
+env_value() { sed -n "s/^$1=//p" "$deploy/.env"; }
+ensure_disk_space() { return 0; }
+use_edge() { return 0; }
+attach_edge() { steps+=(attach); }
+tidy_docker() { steps+=(tidy); }
+rollback() { steps+=("rollback:$1"); }
+DOCOO_UPDATE_REF=v0.12.0
+start() {
+  printf 'TEST_SECRET=changed-fixture-secret\n' > "$deploy/.env.production"
+  printf 'generated\n' > "$deploy/.env.web"
+  return 19
+}
+steps=(); update >"$log" 2>&1; status=$?
+assert_eq 19 "$status" 'manual build failure is returned'
+assert_eq v0.11.0 "$(env_value DOCOO_VERSION)" 'manual failure restores recorded version'
+assert_eq previous-commit "$(cat "$fixture/head")" 'manual failure restores exact checkout'
+assert_eq TEST_SECRET=original-fixture-secret "$(cat "$deploy/.env.production")" 'manual failure restores private source'
+assert_eq 600 "$(stat -c %a "$deploy/.env.production")" 'private file mode retained'
+assert_eq 1 "$([ ! -e "$deploy/.env.web" ] && echo 1 || echo 0)" 'new derived env removed on failure'
+assert_eq '' "${steps[*]}" 'failed build leaves old containers alone'
+assert_eq update "$(scheduled_plan on "$(env_value DOCOO_VERSION)" v0.12.0)" 'nightly check retries failed manual update'
+start() { touch "$DOCOO_UPDATE_BACKUP_DIR/up-attempted"; return 9; }
+steps=(); update >"$log" 2>&1; status=$?
+assert_eq 9 "$status" 'failed startup is returned'
+assert_eq rollback:v0.11.0 "${steps[*]}" 'failed startup restores retained old runtime'
+assert_eq v0.11.0 "$(env_value DOCOO_VERSION)" 'failed startup restores recorded version'
+start() { return 0; }
+steps=(); update >"$log" 2>&1; status=$?
+assert_eq 0 "$status" 'manual update commits on success'
+assert_eq v0.12.0 "$(env_value DOCOO_VERSION)" 'successful startup commits recorded version'
+assert_eq v0.12.0 "$(cat "$fixture/head")" 'successful startup keeps new source'
+assert_eq 'attach tidy' "${steps[*]}" 'successful update attaches edge and cleans only after startup'
+rm -rf "$fixture"
+# A caller using `if start` disables Bash errexit within functions: explicit error propagation
+# must still prevent up/chown after a build failure.
+eval "$(sed -n '/^start() {/,/^}/p' "$here/install.sh")"
+env_value() { echo v0.11.0; }
+ensure_disk_space() { return 0; }
+build_images() { return 19; }
+helper_runs=0; up_calls=0
+docker() {
+  if [ "$1" = run ]; then helper_runs=$((helper_runs+1)); fi
+  if [ "$1" = compose ] && [ "$2" = up ]; then up_calls=$((up_calls+1)); fi
+  return 0
+}
+if start >"$log" 2>&1; then status=0; else status=$?; fi
+assert_eq 19 "$status" 'conditional start propagates failed build'
+assert_eq 1 "$helper_runs" 'failed build never reaches volume ownership changes'
+assert_eq 0 "$up_calls" 'failed build never reaches compose up'
 rm -f "$queue" "$log"
 
 printf '%s checks, %s failed\n' "$checks" "$failures"
