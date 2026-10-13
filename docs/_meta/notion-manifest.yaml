@@ -221,3 +221,6 @@ documents:
   - path: docs/05-security/04-asvs-5-l2-control-map.md
     doc_id: DOCOO-ASVS-L2-MAP
     section: 05 Security
+  - path: docs/adr/0028-optional-quick-draft.md
+    doc_id: DOCOO-ADR-0028
+    section: ADRs

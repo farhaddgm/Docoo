@@ -80,8 +80,13 @@ export class WorkflowService {
     const business = await this.business.resolveForUse(context, projectId);
     const run = await this.database.run(context, async (client) => {
       const project = (
-        await client.query<{ status: string; config_snapshot_id: string | null }>(
-          'select status, config_snapshot_id from projects where id = $1 and deleted_at is null for update',
+        await client.query<{
+          status: string;
+          config_snapshot_id: string | null;
+          analysis_profile: string;
+          analysis_continuation_session_id: string | null;
+        }>(
+          'select status, config_snapshot_id,analysis_profile,analysis_continuation_session_id from projects where id = $1 and deleted_at is null for update',
           [projectId],
         )
       ).rows[0];
@@ -108,8 +113,8 @@ export class WorkflowService {
       const created = (
         await client.query<RunRow>(
           `insert into workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id, config_snapshot_id, created_by,
-                                      business_snapshot_id)
-           values ($1, $2, $3, $4, $5, $6, $7) returning ${runColumns}`,
+                                      business_snapshot_id,analysis_profile,analysis_continuation_session_id)
+           values ($1, $2, $3, $4, $5, $6, $7,$8,$9) returning ${runColumns}`,
           [
             context.workspaceId,
             projectId,
@@ -118,6 +123,8 @@ export class WorkflowService {
             project.config_snapshot_id,
             context.actorId,
             business.snapshotId,
+            project.analysis_profile,
+            project.analysis_continuation_session_id,
           ],
         )
       ).rows[0]!;
@@ -131,6 +138,8 @@ export class WorkflowService {
           stages: STAGES,
           configSnapshotId: project.config_snapshot_id,
           businessSnapshotId: business.snapshotId,
+          analysisProfile: project.analysis_profile,
+          continuedFromSessionId: project.analysis_continuation_session_id,
           // Contenter could not be asked: the run reads the last saved snapshot.
           ...(business.syncError ? { businessSyncError: business.syncError } : {}),
         },

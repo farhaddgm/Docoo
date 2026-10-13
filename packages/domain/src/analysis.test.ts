@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ANALYSIS_LIMITS,
+  analysisLimits,
   analysisProgress,
   answerStatuses,
   batchCapacity,
@@ -28,6 +29,35 @@ import {
 const question = (category: QuestionCategory, status: QuestionStatus) => ({ category, status });
 
 describe('analysis limits (FR-ANL-001, FR-ANL-002)', () => {
+  it('keeps twelve answered questions incomplete for full analysis and caps only the optional draft', () => {
+    const preserved = Array.from({ length: 12 }, () => question('goal', 'answered'));
+    const quick = analysisLimits('quick');
+    expect(analysisProgress(preserved, quick)).toMatchObject({
+      answered: 12,
+      minimumReached: true,
+    });
+    expect(analysisProgress(preserved)).toMatchObject({
+      answered: 12,
+      minimumReached: false,
+      minimum: 30,
+    });
+    expect(batchCapacity(12, quick)).toBe(3);
+    expect(batchCapacity(15, quick)).toBe(0);
+    const facts = {
+      asked: 12,
+      finishRequested: true,
+      modelSufficient: false,
+      newQuestionCount: 3,
+      coverageGaps: ['context'] as QuestionCategory[],
+    };
+    expect(decideRound(facts, quick)).toMatchObject({
+      action: 'define',
+      reason: 'finish_requested',
+    });
+    expect(decideRound(facts)).toMatchObject({ action: 'ask', reason: 'minimum' });
+    expect(preserved.every((q) => q.status === 'answered')).toBe(true);
+  });
+
   it('fixes thirty to three hundred questions in batches of at most forty', () => {
     expect(ANALYSIS_LIMITS).toEqual({ minimumQuestions: 30, maximumQuestions: 300, batchSize: 40 });
   });

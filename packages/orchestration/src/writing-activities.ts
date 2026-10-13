@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import {
   applyOutline,
   assembleDocument,
+  markQuickDraft,
   checkCompliance,
   countBlocks,
   countDocument,
@@ -136,6 +137,7 @@ interface WritingRow {
   parts: Record<string, Part>;
   bibliography: Partial<CitationState>;
   document_title: string;
+  document_analysis_profile: 'full' | 'quick';
   document_status: string;
   solution_id: string | null;
   current_version_id: string | null;
@@ -184,7 +186,7 @@ export function createWritingActivities(
         `select w.id, w.workspace_id, w.project_id, w.document_id, w.status, w.phase, w.level, w.template_version,
                 w.language::text as language, w.notes, w.settings, w.base_version_id, w.agent_definition_version_id,
                 w.plan, w.parts, w.bibliography, d.title as document_title, d.status::text as document_status,
-                d.solution_id, d.current_version_id
+                d.solution_id, d.current_version_id,d.analysis_profile as document_analysis_profile
            from document_writings w join documents d on d.id = w.document_id
           where w.id = $1 ${lock ? 'for update of w' : ''}`,
         [ref.writingId],
@@ -446,7 +448,7 @@ export function createWritingActivities(
       ...(built[section.key] ?? []),
       ...section.subsections.flatMap((sub) => written[sub.id] ?? []),
     ]);
-    return assembleDocument({
+    const document = assembleDocument({
       title: row.document_title,
       language: row.language,
       plan,
@@ -454,6 +456,7 @@ export function createWritingActivities(
       built,
       references: citedReferences(flat, citationState(row).references, row.language),
     });
+    return row.document_analysis_profile === 'quick' ? markQuickDraft(document) : document;
   }
 
   /** What every model-calling step needs before it calls. */
@@ -717,7 +720,13 @@ export function createWritingActivities(
               [{ type: 'heading', id: 't', level: 1, text: row.document_title }],
               row.language,
             ) +
-            Math.min(6, Math.max(0, settings.knowledgeLimit)) * 70;
+            Math.min(6, Math.max(0, settings.knowledgeLimit)) * 70 +
+            (row.document_analysis_profile === 'quick'
+              ? countBlocks(
+                  markQuickDraft({ title: '', language: row.language, blocks: [] }).blocks,
+                  row.language,
+                )
+              : 0);
           const plan = planWriting({
             template,
             language: row.language,

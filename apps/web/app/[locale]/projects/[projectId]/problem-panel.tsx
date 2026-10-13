@@ -9,6 +9,7 @@ import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { DefinitionCard } from './problem-definition';
 import { QuestionQuality } from './question-quality';
+import { quickDraftMessages } from '../quick-draft-messages';
 import { problemMessages } from './problem-messages';
 import {
   emptyDraft,
@@ -280,7 +281,14 @@ export function ProblemPanel({
 
       <section className="card stack" aria-labelledby="problem-heading">
         <h3 id="problem-heading">{text.title}</h3>
-        <p className="muted">{text.intro}</p>
+        {analysis.profile === 'quick' && (
+          <p className="notice" role="status">
+            {quickDraftMessages(locale).warning}
+          </p>
+        )}
+        <p className="muted">
+          {analysis.profile === 'quick' ? quickDraftMessages(locale).help : text.intro}
+        </p>
         <p role="status" aria-busy={analysis.phase === 'analysing'}>
           <strong>{text.phaseHeading}:</strong> {phaseText}
         </p>
@@ -313,8 +321,11 @@ export function ProblemPanel({
         </meter>
         <p className="muted">
           {progress.minimumReached
-            ? text.minimumReached
-            : fill(text.minimumMissing, { n: formatNumber(locale, missing) })}
+            ? fill(text.minimumReached, { min: formatNumber(locale, progress.minimum) })
+            : fill(text.minimumMissing, {
+                n: formatNumber(locale, missing),
+                min: formatNumber(locale, progress.minimum),
+              })}
         </p>
         <dl className="counts" aria-labelledby="progress-heading">
           {(['asked', 'answered', 'unanswered', 'irrelevant', 'later', 'open'] as const).map(

@@ -136,10 +136,11 @@ export class WritingsService {
           level: number;
           language: 'fa' | 'en';
           current_version_id: string | null;
+          analysis_profile: 'full' | 'quick';
           version: number;
         }>(
           `select id, project_id, solution_id, status::text as status, level, language::text as language,
-                  current_version_id, version
+                  current_version_id, version,analysis_profile
              from documents where id = $1 for update`,
           [documentId],
         )
@@ -180,6 +181,11 @@ export class WritingsService {
         throw conflict('AI_NOT_CONFIGURED', 'Set ai.connection_id and ai.model first.');
 
       const level = input.level ?? document.level;
+      if (document.analysis_profile === 'quick' && level !== 1)
+        throw badRequest(
+          'QUICK_DRAFT_LEVEL',
+          'A quick draft uses length level1; continue full analysis for a full document.',
+        );
       const template =
         input.template === undefined
           ? templateFor(effective.values['document.default_template'])

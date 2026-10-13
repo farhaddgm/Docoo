@@ -20,6 +20,7 @@ import {
   STAGE_SCHEMAS,
   stagePrompt,
   scopeOutlineEvaluation,
+  scopeAnalysisDefinition,
   STAGES,
   type Stage,
   type StageContext,
@@ -505,7 +506,12 @@ export function createOrchestrationActivities(
               ? await finishResearch(client, prepared.toolScope, research, response.json)
               : prepared.stage === 'evaluation'
                 ? scopeOutlineEvaluation(response.json)
-                : response.json,
+                : prepared.stage === 'analysis'
+                  ? scopeAnalysisDefinition(
+                      response.json,
+                      prepared.promptInput.analysis?.profile ?? 'full',
+                    )
+                  : response.json,
           );
           const output = (
             await client.query<{ id: string }>(

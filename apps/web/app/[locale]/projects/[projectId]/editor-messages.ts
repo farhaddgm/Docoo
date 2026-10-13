@@ -219,6 +219,7 @@ const messages = {
     when: 'زمان',
     result: 'نتیجه',
     errors: {
+      QUICK_DRAFT_LEVEL: 'پیش‌نویس سریع در سطح ۱ نوشته می‌شود.',
       ...rateLimitErrors.fa,
       DOCUMENT_INVALID: 'ساختار سند معتبر نیست؛ مشکل‌ها در پنل بررسی آمده‌اند.',
       DOCUMENT_VERSION_CONFLICT: 'سند پس از بارگذاری تغییر کرده است. صفحه را به‌روز کنید.',
@@ -457,6 +458,7 @@ const messages = {
     when: 'Time',
     result: 'Result',
     errors: {
+      QUICK_DRAFT_LEVEL: 'Quick drafts use level 1.',
       ...rateLimitErrors.en,
       DOCUMENT_INVALID: 'The document structure is invalid; the problems are in the check panel.',
       DOCUMENT_VERSION_CONFLICT: 'The document changed after you loaded it. Refresh the page.',

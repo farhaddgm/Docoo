@@ -32,6 +32,7 @@ import {
   type ProjectValues,
 } from '../project-fields';
 import { CriteriaEditor, criteriaIssue, sameCriteria, type Criterion } from './criteria-editor';
+import { quickDraftMessages } from '../quick-draft-messages';
 import { wizardMessages } from './wizard-messages';
 
 /** The settings each step offers, in the order of UX §5 (steps 3 to 7). */
@@ -278,6 +279,7 @@ export function ProjectWizard({
           description: values.description.trim(),
           initialProblem: trimmed.problem,
           outputLanguage: values.outputLanguage,
+          analysisProfile: values.analysisProfile ?? 'full',
           topics: values.topics.map((topic) => ({
             topicId: topic.topicId,
             ...(topic.conflictInstruction.trim()
@@ -353,7 +355,33 @@ export function ProjectWizard({
         </h2>
         <p className="muted">{text.stepHelp[step]}</p>
 
-        {step === 0 && <BasicsFields locale={locale} values={values} onChange={setValues} />}
+        {step === 0 && (
+          <>
+            <BasicsFields locale={locale} values={values} onChange={setValues} />
+            <div className="filter-form">
+              <label htmlFor="analysis-profile">{quickDraftMessages(locale).profile}</label>
+              <select
+                id="analysis-profile"
+                value={values.analysisProfile ?? 'full'}
+                aria-describedby="analysis-profile-help"
+                onChange={(event) =>
+                  setValues({ ...values, analysisProfile: event.target.value as 'full' | 'quick' })
+                }
+              >
+                <option value="full">{quickDraftMessages(locale).full}</option>
+                <option value="quick">{quickDraftMessages(locale).quick}</option>
+              </select>
+              <p id="analysis-profile-help" className="muted">
+                {quickDraftMessages(locale).help}
+              </p>
+              {values.analysisProfile === 'quick' && (
+                <p className="notice" role="status">
+                  {quickDraftMessages(locale).warning}
+                </p>
+              )}
+            </div>
+          </>
+        )}
         {step === 0 && (
           <BusinessPicker
             locale={locale}
@@ -383,6 +411,9 @@ export function ProjectWizard({
               setModel(nextModel);
             }}
           />
+        )}
+        {step === 6 && values.analysisProfile === 'quick' && (
+          <p className="notice">{quickDraftMessages(locale).level}</p>
         )}
         {keys && baseline && (
           <ul className="plain-list stack">
@@ -558,6 +589,14 @@ function Review({
         <div>
           <dt>{project.outputLanguage}</dt>
           <dd>{project.languages[values.outputLanguage]}</dd>
+        </div>
+        <div>
+          <dt>{quickDraftMessages(locale).profile}</dt>
+          <dd>
+            {values.analysisProfile === 'quick'
+              ? quickDraftMessages(locale).quick
+              : quickDraftMessages(locale).full}
+          </dd>
         </div>
         <div>
           <dt>{project.topicsSection}</dt>

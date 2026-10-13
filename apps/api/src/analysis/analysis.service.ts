@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
 import {
-  ANALYSIS_LIMITS,
+  analysisLimits,
+  type AnalysisProfile,
   prioritizeAnalysisQuestions,
   analysisProgress,
   checkAnswer,
@@ -16,6 +17,7 @@ import {
   type QuestionStatus,
 } from '@docoo/domain';
 import type { PoolClient, QueryResultRow } from 'pg';
+import { analysisSession } from '@docoo/orchestration';
 
 import { writeAudit } from '../common/audit.js';
 import { isoColumn } from '../common/pagination.js';
@@ -38,6 +40,7 @@ export interface Attachment {
 }
 
 interface CurrentRow extends QueryResultRow {
+  analysis_profile: AnalysisProfile | null;
   run_id: string;
   run_no: number;
   workflow_id: string;
@@ -84,7 +87,7 @@ const questionSelect = `
 const currentSelect = `
   select r.id as run_id, r.run_no, r.temporal_workflow_id as workflow_id, sr.id as stage_run_id,
          sr.status::text as stage_status, sr.latest_output_id, sr.passed_by_decision,
-         s.id as session_id, s.minimum_questions, s.maximum_questions, s.batch_size,
+         s.id as session_id, s.minimum_questions, s.maximum_questions, s.batch_size,coalesce(s.analysis_profile,r.analysis_profile) as analysis_profile,
          ${isoColumn('s.finish_requested_at', 'finish_requested_at')}, s.finish_reason
     from workflow_runs r
     left join stage_runs sr on sr.run_id = r.id and sr.stage = 'analysis'
@@ -206,13 +209,16 @@ export class AnalysisService {
         const questions = current?.session_id
           ? (
               await client.query<QuestionRow>(
-                `${questionSelect} where q.session_id = $1 order by q.ordinal`,
-                [current.session_id],
+                `${questionSelect} where q.session_id = any($1::uuid[]) order by q.ordinal`,
+                [(await analysisSession(client, current.session_id)).sessionIds],
               )
             ).rows.map(toQuestion)
           : [];
         const prioritized = await this.prioritize(client, projectId, questions);
-        const progress = analysisProgress(questions);
+        const progress = analysisProgress(
+          questions,
+          analysisLimits(current?.analysis_profile ?? 'full'),
+        );
         // The run's own configuration says whether risk and out-of-scope must also be asked.
         const settings = current?.run_id
           ? ((
@@ -271,13 +277,21 @@ export class AnalysisService {
         const finishRequested = Boolean(current?.finish_requested_at);
         return {
           analysis: {
+            profile: current?.analysis_profile ?? 'full',
+            incomplete: current?.analysis_profile === 'quick',
             runId: current?.run_id ?? null,
             stageRunId: current?.stage_run_id ?? null,
             phase,
             limits: {
-              minimum: current?.minimum_questions ?? ANALYSIS_LIMITS.minimumQuestions,
-              maximum: current?.maximum_questions ?? ANALYSIS_LIMITS.maximumQuestions,
-              batchSize: current?.batch_size ?? ANALYSIS_LIMITS.batchSize,
+              minimum:
+                current?.minimum_questions ??
+                analysisLimits(current?.analysis_profile ?? 'full').minimumQuestions,
+              maximum:
+                current?.maximum_questions ??
+                analysisLimits(current?.analysis_profile ?? 'full').maximumQuestions,
+              batchSize:
+                current?.batch_size ??
+                analysisLimits(current?.analysis_profile ?? 'full').batchSize,
             },
             progress,
             coverage,
@@ -317,20 +331,21 @@ export class AnalysisService {
       async (client) => {
         const current = await this.current(client, projectId);
         if (!current?.session_id) return { batches: [] };
+        const { sessionIds } = await analysisSession(client, current.session_id);
         const batches = (
           await client.query<Record<string, unknown> & { id: string }>(
             `select b.id, b.batch_no as "batchNo", b.status, ${isoColumn('b.submitted_at', '"submittedAt"')},
                   ${isoColumn('b.created_at', '"createdAt"')}, r.round_no as "round", r.reason,
                   r.understood, r.next_ambiguity as "nextAmbiguity"
              from question_batches b join analysis_rounds r on r.id = b.round_id
-            where b.session_id = $1 order by b.batch_no`,
-            [current.session_id],
+            where b.session_id = any($1::uuid[]) order by b.batch_no`,
+            [sessionIds],
           )
         ).rows;
         const questions = (
           await client.query<QuestionRow>(
-            `${questionSelect} where q.session_id = $1 order by q.ordinal`,
-            [current.session_id],
+            `${questionSelect} where q.session_id = any($1::uuid[]) order by q.ordinal`,
+            [sessionIds],
           )
         ).rows.map(toQuestion);
         const prioritized = await this.prioritize(client, projectId, questions);
@@ -638,15 +653,18 @@ export class AnalysisService {
         }
         const statuses = (
           await client.query<{ status: QuestionStatus }>(
-            'select status from analysis_questions where session_id = $1',
-            [current.session_id],
+            'select status from analysis_questions where session_id = any($1::uuid[])',
+            [(await analysisSession(client, current.session_id)).sessionIds],
           )
         ).rows;
-        const progress = analysisProgress(statuses);
+        const progress = analysisProgress(
+          statuses,
+          analysisLimits(current.analysis_profile ?? 'full'),
+        );
         if (!progress.minimumReached) {
           throw conflict(
             'ANALYSIS_MINIMUM_NOT_REACHED',
-            `At least ${ANALYSIS_LIMITS.minimumQuestions} questions are needed before the analysis can finish.`,
+            `At least ${progress.minimum} questions are needed before the analysis can finish.`,
             { asked: progress.asked, minimum: progress.minimum },
           );
         }

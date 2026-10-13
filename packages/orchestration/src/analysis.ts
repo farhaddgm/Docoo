@@ -1,5 +1,7 @@
 import {
   ANALYSIS_LIMITS,
+  type AnalysisLimits,
+  type AnalysisProfile,
   composeInstructions,
   contradictionKey,
   isQuestionCategory,
@@ -248,6 +250,8 @@ export interface RoundSummary {
 }
 
 export interface AnalysisContext {
+  readonly profile?: AnalysisProfile;
+  readonly limits?: AnalysisLimits;
   readonly round: number;
   readonly asked: number;
   readonly capacity: number;
@@ -296,14 +300,20 @@ const ROUND_TASK = [
  */
 export function roundPrompt(input: RoundRequestInput): { instructions: string; message: string } {
   const { analysis } = input;
+  const limits = analysis.limits ?? ANALYSIS_LIMITS;
   const instructions = composeInstructions({
     role: 'analyst',
     content: input.definition,
     language: input.language,
     task: [
       ROUND_TASK,
-      `Propose at most ${analysis.capacity} new questions (the limit is ${ANALYSIS_LIMITS.batchSize} per batch and ${ANALYSIS_LIMITS.maximumQuestions} in total; ${analysis.asked} were asked so far).`,
-      `At least ${ANALYSIS_LIMITS.minimumQuestions} questions are needed in total before the problem can be defined.`,
+      `Propose at most ${analysis.capacity} new questions (the limit is ${limits.batchSize} per batch and ${limits.maximumQuestions} in total; ${analysis.asked} were asked so far).`,
+      `At least ${limits.minimumQuestions} questions are needed in total before the problem can be defined.`,
+      ...(analysis.profile === 'quick'
+        ? [
+            'This is an optional incomplete quick draft. Keep all unresolved critical ambiguity explicit; no complete analysis or final quality approval is implied.',
+          ]
+        : []),
       'Cover first any dimension listed in coverageGaps, then deepen the dimensions with unanswered or "later" questions.',
       'Set "sufficient" to true only when the problem can be defined without guessing; then propose no questions.',
       'In "understood" summarise what is now clear; in "nextAmbiguity" name the most important open point.',
@@ -323,8 +333,9 @@ export function roundPrompt(input: RoundRequestInput): { instructions: string; m
     round: analysis.round,
     asked: analysis.asked,
     capacity: analysis.capacity,
-    minimum: ANALYSIS_LIMITS.minimumQuestions,
-    maximum: ANALYSIS_LIMITS.maximumQuestions,
+    minimum: limits.minimumQuestions,
+    maximum: limits.maximumQuestions,
+    profile: analysis.profile ?? 'full',
     coverage: analysis.coverage.map((entry) => ({
       category: entry.category,
       required: entry.required,

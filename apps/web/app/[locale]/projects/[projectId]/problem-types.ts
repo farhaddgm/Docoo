@@ -117,6 +117,8 @@ export type Phase =
   'not_started' | 'answering' | 'analysing' | 'awaiting_approval' | 'approved' | 'cancelled';
 
 export interface Analysis {
+  profile?: 'full' | 'quick';
+  incomplete?: boolean;
   runId: string | null;
   stageRunId: string | null;
   phase: Phase;

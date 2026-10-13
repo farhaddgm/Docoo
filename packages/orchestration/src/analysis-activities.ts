@@ -30,6 +30,7 @@ import type { StageRef } from './refs.js';
 import type { ProviderRuntime } from './runtime.js';
 import { promptDigest, resolveAgentProfile } from './agents.js';
 import { loadSettings } from './settings.js';
+import { analysisSession } from './analysis-session.js';
 
 export interface AnalysisRoundRef extends StageRef {
   /** 1-based; every round is stored once, so a repeated call returns the stored outcome. */
@@ -93,16 +94,31 @@ const PENDING_SOURCE_STATUSES = new Set([
 
 async function ensureSession(client: PoolClient, ref: StageRef): Promise<SessionRow> {
   await client.query(
-    `insert into analysis_sessions (workspace_id, project_id, stage_run_id) values ($1, $2, $3)
+    `insert into analysis_sessions (workspace_id, project_id, stage_run_id,analysis_profile,continued_from_session_id,minimum_questions,maximum_questions,batch_size)
+     select $1,$2,$3,r.analysis_profile,r.analysis_continuation_session_id,
+            case when r.analysis_profile='quick' then 12 else 30 end,
+            case when r.analysis_profile='quick' then 15 else 300 end,
+            case when r.analysis_profile='quick' then 12 else 40 end
+       from workflow_runs r where r.id=$4 and r.project_id=$2 and r.workspace_id=$1
      on conflict (stage_run_id) do nothing`,
-    [ref.workspaceId, ref.projectId, ref.stageRunId],
+    [ref.workspaceId, ref.projectId, ref.stageRunId, ref.runId],
   );
-  return (
+  const session = (
     await client.query<SessionRow>(
       'select id, finish_requested_at from analysis_sessions where stage_run_id = $1 for update',
       [ref.stageRunId],
     )
   ).rows[0]!;
+  const { sessionIds } = await analysisSession(client, session.id);
+  if (sessionIds.length === 2)
+    await client.query(
+      `insert into analysis_contradictions
+      (workspace_id,project_id,session_id,question_a_id,question_b_id,key,description,status,detected_round_id,resolved_round_id)
+      select workspace_id,project_id,$1,question_a_id,question_b_id,key,description,status,detected_round_id,resolved_round_id
+        from analysis_contradictions where session_id=$2 on conflict(session_id,key) do nothing`,
+      [session.id, sessionIds[1]],
+    );
+  return session;
 }
 
 async function storedRound(
@@ -138,6 +154,7 @@ async function loadQuestions(
   client: PoolClient,
   sessionId: string,
 ): Promise<{ questions: TranscriptQuestion[]; pendingAttachments: number }> {
+  const { sessionIds } = await analysisSession(client, sessionId);
   const rows = (
     await client.query<QuestionRow>(
       `select q.id, q.ordinal, b.batch_no, q.category, q.text, q.status, f.ordinal as follow_up_ordinal,
@@ -146,8 +163,8 @@ async function loadQuestions(
          join question_batches b on b.id = q.batch_id
          left join analysis_questions f on f.id = q.follow_up_of_id
          left join analysis_answers a on a.id = q.current_answer_id
-        where q.session_id = $1 order by q.ordinal`,
-      [sessionId],
+        where q.session_id = any($1::uuid[]) order by q.ordinal`,
+      [sessionIds],
     )
   ).rows;
   const versionIds = [
@@ -224,6 +241,7 @@ export async function loadAnalysisContext(
   input: { sessionId: string; projectId: string; round: number; capacity: number },
   preloaded?: TranscriptQuestion[],
 ): Promise<AnalysisContext> {
+  const session = await analysisSession(client, input.sessionId);
   const questions = preloaded ?? (await loadQuestions(client, input.sessionId)).questions;
   const report = coverageReport(questions, await loadRequiredCategories(client, input.sessionId));
   const contradictions = await client.query<{ a: number; b: number; description: string }>(
@@ -245,6 +263,8 @@ export async function loadAnalysisContext(
     [input.projectId],
   );
   return {
+    profile: session.profile,
+    limits: session.limits,
     round: input.round,
     asked: questions.length,
     capacity: input.capacity,
@@ -390,7 +410,7 @@ export function createAnalysisActivities(
             sessionId: session.id,
             projectId: ref.projectId,
             round: ref.roundNo,
-            capacity: batchCapacity(asked),
+            capacity: batchCapacity(asked, (await analysisSession(client, session.id)).limits),
           },
           loaded.questions,
         );
@@ -438,7 +458,12 @@ export function createAnalysisActivities(
         return {
           sessionId: session.id,
           lastBatchId: last?.id ?? null,
-          lastBatchNo: last?.batch_no ?? 0,
+          lastBatchNo: (
+            await client.query<{ n: number }>(
+              'select coalesce(max(batch_no),0)::int as n from question_batches where session_id=any($1::uuid[])',
+              [(await analysisSession(client, session.id)).sessionIds],
+            )
+          ).rows[0]!.n,
           config: { ...config, connectionId, model },
           agentDefinitionVersionId: profile.definition.id,
           promptSha256: promptDigest(prompt),
@@ -500,19 +525,22 @@ export function createAnalysisActivities(
         const kept = dedupeQuestions(
           output.questions,
           loaded.questions.map((question) => question.text),
-        ).kept.slice(0, batchCapacity(asked));
+        ).kept.slice(0, batchCapacity(asked, (await analysisSession(client, session.id)).limits));
         const required = await loadRequiredCategories(client, session.id);
         const projected = [
           ...loaded.questions,
           ...kept.map((question) => ({ category: question.category, status: 'open' as const })),
         ];
-        const decision = decideRound({
-          asked,
-          finishRequested: session.finish_requested_at !== null,
-          modelSufficient: output.sufficient,
-          newQuestionCount: kept.length,
-          coverageGaps: coverageGaps(coverageReport(projected, required)),
-        });
+        const decision = decideRound(
+          {
+            asked,
+            finishRequested: session.finish_requested_at !== null,
+            modelSufficient: output.sufficient,
+            newQuestionCount: kept.length,
+            coverageGaps: coverageGaps(coverageReport(projected, required)),
+          },
+          (await analysisSession(client, session.id)).limits,
+        );
         if (decision.action === 'stalled') {
           return {
             status: 'blocked',
@@ -548,8 +576,8 @@ export function createAnalysisActivities(
         const byNumber = new Map(
           (
             await client.query<{ id: string; ordinal: number }>(
-              'select id, ordinal from analysis_questions where session_id = $1',
-              [session.id],
+              'select id, ordinal from analysis_questions where session_id = any($1::uuid[])',
+              [(await analysisSession(client, session.id)).sessionIds],
             )
           ).rows.map((row) => [row.ordinal, row.id]),
         );
@@ -652,10 +680,10 @@ export function createAnalysisActivities(
             JSON.stringify({ batchId: batch.id, batchNo, questionCount: kept.length }),
           ],
         );
-        const progress = analysisProgress([
-          ...loaded.questions,
-          ...kept.map(() => ({ status: 'open' as const })),
-        ]);
+        const progress = analysisProgress(
+          [...loaded.questions, ...kept.map(() => ({ status: 'open' as const }))],
+          (await analysisSession(client, session.id)).limits,
+        );
         await audit(client, ref.workspaceId, {
           action: 'analysis.batch_opened',
           targetType: 'question_batch',

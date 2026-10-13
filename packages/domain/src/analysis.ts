@@ -11,6 +11,25 @@ export const ANALYSIS_LIMITS = {
   batchSize: 40,
 } as const;
 
+export interface AnalysisLimits {
+  readonly minimumQuestions: number;
+  readonly maximumQuestions: number;
+  readonly batchSize: number;
+}
+
+/** Optional incomplete draft profile approved by the owner in Issue140. */
+export const QUICK_ANALYSIS_LIMITS = {
+  minimumQuestions: 12,
+  maximumQuestions: 15,
+  batchSize: 12,
+} as const;
+
+export type AnalysisProfile = 'full' | 'quick';
+
+export function analysisLimits(profile: AnalysisProfile): AnalysisLimits {
+  return profile === 'quick' ? QUICK_ANALYSIS_LIMITS : ANALYSIS_LIMITS;
+}
+
 /**
  * Coverage dimensions. The first eight are those FR-ANL-004 names; risk and out-of-scope come
  * from the analyst's charter (docs/03-ai/02-agent-charters.md §1).
@@ -154,10 +173,7 @@ export function dedupeQuestions<T extends { readonly text: string }>(
 }
 
 /** How many new questions the next batch may hold (FR-ANL-001, FR-ANL-002). */
-export function batchCapacity(
-  asked: number,
-  limits: typeof ANALYSIS_LIMITS = ANALYSIS_LIMITS,
-): number {
+export function batchCapacity(asked: number, limits: AnalysisLimits = ANALYSIS_LIMITS): number {
   return Math.max(0, Math.min(limits.batchSize, limits.maximumQuestions - asked));
 }
 
@@ -179,6 +195,7 @@ export interface AnalysisProgress {
 /** `answered / asked / minimum / maximum` of the analysis (UX §7). */
 export function analysisProgress(
   questions: readonly { readonly status: QuestionStatus }[],
+  limits: AnalysisLimits = ANALYSIS_LIMITS,
 ): AnalysisProgress {
   const count = (status: QuestionStatus) =>
     questions.filter((question) => question.status === status).length;
@@ -190,10 +207,10 @@ export function analysisProgress(
     irrelevant: count('irrelevant'),
     later: count('later'),
     open: count('open'),
-    minimum: ANALYSIS_LIMITS.minimumQuestions,
-    maximum: ANALYSIS_LIMITS.maximumQuestions,
-    minimumReached: asked >= ANALYSIS_LIMITS.minimumQuestions,
-    maximumReached: asked >= ANALYSIS_LIMITS.maximumQuestions,
+    minimum: limits.minimumQuestions,
+    maximum: limits.maximumQuestions,
+    minimumReached: asked >= limits.minimumQuestions,
+    maximumReached: asked >= limits.maximumQuestions,
   };
 }
 
@@ -289,8 +306,11 @@ export type RoundDecision =
  * least thirty questions were asked, whatever the model says (FR-ANL-002), and the model's
  * "enough" is not accepted while a required dimension has no question (FR-ANL-004).
  */
-export function decideRound(facts: RoundFacts): RoundDecision {
-  const { minimumQuestions, maximumQuestions } = ANALYSIS_LIMITS;
+export function decideRound(
+  facts: RoundFacts,
+  limits: AnalysisLimits = ANALYSIS_LIMITS,
+): RoundDecision {
+  const { minimumQuestions, maximumQuestions } = limits;
   if (facts.asked >= minimumQuestions && facts.finishRequested) {
     return { action: 'define', reason: 'finish_requested' };
   }

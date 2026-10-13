@@ -15,7 +15,7 @@ import {
   type QualityReviewReason,
   dataBlock,
 } from '@docoo/domain';
-import { activeAgentVersion, ProviderRuntime } from '@docoo/orchestration';
+import { activeAgentVersion, analysisSession, ProviderRuntime } from '@docoo/orchestration';
 import { ProviderError } from '@docoo/providers';
 import type { PoolClient } from 'pg';
 
@@ -78,8 +78,8 @@ export class QuestionQualityService {
         ? Number(
             (
               await client.query<{ count: string }>(
-                'select count(*) as count from analysis_questions where session_id = $1',
-                [session.id],
+                'select count(*) as count from analysis_questions where session_id = any($1::uuid[])',
+                [(await analysisSession(client, session.id)).sessionIds],
               )
             ).rows[0]!.count,
           )
@@ -110,8 +110,8 @@ export class QuestionQualityService {
           status: string;
         }>(
           `select id, ordinal as number, category, text, status from analysis_questions
-            where session_id = $1 order by ordinal`,
-          [session.id],
+            where session_id = any($1::uuid[]) order by ordinal`,
+          [(await analysisSession(client, session.id)).sessionIds],
         )
       ).rows;
       if (rows.length === 0)

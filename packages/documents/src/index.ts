@@ -9,5 +9,6 @@ export * from './pdf.js';
 export * from './pptx.js';
 export * from './scoring.js';
 export * from './sensitivity.js';
+export * from './quick-draft.js';
 export * from './templates.js';
 export * from './writing.js';

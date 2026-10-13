@@ -24,8 +24,8 @@ const messages = {
     progressTitle: 'پیشرفت پرسش‌ها',
     progressSummary: '{asked} پرسش از حداکثر {max} · {answered} پاسخ‌داده‌شده · حداقل لازم: {min}',
     progressLabel: 'تعداد پرسش‌های پرسیده‌شده از حداکثر مجاز',
-    minimumReached: 'حداقل ۳۰ پرسش پرسیده شده است.',
-    minimumMissing: 'هنوز {n} پرسش تا حداقل ۳۰ مانده است.',
+    minimumReached: 'حداقل {min} پرسش پرسیده شده است.',
+    minimumMissing: 'هنوز {n} پرسش تا حداقل {min} مانده است.',
     counts: {
       asked: 'پرسیده‌شده',
       answered: 'پاسخ‌داده‌شده',
@@ -180,7 +180,7 @@ const messages = {
         'تعریف مسئله منتظر تصمیم است؛ برای ادامهٔ تحلیل ابتدا آن را رد کنید.',
       ANALYSIS_CLOSED: 'تحلیل این اجرا بسته شده است.',
       ANALYSIS_PROJECT_NOT_ACTIVE: 'پاسخ فقط برای پروژهٔ فعال یا متوقف ثبت می‌شود.',
-      ANALYSIS_MINIMUM_NOT_REACHED: 'هنوز ۳۰ پرسش پرسیده نشده است.',
+      ANALYSIS_MINIMUM_NOT_REACHED: 'هنوز حداقل لازم پرسش‌ها پرسیده نشده است.',
       ANALYSIS_ANSWERS_PENDING: 'ابتدا به پرسش‌های باز پاسخ دهید یا برایشان وضعیت بگذارید.',
       ANALYSIS_ATTACHMENT_NOT_FOUND: 'فایل پیوست پیدا نشد.',
       ANALYSIS_ATTACHMENT_NOT_READY: 'بارگذاری یکی از فایل‌ها کامل نشده است.',
@@ -225,8 +225,8 @@ const messages = {
     progressSummary:
       '{asked} questions of at most {max} · {answered} answered · minimum needed: {min}',
     progressLabel: 'Questions asked out of the maximum allowed',
-    minimumReached: 'At least 30 questions have been asked.',
-    minimumMissing: '{n} more questions are needed to reach the minimum of 30.',
+    minimumReached: 'At least {min} questions have been asked.',
+    minimumMissing: '{n} more questions are needed to reach the minimum of {min}.',
     counts: {
       asked: 'Asked',
       answered: 'Answered',

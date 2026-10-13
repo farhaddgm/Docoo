@@ -295,6 +295,20 @@
       "when": 1791558572312,
       "tag": "0041_decision_intelligence",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791904531892,
+      "tag": "0042_quick_draft_profile",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791906426776,
+      "tag": "0043_quick_draft_audit_scope",
+      "breakpoints": true
     }
   ]
 }

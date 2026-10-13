@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { unzipSync, strFromU8 } from 'fflate';
 
 import { Worker } from '@temporalio/worker';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -42,6 +43,7 @@ async function setting(key: string, value: unknown, scopeType = 'workspace', sco
 async function project(
   code: string,
   configure?: (projectId: string) => Promise<void>,
+  analysisProfile: 'full' | 'quick' = 'full',
 ): Promise<string> {
   const created = await h.request('POST', api('/projects'), {
     cookie,
@@ -50,6 +52,7 @@ async function project(
       title: `Project ${code}`,
       initialProblem: 'Reduce repeat-customer churn by 20%.',
       topics: [{ topicId }],
+      analysisProfile,
     },
   });
   expect(created.statusCode, created.body).toBe(201);
@@ -146,6 +149,192 @@ describe.skipIf(!adminUrl || !temporalAddress)(
     afterAll(async () => {
       await h?.close();
     });
+
+    it('PRP-04: caps the incomplete draft and continues full analysis with the same answers and identities', async () => {
+      const projectId = await project('quick-draft', undefined, 'quick');
+      const early = await h.request('POST', api(`/projects/${projectId}/solutions/generate`), {
+        cookie,
+        payload: { count: 2 },
+      });
+      expect(early.statusCode, early.body).toBe(409);
+      expect(early.json<{ code: string }>().code).toBe('QUICK_DRAFT_NOT_READY');
+      const draft = await analysis.reachDefinition(projectId);
+      expect(draft.limits).toEqual({ minimum: 12, maximum: 15, batchSize: 12 });
+      expect(draft.progress.asked).toBeGreaterThanOrEqual(12);
+      expect(draft.progress.asked).toBeLessThanOrEqual(15);
+      const preserved = (await analysis.batches(projectId))
+        .flatMap((b) => b.questions)
+        .map((q) => ({ id: q.id, number: q.number, answer: q.answer }));
+      const unfinishedProject = (
+        await h.request('GET', api(`/projects/${projectId}`), { cookie })
+      ).json<{ project: { version: number } }>().project;
+      const premature = await h.request('POST', api(`/projects/${projectId}/analysis/continue`), {
+        cookie,
+        payload: {
+          expectedVersion: unfinishedProject.version,
+          reason: 'Continue the full analysis.',
+        },
+      });
+      expect(premature.statusCode, premature.body).toBe(409);
+      for (const stage of ['analysis', 'research', 'ideation', 'documentation', 'evaluation']) {
+        const view = await waitFor(projectId, waiting(stage), `${stage} draft gate`);
+        const row = stageOf(view, stage);
+        if (stage === 'analysis') {
+          const detail = await h.request('GET', api(`/projects/${projectId}/stages/${row.id}`), {
+            cookie,
+          });
+          expect(
+            detail.json<{ stage: { outputs: { content: unknown }[] } }>().stage.outputs[0]!.content,
+          ).toMatchObject({ analysisProfile: 'quick', incomplete: true });
+        }
+        expect((await decide(projectId, row, 'approve')).statusCode).toBe(200);
+      }
+      await waitFor(projectId, (v) => v.run?.status === 'completed', 'quick completion');
+      const generated = await h.request('POST', api(`/projects/${projectId}/solutions/generate`), {
+        cookie,
+        payload: { count: 2 },
+      });
+      expect(generated.statusCode, generated.body).toBe(201);
+      const solutionId = generated.json<{ solutionSet: { items: { id: string }[] } }>().solutionSet
+        .items[0]!.id;
+      const selected = await h.request('POST', api(`/projects/${projectId}/solution-selections`), {
+        cookie,
+        payload: { solutionIds: [solutionId], reason: 'Offline draft acceptance.' },
+      });
+      expect(selected.statusCode, selected.body).toBe(201);
+      const docs = await h.request('GET', api(`/projects/${projectId}/documents`), { cookie });
+      const docId = docs.json<{ items: { id: string }[] }>().items[0]!.id;
+      const getDraft = () => h.request('GET', api(`/documents/${docId}`), { cookie });
+      const doc = (await getDraft()).json<{
+        document: {
+          analysisProfile: string;
+          level: number;
+          version: number;
+          currentVersion: { content: { blocks: { id: string; text?: string }[] } };
+        };
+      }>().document;
+      expect(doc.analysisProfile).toBe('quick');
+      expect(doc.level).toBe(1);
+      expect(doc.currentVersion.content.blocks).toContainEqual(
+        expect.objectContaining({
+          id: 'docoo-quick-draft-warning',
+          text: 'پیش‌نویس؛ ناقص‌تر از تحلیل کامل',
+        }),
+      );
+      await expect(
+        h.admin.query('update documents set analysis_profile=$2 where id=$1', [docId, 'full']),
+      ).rejects.toMatchObject({ code: '23514' });
+      const wrongLevel = await h.request('POST', api(`/documents/${docId}/writings`), {
+        cookie,
+        payload: { level: 2 },
+      });
+      expect(wrongLevel.statusCode, wrongLevel.body).toBe(400);
+
+      const removed = {
+        ...doc.currentVersion.content,
+        blocks: doc.currentVersion.content.blocks.filter(
+          (b) => b.id !== 'docoo-quick-draft-warning',
+        ),
+      };
+      const edited = await h.request('PUT', api(`/documents/${docId}/content`), {
+        cookie,
+        headers: { 'if-match': `"${doc.version}"` },
+        payload: { content: removed, reason: 'Verify immutable incomplete warning.' },
+      });
+      expect(edited.statusCode, edited.body).toBe(200);
+      const afterEdit = (await getDraft()).json<{ document: typeof doc }>().document;
+      expect(afterEdit.currentVersion.content.blocks[0]).toMatchObject({
+        id: 'docoo-quick-draft-warning',
+        text: 'پیش‌نویس؛ ناقص‌تر از تحلیل کامل',
+      });
+      const longer = await h.request('PUT', api(`/documents/${docId}/content`), {
+        cookie,
+        headers: { 'if-match': `"${afterEdit.version}"` },
+        payload: {
+          content: removed,
+          level: 2,
+          reason: 'Cannot disguise a quick draft as a longer document.',
+        },
+      });
+      expect(longer.statusCode, longer.body).toBe(400);
+      const audit = await h.admin.query<{ after: Record<string, unknown> }>(
+        "select after from audit_events where target_id=$1 and action='document.edit'",
+        [docId],
+      );
+      expect(audit.rows[0]?.after).toMatchObject({ analysisProfile: 'quick', incomplete: true });
+      for (const format of ['docx', 'pptx']) {
+        const exported = await h.request('POST', api(`/documents/${docId}/exports`), {
+          cookie,
+          payload: { format },
+        });
+        expect(exported.statusCode, exported.body).toBe(201);
+        const artifact = exported.json<{ artifact: { id: string } }>().artifact;
+        const downloaded = await h.request(
+          'GET',
+          api(`/documents/${docId}/artifacts/${artifact.id}/download`),
+          { cookie },
+        );
+        expect(downloaded.statusCode).toBe(200);
+        const xml = Object.entries(unzipSync(downloaded.rawPayload))
+          .filter(([name]) => name.endsWith('.xml'))
+          .map(([, value]) => strFromU8(value))
+          .join('');
+        expect(xml).toContain('پیش‌نویس؛ ناقص‌تر از تحلیل کامل');
+      }
+
+      const p = (await h.request('GET', api(`/projects/${projectId}`), { cookie })).json<{
+        project: { version: number };
+      }>().project;
+      const foreign = await project('foreign-draft-continuation');
+      const source = (
+        await h.admin.query<{ id: string }>(
+          'select id from analysis_sessions where project_id=$1',
+          [projectId],
+        )
+      ).rows[0]!.id;
+      await expect(
+        h.admin.query('update projects set analysis_continuation_session_id=$2 where id=$1', [
+          foreign,
+          source,
+        ]),
+      ).rejects.toMatchObject({ code: '23503' });
+      const cookieB = await h.login(h.emails.b);
+      const denied = await h.request('POST', api(`/projects/${projectId}/analysis/continue`), {
+        cookie: cookieB,
+        payload: { expectedVersion: p.version, reason: 'Denied other tenant.' },
+      });
+      expect(denied.statusCode).toBe(404);
+      const continued = await h.request('POST', api(`/projects/${projectId}/analysis/continue`), {
+        cookie,
+        payload: {
+          expectedVersion: p.version,
+          reason: 'Continue full analysis; retain previous answers.',
+        },
+      });
+      expect(continued.statusCode, continued.body).toBe(201);
+      await analysis.waitFor(projectId, (s) => s.phase === 'answering', 'new full questions');
+      const full = await analysis.overview(projectId);
+      expect(full.limits).toEqual({ minimum: 30, maximum: 300, batchSize: 40 });
+      const questions = (await analysis.batches(projectId)).flatMap((b) => b.questions);
+      for (const q of preserved) expect(questions.find((x) => x.id === q.id)).toMatchObject(q);
+      expect(
+        questions
+          .filter((q) => !preserved.some((old) => old.id === q.id))
+          .every((q) => q.number > preserved.length),
+      ).toBe(true);
+      const complete = await analysis.reachDefinition(projectId);
+      expect(complete.progress.asked).toBeGreaterThanOrEqual(30);
+      expect(
+        (await getDraft()).json<{ document: { analysisProfile: string } }>().document
+          .analysisProfile,
+      ).toBe('quick');
+      const oldAnswers = (
+        await h.admin.query('select id from analysis_answers where question_id=any($1::uuid[])', [
+          preserved.map((q) => q.id),
+        ])
+      ).rows;
+      expect(oldAnswers).toHaveLength(preserved.length);
+    }, 120_000);
 
     it('WF-001/003: activation starts the fixed stages; each manual gate waits for a human and updates the timeline', async () => {
       const projectId = await project('ordered');

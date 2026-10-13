@@ -74,6 +74,7 @@ export function DocumentWriter({
   projectId,
   documentId,
   level,
+  quickDraft = false,
   locked,
   onLive,
   onSaved,
@@ -83,6 +84,7 @@ export function DocumentWriter({
   projectId: string;
   documentId: string;
   level: number;
+  quickDraft?: boolean;
   locked: boolean;
   /** Tells the page whether a writing is in progress, so it can close editing meanwhile. */
   onLive: (live: boolean) => void;
@@ -205,7 +207,7 @@ export function DocumentWriter({
               disabled={busy}
               onChange={(event) => setChosenLevel(Number(event.target.value))}
             >
-              {[1, 2, 3, 4, 5].map((value) => (
+              {(quickDraft ? [1] : [1, 2, 3, 4, 5]).map((value) => (
                 <option key={value} value={value}>
                   {formatNumber(locale, value)}
                 </option>
