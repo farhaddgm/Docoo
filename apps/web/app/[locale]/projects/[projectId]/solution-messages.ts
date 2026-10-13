@@ -42,7 +42,7 @@ const messages = {
     selectionEmpty: 'راه‌حلی انتخاب نشده است.',
     moveUp: 'بالا',
     moveDown: 'پایین',
-    selectionReason: 'دلیل انتخاب (اختیاری، دست‌کم ۳ نویسه)',
+    selectionReason: 'دلیل تصمیم (لازم، دست‌کم ۳ نویسه)',
     select: 'انتخاب و ساخت سند',
     working: 'در حال انجام…',
     done: {
@@ -52,6 +52,8 @@ const messages = {
     },
     errors: {
       ...rateLimitErrors.fa,
+      SOLUTION_DECISION_STALE: 'راه‌حل‌ها یا معیارها تغییر کرده‌اند؛ صفحه را تازه کنید.',
+      SOLUTION_DECISION_INVALID: 'دلیل تصمیم و رد همهٔ گزینه‌های باقی‌مانده لازم است.',
       SOLUTION_COUNT_INVALID: 'تعداد باید بین ۲ تا ۲۰ باشد.',
       SOLUTION_CRITERIA_INVALID: 'معیارها معتبر نیست؛ جمع وزن‌های فعال باید ۱۰۰ باشد.',
       SOLUTION_GENERATION_FAILED: 'ارائهٔ AI پاسخ نداد؛ اتصال را بررسی و دوباره تلاش کنید.',
@@ -104,7 +106,7 @@ const messages = {
     selectionEmpty: 'No solution is selected.',
     moveUp: 'Move up',
     moveDown: 'Move down',
-    selectionReason: 'Reason for the selection (optional, at least 3 characters)',
+    selectionReason: 'Decision reason (required, at least 3 characters)',
     select: 'Select and create documents',
     working: 'Working…',
     done: {
@@ -114,6 +116,9 @@ const messages = {
     },
     errors: {
       ...rateLimitErrors.en,
+      SOLUTION_DECISION_STALE: 'Solutions or criteria changed; reload before deciding.',
+      SOLUTION_DECISION_INVALID:
+        'Provide a decision reason and a reason for every rejected alternative.',
       SOLUTION_COUNT_INVALID: 'The count must be between 2 and 20.',
       SOLUTION_CRITERIA_INVALID: 'The criteria are not valid; enabled weights must add up to 100.',
       SOLUTION_GENERATION_FAILED: 'The AI provider did not answer; check the connection and retry.',

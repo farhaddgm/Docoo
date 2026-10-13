@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "date": "2026-10-13T05:00:55.289Z",
+  "corpus": "qa/acceptance-corpus/v0",
+  "model": "whisper-1",
+  "realProvider": true,
+  "results": [
+    {
+      "id": "audio-fa-001",
+      "language": "fa",
+      "sha256": "20d3f48196c46ad5cca8bbea2e21b84ce9b04b487e7664b4fbd7ba50f8512c93",
+      "accuracy": 0,
+      "minimumAccuracy": 0.7,
+      "timingValid": true,
+      "latencyMs": 2030,
+      "durationMs": 5980,
+      "segments": [
+        {
+          "startMs": 0,
+          "endMs": 2740,
+          "text": "ماش که لاسلی ما کا هش چارید دوباره",
+          "confidence": 0.473
+        },
+        {
+          "startMs": 2740,
+          "endMs": 5520,
+          "text": "ماش تا ریان در چه شما بزنش تاست",
+          "confidence": 0.473
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "audio-en-001",
+      "language": "en",
+      "sha256": "df9c2977104171a3e5e09fca3ef7fd43cd17526cd145dacbe5e4bb4fa127cfc8",
+      "accuracy": 0.9166666666666666,
+      "minimumAccuracy": 0.85,
+      "timingValid": true,
+      "latencyMs": 1188,
+      "durationMs": 5160,
+      "segments": [
+        {
+          "startMs": 0,
+          "endMs": 5200,
+          "text": "Our main problem is that delivery times tripled after the warehouse moved.",
+          "confidence": 0.629
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "passed": false,
+  "provider": "OpenAI",
+  "sourceCommit": "f82ed14d0252c632e1e72c333e29d20ab9d85c37",
+  "note": "Real API acceptance on the frozen v0 synthetic espeak-ng corpus. English passes; Persian fails. Thresholds and expected transcripts were not changed. This is not a passing ING-005 certificate."
+}

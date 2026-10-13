@@ -36,6 +36,9 @@ import { WorkspaceController } from '../src/workspaces/workspace.controller.js';
  * workspace route must appear here with exactly this permission.
  */
 const expectedMatrix: Record<string, string> = {
+  'POST workspaces/:workspaceId/projects/:projectId/solutions/sensitivity': 'project.read',
+  'GET workspaces/:workspaceId/projects/:projectId/solution-decisions': 'project.read',
+  'POST workspaces/:workspaceId/projects/:projectId/solution-decisions': 'workflow.approve',
   'GET workspaces/:workspaceId': 'workspace.read',
   'GET workspaces/:workspaceId/topics': 'topic.read',
   'POST workspaces/:workspaceId/topics': 'topic.create',

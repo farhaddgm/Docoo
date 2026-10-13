@@ -35,7 +35,7 @@
         "apps/api/test/auth.authorization.test.ts",
         "apps/api/test/google-accounts.integration.test.ts"
       ],
-      "note": "Workspace membership, super_admin/editor/viewer permissions, owner controls and per-resource READ/EDIT grants are implemented; unknown roles are denied."
+      "note": "Workspace membership, super_admin/editor/viewer permissions, owner controls and per-resource VIEW/EDIT grants are implemented; unknown roles are denied."
     },
     "FR-LOC-001": {
       "status": "tested",

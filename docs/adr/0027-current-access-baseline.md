@@ -14,7 +14,7 @@ notion_sync: true
 
 PR [#121](https://github.com/farhaddgm/Docoo/pull/121)، commit `3183404`، در v0.21.0 حساب‌های مدیریت‌شده، Google OIDC و دسترسی منابع را منتشر کرد. مستندات اولیه هنوز محدودیت تک‌ادمین را داشتند. درخواست رسیدگی به Issue #150، اصلاح این تناقض را تأیید کرده است؛ این ADR قابلیت منتشرشده را ثبت می‌کند.
 
-خط مبنا اکنون شامل نقش‌های `super_admin`، `editor` و `viewer`، عضویت workspace، grant مستقل `READ`/`EDIT` و ورود Google برای حساب‌های مجاز است. کنترل مالک برنامه از نقش workspace جداست. ورود Google ثبت‌نام عمومی یا مجوز خواندن Drive نیست. MFA، SAML، SCIM و دعوت self-service در خط مبنای جاری فعال نیستند.
+خط مبنا اکنون شامل نقش‌های `super_admin`، `editor` و `viewer`، عضویت workspace، grant مستقل `VIEW`/`EDIT` و ورود Google برای حساب‌های مجاز است. کنترل مالک برنامه از نقش workspace جداست. ورود Google ثبت‌نام عمومی یا مجوز خواندن Drive نیست. MFA، SAML، SCIM و دعوت self-service در خط مبنای جاری فعال نیستند.
 
 ## اثر امنیتی و مهاجرت
 

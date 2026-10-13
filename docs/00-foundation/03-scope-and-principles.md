@@ -15,7 +15,7 @@ notion_sync: true
 ### مدیریت پایه
 
 - ورود امن حساب‌های مدیریت‌شده با گذرواژه و Google OIDC برای حساب‌های مجاز؛ بدون ثبت‌نام خودکار.
-- نقش‌های `super_admin`، `editor` و `viewer`، عضویت workspace و دسترسی `READ`/`EDIT` به پروژه/حوزه طبق [ADR-0027](../adr/0027-current-access-baseline.md).
+- نقش‌های `super_admin`، `editor` و `viewer`، عضویت workspace و دسترسی `VIEW`/`EDIT` به پروژه/حوزه طبق [ADR-0027](../adr/0027-current-access-baseline.md).
 - تنظیم زبان فارسی/انگلیسی.
 - داشبورد وضعیت پروژه‌ها، اجراها، خطاها و gateهای منتظر اقدام.
 - تنظیم و health check کلیدهای API مالک سامانه.

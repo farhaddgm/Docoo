@@ -18,7 +18,7 @@ notion_sync: true
 - **FR-AUTH-002:** گذرواژه باید تغییر، reset امن و revoke همهٔ نشست‌ها را پشتیبانی کند.
 - **FR-AUTH-003:** نشست باید cookie امن، HttpOnly و SameSite مناسب داشته باشد و پس از inactivity قابل‌تنظیم منقضی شود.
 - **FR-AUTH-004:** رویدادهای ورود موفق/ناموفق، خروج، reset و lockout باید audit شوند.
-- **FR-AUTH-005:** مدل authorization باید نقش‌های `super_admin`، `editor` و `viewer`، عضویت workspace و مجوز READ/EDIT منبع را مطابق ADR-0027 بررسی کند.
+- **FR-AUTH-005:** مدل authorization باید نقش‌های `super_admin`، `editor` و `viewer`، عضویت workspace و مجوز VIEW/EDIT منبع را مطابق ADR-0027 بررسی کند.
 
 ## LOC — زبان و نمایش
 

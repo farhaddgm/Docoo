@@ -2,6 +2,18 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.26.0] — 2026-10-13
+
+### Added
+
+- Preview solution ranks and joint winners across integer criterion-weight ranges. Other enabled weights are redistributed proportionally to total 100, with equal shares when their original total is zero; saved criteria remain unchanged.
+- Record final selections with a required decision reason and a reason for each rejected alternative. The append-only decision journal pins the solution set, full criterion snapshot and score inputs, with the actor and time. Stale selections and insufficient resource access are rejected.
+
+### Documentation
+
+- Align the baseline with the account roles, resource grants and Google OIDC released in v0.21.0. ADR-0027 records the existing behavior, including VIEW/EDIT grants and owner controls.
+- Map all 253 ASVS 5.0.0 L1/L2 controls to candidate evidence, explicit gaps or applicability decisions. Independent verification remains pending; the map does not claim L2 certification.
+
 ## [0.25.1] — 2026-10-13
 
 ### Security

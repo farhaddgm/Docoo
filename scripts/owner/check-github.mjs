@@ -270,7 +270,9 @@ export async function runChecks({ repo, api, lang = 'fa' }) {
       } else {
         add(
           t.actions,
-          'PASS',
+          onBranch.status === 200 && last?.status === 'completed' && last.conclusion === 'success'
+            ? 'PASS'
+            : 'UNKNOWN',
           fill(t.actionsOk, { branch, conclusion: last?.conclusion ?? last?.status ?? '—' }),
         );
       }

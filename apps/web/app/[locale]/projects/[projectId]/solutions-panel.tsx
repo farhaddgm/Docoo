@@ -9,6 +9,7 @@ import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { solutionMessages } from './solution-messages';
+import { SensitivityPanel } from './sensitivity-panel';
 
 interface Criterion {
   key: string;
@@ -74,6 +75,19 @@ export function SolutionsPanel({
   const [criteriaReason, setCriteriaReason] = useState('');
   const [chosen, setChosen] = useState<string[]>([]);
   const [selectionReason, setSelectionReason] = useState('');
+  const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
+  const [decisions, setDecisions] = useState<
+    {
+      id: string;
+      actorName: string | null;
+      recordedAt: string;
+      reason: string;
+      snapshot: {
+        selected: { solutionId: string; priority: number; ordinal: number }[];
+        rejected: { solutionId: string; reason: string; ordinal: number }[];
+      };
+    }[]
+  >([]);
   const explain = useCallback(
     (error: unknown) => explainError(error, text.errors, text.failed),
     [text],
@@ -90,6 +104,8 @@ export function SolutionsPanel({
         .sort((a, b) => (a.selectedPriority ?? 0) - (b.selectedPriority ?? 0))
         .map((item) => item.id),
     );
+    const journal = await apiGet<{ decisions: typeof decisions }>(`${base}/solution-decisions`);
+    setDecisions(journal.decisions);
   }, [base]);
 
   useEffect(() => {
@@ -138,11 +154,17 @@ export function SolutionsPanel({
     event.preventDefault();
     const reason = selectionReason.trim();
     void run(async () => {
-      await apiSend('POST', `${base}/solution-selections`, {
+      await apiSend('POST', `${base}/solution-decisions`, {
+        setId: set?.setId,
+        criteriaVersionId: set?.criteria.versionId,
         solutionIds: chosen,
-        ...(reason ? { reason } : {}),
+        reason,
+        rejected: set?.items
+          .filter((s) => !chosen.includes(s.id))
+          .map((s) => ({ solutionId: s.id, reason: (rejectionReasons[s.id] ?? '').trim() })),
       });
       setSelectionReason('');
+      setRejectionReasons({});
       await load();
       onChanged();
     }, text.done.selected);
@@ -423,6 +445,18 @@ export function SolutionsPanel({
         ))}
       </section>
 
+      {set.setId && set.items.length >= 2 && (
+        <SensitivityPanel
+          key={`${set.setId}-${set.criteria.versionId ?? 'default'}`}
+          locale={locale}
+          base={base}
+          setId={set.setId}
+          criteriaVersionId={set.criteria.versionId}
+          criteria={set.criteria.criteria}
+          alternatives={set.items}
+        />
+      )}
+
       {set.items.length > 0 && !readOnly && (
         <form
           data-write-action
@@ -480,8 +514,29 @@ export function SolutionsPanel({
               maxLength={1000}
               onChange={(event) => setSelectionReason(event.target.value)}
               autoComplete="off"
+              required
             />
           </div>
+          {set.items
+            .filter((s) => !chosen.includes(s.id))
+            .map((s) => (
+              <div className="filter-grid" key={s.id}>
+                <label htmlFor={`reject-${s.id}`}>
+                  {locale === 'fa' ? 'دلیل رد گزینه' : 'Reason for rejecting'}: {s.title}
+                </label>
+                <input
+                  id={`reject-${s.id}`}
+                  value={rejectionReasons[s.id] ?? ''}
+                  required
+                  minLength={3}
+                  maxLength={1000}
+                  dir="auto"
+                  onChange={(event) =>
+                    setRejectionReasons((previous) => ({ ...previous, [s.id]: event.target.value }))
+                  }
+                />
+              </div>
+            ))}
           <div className="toolbar">
             <button className="primary-button" type="submit" disabled={busy || chosen.length === 0}>
               {busy ? text.working : text.select}
@@ -489,6 +544,39 @@ export function SolutionsPanel({
           </div>
         </form>
       )}
+      <section className="card stack" aria-labelledby="decision-journal-title">
+        <h2 id="decision-journal-title">{locale === 'fa' ? 'دفتر تصمیم' : 'Decision journal'}</h2>
+        {decisions.length === 0 && (
+          <p className="muted">
+            {locale === 'fa'
+              ? 'هنوز تصمیم مستدلی ثبت نشده است.'
+              : 'No reasoned decision has been recorded yet.'}
+          </p>
+        )}
+        {decisions.map((d) => (
+          <article key={d.id} className="card">
+            <p>
+              {formatDateTime(locale, d.recordedAt)} · {locale === 'fa' ? 'ثبت‌کننده' : 'Actor'}:{' '}
+              {d.actorName ?? (locale === 'fa' ? 'کاربر پیشین' : 'Former user')}
+            </p>
+            <p dir="auto">{d.reason}</p>
+            <p>
+              {locale === 'fa'
+                ? 'گزینه‌های منتخب به ترتیب اولویت'
+                : 'Selected alternatives in priority order'}
+              : {d.snapshot.selected.map((s) => formatNumber(locale, s.ordinal)).join('، ')}
+            </p>
+            <ul>
+              {d.snapshot.rejected.map((r) => (
+                <li key={r.solutionId} dir="auto">
+                  {locale === 'fa' ? 'گزینه' : 'Alternative'} {formatNumber(locale, r.ordinal)}:{' '}
+                  {r.reason}
+                </li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </section>
     </div>
   );
 }
