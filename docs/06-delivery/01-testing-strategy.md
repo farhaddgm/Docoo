@@ -2,9 +2,9 @@
 doc_id: DOCOO-TESTING-STRATEGY
 title: راهبرد آزمون و کیفیت مهندسی
 status: proposed
-version: 1.0.0
+version: 1.1.0
 owner: Quality Engineering
-last_updated: 2026-09-24
+last_updated: 2026-10-14
 notion_sync: true
 ---
 
@@ -52,6 +52,12 @@ Live provider test محدود، opt-in و بدون دادهٔ مشتری است.
 8. archive/delete/restore.
 
 Provider در E2E اصلی deterministic fake است؛ یک smoke جدا با provider واقعی.
+
+Playwright پروژه‌های Chromium، Firefox و WebKit دارد. `pnpm --filter @docoo/web test:e2e` مسیر معمول Chromium است؛ `pnpm --filter @docoo/web test:e2e:cross-browser` دو موتور دیگر را اجرا می‌کند. برای انتخاب یک موتور از `pnpm --filter @docoo/web exec playwright test --project=firefox` یا `--project=webkit` استفاده می‌شود.
+
+در CI دو موتور اضافی در jobهای مستقل و موازی، با PostgreSQL/RLS، Temporal، object store و scanner جداگانه، کل مجموعهٔ E2E موجود را اجرا می‌کنند. هر job یک worker و بدون retry دارد؛ report و trace خطا با نام موتور ذخیره می‌شود. Chromium نیز در این محیط‌ها نصب می‌شود چون export سند از renderer مبتنی بر Chromium در API استفاده می‌کند. این جداسازی جلوی رقابت تست‌ها بر سر تنظیمات و دادهٔ مشترک را می‌گیرد و زمان اجرای مرورگرها را پشت سر هم جمع نمی‌کند.
+
+WebKit در Playwright شاهد پوشش موتور است؛ آزمون روی Safari واقعی یا دو نسخهٔ پایدار اخیر را اثبات نمی‌کند. بار ۲۵ اجرای هم‌زمان ایجنت، تنظیم concurrency هر provider و گزارش عددی SLO جدا از این آزمون‌ها هستند و تا داشتن نتیجهٔ واقعی زیر PRP-13 باز می‌مانند.
 
 ### AI eval
 

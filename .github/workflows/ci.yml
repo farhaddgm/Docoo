@@ -153,3 +153,115 @@ jobs:
             **/test-results/
             **/playwright-report/
           if-no-files-found: ignore
+
+  browser-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.1-pg18@sha256:508c5290cda481d4f5f846446a26e9c1b804766828a394a5861de1b348a18b4c
+        env:
+          POSTGRES_DB: docoo_ci
+          POSTGRES_USER: docoo_admin
+          POSTGRES_PASSWORD: docoo-ci-admin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U docoo_admin -d docoo_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: 12.6.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install OCR tools (Tesseract fas/eng, poppler)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-fas poppler-utils
+      - name: Start ingestion services (S3, clamd with the EICAR test signature, Temporal)
+        run: |
+          docker run -d --name object-store -p 8333:8333 \
+            -e AWS_ACCESS_KEY_ID=docoo-ci -e AWS_SECRET_ACCESS_KEY=docoo-ci-secret \
+            chrislusf/seaweedfs:latest@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d mini -dir=/data
+          docker run -d --name clamd -p 3310:3310 --entrypoint clamd \
+            -v "$GITHUB_WORKSPACE/infra/clamav/test-signatures:/var/lib/clamav:ro" \
+            clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23 --foreground=yes
+          docker run -d --name temporal -p 7233:7233 temporalio/temporal:latest@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e \
+            server start-dev --ip 0.0.0.0
+      - run: pnpm build
+      - run: pnpm db:migrate
+        env:
+          DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+      - name: Wait for ingestion services
+        run: |
+          for i in $(seq 1 60); do
+            if printf 'zPING\0' | nc -w 2 localhost 3310 | grep -q PONG && nc -z localhost 7233 && nc -z localhost 8333; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs clamd; docker logs temporal; docker logs object-store
+          exit 1
+      # Document exports use the API's Chromium renderer even when the UI browser differs.
+      - run: pnpm --filter @docoo/web exec playwright install --with-deps chromium ${{ matrix.browser }}
+      - name: Prepare end-to-end data
+        env:
+          DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+          S3_ENDPOINT: http://localhost:8333
+          S3_REGION: us-east-1
+          S3_BUCKET: docoo-ci
+          S3_ACCESS_KEY_ID: docoo-ci
+          S3_SECRET_ACCESS_KEY: docoo-ci-secret
+          S3_FORCE_PATH_STYLE: 'true'
+        run: |
+          # A non-superuser runtime role so the API runs under RLS exactly as in production.
+          psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c \
+            "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'docoo_e2e') THEN CREATE ROLE docoo_e2e LOGIN PASSWORD 'docoo-e2e-runtime' IN ROLE docoo_app; END IF; END \$\$;"
+          node apps/web/e2e/prepare.mjs
+      - run: pnpm --filter @docoo/web exec playwright test --project=${{ matrix.browser }}
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://docoo_e2e:docoo-e2e-runtime@localhost:5432/docoo_ci
+          SESSION_PEPPER: docoo-ci-e2e-pepper-with-at-least-32-characters
+          # The price catalog the "get prices" end-to-end test reads: a stand-in, never the internet.
+          MODEL_PRICE_CATALOG_URL: http://127.0.0.1:4010/__prices/catalog.json
+          # Seals the Contenter token the business end-to-end test enters (32 bytes, base64).
+          SECRET_MASTER_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          WEB_ORIGIN: http://localhost:3000
+          # The whole suite comes from one address; the production limit (120/min) would ban it.
+          API_RATE_LIMIT_PER_MINUTE: '5000'
+          # ... and signs in more than the 10 a minute that production allows, depending on how fast it runs.
+          AUTH_RATE_LIMIT_PER_MINUTE: '1000'
+          # Sources are scanned by the ingestion worker the end-to-end run starts.
+          CLAMD_HOST: localhost
+          TEMPORAL_ADDRESS: localhost:7233
+          # File answers are uploaded straight from the browser to the object store.
+          S3_ENDPOINT: http://localhost:8333
+          # The files host the web app's Content-Security-Policy lets the browser call.
+          S3_PUBLIC_ENDPOINT: http://localhost:8333
+          S3_REGION: us-east-1
+          S3_BUCKET: docoo-ci
+          S3_ACCESS_KEY_ID: docoo-ci
+          S3_SECRET_ACCESS_KEY: docoo-ci-secret
+          S3_FORCE_PATH_STYLE: 'true'
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: browser-${{ matrix.browser }}-reports
+          path: |
+            **/coverage/
+            **/test-results/
+            **/playwright-report/
+          if-no-files-found: ignore
