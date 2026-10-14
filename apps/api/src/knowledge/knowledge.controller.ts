@@ -55,10 +55,42 @@ const claimSchema = z
     citations: z.array(citationSchema).max(20).optional(),
   })
   .strict();
-const provenanceSchema = z.record(
-  z.string().max(64),
-  z.union([z.string().max(2000), z.number(), z.boolean(), z.null()]),
-);
+const sourceCitationSchema = z
+  .object({
+    title: z.string().trim().min(1).max(500),
+    url: z
+      .string()
+      .trim()
+      .min(1)
+      .max(2048)
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return (
+            ['https:', 'http:'].includes(url.protocol) &&
+            !url.username &&
+            !url.password &&
+            !/[\r\n]/u.test(value)
+          );
+        } catch {
+          return false;
+        }
+      }),
+    author: z.string().trim().min(1).max(200).optional(),
+    publisher: z.string().trim().min(1).max(200).optional(),
+    publishedAt: z.string().trim().min(1).max(40).optional(),
+  })
+  .strict();
+const provenanceSchema = z
+  .record(
+    z.string().max(64),
+    z.union([z.string().max(2000), z.number(), z.boolean(), z.null(), sourceCitationSchema]),
+  )
+  .refine((value) =>
+    Object.entries(value).every(
+      ([key, item]) => item === null || typeof item !== 'object' || key === 'sourceCitation',
+    ),
+  );
 const contentSchema = z.string().trim().min(1).max(2_000_000);
 
 const createSchema = z

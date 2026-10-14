@@ -162,6 +162,8 @@ const messages = {
     keepWriting: 'ادامه می‌دهم',
     blockedTitle: 'نگارش منتظر شماست',
     blockCodes: {
+      document_level_too_short:
+        'شروط مصوب در این سطح طول جا نمی‌شوند. نگارش را لغو کنید و سطح بلندتری انتخاب کنید؛ برای پیش‌نویس سریع، تحلیل کامل را ادامه دهید.',
       paused_by_administrator: 'شما نگارش را متوقف کرده‌اید.',
       ai_not_configured:
         'اتصال یا مدل AI تنظیم نیست؛ در «ارائه‌دهندگان AI» و «تنظیمات» آن را بگذارید.',
@@ -220,6 +222,8 @@ const messages = {
     result: 'نتیجه',
     errors: {
       QUICK_DRAFT_LEVEL: 'پیش‌نویس سریع در سطح ۱ نوشته می‌شود.',
+      DOCUMENT_LEVEL_TOO_SHORT:
+        'شروط مصوب در این سطح طول جا نمی‌شوند؛ سطح بلندتری انتخاب کنید. برای پیش‌نویس سریع، تحلیل کامل را ادامه دهید.',
       ...rateLimitErrors.fa,
       DOCUMENT_INVALID: 'ساختار سند معتبر نیست؛ مشکل‌ها در پنل بررسی آمده‌اند.',
       DOCUMENT_VERSION_CONFLICT: 'سند پس از بارگذاری تغییر کرده است. صفحه را به‌روز کنید.',
@@ -398,6 +402,8 @@ const messages = {
     keepWriting: 'Keep going',
     blockedTitle: 'The writing is waiting for you',
     blockCodes: {
+      document_level_too_short:
+        'The approved conditions do not fit this length level. Cancel this writing and choose a longer level; for a quick draft, continue full analysis.',
       paused_by_administrator: 'You paused the writing.',
       ai_not_configured:
         'The AI connection or model is not set; set it on "AI providers" and "Settings".',
@@ -459,6 +465,8 @@ const messages = {
     result: 'Result',
     errors: {
       QUICK_DRAFT_LEVEL: 'Quick drafts use level 1.',
+      DOCUMENT_LEVEL_TOO_SHORT:
+        'The approved conditions do not fit this length level. Choose a longer level; for a quick draft, continue full analysis.',
       ...rateLimitErrors.en,
       DOCUMENT_INVALID: 'The document structure is invalid; the problems are in the check panel.',
       DOCUMENT_VERSION_CONFLICT: 'The document changed after you loaded it. Refresh the page.',

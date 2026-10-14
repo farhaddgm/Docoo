@@ -1,0 +1,50 @@
+{
+  "fixtureType": "synthetic; approved text in automated acceptance, not real cafe observations or human-calibrated labels",
+  "problem": {
+    "problemStatement": "This is a synthetic café-retention scenario, not an observation about a real café. The fixture declares 1,200 completed receipts in the 28-day baseline window, 300 active opted-in loyalty members at week 0, and a 22% repeat-visit proxy. The proxy is based on voluntary anonymous surveys, not transaction-level customer identification: valid respondents aged 18 or older who report at least two visits in the previous 28 days, divided by all valid survey responses. The stated 22% is 66 of 300 baseline responses and is a declared fixture value, not an independently observed retention rate. The project is to assess feasible ways to improve this proxy within 12 weeks while preserving the margin, privacy, staffing, budget, and operational limits. Causes of repeat visits are unknown.",
+    "objectives": [
+      "Prepare two alternatives that can be compared against common feasibility and evaluation criteria; the owner selects one for the 12-week pilot, while the other is documented as a fallback.",
+      "Assess whether the selected pilot can reach an absolute repeat-visit proxy rate of at least 30%, an 8-percentage-point increase over the declared 22% baseline.",
+      "Keep gross margin at or above 58.8%, equivalent to a maximum relative decline of 2% from the declared 60% baseline.",
+      "Use the same survey eligibility, wording, visit window, and aggregation method at baseline and endpoint.",
+      "Keep the pilot within the SEK 12,000 incremental spending cap and four combined staff hours per week.",
+      "Report response counts, uncertainty, limitations, and confounders; do not present an uncontrolled before-and-after comparison as causal evidence.",
+      "Enable a week-12 decision to stop, revise the hypothesis, or propose a separately budgeted pilot if the target is not met."
+    ],
+    "constraints": [
+      "The project inputs are synthetic fixture declarations and must not be represented as verified observations about a real café.",
+      "The pilot lasts 12 weeks, with the declared schedule from 2026-11-02 through 2027-01-24. Unexpected closures must be documented and considered when interpreting results.",
+      "The baseline is the 28 days immediately before week 0. The endpoint uses survey responses collected during weeks 9–12, each asking about the previous 28 days; the overlap and sampling uncertainty must be reported.",
+      "The repeat-visit measure is a voluntary, anonymous self-report proxy for survey-responding café visitors aged 18 or older, regardless of loyalty membership. Loyalty membership is context only and is not the denominator.",
+      "No loyalty identifiers, personal identifiers, contact lists, individual linkage, or other individual tracking may be used. Aggregated receipts alone cannot identify repeat customers.",
+      "Receipt data are available as weekly aggregate totals for completed transaction count, net revenue, and ingredient costs, with refunds excluded from transaction totals and counted separately. The shift lead downloads the report weekly.",
+      "Surveys may ask self-reported visit frequency and a short optional satisfaction question. Participation must be voluntary and unpressured; no names, contacts, IDs, demographic questions, or identifying free text may be collected. Refusal must have no penalty.",
+      "Only aggregate survey groups with at least 10 responses may be reported. Raw anonymous forms are deleted after weekly aggregation.",
+      "No price increases, targeted personal offers, additional locations, opening-hour expansion, paid acquisition, broader customer tracking, or service discrimination are allowed. Small complimentary items are permitted only if approved, within budget, and consistent with the margin guardrail.",
+      "Total incremental spending, including materials, approved rewards, printing, and incremental equipment, must not exceed SEK 12,000. No spending is declared committed. Regular salaries are excluded from the spending cap, but staff time remains constrained.",
+      "All planning, training, execution, survey administration, data handling, and evaluation count toward a combined limit of four staff hours per week. Hours may be shared by the shift lead and one staff member during low-traffic periods; no overtime or additional hire is permitted.",
+      "Only one alternative is run for the pilot. Concurrent interventions that would prevent interpretation are excluded.",
+      "Before week 1, the owner must receive the hypothesis, protocol, spending cap, staff-time plan, privacy safeguards, measurement limitations, and stop rules. The fixture describes approval as simulated, not as real owner sign-off.",
+      "The shift lead may adjust timing within the approved protocol and pause for privacy, safety, or budget concerns. Changes to the protocol, rewards, or costs require owner approval.",
+      "A privacy incident, safety concern, additional staffing need, budget breach, or material checkout delay disqualifies the intervention and triggers a pause. Normal checkout must not be interrupted.",
+      "The synthetic baseline gross margin is defined as (net revenue minus ingredient cost) divided by net revenue over all café receipts. The declared baseline is SEK 120,000 net revenue and SEK 48,000 ingredient costs over 28 days, yielding 60%. Staffing hours and experiment spending are tracked separately."
+    ],
+    "successCriteria": [
+      "The week-12 repeat-visit proxy is at least 30%, calculated using the same eligibility, question wording, 28-day self-report window, and valid-response denominator as the baseline method. The declared baseline is 66 of 300 valid responses, or 22%.",
+      "Gross margin over the comparison period is at least 58.8%, using the specified all-receipts calculation and the declared 60% baseline.",
+      "The selected pilot stays within SEK 12,000 incremental spending and four total staff hours per week.",
+      "The pilot complies with the privacy, consent, reporting, service, staffing, and operating restrictions; no disqualifying incident occurs.",
+      "The evaluation reports response counts, uncertainty, survey limitations, and relevant confounders. Reaching the proxy target does not by itself establish causal impact or independently verified retention.",
+      "If the proxy target is not reached, the evaluation supports a documented stop, hypothesis revision, or proposal for a separately approved and budgeted pilot; the 12-week period is not silently extended."
+    ],
+    "outOfScope": [
+      "Establishing actual retention through individual transaction or loyalty-ID linkage.",
+      "Claiming causal impact from the before-and-after proxy comparison.",
+      "Expanding to additional locations, opening hours, paid acquisition, or broader customer populations.",
+      "Price increases, targeted personal offers, contact-list marketing, or customer-level tracking.",
+      "Running both alternatives concurrently during the same pilot.",
+      "Treating synthetic fixture values as real-world observations or claiming a predicted intervention effect as fact.",
+      "Extending the 12-week evaluation without a separate decision and approval."
+    ]
+  }
+}

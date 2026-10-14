@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { embed, EMBEDDING_MODEL, normalizeForSearch, vectorLiteral } from '@docoo/knowledge';
 import type { PoolClient } from 'pg';
+import { declaredSourceCitation, type SourceCitation } from './source-citation.js';
 
 /** Reciprocal rank fusion constant. */
 const RRF_K = 60;
@@ -43,6 +44,7 @@ export interface RetrievedPassage {
   readonly versionId: string;
   readonly versionNo: number;
   readonly title: string;
+  readonly sourceCitation?: SourceCitation;
   readonly confidentiality: string;
   readonly chunkOrdinal: number;
   readonly text: string;
@@ -158,7 +160,7 @@ export async function retrieveKnowledge(
   }
   const eligible = `
     select ch.id as chunk_id, ch.text, ch.ordinal, ch.tsv, ch.embedding, v.id as version_id, i.id as item_id, i.title,
-           i.confidentiality, v.version_no
+           i.confidentiality, v.version_no, v.provenance, left(v.content, 8000) as source_attribution_text
       from knowledge_chunks ch
       join knowledge_versions v on v.id = ch.knowledge_version_id
       join knowledge_items i on i.id = v.item_id and i.current_version_id = v.id
@@ -261,8 +263,10 @@ export async function retrieveKnowledge(
           title: string;
           confidentiality: string;
           version_no: number;
+          provenance: unknown;
+          source_attribution_text: string;
         }>(
-          `select chunk_id, text, ordinal, version_id, item_id, title, confidentiality, version_no
+          `select chunk_id, text, ordinal, version_id, item_id, title, confidentiality, version_no, provenance, source_attribution_text
              from (${eligible}) e where chunk_id = any($7::uuid[])`,
           [...params, chunkIds],
         )
@@ -304,12 +308,14 @@ export async function retrieveKnowledge(
     const row = byChunk.get(chunkId);
     if (!row) continue;
     const override = overrideByVersion.get(row.version_id);
+    const sourceCitation = declaredSourceCitation(row.provenance, row.source_attribution_text);
     results.push({
       chunkId,
       knowledgeId: row.item_id,
       versionId: row.version_id,
       versionNo: row.version_no,
       title: row.title,
+      ...(sourceCitation ? { sourceCitation } : {}),
       confidentiality: row.confidentiality,
       chunkOrdinal: row.ordinal,
       text: row.text,

@@ -8,7 +8,7 @@ import type { DocumentTemplate, SectionSource, TemplateSection } from './templat
  * subsection at a time, and every number it relies on (letters, bounds, citations) is computed
  * by code from the structured document, never taken from the model's word.
  */
-export const WRITING_VERSION = 'writing-v1';
+export const WRITING_VERSION = 'writing-v2';
 
 /** A subsection is written in one model call; longer sections are split into several. */
 export const SUBSECTION_TARGET_LETTERS = 2500;
@@ -19,6 +19,9 @@ export const SUBSECTION_TOLERANCE = { low: 0.6, high: 1.6 } as const;
 export const MAX_FIT_ROUNDS = 3;
 export const MAX_FIT_CALLS_PER_ROUND = 4;
 export const MAX_BLOCKS_PER_SUBSECTION = 40;
+/** Matches the body budget floor; fixed conditions and references are additional. */
+export const minimumWritingBody = (template: DocumentTemplate): number =>
+  template.sections.length * 200;
 
 /** How much of the writing budget each kind of section gets (relative). */
 const SECTION_WEIGHTS: Readonly<Record<SectionSource, number>> = {
@@ -55,7 +58,7 @@ export interface SectionPlan {
 }
 
 export interface WritingPlan {
-  readonly version: typeof WRITING_VERSION;
+  readonly version: 'writing-v1' | typeof WRITING_VERSION;
   readonly templateVersion: string;
   readonly level: Level;
   readonly bounds: LevelBounds;
@@ -108,7 +111,7 @@ export function planWriting(input: {
 }): WritingPlan {
   const { template, level, bounds } = input;
   const targetTotal = Math.round((bounds.min + bounds.max) / 2);
-  const writable = Math.max(template.sections.length * 200, targetTotal - input.fixedLetters);
+  const writable = Math.max(minimumWritingBody(template), targetTotal - input.fixedLetters);
   const totalWeight = template.sections.reduce(
     (sum, section) => sum + SECTION_WEIGHTS[section.source],
     0,
@@ -515,7 +518,7 @@ export function fitAdjustments(input: {
 // ---------------------------------------------------------------- the report of one writing
 
 export interface WritingReport {
-  readonly version: typeof WRITING_VERSION;
+  readonly version: WritingPlan['version'];
   readonly level: Level;
   readonly bounds: LevelBounds;
   readonly count: number;
@@ -534,6 +537,10 @@ export interface WritingReport {
   readonly discardedBlocks: number;
   /** Notes the administrator should read (a tool the role lacks, a section left short, …). */
   readonly notes: readonly string[];
+  readonly decisionConditions?: {
+    readonly approvedProblemVersionId: string | null;
+    readonly count: number;
+  };
   /**
    * Where the text breaks the brand terminology of the project's business (ADR-0021), found by
    * code; absent when the project has no business or the report is older than that.

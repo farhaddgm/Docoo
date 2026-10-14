@@ -215,6 +215,37 @@ describe('queries', () => {
 });
 
 describe('CitationRegistry', () => {
+  it('carries immutable declared attribution into the bibliography without inventing source claims', () => {
+    const attributed: KnowledgePassage = {
+      ...knowledge[0]!,
+      sourceCitation: {
+        title: 'Underlying source',
+        author: 'Declared author',
+        publisher: 'Publisher',
+        publishedAt: '2024-01-15',
+        url: 'https://example.org/original',
+      },
+    };
+    const registry = new CitationRegistry([attributed], true);
+    expect(
+      registry.resolve({ ref: 'K1', quote: 'Churn fell by a fifth after onboarding calls' }),
+    ).toBe('B1');
+    const blocks: Block[] = [
+      {
+        type: 'paragraph',
+        id: 'evidence',
+        runs: [{ text: 'Limited inference.', citations: ['B1'] }],
+      },
+    ];
+    const entry = citedReferences(blocks, registry.state().references, 'en')[0]!;
+    expect(entry).toMatchObject({ id: 'B1', url: 'https://example.org/original' });
+    expect(entry.text).toContain('Declared author. Underlying source. Publisher. 2024-01-15');
+    expect(entry.text).toContain('declared attribution for the knowledge excerpt');
+    expect(entry.text).not.toContain('verified web');
+    expect(
+      registry.resolve({ ref: 'K1', quote: 'The underlying source proves an invented result.' }),
+    ).toBeNull();
+  });
   it('verifies a quote against its passage and reuses one reference per knowledge version', () => {
     const registry = new CitationRegistry(knowledge, true);
     const quote = 'Churn fell by a fifth after onboarding calls';

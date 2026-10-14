@@ -2,6 +2,14 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.27.1] — 2026-10-14
+
+### Fixed
+
+- Pin and preserve approved decision conditions verbatim in generated documents. Refuse a length level that cannot contain the conditions and minimum body, and show a clear longer-level/full-analysis action instead of silently dropping constraints.
+- Carry immutable declared source attribution into retrieval snapshots and bibliographies, including explicit headers in existing approved excerpts; reject unsafe attribution URLs and keep quote verification unchanged.
+- Preserve complete conditions and cited source identity in native PPTX speaker notes with a title-slide hint while keeping management-summary slide limits. Existing failed versions, quality rubrics and approval gates remain intact.
+
 ## [0.27.0] — 2026-10-13
 
 ### Added

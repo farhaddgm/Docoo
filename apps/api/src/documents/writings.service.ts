@@ -1,8 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   checkCompliance,
+  countBlocks,
+  decisionConditionBlocks,
+  decisionConditions,
   DocumentValidationError,
   isTemplateKey,
+  minimumWritingBody,
   templateFor,
   validateDocument,
   visibleText,
@@ -20,7 +24,13 @@ import type { PoolClient, QueryResultRow } from 'pg';
 import { BusinessService } from '../business/business.service.js';
 import { writeAudit } from '../common/audit.js';
 import { isoColumn } from '../common/pagination.js';
-import { badRequest, conflict, isUniqueViolation, notFound } from '../common/problems.js';
+import {
+  badRequest,
+  conflict,
+  isUniqueViolation,
+  notFound,
+  unprocessable,
+} from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { ConfigService } from '../config/config.service.js';
@@ -195,6 +205,40 @@ export class WritingsService {
       if (!template)
         throw badRequest('DOCUMENT_TEMPLATE_UNKNOWN', 'Choose brief, standard or detailed.');
 
+      const approved = (
+        await client.query<{ id: string; content: Record<string, unknown> }>(
+          `select o.id, o.content from projects p
+         join stage_outputs o on o.id = p.approved_problem_version_id
+         join stage_runs s on s.id = o.stage_run_id and s.project_id = p.id
+           and s.workspace_id = p.workspace_id and s.stage = 'analysis'
+         where p.id = $1`,
+          [document.project_id],
+        )
+      ).rows[0];
+      const conditions = approved ? decisionConditions(approved.content) : [];
+      const conditionsLetters = countBlocks(
+        decisionConditionBlocks(conditions, document.language),
+        document.language,
+      );
+      const bounds = levelBoundsFrom(effective.values['document.level_bounds']);
+      const minimumLetters = conditionsLetters + minimumWritingBody(template);
+      if (minimumLetters > bounds[level as Level].max) {
+        const suggestedLevel =
+          ([1, 2, 3, 4, 5] as Level[]).find(
+            (candidate) => bounds[candidate].max >= minimumLetters,
+          ) ?? null;
+        throw unprocessable(
+          'DOCUMENT_LEVEL_TOO_SHORT',
+          'The approved decision conditions do not fit this length level. Choose a longer document; the conditions will be preserved verbatim.',
+          {
+            conditionsLetters,
+            minimumLetters,
+            suggestedLevel: document.analysis_profile === 'quick' ? null : suggestedLevel,
+            continueFullAnalysis: document.analysis_profile === 'quick',
+          },
+        );
+      }
+
       const row = await client
         .query<{ id: string }>(
           `insert into document_writings (workspace_id, project_id, document_id, level, template_version, language, notes,
@@ -210,7 +254,12 @@ export class WritingsService {
             document.language,
             input.notes?.trim() ? input.notes.trim() : null,
             document.current_version_id,
-            JSON.stringify({ ...settings, levelBounds: effective.values['document.level_bounds'] }),
+            JSON.stringify({
+              ...settings,
+              levelBounds: effective.values['document.level_bounds'],
+              approvedProblemVersionId: approved?.id ?? null,
+              decisionConditions: conditions,
+            }),
             context.actorId,
             business.snapshotId,
           ],
@@ -247,6 +296,8 @@ export class WritingsService {
           template: template.version,
           knowledgeLimit: settings.knowledgeLimit,
           fitRounds: settings.fitRounds,
+          approvedProblemVersionId: approved?.id ?? null,
+          decisionConditions: conditions.length,
         },
       });
       return { writingId, workflowId, projectId: document.project_id };

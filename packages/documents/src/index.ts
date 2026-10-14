@@ -1,6 +1,7 @@
 export * from './artifacts.js';
 export * from './count.js';
 export * from './diff.js';
+export * from './decision-conditions.js';
 export * from './docx.js';
 export * from './evaluation.js';
 export * from './html.js';

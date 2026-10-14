@@ -3,7 +3,7 @@ import { strToU8, zipSync } from 'fflate';
 import type { RenderMeta } from './docx.js';
 import { walkBlocks, type Block, type StructuredDocument } from './model.js';
 
-export const PPTX_TEMPLATE_VERSION = 'pptx-summary-v1';
+export const PPTX_TEMPLATE_VERSION = 'pptx-summary-v2';
 const FIXED_DATE = new Date('2020-01-01T00:00:00Z');
 const MAX_BULLETS = 6;
 const MAX_BULLET_CHARS = 220;
@@ -95,7 +95,7 @@ const NS =
 function shape(
   id: number,
   name: string,
-  placeholder: string,
+  placeholder: string | null,
   x: number,
   y: number,
   cx: number,
@@ -103,6 +103,7 @@ function shape(
   paragraphs: readonly string[],
   rtl: boolean,
   size: number,
+  placeholderIndex?: number,
 ): string {
   const body = paragraphs
     .map(
@@ -110,7 +111,29 @@ function shape(
         `<a:p><a:pPr algn="${rtl ? 'r' : 'l'}" rtl="${rtl ? 1 : 0}"/><a:r><a:rPr lang="${rtl ? 'fa-IR' : 'en-US'}" sz="${size}"/><a:t>${xml(text)}</a:t></a:r></a:p>`,
     )
     .join('');
-  return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${name}"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="${placeholder}"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm></p:spPr><p:txBody><a:bodyPr wrap="square"><a:normAutofit/></a:bodyPr><a:lstStyle/>${body || '<a:p/>'}</p:txBody></p:sp>`;
+  const ph =
+    placeholder === null
+      ? ''
+      : `<p:ph type="${placeholder}"${placeholderIndex === undefined ? '' : ` idx="${placeholderIndex}"`}/>`;
+  return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${name}"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr>${ph}</p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm></p:spPr><p:txBody><a:bodyPr wrap="square"><a:normAutofit/></a:bodyPr><a:lstStyle/>${body || '<a:p/>'}</p:txBody></p:sp>`;
+}
+
+/** Full decision conditions and source identity remain accessible in native speaker notes. */
+function decisionNotes(document: StructuredDocument): string[] {
+  const notes: string[] = [];
+  for (const block of walkBlocks(document.blocks)) {
+    if (block.type === 'list' && block.id === 'approved-decision-condition-list')
+      notes.push(
+        document.language === 'fa' ? 'شروط مصوب تصمیم' : 'Approved decision conditions',
+        ...block.items,
+      );
+    if (block.type === 'bibliography' && block.entries.length > 0)
+      notes.push(
+        document.language === 'fa' ? 'منابع' : 'References',
+        ...block.entries.map((entry) => `${entry.text}${entry.url ? ` ${entry.url}` : ''}`),
+      );
+  }
+  return notes;
 }
 
 /** Management-summary PPTX (DOC-103). */
@@ -121,6 +144,10 @@ export function renderPptx(
 ): { bytes: Uint8Array; slides: Slide[] } {
   const slides = planSlides(document, level);
   const rtl = document.language === 'fa';
+  const notes = decisionNotes(document);
+  const notesContentTypes = notes.length
+    ? '<Override PartName="/ppt/notesMasters/notesMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml"/><Override PartName="/ppt/notesSlides/notesSlide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml"/>'
+    : '';
   const files: Record<string, Uint8Array> = {};
   const put = (name: string, content: string) => {
     files[name] = strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${content}`);
@@ -132,7 +159,7 @@ export function renderPptx(
         (_, index) =>
           `<Override PartName="/ppt/slides/slide${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`,
       )
-      .join('')}</Types>`,
+      .join('')}${notesContentTypes}</Types>`,
   );
   put(
     '_rels/.rels',
@@ -144,7 +171,7 @@ export function renderPptx(
   );
   put(
     'ppt/presentation.xml',
-    `<p:presentation ${NS}><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rIdMaster"/></p:sldMasterIdLst><p:sldIdLst>${slides
+    `<p:presentation ${NS}><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rIdMaster"/></p:sldMasterIdLst>${notes.length ? '<p:notesMasterIdLst><p:notesMasterId r:id="rIdNotesMaster"/></p:notesMasterIdLst>' : ''}<p:sldIdLst>${slides
       .map((_, index) => `<p:sldId id="${256 + index}" r:id="rIdSlide${index + 1}"/>`)
       .join(
         '',
@@ -157,7 +184,9 @@ export function renderPptx(
         (_, index) =>
           `<Relationship Id="rIdSlide${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${index + 1}.xml"/>`,
       )
-      .join('')}</Relationships>`,
+      .join(
+        '',
+      )}${notes.length ? '<Relationship Id="rIdNotesMaster" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster" Target="notesMasters/notesMaster1.xml"/>' : ''}</Relationships>`,
   );
   put(
     'ppt/slideMasters/slideMaster1.xml',
@@ -197,15 +226,68 @@ export function renderPptx(
     const body = slide.bullets.length
       ? shape(3, 'Content', 'body', 457200, 1600200, 11277600, 4525963, slide.bullets, rtl, 2000)
       : '';
+    const notesHint =
+      index === 0 && notes.length > 0
+        ? shape(
+            4,
+            'Notes hint',
+            null,
+            457200,
+            6150000,
+            11277600,
+            400000,
+            [
+              rtl
+                ? 'متن کامل شروط و منابع در یادداشت‌های اسلاید اول است.'
+                : 'Full conditions and references are in the first slide’s notes.',
+            ],
+            rtl,
+            1400,
+          )
+        : '';
     put(
       `ppt/slides/slide${index + 1}.xml`,
-      `<p:sld ${NS}><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${title}${body}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`,
+      `<p:sld ${NS}><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${title}${body}${notesHint}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`,
     );
     put(
       `ppt/slides/_rels/slide${index + 1}.xml.rels`,
-      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>`,
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>${index === 0 && notes.length ? '<Relationship Id="rIdNotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide1.xml"/>' : ''}</Relationships>`,
     );
   });
+  if (notes.length) {
+    // PresentationML NotesSlide/NotesMaster parts: https://learn.microsoft.com/en-us/office/open-xml/presentation/working-with-notes-slides
+    const group =
+      '<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>';
+    const noteBody = shape(
+      2,
+      'Decision conditions and references',
+      'body',
+      457200,
+      457200,
+      5943600,
+      8229600,
+      notes,
+      rtl,
+      1200,
+      1,
+    );
+    put(
+      'ppt/notesSlides/notesSlide1.xml',
+      `<p:notes ${NS}><p:cSld><p:spTree>${group}${noteBody}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:notes>`,
+    );
+    put(
+      'ppt/notesSlides/_rels/notesSlide1.xml.rels',
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdSlide" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="../slides/slide1.xml"/><Relationship Id="rIdMaster" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster" Target="../notesMasters/notesMaster1.xml"/></Relationships>',
+    );
+    put(
+      'ppt/notesMasters/notesMaster1.xml',
+      `<p:notesMaster ${NS}><p:cSld><p:spTree>${group}${shape(2, 'Notes', 'body', 457200, 457200, 5943600, 8229600, [], rtl, 1200, 1)}</p:spTree></p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:notesStyle/></p:notesMaster>`,
+    );
+    put(
+      'ppt/notesMasters/_rels/notesMaster1.xml.rels',
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/></Relationships>',
+    );
+  }
   const bytes = zipSync(
     Object.fromEntries(
       Object.entries(files).map(([name, data]) => [name, [data, { mtime: FIXED_DATE }]]),

@@ -224,3 +224,6 @@ documents:
   - path: docs/adr/0028-optional-quick-draft.md
     doc_id: DOCOO-ADR-0028
     section: ADRs
+  - path: docs/adr/0029-approved-decision-conditions.md
+    doc_id: DOCOO-ADR-0029
+    section: ADRs
