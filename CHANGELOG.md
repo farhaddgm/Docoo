@@ -2,6 +2,12 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.27.2] — 2026-10-14
+
+### Fixed
+
+- Export valid real-provider documents whose summary sentences or list items exceed a slide's bullet limit. PPTX uses visibly abbreviated excerpts at word boundaries and retains their unabridged original text in native notes, alongside complete approved conditions and source identity. Slide, title and unbreakable-text overflow checks remain enforced; template version is `pptx-summary-v3`.
+
 ## [0.27.1] — 2026-10-14
 
 ### Fixed
