@@ -36,7 +36,7 @@
     "stack:observability": "docker compose --profile observability up -d",
     "stack:down": "docker compose down",
     "owner:check": "node scripts/owner/check-github.mjs",
-    "security:test": "node --test scripts/deploy/prepare-secrets.test.mjs scripts/security/monitor.test.mjs && python3 scripts/deploy/verify-release.test.py"
+    "security:test": "node --test scripts/deploy/prepare-secrets.test.mjs scripts/security/*.test.mjs && python3 scripts/deploy/verify-release.test.py"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
