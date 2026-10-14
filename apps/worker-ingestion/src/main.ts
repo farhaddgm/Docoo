@@ -60,9 +60,10 @@ async function main(): Promise<void> {
   const metricsAddress = process.env['TEMPORAL_METRICS_ADDRESS'];
   Runtime.install({
     logger: correlatedWorkerLogger('worker-ingestion'),
-    ...(metricsAddress
-      ? {
-          telemetryOptions: {
+    telemetryOptions: {
+      logging: { forward: {} },
+      ...(metricsAddress
+        ? {
             metrics: {
               prometheus: {
                 bindAddress: metricsAddress,
@@ -71,9 +72,9 @@ async function main(): Promise<void> {
                 useSecondsForDurations: true,
               },
             },
-          },
-        }
-      : {}),
+          }
+        : {}),
+    },
   });
   const connection = await NativeConnection.connect({
     address: process.env['TEMPORAL_ADDRESS'] ?? 'localhost:7233',

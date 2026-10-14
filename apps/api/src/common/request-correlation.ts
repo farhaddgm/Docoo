@@ -11,6 +11,10 @@ import {
 
 import { isUuid } from './request-context.js';
 
+export function validatedRequestId(value: unknown): string {
+  return isUuid(value) ? value.toLowerCase() : randomUUID();
+}
+
 export function requestCorrelation(request: FastifyRequest): CorrelationInput {
   const authorization = request.workspaceAuthorization;
   const params = request.params as Record<string, unknown> | undefined;
@@ -20,7 +24,7 @@ export function requestCorrelation(request: FastifyRequest): CorrelationInput {
       authorization && isUuid(params?.['projectId']) ? params['projectId'].toLowerCase() : null,
     stageRunId:
       authorization && isUuid(params?.['stageRunId']) ? params['stageRunId'].toLowerCase() : null,
-    requestId: isUuid(request.id) ? request.id : randomUUID(),
+    requestId: validatedRequestId(request.id),
     ...activeTraceCorrelation(),
   };
 }

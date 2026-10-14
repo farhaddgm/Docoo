@@ -27,6 +27,11 @@ export interface WorkflowEngine {
 
 export class WorkflowEngineUnavailableError extends Error {}
 
+export function correlateWorkflowRef<T extends object>(ref: T): T {
+  const requestId = currentCorrelation().requestId;
+  return requestId ? { ...ref, correlation: captureWorkflowCorrelation(requestId) } : ref;
+}
+
 @Injectable()
 export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
   private connection: Promise<{ client: Client; connection: Connection }> | null = null;
@@ -63,7 +68,7 @@ export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
       await client.workflow.start('projectWorkflow', {
         taskQueue: AGENT_TASK_QUEUE,
         workflowId,
-        args: [this.correlate(ref)],
+        args: [correlateWorkflowRef(ref)],
       });
     } catch (error) {
       if (error instanceof WorkflowExecutionAlreadyStartedError) return;
@@ -77,7 +82,7 @@ export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
       await client.workflow.start('documentWritingWorkflow', {
         taskQueue: AGENT_TASK_QUEUE,
         workflowId,
-        args: [this.correlate(ref)],
+        args: [correlateWorkflowRef(ref)],
       });
     } catch (error) {
       if (error instanceof WorkflowExecutionAlreadyStartedError) return;
@@ -91,7 +96,7 @@ export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
       await client.workflow.start('decisionResearchWorkflow', {
         taskQueue: AGENT_TASK_QUEUE,
         workflowId,
-        args: [this.correlate(ref)],
+        args: [correlateWorkflowRef(ref)],
       });
     } catch (error) {
       if (error instanceof WorkflowExecutionAlreadyStartedError) return;
@@ -108,11 +113,6 @@ export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
     } catch {
       throw new WorkflowEngineUnavailableError('temporal_signal_failed');
     }
-  }
-
-  private correlate<T extends object>(ref: T): T {
-    const requestId = currentCorrelation().requestId;
-    return requestId ? { ...ref, correlation: captureWorkflowCorrelation(requestId) } : ref;
   }
 
   async onModuleDestroy(): Promise<void> {

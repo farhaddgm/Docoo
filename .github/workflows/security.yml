@@ -203,6 +203,24 @@ jobs:
           docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges:true \
             -v "$PWD/infra/otel/collector.production.yaml:/config.yaml:ro" \
             docoo-otel-collector:ci validate --config=/config.yaml
+      - name: Start Tempo with the private production configuration
+        if: matrix.name == 'tempo'
+        run: |
+          mkdir -p "$RUNNER_TEMP/tempo-data"
+          sudo chown 1000:1000 "$RUNNER_TEMP/tempo-data"
+          trap 'docker logs docoo-tempo-smoke; docker rm -f docoo-tempo-smoke' EXIT
+          docker run -d --name docoo-tempo-smoke --read-only --cap-drop ALL \
+            --security-opt no-new-privileges:true --memory 512m \
+            --tmpfs /tmp:rw,nosuid,nodev,size=32m,mode=1777 \
+            -p 127.0.0.1:13200:3200 \
+            -v "$PWD/infra/tempo/tempo.production.yaml:/config.yaml:ro" \
+            -v "$RUNNER_TEMP/tempo-data:/var/tempo" \
+            docoo-tempo:ci -config.file=/config.yaml
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:13200/ready; then exit 0; fi
+            sleep 2
+          done
+          exit 1
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: v0.75.0

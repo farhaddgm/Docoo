@@ -3,7 +3,6 @@ import 'reflect-metadata';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { HttpException, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -14,8 +13,11 @@ import type { IncomingMessage } from 'node:http';
 import { correlationRecord, logCorrelation, withCorrelation } from '@docoo/observability';
 
 import { AppModule } from './app.module.js';
-import { isUuid } from './common/request-context.js';
-import { requestCorrelation, RequestCorrelationInterceptor } from './common/request-correlation.js';
+import {
+  requestCorrelation,
+  RequestCorrelationInterceptor,
+  validatedRequestId,
+} from './common/request-correlation.js';
 
 const localEnv = new URL('../../../.env', import.meta.url);
 if (existsSync(localEnv)) process.loadEnvFile(localEnv);
@@ -57,8 +59,7 @@ const adapter = new FastifyAdapter({
   },
   requestIdHeader: false,
   genReqId: (request: IncomingMessage) => {
-    const id = request.headers['x-request-id'];
-    return isUuid(id) ? id.toLowerCase() : randomUUID();
+    return validatedRequestId(request.headers['x-request-id']);
   },
 });
 
