@@ -2,6 +2,13 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.27.4] — 2026-10-15
+
+### Fixed
+
+- Start the API with optional production tracing enabled without duplicating local module identities and breaking Nest database dependency injection. Restrict the ESM instrumentation hook to HTTP, Fastify, PostgreSQL and Undici transport libraries; explicit application, workflow and provider spans are preserved.
+- Exercise the real compiled API startup with tracing enabled in CI. Verify database readiness, request identity, actual HTTP span export and removal of private URL/header content before browser acceptance.
+
 ## [0.27.3] — 2026-10-14
 
 API, worker and provider execution now share validated request and workflow identifiers. Trace export removes URLs, SQL, exception content and arbitrary resource metadata before sending spans. An optional private Collector/Tempo deployment supports production tracing; its patched images are built and scanned in CI with exact archive provenance. Owner review and model quality gates remain unchanged.
