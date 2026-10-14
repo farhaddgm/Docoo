@@ -48,10 +48,12 @@ const RETRY_STATUSES = new Set([502, 503, 504]);
 const RETRY_DELAY_MS = 400;
 
 export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const requestId = crypto.randomUUID();
   const request = () =>
     fetch(`/api${path}`, {
       cache: 'no-store',
       credentials: 'same-origin',
+      headers: { 'x-request-id': requestId },
       ...(signal ? { signal } : {}),
     });
   let response: Response;
@@ -80,7 +82,7 @@ export async function apiPost(path: string, body: unknown): Promise<Response> {
       method: 'POST',
       cache: 'no-store',
       credentials: 'same-origin',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'x-request-id': crypto.randomUUID() },
       body: JSON.stringify(body),
     });
   } catch (error) {
@@ -111,6 +113,7 @@ export async function apiSend<T = unknown>(
         ...(body === undefined ? {} : { 'content-type': 'application/json' }),
         ...(options.version === undefined ? {} : { 'if-match': `"${options.version}"` }),
         ...options.headers,
+        'x-request-id': crypto.randomUUID(),
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });

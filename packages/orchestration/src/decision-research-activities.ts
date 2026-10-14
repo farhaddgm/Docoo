@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+import type { WorkflowCorrelation } from '@docoo/observability';
 import { projectResearchPlanSchema } from '@docoo/contracts';
 import { inWorkspace, audit } from './db.js';
 import { approvedDecisionEvidence, evidenceDigest } from './decision-evidence.js';
@@ -9,6 +10,7 @@ export interface DecisionResearchRef {
   projectId: string;
   actorId: string;
   reportId: string;
+  readonly correlation?: WorkflowCorrelation;
 }
 export function createDecisionResearchActivities(pool: Pool) {
   return {

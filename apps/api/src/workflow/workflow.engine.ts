@@ -7,6 +7,7 @@ import {
   type DecisionResearchRef,
 } from '@docoo/orchestration';
 import { Client, Connection, WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
+import { captureWorkflowCorrelation, currentCorrelation } from '@docoo/observability';
 
 import { API_CONFIG } from '../tokens.js';
 
@@ -62,7 +63,7 @@ export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
       await client.workflow.start('projectWorkflow', {
         taskQueue: AGENT_TASK_QUEUE,
         workflowId,
-        args: [ref],
+        args: [this.correlate(ref)],
       });
     } catch (error) {
       if (error instanceof WorkflowExecutionAlreadyStartedError) return;
@@ -76,7 +77,7 @@ export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
       await client.workflow.start('documentWritingWorkflow', {
         taskQueue: AGENT_TASK_QUEUE,
         workflowId,
-        args: [ref],
+        args: [this.correlate(ref)],
       });
     } catch (error) {
       if (error instanceof WorkflowExecutionAlreadyStartedError) return;
@@ -90,7 +91,7 @@ export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
       await client.workflow.start('decisionResearchWorkflow', {
         taskQueue: AGENT_TASK_QUEUE,
         workflowId,
-        args: [ref],
+        args: [this.correlate(ref)],
       });
     } catch (error) {
       if (error instanceof WorkflowExecutionAlreadyStartedError) return;
@@ -107,6 +108,11 @@ export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
     } catch {
       throw new WorkflowEngineUnavailableError('temporal_signal_failed');
     }
+  }
+
+  private correlate<T extends object>(ref: T): T {
+    const requestId = currentCorrelation().requestId;
+    return requestId ? { ...ref, correlation: captureWorkflowCorrelation(requestId) } : ref;
   }
 
   async onModuleDestroy(): Promise<void> {

@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
-import { startTelemetry } from '@docoo/observability';
+import { startTelemetry, logCorrelation, type CorrelationEvent } from '@docoo/observability';
 import {
   AGENT_TASK_QUEUE,
   createOrchestrationActivities,
@@ -10,11 +10,10 @@ import {
 import { masterKeyFromEnv } from '@docoo/providers';
 import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { Pool } from 'pg';
+import { correlatedActivities } from './correlated-activities.js';
 
-function log(level: 'info' | 'error', event: string, fields: Record<string, unknown> = {}): void {
-  process.stdout.write(
-    `${JSON.stringify({ level, event, worker: 'docoo-worker-agent', timestamp: new Date().toISOString(), ...fields })}\n`,
-  );
+function log(_level: 'info' | 'error', event: CorrelationEvent): void {
+  logCorrelation(event, { service: 'worker-agent' });
 }
 
 /** Runs project workflows (WF-*) and their provider calls (AI-*) on the `docoo.agent` queue. */
@@ -29,10 +28,7 @@ async function main(): Promise<void> {
   const databaseUrl = process.env['DATABASE_URL'];
   if (!databaseUrl) throw new Error('DATABASE_URL is required.');
   const masterKey = masterKeyFromEnv();
-  if (!masterKey)
-    log('error', 'agent.secret_key.missing', {
-      detail: 'SECRET_MASTER_KEY is not set; only the fake provider can run.',
-    });
+  if (!masterKey) log('error', 'worker.secret_key.missing');
 
   const pool = new Pool({
     connectionString: databaseUrl,
@@ -42,20 +38,34 @@ async function main(): Promise<void> {
   // Workflow and queue SLIs (SRE-001): schedule-to-start latency, failures and completions
   // are scraped by Prometheus from this address; names match infra/prometheus/rules.
   const metricsAddress = process.env['TEMPORAL_METRICS_ADDRESS'];
-  if (metricsAddress) {
-    Runtime.install({
-      telemetryOptions: {
-        metrics: {
-          prometheus: {
-            bindAddress: metricsAddress,
-            countersTotalSuffix: true,
-            unitSuffix: true,
-            useSecondsForDurations: true,
+  Runtime.install({
+    logger: {
+      log: (level) =>
+        logCorrelation('worker.sdk', {
+          service: 'worker-agent',
+          logLevel: level === 'TRACE' ? 'debug' : level.toLowerCase(),
+        }),
+      trace: () => logCorrelation('worker.sdk', { service: 'worker-agent', logLevel: 'debug' }),
+      debug: () => logCorrelation('worker.sdk', { service: 'worker-agent', logLevel: 'debug' }),
+      info: () => logCorrelation('worker.sdk', { service: 'worker-agent' }),
+      warn: () => logCorrelation('worker.sdk', { service: 'worker-agent', logLevel: 'warn' }),
+      error: () => logCorrelation('worker.sdk', { service: 'worker-agent', logLevel: 'error' }),
+    },
+    ...(metricsAddress
+      ? {
+          telemetryOptions: {
+            metrics: {
+              prometheus: {
+                bindAddress: metricsAddress,
+                countersTotalSuffix: true,
+                unitSuffix: true,
+                useSecondsForDurations: true,
+              },
+            },
           },
-        },
-      },
-    });
-  }
+        }
+      : {}),
+  });
   const connection = await NativeConnection.connect({
     address: process.env['TEMPORAL_ADDRESS'] ?? 'localhost:7233',
   });
@@ -65,12 +75,12 @@ async function main(): Promise<void> {
     maxConcurrentActivityTaskExecutions: Number(process.env['AGENT_CONCURRENCY'] ?? 4),
     taskQueue: AGENT_TASK_QUEUE,
     workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
-    activities: {
+    activities: correlatedActivities({
       ...createOrchestrationActivities(pool, new ProviderRuntime(pool, masterKey)),
       ...createDecisionResearchActivities(pool),
-    },
+    }),
   });
-  log('info', 'worker.ready', { taskQueue: AGENT_TASK_QUEUE });
+  log('info', 'worker.ready');
   const stop = (): void => {
     log('info', 'worker.stopping');
     worker.shutdown();
@@ -86,9 +96,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  log('error', 'worker.failed', {
-    message: error instanceof Error ? error.message : String(error),
-  });
+main().catch(() => {
+  log('error', 'worker.failed');
   process.exitCode = 1;
 });

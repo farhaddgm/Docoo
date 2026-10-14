@@ -6,6 +6,7 @@ import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { register } from 'node:module';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import { PrivateTraceExporter } from './private-trace-exporter.js';
 
 export interface TelemetryOptions {
   readonly serviceName: string;
@@ -35,7 +36,9 @@ export function startTelemetry(options: TelemetryOptions): NodeSDK | undefined {
       [ATTR_SERVICE_NAME]: options.serviceName,
       [ATTR_SERVICE_VERSION]: options.serviceVersion,
     }),
-    traceExporter: new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }),
+    traceExporter: new PrivateTraceExporter(
+      new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }),
+    ),
     metricReader: new PeriodicExportingMetricReader({
       exporter: new OTLPMetricExporter({ url: `${endpoint}/v1/metrics` }),
       exportIntervalMillis: 15_000,

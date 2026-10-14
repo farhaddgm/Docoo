@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import type { WorkflowCorrelation } from '@docoo/observability';
 
 import {
   applyOutline,
@@ -74,6 +75,7 @@ export interface WritingRef {
   readonly projectId: string;
   readonly documentId: string;
   readonly writingId: string;
+  readonly correlation?: WorkflowCorrelation;
 }
 
 export type WritingBlockReason = 'provider_failure' | 'configuration' | 'cost_limit' | 'tool';
