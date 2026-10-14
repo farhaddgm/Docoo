@@ -49,6 +49,7 @@ interface CurrentRow extends QueryResultRow {
   latest_output_id: string | null;
   passed_by_decision: boolean | null;
   session_id: string | null;
+  continuation_session_id: string | null;
   minimum_questions: number | null;
   maximum_questions: number | null;
   batch_size: number | null;
@@ -87,7 +88,8 @@ const questionSelect = `
 const currentSelect = `
   select r.id as run_id, r.run_no, r.temporal_workflow_id as workflow_id, sr.id as stage_run_id,
          sr.status::text as stage_status, sr.latest_output_id, sr.passed_by_decision,
-         s.id as session_id, s.minimum_questions, s.maximum_questions, s.batch_size,coalesce(s.analysis_profile,r.analysis_profile) as analysis_profile,
+         s.id as session_id, r.analysis_continuation_session_id as continuation_session_id,
+         s.minimum_questions, s.maximum_questions, s.batch_size,coalesce(s.analysis_profile,r.analysis_profile) as analysis_profile,
          ${isoColumn('s.finish_requested_at', 'finish_requested_at')}, s.finish_reason
     from workflow_runs r
     left join stage_runs sr on sr.run_id = r.id and sr.stage = 'analysis'
@@ -206,11 +208,12 @@ export class AnalysisService {
       context,
       async (client) => {
         const current = await this.current(client, projectId);
-        const questions = current?.session_id
+        const questionSession = await this.questionSession(client, projectId, current);
+        const questions = questionSession
           ? (
               await client.query<QuestionRow>(
                 `${questionSelect} where q.session_id = any($1::uuid[]) order by q.ordinal`,
-                [(await analysisSession(client, current.session_id)).sessionIds],
+                [(await analysisSession(client, questionSession)).sessionIds],
               )
             ).rows.map(toQuestion)
           : [];
@@ -330,8 +333,9 @@ export class AnalysisService {
       context,
       async (client) => {
         const current = await this.current(client, projectId);
-        if (!current?.session_id) return { batches: [] };
-        const { sessionIds } = await analysisSession(client, current.session_id);
+        const questionSession = await this.questionSession(client, projectId, current);
+        if (!questionSession) return { batches: [] };
+        const { sessionIds } = await analysisSession(client, questionSession);
         const batches = (
           await client.query<Record<string, unknown> & { id: string }>(
             `select b.id, b.batch_no as "batchNo", b.status, ${isoColumn('b.submitted_at', '"submittedAt"')},
@@ -696,6 +700,24 @@ export class AnalysisService {
   }
 
   // ------------------------------------------------------------------ internals
+
+  /** Previously answered questions stay readable while the continued session starts. */
+  private async questionSession(
+    client: PoolClient,
+    projectId: string,
+    current: CurrentRow | null,
+  ): Promise<string | null> {
+    if (current?.session_id) return current.session_id;
+    if (!current?.continuation_session_id) return null;
+    return (
+      (
+        await client.query<{ id: string }>(
+          'select id from analysis_sessions where id=$1 and project_id=$2',
+          [current.continuation_session_id, projectId],
+        )
+      ).rows[0]?.id ?? null
+    );
+  }
 
   private async current(
     client: PoolClient,
