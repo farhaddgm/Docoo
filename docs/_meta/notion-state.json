@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "8b64ad09f751998465be912a7fac91402af9f492"
+    "source_commit": "76a7282ed05ec1fd2bf24ed873a11babe8b0daf3"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-14T07:05:25.396Z",
+    "synced_at": "2026-10-14T11:47:56.222Z",
     "created": 0,
-    "updated": 1,
-    "unchanged": 73,
+    "updated": 2,
+    "unchanged": 72,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -358,16 +358,16 @@
     "DOCOO-DOCUMENT-PIPELINE": {
       "path": "docs/04-architecture/05-document-pipeline.md",
       "section": "04 Architecture",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "proposed",
       "owner": "Document Platform",
-      "checksum_sha256": "d915806193549ece6c477f21a51d8a7a2f4ef0ce44158d7c5bcd0d8c12808fb8",
+      "checksum_sha256": "484c756b4238991901ddcb5621cb85a9ff58008381e7390d76acc48638be665d",
       "notion_page_id": "3e55a24a-6668-81aa-97a8-e1a75acc507e",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881aa97a8e1a75acc507e?pvs=204",
       "index_row_page_id": "3e55a24a-6668-816e-9611-ff8551618e47",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a6668816e9611ff8551618e47",
-      "synced_commit": "bfd822a16e3095edcab8c66b0fd69462d037fc4d",
-      "synced_at": "2026-10-05T05:25:38.438Z"
+      "synced_commit": "76a7282ed05ec1fd2bf24ed873a11babe8b0daf3",
+      "synced_at": "2026-10-14T11:47:56.222Z"
     },
     "DOCOO-SECURITY-THREAT-MODEL": {
       "path": "docs/05-security/01-security-and-threat-model.md",
@@ -1100,16 +1100,16 @@
     "DOCOO-ADR-0029": {
       "path": "docs/adr/0029-approved-decision-conditions.md",
       "section": "ADRs",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "accepted",
       "owner": "Document Platform",
-      "checksum_sha256": "2530b78abd9d289956b19967a655276a201311866891ab1b0aecfc6d16f423a4",
+      "checksum_sha256": "c833dd8ec34e03c0034e5977954ffea2dd924422265a9fe1c93e02c407313dd6",
       "notion_page_id": "3f95a24a-6668-818a-a88c-d480667778a3",
       "notion_page_url": "https://app.notion.com/p/3f95a24a6668818aa88cd480667778a3",
       "index_row_page_id": "3f95a24a-6668-8150-84f8-cc8feb070e71",
       "index_row_page_url": "https://app.notion.com/p/3f95a24a6668815084f8cc8feb070e71",
-      "synced_commit": "7e3f1d33dc7c85111ac2ee9b076adcb5f416a89b",
-      "synced_at": "2026-10-14T05:14:17.465Z"
+      "synced_commit": "76a7282ed05ec1fd2bf24ed873a11babe8b0daf3",
+      "synced_at": "2026-10-14T11:47:56.222Z"
     }
   }
 }
