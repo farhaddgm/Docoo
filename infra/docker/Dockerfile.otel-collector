@@ -6,7 +6,7 @@ RUN go install go.opentelemetry.io/collector/cmd/builder@v0.162.0
 COPY infra/otel/builder.yaml /source/builder.yaml
 RUN /go/bin/builder --config /source/builder.yaml --skip-compilation
 WORKDIR /source/collector
-RUN go get golang.org/x/net@v0.60.0 golang.org/x/crypto@v0.55.0 golang.org/x/text@v0.39.0 google.golang.org/grpc@v1.83.2 && \
+RUN go get golang.org/x/net@v0.60.0 golang.org/x/crypto@v0.57.0 golang.org/x/text@v0.42.0 google.golang.org/grpc@v1.83.2 && \
     go mod tidy && go build -p 2 -trimpath -buildvcs=false -ldflags '-s -w' -o /out/docoo-otel-collector .
 FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
