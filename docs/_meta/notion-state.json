@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "7e3f1d33dc7c85111ac2ee9b076adcb5f416a89b"
+    "source_commit": "8b64ad09f751998465be912a7fac91402af9f492"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-14T05:14:17.465Z",
-    "created": 1,
-    "updated": 2,
-    "unchanged": 71,
+    "synced_at": "2026-10-14T07:05:25.396Z",
+    "created": 0,
+    "updated": 1,
+    "unchanged": 73,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -400,16 +400,16 @@
     "DOCOO-TESTING-STRATEGY": {
       "path": "docs/06-delivery/01-testing-strategy.md",
       "section": "06 Delivery & Operations",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "proposed",
       "owner": "Quality Engineering",
-      "checksum_sha256": "62b26d7932c32c2984079152aabe6cefe688336f88084fcb2e8b0bbed16b1bce",
+      "checksum_sha256": "7dbab3b2b8312b2f58efe2b12956617453d415a103c4fc047c4ec3b93c5b4315",
       "notion_page_id": "3e55a24a-6668-816d-ab7d-db6b1ca25fab",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668816dab7ddb6b1ca25fab?pvs=204",
       "index_row_page_id": "3e55a24a-6668-8198-b395-fe2f5d8e53e9",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a66688198b395fe2f5d8e53e9",
-      "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
-      "synced_at": "2026-10-01T16:08:48.251Z"
+      "synced_commit": "8b64ad09f751998465be912a7fac91402af9f492",
+      "synced_at": "2026-10-14T07:05:25.396Z"
     },
     "DOCOO-DEPLOYMENT-OPERATIONS": {
       "path": "docs/06-delivery/02-deployment-and-operations.md",
