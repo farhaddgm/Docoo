@@ -2,6 +2,7 @@ import {
   condition,
   defineQuery,
   defineSignal,
+  patched,
   proxyActivities,
   setHandler,
   sleep,
@@ -323,6 +324,7 @@ export async function documentWritingWorkflow(
   ref: WritingRef,
 ): Promise<{ status: 'succeeded' | 'failed' | 'cancelled' }> {
   let paused = false;
+  const preserveEarlyResume = patched('writing-block-resume-boundary-v1');
   let cancelled: { reason: string | null } | null = null;
   setHandler(pauseSignal, () => {
     paused = true;
@@ -360,8 +362,17 @@ export async function documentWritingWorkflow(
       }
       if (result.status === 'blocked') {
         const blocked = result as unknown as { code: string; reason: string };
-        await writing.writingBlock({ ...ref, code: blocked.code, reason: blocked.reason });
-        paused = true;
+        if (preserveEarlyResume) {
+          // writingBlock commits `paused` before its activity completes. Set the workflow
+          // flag first so a resume processed during that interval survives the boundary.
+          paused = true;
+          await writing.writingBlock({ ...ref, code: blocked.code, reason: blocked.reason });
+          if (!paused && cancelled === null) await writing.writingResume(ref);
+        } else {
+          // Preserve the command sequence of histories recorded before the patch.
+          await writing.writingBlock({ ...ref, code: blocked.code, reason: blocked.reason });
+          paused = true;
+        }
         retryNo = 0;
         continue;
       }

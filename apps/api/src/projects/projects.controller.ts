@@ -85,6 +85,7 @@ const createSchema = z
     description: descriptionSchema.default(''),
     initialProblem: problemSchema,
     outputLanguage: languageSchema.default('fa'),
+    analysisProfile: z.enum(['full', 'quick']).default('full'),
     topics: topicsSchema.default([]),
     settings: settingsSchema.default([]),
     // The id of a business in Contenter; the project is linked to it as it is created.
@@ -148,6 +149,23 @@ export class ProjectsController {
     private readonly configService: ConfigService,
     private readonly workflowService: WorkflowService,
   ) {}
+
+  @Post(':projectId/analysis/continue')
+  @RequireWorkspacePermission('project.run')
+  async continueFullAnalysis(
+    @Req() request: FastifyRequest,
+    @Param('projectId') id: string,
+    @Body() body: unknown,
+  ) {
+    const context = workspaceContext(request);
+    const project = await this.projectsService.continueFullAnalysis(
+      context,
+      projectId(id),
+      parse(commandSchema, body),
+    );
+    const workflow = await this.workflowService.start(context, project.id);
+    return { project, workflow };
+  }
 
   @Get()
   @ApiOperation({ summary: 'List projects (default: every status except deleted)' })

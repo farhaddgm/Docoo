@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
 
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { projectWorkflowId, STAGES } from '@docoo/orchestration';
+import {
+  projectWorkflowId,
+  scopeAnalysisDefinition,
+  scopeOutlineEvaluation,
+  STAGES,
+} from '@docoo/orchestration';
 import type { PoolClient, QueryResultRow } from 'pg';
 
 import { BusinessService } from '../business/business.service.js';
@@ -80,8 +85,13 @@ export class WorkflowService {
     const business = await this.business.resolveForUse(context, projectId);
     const run = await this.database.run(context, async (client) => {
       const project = (
-        await client.query<{ status: string; config_snapshot_id: string | null }>(
-          'select status, config_snapshot_id from projects where id = $1 and deleted_at is null for update',
+        await client.query<{
+          status: string;
+          config_snapshot_id: string | null;
+          analysis_profile: string;
+          analysis_continuation_session_id: string | null;
+        }>(
+          'select status, config_snapshot_id,analysis_profile,analysis_continuation_session_id from projects where id = $1 and deleted_at is null for update',
           [projectId],
         )
       ).rows[0];
@@ -108,8 +118,8 @@ export class WorkflowService {
       const created = (
         await client.query<RunRow>(
           `insert into workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id, config_snapshot_id, created_by,
-                                      business_snapshot_id)
-           values ($1, $2, $3, $4, $5, $6, $7) returning ${runColumns}`,
+                                      business_snapshot_id,analysis_profile,analysis_continuation_session_id)
+           values ($1, $2, $3, $4, $5, $6, $7,$8,$9) returning ${runColumns}`,
           [
             context.workspaceId,
             projectId,
@@ -118,6 +128,8 @@ export class WorkflowService {
             project.config_snapshot_id,
             context.actorId,
             business.snapshotId,
+            project.analysis_profile,
+            project.analysis_continuation_session_id,
           ],
         )
       ).rows[0]!;
@@ -131,6 +143,8 @@ export class WorkflowService {
           stages: STAGES,
           configSnapshotId: project.config_snapshot_id,
           businessSnapshotId: business.snapshotId,
+          analysisProfile: project.analysis_profile,
+          continuedFromSessionId: project.analysis_continuation_session_id,
           // Contenter could not be asked: the run reads the last saved snapshot.
           ...(business.syncError ? { businessSyncError: business.syncError } : {}),
         },
@@ -566,7 +580,18 @@ export class WorkflowService {
             'Only an output waiting for review can be edited.',
           );
         }
-        const content = JSON.stringify(input.content);
+        let scoped = input.content;
+        if (stage.stage === 'analysis') {
+          const profile = (
+            await client.query<{ analysis_profile: 'full' | 'quick' }>(
+              'select analysis_profile from workflow_runs where id=$1',
+              [stage.run_id],
+            )
+          ).rows[0]?.analysis_profile;
+          if (!profile) throw notFound('WORKFLOW_RUN_NOT_FOUND', 'The workflow run was not found.');
+          scoped = scopeAnalysisDefinition(scoped, profile);
+        } else if (stage.stage === 'evaluation') scoped = scopeOutlineEvaluation(scoped);
+        const content = JSON.stringify(scoped);
         const created = (
           await client.query<{ id: string; version_no: number }>(
             `insert into stage_outputs (workspace_id, stage_run_id, version_no, content, content_sha256, origin, edited_from_id, created_by)

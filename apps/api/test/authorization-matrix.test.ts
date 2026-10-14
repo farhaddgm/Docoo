@@ -162,6 +162,7 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/projects/:projectId/problem-definitions': 'project.read',
   'POST workspaces/:workspaceId/question-batches/:batchId/answers': 'analysis.answer',
   'POST workspaces/:workspaceId/projects/:projectId/analysis/finish': 'workflow.approve',
+  'POST workspaces/:workspaceId/projects/:projectId/analysis/continue': 'project.run',
   'GET workspaces/:workspaceId/agent-roles': 'agent_definition.read',
   'GET workspaces/:workspaceId/agent-roles/:role': 'agent_definition.read',
   'GET workspaces/:workspaceId/agent-roles/:role/definitions': 'agent_definition.read',

@@ -2,7 +2,7 @@
 doc_id: DOCOO-AUTHORIZATION-MATRIX
 title: ماتریس مجوز endpointهای control plane
 status: active
-version: 1.5.0
+version: 1.6.0
 owner: Security & Engineering
 last_updated: 2026-10-13
 notion_sync: true
@@ -150,6 +150,7 @@ notion_sync: true
 | `GET /projects/{id}/problem-definitions`                             | `project.read`              |
 | `POST /question-batches/{id}/answers`                                | `analysis.answer`           |
 | `POST /projects/{id}/analysis/finish`                                | `workflow.approve`          |
+| `POST /projects/{id}/analysis/continue`                              | `project.run`               |
 | `GET /agent-roles`                                                   | `agent_definition.read`     |
 | `GET /agent-roles/{role}`                                            | `agent_definition.read`     |
 | `GET /agent-roles/{role}/definitions`                                | `agent_definition.read`     |

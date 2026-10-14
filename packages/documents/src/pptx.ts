@@ -60,14 +60,17 @@ export function slideLimit(level: number): number {
 
 /** Title slide plus one slide per top-level section. Overflow is a validation failure. */
 export function planSlides(document: StructuredDocument, level: number): Slide[] {
-  const slides: Slide[] = [{ title: document.title, bullets: [] }];
+  const titleSlide = { title: document.title, bullets: [] as string[] };
+  const slides: Slide[] = [titleSlide];
   let current: { title: string; bullets: string[] } | null = null;
   for (const block of walkBlocks(document.blocks)) {
     if (block.type === 'heading' && block.level === 1) {
       if (current) slides.push(current);
       current = { title: block.text, bullets: [] };
-    } else if (current && current.bullets.length < MAX_BULLETS) {
-      current.bullets.push(...blockBullets(block).slice(0, MAX_BULLETS - current.bullets.length));
+    } else {
+      const target = current ?? titleSlide;
+      if (target.bullets.length < MAX_BULLETS)
+        target.bullets.push(...blockBullets(block).slice(0, MAX_BULLETS - target.bullets.length));
     }
   }
   if (current) slides.push(current);

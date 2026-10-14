@@ -191,9 +191,15 @@ export class SolutionsService {
       );
       // What the ideator reads of the project's business: the solutions have to fit that company.
       const company = await this.business.roleBusiness(client, context, projectId, 'ideator');
+      const problem = await projectProblem(client, projectId);
+      if (project.analysis_profile === 'quick' && !problem.versionId)
+        throw conflict(
+          'QUICK_DRAFT_NOT_READY',
+          'Approve the quick analysis before generating its draft.',
+        );
       return {
         project,
-        problem: await projectProblem(client, projectId),
+        problem,
         count,
         connectionId,
         model,
@@ -482,10 +488,10 @@ export class SolutionsService {
           after: { ...snapshot, decisionId: selection.rows[0]!.id },
         });
       const effective = await this.config.resolve(client, context, 'project', projectId);
-      const level = Math.min(
-        5,
-        Math.max(1, Number(effective.values['document.level'] ?? 3)),
-      ) as Level;
+      const level =
+        project.analysis_profile === 'quick'
+          ? 1
+          : (Math.min(5, Math.max(1, Number(effective.values['document.level'] ?? 3))) as Level);
       const bounds = levelBoundsFrom(effective.values['document.level_bounds']);
       // The template lays out the first draft of every selected solution (ADR-0018).
       const template = templateFor(effective.values['document.default_template']);
@@ -506,8 +512,8 @@ export class SolutionsService {
         }
         const document = (
           await client.query<{ id: string }>(
-            `insert into documents (workspace_id, project_id, solution_id, priority, title, level, language, created_by)
-             values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,
+            `insert into documents (workspace_id, project_id, solution_id, priority, title, level, language, created_by,analysis_profile)
+             values ($1, $2, $3, $4, $5, $6, $7, $8,$9) returning id`,
             [
               context.workspaceId,
               projectId,
@@ -517,6 +523,7 @@ export class SolutionsService {
               level,
               project.output_language,
               context.actorId,
+              project.analysis_profile,
             ],
           )
         ).rows[0]!;
@@ -636,8 +643,9 @@ export class SolutionsService {
         initial_problem: string;
         output_language: 'fa' | 'en';
         status: string;
+        analysis_profile: 'full' | 'quick';
       }>(
-        'select id, title, initial_problem, output_language, status from projects where id = $1 and deleted_at is null' +
+        'select id, title, initial_problem, output_language, status,analysis_profile from projects where id = $1 and deleted_at is null' +
           (write ? ' for update' : ''),
         [projectId],
       )

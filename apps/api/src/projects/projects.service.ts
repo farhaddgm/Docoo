@@ -12,6 +12,7 @@ import {
   type ProjectCommand,
   type ProjectNextAction,
   type ProjectStatus,
+  type AnalysisProfile,
 } from '@docoo/domain';
 import type { PoolClient, QueryResultRow } from 'pg';
 
@@ -46,6 +47,7 @@ export interface ProjectTopicLink {
 }
 
 export interface Project {
+  readonly analysisProfile: AnalysisProfile;
   readonly id: string;
   readonly workspaceId: string;
   readonly code: string;
@@ -85,6 +87,7 @@ export interface TopicLinkInput {
 }
 
 export interface CreateProjectInput {
+  readonly analysisProfile?: AnalysisProfile;
   readonly code: string;
   readonly title: string;
   readonly description: string;
@@ -154,6 +157,8 @@ export interface TimelineEntry {
 }
 
 interface ProjectRow extends QueryResultRow {
+  analysis_profile: AnalysisProfile;
+  analysis_continuation_session_id: string | null;
   id: string;
   workspace_id: string;
   code: string;
@@ -188,7 +193,7 @@ interface LinkRow extends QueryResultRow {
 }
 
 const projectColumns = `
-  id, workspace_id, code, title, description, initial_problem, output_language, status,
+  id, workspace_id, code, title, description, initial_problem, output_language, status,analysis_profile,analysis_continuation_session_id,
   previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id,
   approved_problem_version_id, version,
   ${isoColumn('deleted_at', 'deleted_at')},
@@ -334,8 +339,8 @@ export class ProjectsService {
         const result = await client.query<ProjectRow>(
           `with inserted as (
              insert into projects (
-               workspace_id, code, title, description, initial_problem, output_language, created_by
-             ) values ($1, $2, $3, $4, $5, $6, $7)
+               workspace_id, code, title, description, initial_problem, output_language, created_by,analysis_profile
+             ) values ($1, $2, $3, $4, $5, $6, $7,$8)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -347,6 +352,7 @@ export class ProjectsService {
             input.initialProblem,
             input.outputLanguage,
             context.actorId,
+            input.analysisProfile ?? 'full',
           ],
         );
         row = result.rows[0];
@@ -577,6 +583,65 @@ export class ProjectsService {
           version: updated.version,
           configSnapshotId: updated.config_snapshot_id,
           purgeAfter: updated.purge_after,
+        },
+      });
+      return this.read(client, context, projectId);
+    });
+  }
+
+  /** Continue the completed optional draft; old questions and documents retain their identities. */
+  async continueFullAnalysis(
+    context: WorkspaceRequestContext,
+    projectId: string,
+    input: ProjectCommandInput,
+  ) {
+    return this.database.run(context, async (client) => {
+      const current = await this.load(client, context, projectId, true);
+      this.assertVersion(current, input.expectedVersion);
+      if (current.analysis_profile !== 'quick' || current.status !== 'completed')
+        throw conflict(
+          'QUICK_DRAFT_CONTINUATION_UNAVAILABLE',
+          'Complete the quick draft workflow before continuing full analysis.',
+        );
+      if (!input.reason)
+        throw badRequest('PROJECT_REASON_REQUIRED', 'A reason is required to continue analysis.');
+      const prior = (
+        await client.query<{ id: string }>(
+          `select s.id from analysis_sessions s join stage_runs sr on sr.id=s.stage_run_id
+          join workflow_runs r on r.id=sr.run_id
+         where s.project_id=$1 and s.analysis_profile='quick' and r.status='completed'
+           and sr.status='completed' and sr.latest_output_id=$2
+         order by r.run_no desc limit 1`,
+          [projectId, current.approved_problem_version_id],
+        )
+      ).rows[0];
+      if (!prior)
+        throw conflict(
+          'QUICK_DRAFT_CONTINUATION_UNAVAILABLE',
+          'The approved quick analysis is unavailable.',
+        );
+      const snapshot = await this.configService.snapshot(client, context, 'project', projectId);
+      await client.query(
+        `update projects set analysis_profile='full',analysis_continuation_session_id=$2,
+         approved_problem_version_id=null,status='active',previous_status=null,current_stage='analysis',
+         pause_reason=null,config_snapshot_id=$3,version=version+1,updated_at=now() where id=$1`,
+        [projectId, prior.id, snapshot.id],
+      );
+      await writeAudit(client, context, {
+        action: 'analysis.full_continued',
+        targetType: 'project',
+        targetId: projectId,
+        projectId,
+        reason: input.reason,
+        before: {
+          analysisProfile: 'quick',
+          approvedProblemVersionId: current.approved_problem_version_id,
+        },
+        after: {
+          analysisProfile: 'full',
+          continuedFromSessionId: prior.id,
+          minimumQuestions: 30,
+          preservedQuestionIdentities: true,
         },
       });
       return this.read(client, context, projectId);
@@ -888,6 +953,7 @@ export class ProjectsService {
 
   private snapshot(row: ProjectRow): Record<string, unknown> {
     return {
+      analysisProfile: row.analysis_profile,
       code: row.code,
       title: row.title,
       description: row.description,
@@ -912,6 +978,7 @@ export class ProjectsService {
     business: ProjectBusiness | null,
   ): Project {
     return {
+      analysisProfile: row.analysis_profile,
       id: row.id,
       workspaceId: row.workspace_id,
       code: row.code,

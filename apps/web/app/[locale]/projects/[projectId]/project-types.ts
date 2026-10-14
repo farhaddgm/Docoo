@@ -6,6 +6,7 @@ export interface ProjectDetail {
   description: string;
   initialProblem: string;
   outputLanguage: 'fa' | 'en';
+  analysisProfile?: 'full' | 'quick';
   status: string;
   currentStage: string;
   pauseReason: string | null;

@@ -20,6 +20,7 @@ export interface ProjectValues {
   description: string;
   initialProblem: string;
   outputLanguage: 'fa' | 'en';
+  analysisProfile?: 'full' | 'quick';
   topics: TopicChoice[];
 }
 
@@ -43,6 +44,7 @@ export const emptyProject = (locale: Locale): ProjectValues => ({
   description: '',
   initialProblem: '',
   outputLanguage: locale,
+  analysisProfile: 'full',
   topics: [],
 });
 

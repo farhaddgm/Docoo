@@ -12,6 +12,7 @@ import { ProjectAccessBoundary, useReadOnlyAccess } from '../../resource-access'
 import { useSessionIdentity } from '../../signed-in';
 import { WorkspacePage } from '../../workspace-page';
 import { explainProject } from '../explain';
+import { quickDraftMessages } from '../quick-draft-messages';
 import { projectMessages } from '../messages';
 import { projectPageMessages } from './messages';
 import { healthMessages } from './health-messages';
@@ -165,6 +166,11 @@ function ProjectView({
         <h2 id="project-heading" dir="auto">
           <span dir="ltr">{project.code}</span> — {project.title}
         </h2>
+        {project.analysisProfile === 'quick' && (
+          <p className="notice" role="status">
+            {quickDraftMessages(locale).warning}
+          </p>
+        )}
         <dl className="facts">
           <div>
             <dt>{text.status}</dt>
@@ -362,8 +368,15 @@ function ProjectView({
 }
 
 /** Commands that need a reason, or a visible confirmation of their effect, before they run. */
-const reasonRequired = new Set(['pause', 'complete', 'reopen']);
-const needsConfirmation = new Set(['pause', 'complete', 'reopen', 'archive', 'delete']);
+const reasonRequired = new Set(['pause', 'complete', 'reopen', 'analysis/continue']);
+const needsConfirmation = new Set([
+  'pause',
+  'complete',
+  'reopen',
+  'archive',
+  'delete',
+  'analysis/continue',
+]);
 const destructive = new Set(['archive', 'delete']);
 
 function Lifecycle({
@@ -379,6 +392,8 @@ function Lifecycle({
 }) {
   const text = projectPageMessages(locale);
   const formText = projectMessages(locale);
+  const quick = quickDraftMessages(locale);
+  const labels: Record<string, string> = { ...text.commands, 'analysis/continue': quick.continue };
   const [pending, setPending] = useState<{ command: string; reason: string } | null>(null);
   const explain = useCallback((error: unknown) => explainProject(error, formText), [formText]);
   const { busy, notice, setNotice, run } = useAction(explain);
@@ -393,14 +408,17 @@ function Lifecycle({
       expectedVersion: project.version,
       ...(reason.trim() ? { reason: reason.trim() } : {}),
     };
-    void run(async () => {
-      const result =
-        command === 'delete'
-          ? await apiSend<{ project: ProjectDetail }>('DELETE', base, body)
-          : await apiSend<{ project: ProjectDetail }>('POST', `${base}/${command}`, body);
-      setPending(null);
-      onChanged(result.project);
-    }, text.done[command] ?? formText.saved);
+    void run(
+      async () => {
+        const result =
+          command === 'delete'
+            ? await apiSend<{ project: ProjectDetail }>('DELETE', base, body)
+            : await apiSend<{ project: ProjectDetail }>('POST', `${base}/${command}`, body);
+        setPending(null);
+        onChanged(result.project);
+      },
+      command === 'analysis/continue' ? quick.continued : (text.done[command] ?? formText.saved),
+    );
   }
 
   function choose(command: string) {
@@ -413,6 +431,8 @@ function Lifecycle({
   const commands = project.availableCommands.filter(
     (command) => command !== 'delete' || identity?.user.role === 'super_admin',
   );
+  if (project.analysisProfile === 'quick' && project.status === 'completed')
+    commands.unshift('analysis/continue');
   if (commands.length === 0) return <Notice notice={notice} />;
 
   return (
@@ -436,7 +456,7 @@ function Lifecycle({
             }
             onClick={() => choose(command)}
           >
-            {text.commands[command] ?? command}
+            {labels[command] ?? command}
           </button>
         ))}
       </div>
@@ -453,10 +473,14 @@ function Lifecycle({
         >
           <h3 id="command-title" tabIndex={-1} ref={heading}>
             {text.commandTitle
-              .replace('{command}', text.commands[pending.command] ?? pending.command)
+              .replace('{command}', labels[pending.command] ?? pending.command)
               .replace('{title}', project.title)}
           </h3>
-          <p>{text.effects[pending.command] ?? ''}</p>
+          <p>
+            {pending.command === 'analysis/continue'
+              ? quick.effect
+              : (text.effects[pending.command] ?? '')}
+          </p>
           <div className="filter-grid">
             <label htmlFor="command-reason">
               {reasonRequired.has(pending.command) ? text.reasonRequired : text.reasonOptional}

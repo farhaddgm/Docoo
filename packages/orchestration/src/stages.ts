@@ -228,6 +228,12 @@ export function scopeOutlineEvaluation(output: unknown): Record<string, unknown>
   return { ...output, evaluationScope: OUTLINE_EVALUATION_SCOPE };
 }
 
+export function scopeAnalysisDefinition(output: unknown, profile: 'full' | 'quick') {
+  if (!output || typeof output !== 'object' || Array.isArray(output))
+    throw new Error('Invalid analysis definition.');
+  return { ...output, analysisProfile: profile, incomplete: profile === 'quick' };
+}
+
 /**
  * Builds the provider request of one stage attempt. Content and instructions stay in
  * separate channels: project data is quoted as data, never as instructions.
@@ -248,6 +254,11 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
         ? [
             'The documentation_output artifact is an outline. Review its coverage, consistency, groundedness and planned safeguards against the approved upstream stages. Preserve concrete findings within that scope.',
             'Do not fail an outline merely because a completed document or executed pilot is not present. State final document evaluation and owner approval are pending; do not claim either. Actual document versions are evaluated separately against their pinned rubric.',
+          ]
+        : []),
+      ...(context.stage === 'analysis' && context.analysis?.profile === 'quick'
+        ? [
+            'This is an explicitly selected optional quick draft, less complete than full analysis. The complete-analysis minimum of30 is reserved for the full continuation. Preserve unresolved ambiguity and state that this draft does not complete full analysis.',
           ]
         : []),
       ...(context.business?.rules ?? []),

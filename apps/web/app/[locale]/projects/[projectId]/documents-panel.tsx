@@ -8,6 +8,7 @@ import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { DocumentContent, type DocContent } from './document-content';
 import { DocumentEditor } from './document-editor';
+import { quickDraftMessages } from '../quick-draft-messages';
 import { documentMessages } from './document-messages';
 import { DocumentWriter } from './document-writer';
 import { editorMessages } from './editor-messages';
@@ -18,6 +19,7 @@ interface DocumentSummary {
   title: string;
   level: number;
   language: 'fa' | 'en';
+  analysisProfile?: 'full' | 'quick';
   status: string;
   approvalKind: string | null;
   updatedAt: string;
@@ -161,6 +163,11 @@ export function DocumentsPanel({
                   <td>{formatNumber(locale, item.priority)}</td>
                   <th scope="row" dir="auto">
                     {item.title}
+                    {item.analysisProfile === 'quick' && (
+                      <span className="badge state-paused">
+                        {quickDraftMessages(locale).warning}
+                      </span>
+                    )}
                   </th>
                   <td>{formatNumber(locale, item.level)}</td>
                   <td>
@@ -328,6 +335,11 @@ function DocumentView({
         <h2 id="document-heading" dir="auto">
           {doc.title}
         </h2>
+        {doc.analysisProfile === 'quick' && (
+          <p className="notice" role="status">
+            {quickDraftMessages(locale).warning}
+          </p>
+        )}
         <dl className="facts">
           <div>
             <dt>{text.status}</dt>
@@ -543,6 +555,7 @@ function DocumentView({
           workspaceId={workspaceId}
           projectId={projectId}
           documentId={documentId}
+          quickDraft={doc.analysisProfile === 'quick'}
           level={doc.level}
           locked={['locked', 'superseded'].includes(status)}
           onLive={setLive}

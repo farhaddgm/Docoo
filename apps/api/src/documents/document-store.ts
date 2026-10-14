@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import {
   checkCompliance,
+  markQuickDraft,
   DEFAULT_LEVEL_BOUNDS,
   type Level,
   type LevelBounds,
@@ -49,6 +50,13 @@ export async function insertDocumentVersion(
   restoredFromId: string | null,
   reason: string | null,
 ): Promise<{ id: string; versionNo: number; withinBounds: boolean; count: number }> {
+  const profile = (
+    await client.query<{ analysis_profile: string }>(
+      'select analysis_profile from documents where id=$1',
+      [documentId],
+    )
+  ).rows[0]?.analysis_profile;
+  if (profile === 'quick') content = markQuickDraft(content);
   const compliance = checkCompliance(content, level, bounds);
   const json = canonicalJson(content);
   const row = (

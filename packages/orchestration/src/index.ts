@@ -3,6 +3,7 @@ export * from './agents.js';
 export * from './activities.js';
 export * from './analysis-activities.js';
 export * from './analysis.js';
+export * from './analysis-session.js';
 export * from './fake-analyst.js';
 export * from './fake-responders.js';
 export * from './knowledge-retrieval.js';

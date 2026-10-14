@@ -46,6 +46,7 @@ import { insertDocumentVersion, levelBoundsFrom, settingText } from './document-
 import { assertCurrentProblem, projectProblem } from './project-problem.js';
 
 interface DocumentRow extends QueryResultRow {
+  analysis_profile: 'full' | 'quick';
   id: string;
   project_id: string;
   solution_id: string | null;
@@ -81,7 +82,7 @@ interface VersionRow extends QueryResultRow {
   created_at: string;
 }
 
-const documentColumns = `id, project_id, solution_id, priority, title, level, language, status, current_version_id,
+const documentColumns = `id, project_id, solution_id, priority, title, level, language, status, current_version_id,analysis_profile,
   approved_version_id, approval_kind, ${isoColumn('locked_at', 'locked_at')}, version,
   ${isoColumn('created_at', 'created_at')}, ${isoColumn('updated_at', 'updated_at')}`;
 const versionColumns = `id, document_id, version_no, content, content_sha256, char_count, count_algorithm, level, bounds,
@@ -239,6 +240,8 @@ export class DocumentsService {
       if (document.status === 'locked')
         throw conflict('DOCUMENT_LOCKED', 'A locked document can only change through supersede.');
       const level = (input.level ?? document.level) as Level;
+      if (document.analysis_profile === 'quick' && level !== 1)
+        throw badRequest('QUICK_DRAFT_LEVEL', 'Quick drafts use document level 1.');
       if (input.level && input.level !== document.level)
         await client.query('update documents set level = $2 where id = $1', [
           documentId,
@@ -721,6 +724,8 @@ export class DocumentsService {
                 documentScope: {
                   artifact: 'selected-solution-document',
                   solutionId: prepared.document.solution_id,
+                  analysisProfile: prepared.document.analysis_profile,
+                  incomplete: prepared.document.analysis_profile === 'quick',
                 },
                 rubric: prepared.rubric.rubric.criteria,
                 document: prepared.version.content,
@@ -1150,6 +1155,7 @@ export class DocumentsService {
 
   private toDocument(row: DocumentRow) {
     return {
+      analysisProfile: row.analysis_profile,
       id: row.id,
       projectId: row.project_id,
       solutionId: row.solution_id,

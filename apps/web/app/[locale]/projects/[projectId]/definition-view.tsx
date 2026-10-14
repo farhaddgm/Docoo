@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { Locale } from '../../../i18n';
+import { quickDraftMessages } from '../quick-draft-messages';
 import { workflowMessages } from './workflow-messages';
 
 const asText = (value: unknown): string => (typeof value === 'string' ? value : '');
@@ -69,6 +70,11 @@ export function DefinitionView({
   const glossary = pairs(content['glossary']);
   return (
     <div className="output-view definition-view">
+      {content['analysisProfile'] === 'quick' && (
+        <p className="notice" role="status">
+          {quickDraftMessages(locale).warning}
+        </p>
+      )}
       <Block title={out.problemStatement}>
         <p dir="auto">{asText(content['problemStatement'])}</p>
       </Block>

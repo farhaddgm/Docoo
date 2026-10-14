@@ -2,6 +2,18 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.27.0] — 2026-10-13
+
+### Added
+
+- Optional quick draft with 12–15 questions and a level 1 document explicitly marked less complete than full analysis in the interface, document, exports and audit. Full analysis remains the default at 30–300 questions.
+- Continue a completed quick project into full analysis while preserving question and answer IDs, files and history. Existing quick documents retain their profile and warning, and the full problem definition requires a new approval.
+
+### Fixed
+
+- Preserve content before the first heading on the PPTX title slide, including the incomplete-draft warning.
+- Preserve writing-resume signals received while the pause activity completes; retain replay compatibility with existing Temporal histories.
+
 ## [0.26.2] — 2026-10-13
 
 ### Fixed
