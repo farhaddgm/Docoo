@@ -13,6 +13,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 - Preserve content before the first heading on the PPTX title slide, including the incomplete-draft warning.
 - Preserve writing-resume signals received while the pause activity completes; retain replay compatibility with existing Temporal histories.
+- Read workflow overviews from one database snapshot, keeping the run, stages and human tasks consistent during concurrent transitions. Preserve project-resume signals during a failure pause and replay compatibility with older histories.
 
 ## [0.26.2] — 2026-10-13
 

@@ -2,7 +2,9 @@ import { fileURLToPath } from 'node:url';
 import { unzipSync, strFromU8 } from 'fflate';
 
 import { Worker } from '@temporalio/worker';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ProviderError } from '@docoo/providers';
+import { Client } from 'pg';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { AnalysisDriver } from './support/analysis.js';
 import type { TemporalTestRuntime } from './support/harness.js';
@@ -149,6 +151,123 @@ describe.skipIf(!adminUrl || !temporalAddress)(
     afterAll(async () => {
       await h?.close();
     });
+
+    afterEach(() => {
+      temporal.fakeScript = () => null;
+      temporal.afterProjectBlocked = null;
+    });
+
+    it('WF-SNAPSHOT: a concurrent pause never mixes an old run with its new human task', async () => {
+      await temporal.stopWorker();
+      const observer = new Client({ connectionString: adminUrl });
+      await observer.connect();
+      let pending: ReturnType<Harness['request']> | null = null;
+      try {
+        const projectId = await project('snapshot');
+        const before = await overview(projectId);
+        await h.admin.query('begin');
+        await h.admin.query('lock table human_tasks in access exclusive mode');
+        pending = h.request('GET', api(`/projects/${projectId}/workflow`), { cookie });
+        await expect
+          .poll(
+            async () =>
+              (
+                await observer.query<{ count: number }>(
+                  `select count(*)::int as count from pg_stat_activity where wait_event_type='Lock'
+           and query like '%from human_tasks where project_id%'`,
+                )
+              ).rows[0]!.count,
+            { timeout: 10_000 },
+          )
+          .toBeGreaterThan(0);
+        await h.admin.query("update workflow_runs set status='paused' where id=$1", [
+          before.run!.id,
+        ]);
+        await h.admin.query(
+          `insert into human_tasks (workspace_id,project_id,kind,title,payload)
+          values ($1,$2,'provider_failure','Synthetic concurrent pause','{}')`,
+          [h.ids.workspaceA, projectId],
+        );
+        await h.admin.query('commit');
+        const response = await pending;
+        expect(response.statusCode, response.body).toBe(200);
+        const during = response.json<{ workflow: Overview }>().workflow;
+        expect(during.run?.status).toBe(before.run!.status);
+        expect(during.humanTasks).toEqual([]);
+        const after = await overview(projectId);
+        expect(after.run?.status).toBe('paused');
+        expect(after.humanTasks).toEqual([expect.objectContaining({ kind: 'provider_failure' })]);
+      } finally {
+        await h.admin.query('rollback');
+        await pending?.catch(() => undefined);
+        await observer.end();
+        await temporal.startWorker();
+      }
+    }, 30_000);
+
+    it('WF-EARLY-RESUME: a processed resume during the pause activity continues analysis and replays', async () => {
+      let projectId: string | null = null;
+      let held = false;
+      let release!: () => void;
+      const barrier = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      temporal.afterProjectBlocked = async (ref) => {
+        if (ref.projectId === projectId && !held) {
+          held = true;
+          await barrier;
+        }
+      };
+      temporal.fakeScript = () => {
+        throw new ProviderError('auth', 'fixture_key_invalid');
+      };
+      try {
+        projectId = await project('early-resume');
+        await expect.poll(() => held, { timeout: 15_000 }).toBe(true);
+        const paused = await projectStatus(projectId);
+        expect(paused.status).toBe('paused');
+        temporal.fakeScript = () => null;
+        const resumed = await h.request('POST', api(`/projects/${projectId}/resume`), {
+          cookie,
+          payload: { expectedVersion: paused.version },
+        });
+        expect(resumed.statusCode, resumed.body).toBe(200);
+        const run = (await overview(projectId)).run!;
+        const handle = temporal.client.workflow.getHandle(run.workflowId);
+        await expect
+          .poll(
+            async () => {
+              const events = (await handle.fetchHistory()).events ?? [];
+              const signal = events.find(
+                (event) => event.workflowExecutionSignaledEventAttributes?.signalName === 'resume',
+              );
+              return (
+                signal !== undefined &&
+                events.some(
+                  (event) =>
+                    event.workflowTaskCompletedEventAttributes !== undefined &&
+                    Number(event.eventId) > Number(signal.eventId),
+                )
+              );
+            },
+            { timeout: 15_000 },
+          )
+          .toBe(true);
+        release();
+        const after = await analysisGate(projectId);
+        expect(after.humanTasks.map((task) => task.kind)).toEqual(['gate_review']);
+        await expect(
+          Worker.runReplayHistory(
+            { workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')) },
+            await handle.fetchHistory(),
+            run.workflowId,
+          ),
+        ).resolves.toBeUndefined();
+      } finally {
+        release();
+        temporal.afterProjectBlocked = null;
+      }
+    }, 90_000);
 
     it('PRP-04: caps the incomplete draft and continues full analysis with the same answers and identities', async () => {
       const projectId = await project('quick-draft', undefined, 'quick');

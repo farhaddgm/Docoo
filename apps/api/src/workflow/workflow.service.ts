@@ -302,64 +302,68 @@ export class WorkflowService {
   // ------------------------------------------------------------------ reads
 
   async overview(context: WorkspaceRequestContext, projectId: string) {
-    return this.database.run(context, async (client) => {
-      const project = await client.query('select 1 from projects where id = $1', [projectId]);
-      if (!project.rowCount) throw notFound('PROJECT_NOT_FOUND', 'The project was not found.');
-      const runs = (
-        await client.query<RunRow>(
-          `select ${runColumns} from workflow_runs where project_id = $1 order by run_no desc`,
-          [projectId],
-        )
-      ).rows;
-      const current = runs[0] ?? null;
-      const stages = current
-        ? (
-            await client.query<StageRow>(
-              `select ${stageColumns} from stage_runs where run_id = $1 order by sequence`,
-              [current.id],
-            )
-          ).rows
-        : [];
-      const gates = current
-        ? (
-            await client.query<{ stage_run_id: string; output_id: string; status: string }>(
-              `select stage_run_id, output_id, status from gate_decisions
-                where status = 'pending' and stage_run_id in (select id from stage_runs where run_id = $1)`,
-              [current.id],
-            )
-          ).rows
-        : [];
-      const tasks = (
-        await client.query<Record<string, unknown>>(
-          `select id, stage_run_id as "stageRunId", kind, title, payload, ${isoColumn('created_at', '"createdAt"')}
-             from human_tasks where project_id = $1 and status = 'pending' order by created_at`,
-          [projectId],
-        )
-      ).rows;
-      return {
-        run: current ? this.toRun(current) : null,
-        previousRuns: runs.slice(1).map((run) => this.toRun(run)),
-        stages: STAGES.map((stage, index) => {
-          const row = stages.find((item) => item.stage === stage);
-          return row
-            ? {
-                ...this.toStage(row),
-                pendingGateOutputId:
-                  gates.find((gate) => gate.stage_run_id === row.id)?.output_id ?? null,
-              }
-            : { stage, sequence: index + 1, status: 'pending', id: null };
-        }),
-        humanTasks: tasks,
-        agentQuestions: (
-          await client.query<Record<string, unknown>>(
-            `select id, stage_run_id as "stageRunId", role::text as role, question, reason, status, answer,
-                    ${isoColumn('created_at', '"createdAt"')}, ${isoColumn('answered_at', '"answeredAt"')}
-               from agent_questions where project_id = $1 order by created_at desc, id desc limit 30`,
+    return this.database.run(
+      context,
+      async (client) => {
+        const project = await client.query('select 1 from projects where id = $1', [projectId]);
+        if (!project.rowCount) throw notFound('PROJECT_NOT_FOUND', 'The project was not found.');
+        const runs = (
+          await client.query<RunRow>(
+            `select ${runColumns} from workflow_runs where project_id = $1 order by run_no desc`,
             [projectId],
           )
-        ).rows,
-      };
-    });
+        ).rows;
+        const current = runs[0] ?? null;
+        const stages = current
+          ? (
+              await client.query<StageRow>(
+                `select ${stageColumns} from stage_runs where run_id = $1 order by sequence`,
+                [current.id],
+              )
+            ).rows
+          : [];
+        const gates = current
+          ? (
+              await client.query<{ stage_run_id: string; output_id: string; status: string }>(
+                `select stage_run_id, output_id, status from gate_decisions
+                where status = 'pending' and stage_run_id in (select id from stage_runs where run_id = $1)`,
+                [current.id],
+              )
+            ).rows
+          : [];
+        const tasks = (
+          await client.query<Record<string, unknown>>(
+            `select id, stage_run_id as "stageRunId", kind, title, payload, ${isoColumn('created_at', '"createdAt"')}
+             from human_tasks where project_id = $1 and status = 'pending' order by created_at`,
+            [projectId],
+          )
+        ).rows;
+        return {
+          run: current ? this.toRun(current) : null,
+          previousRuns: runs.slice(1).map((run) => this.toRun(run)),
+          stages: STAGES.map((stage, index) => {
+            const row = stages.find((item) => item.stage === stage);
+            return row
+              ? {
+                  ...this.toStage(row),
+                  pendingGateOutputId:
+                    gates.find((gate) => gate.stage_run_id === row.id)?.output_id ?? null,
+                }
+              : { stage, sequence: index + 1, status: 'pending', id: null };
+          }),
+          humanTasks: tasks,
+          agentQuestions: (
+            await client.query<Record<string, unknown>>(
+              `select id, stage_run_id as "stageRunId", role::text as role, question, reason, status, answer,
+                    ${isoColumn('created_at', '"createdAt"')}, ${isoColumn('answered_at', '"answeredAt"')}
+               from agent_questions where project_id = $1 order by created_at desc, id desc limit 30`,
+              [projectId],
+            )
+          ).rows,
+        };
+      },
+      { snapshot: true },
+    );
   }
 
   async stage(context: WorkspaceRequestContext, projectId: string, stageRunId: string) {

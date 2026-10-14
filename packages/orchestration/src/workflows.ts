@@ -75,6 +75,7 @@ const activities = proxyActivities<OrchestrationActivities>({
  */
 export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed' | 'cancelled' }> {
   let paused = false;
+  const preserveEarlyResume = patched('project-block-resume-boundary-v1');
   let cancelled: { reason: string | null } | null = null;
   let gate: GateSignal | null = null;
   let decision: AttemptDecisionSignal | null = null;
@@ -133,6 +134,18 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
     return cancelled === null;
   };
 
+  const blockRun = async (
+    input: RunRef & { stageRunId: string; code: string; reason: string },
+  ): Promise<void> => {
+    // The administrator can resume after the pause commit but before this activity returns.
+    // Histories recorded before the patch keep their original command sequence.
+    if (preserveEarlyResume) paused = true;
+    await activities.blockRun(input);
+    if (!preserveEarlyResume) paused = true;
+    else if (!paused && cancelled === null)
+      await activities.setRunStatus({ ...ref, status: 'running' });
+  };
+
   /**
    * The analyst's question-and-answer phase (ANL-*): rounds of questions, each followed by the
    * administrator's answers, until the analyst can define the problem. Returns false when the
@@ -162,13 +175,12 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
           retryNo += 1;
           await sleep(result.delaySeconds * 1000);
         } else if (result.status === 'blocked') {
-          await activities.blockRun({
+          await blockRun({
             ...ref,
             stageRunId: stageRef.stageRunId,
             code: result.code,
             reason: result.reason,
           });
-          paused = true;
           retryNo = 0;
         } else {
           attachmentPolls += 1;
@@ -243,13 +255,12 @@ export async function projectWorkflow(ref: RunRef): Promise<{ status: 'completed
           } else {
             // Retries exhausted, permanent error, missing configuration or cost ceiling:
             // pause the project and wait for the administrator. Fallback stays off.
-            await activities.blockRun({
+            await blockRun({
               ...ref,
               stageRunId: stageStart.stageRunId,
               code: result.code,
               reason: result.reason,
             });
-            paused = true;
             if (!(await whileActive())) return cancel();
             retryNo = 0;
           }
