@@ -2,9 +2,9 @@
 doc_id: DOCOO-DEPLOYMENT-OPERATIONS
 title: استقرار، انتقال‌پذیری و عملیات
 status: proposed
-version: 1.0.0
+version: 1.1.0
 owner: Platform & Operations
-last_updated: 2026-09-24
+last_updated: 2026-10-14
 notion_sync: true
 ---
 
@@ -109,3 +109,9 @@ Rollback application تنها اگر schema backward-compatible است. migratio
 ## ۱۲. patch و dependency
 
 هفته‌ای dependency scan، ماهانه maintenance window و emergency process برای critical CVE. base image حداقل، non-root و read-only filesystem در حد امکان.
+
+## Correlated production diagnostics (PRP-12)
+
+`DOCOO_OBSERVABILITY=1` selects the versioned private compose override. Collector and Tempo share only the backend network, publish no host port and run read-only with dropped capabilities. API and both workers send metadata-only spans to the internal Collector. The trace volume retains24hours; the existing backup and recovery procedures remain authoritative for project data.
+
+The installed tracing images must pass the release security gate. The current-server path imports the exact scanned CI image archives with source/run/image identity and SHA256 checks, then scans their actual installed identities. Each update retains the setting; a failed first enablement restores the previous compose selection and private configuration. A trace acceptance record identifies the originating browser request UUID, workflow/run/attempt IDs and actual configured-provider invocation. It must contain no prompts, problem content, keys or exception text. See ADR0030. Issue148 remains open until the signed release and real production trace are verified.

@@ -6,7 +6,12 @@ import {
   trace,
 } from '@opentelemetry/api';
 
-import { currentCorrelation, withCorrelation, type CorrelationInput } from './correlation.js';
+import {
+  currentCorrelation,
+  correlationFields,
+  withCorrelation,
+  type CorrelationInput,
+} from './correlation.js';
 
 /** Only identifiers cross the durable workflow boundary, never baggage or request bodies. */
 export interface WorkflowCorrelation {
@@ -17,6 +22,13 @@ export interface WorkflowCorrelation {
 export function activeTraceCorrelation(): CorrelationInput {
   const span = trace.getSpan(context.active())?.spanContext();
   return span && isSpanContextValid(span) ? { traceId: span.traceId, spanId: span.spanId } : {};
+}
+
+export function annotateActiveSpan(fields: CorrelationInput): void {
+  const span = trace.getSpan(context.active());
+  if (!span) return;
+  for (const [key, value] of Object.entries(correlationFields(fields)))
+    if (value !== null) span.setAttribute(`docoo.${key}`, value);
 }
 
 export function captureWorkflowCorrelation(requestId: string): WorkflowCorrelation {

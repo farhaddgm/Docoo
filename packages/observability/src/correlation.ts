@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const uuidPattern = new RegExp(`^${uuid}$`, 'u');
 const workflowPattern = new RegExp(
-  `^(?:project-${uuid}-run-[1-9][0-9]{0,8}|document-writing-${uuid}|decision-research-${uuid})$`,
+  `^(?:project-${uuid}-run-[1-9][0-9]{0,8}|document-writing-${uuid}|decision-research-${uuid}|ingest-${uuid})$`,
   'u',
 );
 
@@ -12,6 +12,7 @@ export const correlationKeys = [
   'projectId',
   'workflowId',
   'runId',
+  'temporalRunId',
   'stageRunId',
   'attemptId',
   'requestId',
@@ -72,6 +73,7 @@ export type CorrelationEvent =
   | 'worker.stopping'
   | 'worker.failed'
   | 'worker.secret_key.missing'
+  | 'worker.scanner.missing'
   | 'worker.sdk';
 
 /** A whitelist, rather than redaction, keeps prompts, exceptions and secret-shaped metadata out. */
@@ -88,7 +90,7 @@ export function correlationRecord(
   if (['debug', 'info', 'warn', 'error'].includes(details['logLevel'] as string))
     record['level'] = details['logLevel'];
   for (const [key, values] of Object.entries({
-    service: ['api', 'worker-agent', 'provider-runtime'],
+    service: ['api', 'worker-agent', 'worker-ingestion', 'provider-runtime'],
     provider: ['openai', 'anthropic', 'google', 'gemini', 'openrouter', 'fake'],
     outcome: ['succeeded', 'failed', 'cancelled'],
     method: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],

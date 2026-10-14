@@ -4,6 +4,7 @@ import type { FastifyRequest } from 'fastify';
 import { Observable } from 'rxjs';
 import {
   activeTraceCorrelation,
+  annotateActiveSpan,
   withCorrelation,
   type CorrelationInput,
 } from '@docoo/observability';
@@ -29,7 +30,10 @@ export class RequestCorrelationInterceptor implements NestInterceptor {
   intercept(execution: ExecutionContext, next: CallHandler): Observable<unknown> {
     const ids = requestCorrelation(execution.switchToHttp().getRequest<FastifyRequest>());
     return new Observable((subscriber) =>
-      withCorrelation(ids, () => next.handle().subscribe(subscriber)),
+      withCorrelation(ids, () => {
+        annotateActiveSpan(ids);
+        return next.handle().subscribe(subscriber);
+      }),
     );
   }
 }

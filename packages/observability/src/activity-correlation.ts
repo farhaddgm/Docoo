@@ -1,8 +1,12 @@
-import { Context } from '@temporalio/activity';
-import { correlatedSpan, logCorrelation, type WorkflowCorrelation } from '@docoo/observability';
+import { correlatedSpan, type WorkflowCorrelation } from './correlated-span.js';
+import { logCorrelation } from './correlation.js';
 
-/** Wrap activities, outside deterministic workflow code; old histories need no new argument. */
-export function correlatedActivities<T extends object>(activities: T): T {
+/** Instrument activities rather than deterministic workflow code; existing histories stay compatible. */
+export function correlatedActivities<T extends object>(
+  activities: T,
+  metadata: () => { workflowId?: string | undefined; temporalRunId?: string | undefined },
+  service: 'worker-agent' | 'worker-ingestion',
+): T {
   return Object.fromEntries(
     Object.entries(activities).map(([name, handler]) => [
       name,
@@ -11,7 +15,6 @@ export function correlatedActivities<T extends object>(activities: T): T {
           string,
           unknown
         >;
-        const info = Context.current().info;
         const carrier = ref['correlation'] as WorkflowCorrelation | undefined;
         return correlatedSpan(
           'workflow.activity',
@@ -20,22 +23,23 @@ export function correlatedActivities<T extends object>(activities: T): T {
             projectId: ref['projectId'],
             runId: ref['runId'],
             stageRunId: ref['stageRunId'],
-            workflowId: info.workflowExecution?.workflowId,
+            requestId: ref['correlationId'],
+            ...metadata(),
           },
           async () => {
             const started = performance.now();
-            logCorrelation('workflow.activity.started', { service: 'worker-agent' });
+            logCorrelation('workflow.activity.started', { service });
             try {
               const result = await (handler as (...values: unknown[]) => Promise<unknown>)(...args);
               logCorrelation('workflow.activity.completed', {
-                service: 'worker-agent',
+                service,
                 outcome: 'succeeded',
                 durationMs: performance.now() - started,
               });
               return result;
             } catch (error) {
               logCorrelation('workflow.activity.failed', {
-                service: 'worker-agent',
+                service,
                 outcome: 'failed',
                 durationMs: performance.now() - started,
               });
@@ -47,4 +51,16 @@ export function correlatedActivities<T extends object>(activities: T): T {
       },
     ]),
   ) as T;
+}
+
+export function correlatedWorkerLogger(service: 'worker-agent' | 'worker-ingestion') {
+  const write = (logLevel: string): void => logCorrelation('worker.sdk', { service, logLevel });
+  return {
+    log: (level: string): void => write(level === 'TRACE' ? 'debug' : level.toLowerCase()),
+    trace: (): void => write('debug'),
+    debug: (): void => write('debug'),
+    info: (): void => write('info'),
+    warn: (): void => write('warn'),
+    error: (): void => write('error'),
+  };
 }

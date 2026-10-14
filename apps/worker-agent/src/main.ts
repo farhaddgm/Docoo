@@ -1,6 +1,13 @@
 import { fileURLToPath } from 'node:url';
 
-import { startTelemetry, logCorrelation, type CorrelationEvent } from '@docoo/observability';
+import {
+  startTelemetry,
+  logCorrelation,
+  correlatedActivities,
+  correlatedWorkerLogger,
+  type CorrelationEvent,
+} from '@docoo/observability';
+import { Context } from '@temporalio/activity';
 import {
   AGENT_TASK_QUEUE,
   createOrchestrationActivities,
@@ -10,7 +17,6 @@ import {
 import { masterKeyFromEnv } from '@docoo/providers';
 import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { Pool } from 'pg';
-import { correlatedActivities } from './correlated-activities.js';
 
 function log(_level: 'info' | 'error', event: CorrelationEvent): void {
   logCorrelation(event, { service: 'worker-agent' });
@@ -39,18 +45,7 @@ async function main(): Promise<void> {
   // are scraped by Prometheus from this address; names match infra/prometheus/rules.
   const metricsAddress = process.env['TEMPORAL_METRICS_ADDRESS'];
   Runtime.install({
-    logger: {
-      log: (level) =>
-        logCorrelation('worker.sdk', {
-          service: 'worker-agent',
-          logLevel: level === 'TRACE' ? 'debug' : level.toLowerCase(),
-        }),
-      trace: () => logCorrelation('worker.sdk', { service: 'worker-agent', logLevel: 'debug' }),
-      debug: () => logCorrelation('worker.sdk', { service: 'worker-agent', logLevel: 'debug' }),
-      info: () => logCorrelation('worker.sdk', { service: 'worker-agent' }),
-      warn: () => logCorrelation('worker.sdk', { service: 'worker-agent', logLevel: 'warn' }),
-      error: () => logCorrelation('worker.sdk', { service: 'worker-agent', logLevel: 'error' }),
-    },
+    logger: correlatedWorkerLogger('worker-agent'),
     ...(metricsAddress
       ? {
           telemetryOptions: {
@@ -75,10 +70,20 @@ async function main(): Promise<void> {
     maxConcurrentActivityTaskExecutions: Number(process.env['AGENT_CONCURRENCY'] ?? 4),
     taskQueue: AGENT_TASK_QUEUE,
     workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
-    activities: correlatedActivities({
-      ...createOrchestrationActivities(pool, new ProviderRuntime(pool, masterKey)),
-      ...createDecisionResearchActivities(pool),
-    }),
+    activities: correlatedActivities(
+      {
+        ...createOrchestrationActivities(pool, new ProviderRuntime(pool, masterKey)),
+        ...createDecisionResearchActivities(pool),
+      },
+      () => {
+        const info = Context.current().info;
+        return {
+          workflowId: info.workflowExecution?.workflowId,
+          temporalRunId: info.workflowExecution?.runId,
+        };
+      },
+      'worker-agent',
+    ),
   });
   log('info', 'worker.ready');
   const stop = (): void => {

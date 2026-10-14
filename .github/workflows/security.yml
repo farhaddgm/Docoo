@@ -182,3 +182,56 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
+
+  observability-image:
+    name: observability-image (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [otel-collector, tempo]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build the patched tracing binary and image
+        run: |
+          docker build -f infra/docker/Dockerfile.${{ matrix.name }} \
+            --build-arg SOURCE_REVISION=${{ github.sha }} -t docoo-${{ matrix.name }}:ci .
+      - name: Validate Collector configuration
+        if: matrix.name == 'otel-collector'
+        run: |
+          docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges:true \
+            -v "$PWD/infra/otel/collector.production.yaml:/config.yaml:ro" \
+            docoo-otel-collector:ci validate --config=/config.yaml
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.75.0
+          scan-type: image
+          image-ref: docoo-${{ matrix.name }}:ci
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Export the exact scanned image with provenance
+        env:
+          TRACE_IMAGE: docoo-${{ matrix.name }}:ci
+          TRACE_SOURCE: ${{ github.sha }}
+          TRACE_RUN: ${{ github.run_id }}
+        run: |
+          mkdir -p trace-image
+          docker save "$TRACE_IMAGE" > trace-image/image.tar
+          python3 - <<'PYTHON'
+          import hashlib,json,os,pathlib,subprocess
+          p=pathlib.Path('trace-image')
+          digest=hashlib.sha256()
+          with (p/'image.tar').open('rb') as source:
+              for chunk in iter(lambda:source.read(1024*1024),b''):digest.update(chunk)
+          image=json.loads(subprocess.check_output(['docker','image','inspect',os.environ['TRACE_IMAGE']]))[0]
+          (p/'provenance.json').write_text(json.dumps({'sourceCommit':os.environ['TRACE_SOURCE'],'workflowRunId':int(os.environ['TRACE_RUN']),'image':os.environ['TRACE_IMAGE'],'imageId':image['Id'],'labels':image['Config']['Labels'],'imageTarSha256':digest.hexdigest()},indent=2)+'\n')
+          PYTHON
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: observability-image-${{ matrix.name }}-${{ github.sha }}
+          path: trace-image
+          compression-level: 0
+          retention-days: 14

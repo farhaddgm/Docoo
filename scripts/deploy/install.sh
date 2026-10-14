@@ -87,6 +87,15 @@ use_edge() { # Record the edge mode and switch compose to the edge override.
   compose+=(-f "$deploy/compose.edge.yaml")
 }
 
+use_observability() {
+  local enabled=${DOCOO_OBSERVABILITY:-$(env_value DOCOO_OBSERVABILITY)} file="$deploy/compose.observability.yaml" item
+  case "${enabled:-0}" in 0) return 0 ;; 1) ;; *) return 1 ;; esac
+  [ -f "$file" ] || return 1
+  set_env DOCOO_OBSERVABILITY 1 || return
+  for item in "${compose[@]}"; do [ "$item" = "$file" ] && return 0; done
+  compose+=(-f "$file")
+}
+
 # Joins the existing Caddy to the docoo network and adds one site block for the two host names
 # to its Caddyfile (a backup is kept next to it); the block is validated before the reload.
 attach_edge() {
@@ -242,6 +251,12 @@ start() {
     --mount type=volume,source=docoo_object-data,target=/objects \
     --entrypoint sh "docoo-temporal:${DOCOO_VERSION:-local}" \
     -c 'chown -R 1000:1000 /temporal /caddy-data /caddy-config /objects && chown -R 100:101 /clamav' || return
+  if [ "${DOCOO_OBSERVABILITY:-$(env_value DOCOO_OBSERVABILITY)}" = 1 ]; then
+    docker run --rm --network none --user 0 --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE \
+      --mount type=volume,source=docoo_trace-data,target=/traces \
+      --entrypoint sh "docoo-temporal:${DOCOO_VERSION:-local}" \
+      -c 'chown -R 1000:1000 /traces' || return
+  fi
   if [ -n "${DOCOO_UPDATE_BACKUP_DIR:-}" ]; then touch "$DOCOO_UPDATE_BACKUP_DIR/up-attempted" || return; fi
   "${compose[@]}" up -d || return
   wait_healthy && return
@@ -354,6 +369,7 @@ apply_update() {
   sed -i "s/^DOCOO_VERSION=.*/DOCOO_VERSION=${latest:-local}/" "$deploy/.env" || return
   set -a; . "$deploy/.env"; set +a
   use_edge || return
+  use_observability || return
   start || return
   attach_edge || return
 }
@@ -504,7 +520,11 @@ rollback() { # rollback VERSION
   set_env DOCOO_VERSION "$previous" || return
   set -a; . "$deploy/.env"; set +a
   detect_edge || return
+  # Drop overrides from the failed release and re-read the restored private settings.
+  compose=(docker compose --project-directory "$deploy" -f "$deploy/compose.production.yaml")
+  DOCOO_OBSERVABILITY=$(env_value DOCOO_OBSERVABILITY)
   use_edge || return
+  use_observability || return
   # A retained rollback image needs no compilation (important after a low-disk failure).
   "${compose[@]}" up -d --no-build && wait_healthy
 }
@@ -560,6 +580,7 @@ install_main() {
   configure
   set -a; . "$deploy/.env"; set +a
   use_edge
+  use_observability
   open_firewall
   start
   attach_edge

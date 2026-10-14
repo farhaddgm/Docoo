@@ -1,0 +1,58 @@
+# Added only when DOCOO_OBSERVABILITY=1. Trace/query/metrics ports stay on the backend network.
+services:
+  api:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  worker-agent:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  worker-ingestion:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  otel-collector:
+    image: docoo-otel-collector:${DOCOO_VERSION:-local}
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.otel-collector
+      args:
+        SOURCE_REVISION: ${DOCOO_SOURCE_REVISION:-}
+    command: ['--config=/etc/otel/config.yaml']
+    restart: unless-stopped
+    user: '1000:1000'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 256m
+    cpus: 0.5
+    tmpfs: ['/tmp:rw,nosuid,nodev,size=16m,mode=1777']
+    networks: [backend]
+    volumes: ['../infra/otel/collector.production.yaml:/etc/otel/config.yaml:ro']
+    depends_on: [tempo]
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: '3' }
+  tempo:
+    image: docoo-tempo:${DOCOO_VERSION:-local}
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.tempo
+      args:
+        SOURCE_REVISION: ${DOCOO_SOURCE_REVISION:-}
+    command: ['-config.file=/etc/tempo/config.yaml']
+    restart: unless-stopped
+    user: '1000:1000'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 512m
+    cpus: 0.5
+    tmpfs: ['/tmp:rw,nosuid,nodev,size=32m,mode=1777']
+    networks: [backend]
+    volumes:
+      - '../infra/tempo/tempo.production.yaml:/etc/tempo/config.yaml:ro'
+      - trace-data:/var/tempo
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: '3' }
+volumes:
+  trace-data:

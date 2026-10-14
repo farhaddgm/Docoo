@@ -2,6 +2,10 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## 0.27.3 — 2026-10-14
+
+API, worker and provider execution now share validated request and workflow identifiers. Trace export removes URLs, SQL, exception content and arbitrary resource metadata before sending spans. An optional private Collector/Tempo deployment supports production tracing; its patched images are built and scanned in CI with exact archive provenance. Owner review and model quality gates remain unchanged.
+
 ## [0.27.2] — 2026-10-14
 
 ### Fixed

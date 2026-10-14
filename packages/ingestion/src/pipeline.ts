@@ -27,6 +27,7 @@ export interface IngestionInput {
   readonly workspaceId: string;
   readonly versionId: string;
   readonly correlationId: string;
+  readonly correlation?: { readonly requestId: string; readonly traceparent?: string };
   readonly maxBytes: number;
   readonly language: 'fa' | 'en' | null;
   readonly urlPolicy?: { readonly policy: UrlPolicy; readonly allowlist: readonly string[] };
