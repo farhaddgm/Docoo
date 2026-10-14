@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "76a7282ed05ec1fd2bf24ed873a11babe8b0daf3"
+    "source_commit": "92956c9c9c85a53ddde45035e1aff9f38d7c4cf5"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-14T11:47:56.222Z",
+    "synced_at": "2026-10-14T15:26:21.384Z",
     "created": 0,
-    "updated": 2,
-    "unchanged": 72,
+    "updated": 1,
+    "unchanged": 73,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -414,16 +414,16 @@
     "DOCOO-DEPLOYMENT-OPERATIONS": {
       "path": "docs/06-delivery/02-deployment-and-operations.md",
       "section": "06 Delivery & Operations",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "proposed",
       "owner": "Platform & Operations",
-      "checksum_sha256": "bb2d0b6b1afec11039587a1da516c6a073d011097aa33a81ac7d8c7b3ec8c4ea",
+      "checksum_sha256": "8fbf9d09de477fccb2de9e1af5e8db7518e27cd7012e14f79790be7f18085504",
       "notion_page_id": "3e55a24a-6668-817f-ab8a-e70fa8bc7ba6",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668817fab8ae70fa8bc7ba6?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81bf-8aae-e3508baabf76",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881bf8aaee3508baabf76",
-      "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
-      "synced_at": "2026-10-01T16:08:48.251Z"
+      "synced_commit": "92956c9c9c85a53ddde45035e1aff9f38d7c4cf5",
+      "synced_at": "2026-10-14T15:26:21.384Z"
     },
     "DOCOO-OBSERVABILITY-SRE": {
       "path": "docs/06-delivery/03-observability-and-sre.md",
