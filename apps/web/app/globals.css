@@ -737,6 +737,13 @@ button:disabled {
   gap: var(--space-4);
 }
 
+.wizard-fields {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;

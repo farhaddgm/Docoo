@@ -318,7 +318,12 @@ export function ProjectWizard({
   const stepName = text.steps[step]!;
   const keys = STEP_KEYS[step];
   return (
-    <div className="stack">
+    <fieldset
+      className="stack wizard-fields"
+      disabled={!ready}
+      aria-busy={!ready}
+      aria-label={project.newTitle}
+    >
       <nav aria-label={text.stepsLabel}>
         <ol className="plain-list toolbar">
           {text.steps.map((name, index) => (
@@ -531,7 +536,7 @@ export function ProjectWizard({
           </button>
         )}
       </div>
-    </div>
+    </fieldset>
   );
 }
 
