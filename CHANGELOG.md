@@ -6,6 +6,8 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 API, worker and provider execution now share validated request and workflow identifiers. Trace export removes URLs, SQL, exception content and arbitrary resource metadata before sending spans. An optional private Collector/Tempo deployment supports production tracing; its patched images are built and scanned in CI with exact archive provenance. Owner review and model quality gates remain unchanged.
 
+Project creation accepts input after the wizard's client handlers and saved draft are ready, preserving the first field entered during a fast or slow-loading navigation. Switching workspace mounts a separate wizard and restores only that workspace's draft.
+
 ## [0.27.2] — 2026-10-14
 
 ### Fixed

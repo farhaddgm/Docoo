@@ -39,6 +39,7 @@ function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: stri
         <Link href={`/${locale}/projects` as Route}>{text.backToList}</Link>
       </p>
       <ProjectWizard
+        key={workspaceId}
         locale={locale}
         workspaceId={workspaceId}
         onCreated={(projectId) => router.push(`/${locale}/projects/${projectId}` as Route)}
