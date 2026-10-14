@@ -17,7 +17,16 @@ export async function expectNoSeriousA11yViolations(page: Page) {
   const serious = results.violations.filter((violation) =>
     ['serious', 'critical'].includes(violation.impact ?? ''),
   );
-  expect(serious.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
+  expect(
+    serious.map((violation) => ({
+      rule: violation.id,
+      help: violation.help,
+      nodes: violation.nodes.map((node) => ({
+        target: node.target,
+        failure: node.failureSummary,
+      })),
+    })),
+  ).toEqual([]);
 }
 
 /** Signs in on the Persian sign-in page with the keyboard only. */

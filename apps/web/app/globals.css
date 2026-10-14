@@ -1018,9 +1018,8 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition:
-    background-color var(--transition),
-    border-color var(--transition);
+  /* Text changes with aria-current; keep its background in the same paint. */
+  transition: border-color var(--transition);
 }
 
 .section-nav button:hover {
