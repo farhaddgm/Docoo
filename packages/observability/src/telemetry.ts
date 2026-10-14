@@ -19,7 +19,13 @@ export interface TelemetryOptions {
  * Fastify, pg or http, which is why services load an `--import` entry (instrumentation.ts).
  */
 export function registerInstrumentationHook(): void {
-  register('@opentelemetry/instrumentation/hook.mjs', import.meta.url);
+  // Loading application modules through import-in-the-middle can evaluate a local
+  // dependency token both with and without its loader query, producing distinct
+  // Symbols and breaking Nest injection. Only transport libraries need ESM patches;
+  // application/workflow/provider spans are explicit and retain their module identity.
+  register('@opentelemetry/instrumentation/hook.mjs', import.meta.url, {
+    data: { include: ['http', 'https', 'fastify', 'pg', 'pg-pool', 'undici'] },
+  });
 }
 
 export function startTelemetry(options: TelemetryOptions): NodeSDK | undefined {
