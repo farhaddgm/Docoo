@@ -1,6 +1,7 @@
 // Scripted penetration test of the authentication path (SEC-002), run against a started API
 // with its production middleware (helmet, CORS, rate limits). Exits non-zero on any finding.
 import assert from 'node:assert/strict';
+import { tamperSessionToken } from './auth-probe-tokens.mjs';
 
 const api = (process.env.DAST_API_URL ?? 'http://127.0.0.1:4000').replace(/\/$/u, '');
 const origin = process.env.WEB_ORIGIN ?? 'http://localhost:3000';
@@ -98,7 +99,7 @@ await check('session fixation: a planted cookie is never adopted', async () => {
 
 await check('tampered and truncated session tokens are rejected', async () => {
   const [name, value] = session.split('=');
-  const flipped = `${name}=${value.slice(0, -2)}${value.endsWith('A') ? 'B' : 'A'}${value.slice(-1)}`;
+  const flipped = `${name}=${tamperSessionToken(value)}`;
   assert.equal((await call('/v1/me', { cookie: flipped })).status, 401);
   assert.equal((await call('/v1/me', { cookie: `${name}=${value.slice(0, 10)}` })).status, 401);
   assert.equal((await call('/v1/me', { cookie: session })).status, 200);
