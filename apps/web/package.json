@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint app e2e/*.ts next.config.ts playwright.config.ts proxy.ts --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:cross-browser": "playwright test --project=firefox --project=webkit",
     "test": "vitest run --exclude 'e2e/**' --exclude '.next/**'",
     "test:coverage": "vitest run --coverage --exclude 'e2e/**' --exclude '.next/**'"
   },

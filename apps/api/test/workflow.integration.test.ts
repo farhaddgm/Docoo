@@ -458,14 +458,36 @@ describe.skipIf(!adminUrl || !temporalAddress)(
         payload: { expectedVersion: p.version, reason: 'Denied other tenant.' },
       });
       expect(denied.statusCode).toBe(404);
-      const continued = await h.request('POST', api(`/projects/${projectId}/analysis/continue`), {
-        cookie,
-        payload: {
-          expectedVersion: p.version,
-          reason: 'Continue full analysis; retain previous answers.',
-        },
+      let held = false;
+      let release!: () => void;
+      const blocked = new Promise<void>((resolve) => {
+        release = resolve;
       });
-      expect(continued.statusCode, continued.body).toBe(201);
+      temporal.beforeAnalysisRound = async (ref) => {
+        if (ref.projectId !== projectId) return;
+        held = true;
+        await blocked;
+      };
+      try {
+        const continued = await h.request('POST', api(`/projects/${projectId}/analysis/continue`), {
+          cookie,
+          payload: {
+            expectedVersion: p.version,
+            reason: 'Continue full analysis; retain previous answers.',
+          },
+        });
+        expect(continued.statusCode, continued.body).toBe(201);
+        await expect.poll(() => held, { timeout: 5000 }).toBe(true);
+        const whileStarting = (await analysis.batches(projectId)).flatMap((b) => b.questions);
+        for (const q of preserved)
+          expect(whileStarting.find((x) => x.id === q.id)).toMatchObject(q);
+        const starting = await analysis.overview(projectId);
+        expect(starting.limits.minimum).toBe(30);
+        expect(starting.progress.asked).toBe(preserved.length);
+      } finally {
+        temporal.beforeAnalysisRound = null;
+        release();
+      }
       await analysis.waitFor(projectId, (s) => s.phase === 'answering', 'new full questions');
       const full = await analysis.overview(projectId);
       expect(full.limits).toEqual({ minimum: 30, maximum: 300, batchSize: 40 });
