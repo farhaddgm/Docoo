@@ -3,15 +3,21 @@ import 'reflect-metadata';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { HttpException, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { parseEnvironment } from '@docoo/config';
+import type { IncomingMessage } from 'node:http';
+import { correlationRecord, logCorrelation, withCorrelation } from '@docoo/observability';
 
 import { AppModule } from './app.module.js';
+import {
+  requestCorrelation,
+  RequestCorrelationInterceptor,
+  validatedRequestId,
+} from './common/request-correlation.js';
 
 const localEnv = new URL('../../../.env', import.meta.url);
 if (existsSync(localEnv)) process.loadEnvFile(localEnv);
@@ -22,12 +28,19 @@ const adapter = new FastifyAdapter({
   // Behind the TLS proxy, trust exactly that many hops of X-Forwarded-For so rate limits see
   // the real client; with 0 (default) the header is ignored and cannot be spoofed.
   trustProxy: (_address: string, hop: number) => hop < config.TRUST_PROXY_HOPS,
+  disableRequestLogging: true,
   logger: {
     level: config.LOG_LEVEL,
+    hooks: {
+      logMethod(_args, method) {
+        const record = correlationRecord('api.runtime', { service: 'api' });
+        delete record['level'];
+        method.call(this, record, 'api.runtime');
+      },
+    },
     serializers: {
       req: (request: { method: string; url: string; id: string }) => ({
         method: request.method,
-        url: request.url.split('?')[0] ?? '/',
         id: request.id,
       }),
     },
@@ -44,13 +57,44 @@ const adapter = new FastifyAdapter({
       censor: '[REDACTED]',
     },
   },
-  requestIdHeader: 'x-request-id',
-  genReqId: () => randomUUID(),
+  requestIdHeader: false,
+  genReqId: (request: IncomingMessage) => {
+    return validatedRequestId(request.headers['x-request-id']);
+  },
 });
 
 const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, {
   bufferLogs: true,
 });
+app.useLogger({
+  log: () => logCorrelation('api.lifecycle', { service: 'api' }),
+  error: () => logCorrelation('api.lifecycle.failed', { service: 'api' }),
+  warn: () => logCorrelation('api.lifecycle', { service: 'api', logLevel: 'warn' }),
+  debug: () => logCorrelation('api.lifecycle', { service: 'api', logLevel: 'debug' }),
+  verbose: () => logCorrelation('api.lifecycle', { service: 'api', logLevel: 'debug' }),
+});
+app.useGlobalInterceptors(new RequestCorrelationInterceptor());
+app
+  .getHttpAdapter()
+  .getInstance()
+  .addHook('onRequest', (request, reply, done) => {
+    reply.header('x-request-id', request.id);
+    done();
+  });
+app
+  .getHttpAdapter()
+  .getInstance()
+  .addHook('onResponse', (request, reply, done) => {
+    withCorrelation(requestCorrelation(request), () =>
+      logCorrelation('api.request.completed', {
+        service: 'api',
+        method: request.method,
+        httpStatus: reply.statusCode,
+        durationMs: reply.elapsedTime,
+      }),
+    );
+    done();
+  });
 
 await app.register(cookie, { secret: config.SESSION_PEPPER });
 await app.register(

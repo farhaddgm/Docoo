@@ -15,6 +15,7 @@ import {
   type ProviderKind,
 } from '@docoo/providers';
 import type { Pool, PoolClient } from 'pg';
+import { correlatedSpan, logCorrelation } from '@docoo/observability';
 
 import { inWorkspace } from './db.js';
 import { fakeResponder, fakeToolResponder } from './fake-responders.js';
@@ -134,6 +135,46 @@ export class ProviderRuntime {
   }
 
   async invoke(
+    scope: InvocationScope,
+    connectionId: string,
+    request: NormalizedModelRequest,
+  ): Promise<{ response: NormalizedModelResponse; invocationId: string; costUsd: number | null }> {
+    return correlatedSpan(
+      'provider.invoke',
+      {
+        tenantId: scope.workspaceId,
+        projectId: scope.projectId,
+        stageRunId: scope.stageRunId,
+        attemptId: scope.attemptId,
+      },
+      async () => {
+        const started = performance.now();
+        logCorrelation('provider.invoke.started', {
+          service: 'provider-runtime',
+          retryNo: scope.retryNo,
+        });
+        try {
+          const result = await this.invokeRecorded(scope, connectionId, request);
+          logCorrelation('provider.invoke.completed', {
+            service: 'provider-runtime',
+            invocationId: result.invocationId,
+            outcome: 'succeeded',
+            durationMs: performance.now() - started,
+          });
+          return result;
+        } catch (error) {
+          logCorrelation('provider.invoke.failed', {
+            service: 'provider-runtime',
+            outcome: 'failed',
+            durationMs: performance.now() - started,
+          });
+          throw error;
+        }
+      },
+    );
+  }
+
+  private async invokeRecorded(
     scope: InvocationScope,
     connectionId: string,
     request: NormalizedModelRequest,

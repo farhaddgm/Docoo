@@ -9,7 +9,14 @@ import {
   TesseractOcr,
   transcriberFromEnv,
 } from '@docoo/ingestion';
-import { startTelemetry } from '@docoo/observability';
+import {
+  startTelemetry,
+  logCorrelation,
+  correlatedActivities,
+  correlatedWorkerLogger,
+  type CorrelationEvent,
+} from '@docoo/observability';
+import { Context } from '@temporalio/activity';
 import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { Pool } from 'pg';
 
@@ -17,10 +24,8 @@ import { createActivities } from './activities.js';
 
 export const TASK_QUEUE = 'docoo.ingestion';
 
-function log(level: 'info' | 'error', event: string, fields: Record<string, unknown> = {}): void {
-  process.stdout.write(
-    `${JSON.stringify({ level, event, worker: 'docoo-worker-ingestion', timestamp: new Date().toISOString(), ...fields })}\n`,
-  );
+function log(level: 'info' | 'error', event: CorrelationEvent): void {
+  logCorrelation(event, { service: 'worker-ingestion', logLevel: level });
 }
 
 async function main(): Promise<void> {
@@ -35,9 +40,7 @@ async function main(): Promise<void> {
   const s3 = s3ConfigFromEnv();
   if (!databaseUrl || !s3) throw new Error('DATABASE_URL and S3_* settings are required.');
   if (!process.env['CLAMD_HOST']) {
-    log('error', 'ingestion.scanner.missing', {
-      detail: 'CLAMD_HOST is not set; every file stays quarantined.',
-    });
+    log('error', 'worker.scanner.missing');
   }
 
   const pool = new Pool({ connectionString: databaseUrl, max: 8 });
@@ -55,20 +58,24 @@ async function main(): Promise<void> {
   // Workflow and queue SLIs (SRE-001): schedule-to-start latency, failures and completions
   // are scraped by Prometheus from this address; names match infra/prometheus/rules.
   const metricsAddress = process.env['TEMPORAL_METRICS_ADDRESS'];
-  if (metricsAddress) {
-    Runtime.install({
-      telemetryOptions: {
-        metrics: {
-          prometheus: {
-            bindAddress: metricsAddress,
-            countersTotalSuffix: true,
-            unitSuffix: true,
-            useSecondsForDurations: true,
-          },
-        },
-      },
-    });
-  }
+  Runtime.install({
+    logger: correlatedWorkerLogger('worker-ingestion'),
+    telemetryOptions: {
+      logging: { forward: {} },
+      ...(metricsAddress
+        ? {
+            metrics: {
+              prometheus: {
+                bindAddress: metricsAddress,
+                countersTotalSuffix: true,
+                unitSuffix: true,
+                useSecondsForDurations: true,
+              },
+            },
+          }
+        : {}),
+    },
+  });
   const connection = await NativeConnection.connect({
     address: process.env['TEMPORAL_ADDRESS'] ?? 'localhost:7233',
   });
@@ -77,10 +84,20 @@ async function main(): Promise<void> {
     namespace: process.env['TEMPORAL_NAMESPACE'] ?? 'default',
     taskQueue: TASK_QUEUE,
     workflowsPath: fileURLToPath(new URL('./workflows.js', import.meta.url)),
-    activities,
+    activities: correlatedActivities(
+      activities,
+      () => {
+        const info = Context.current().info;
+        return {
+          workflowId: info.workflowExecution?.workflowId,
+          temporalRunId: info.workflowExecution?.runId,
+        };
+      },
+      'worker-ingestion',
+    ),
     maxConcurrentActivityTaskExecutions: Number(process.env['INGESTION_CONCURRENCY'] ?? 4),
   });
-  log('info', 'worker.ready', { taskQueue: TASK_QUEUE });
+  log('info', 'worker.ready');
 
   const stop = (): void => {
     log('info', 'worker.stopping');
@@ -97,9 +114,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  log('error', 'worker.failed', {
-    message: error instanceof Error ? error.message : String(error),
-  });
+main().catch(() => {
+  log('error', 'worker.failed');
   process.exitCode = 1;
 });

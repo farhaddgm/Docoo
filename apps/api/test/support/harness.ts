@@ -4,6 +4,7 @@ import { hash } from '@node-rs/argon2';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import { randomBytes, randomUUID } from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
 import { HttpException } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
@@ -48,6 +49,8 @@ import {
   WorkflowExecutionAlreadyStartedError,
 } from '@temporalio/client';
 import { NativeConnection, Worker } from '@temporalio/worker';
+import { Context } from '@temporalio/activity';
+import { correlatedActivities } from '@docoo/observability';
 import { fileURLToPath } from 'node:url';
 
 import { AppModule } from '../../src/app.module.js';
@@ -57,6 +60,7 @@ import {
 } from '../../src/notifications/notification-mailer.js';
 import {
   WORKFLOW_ENGINE,
+  correlateWorkflowRef,
   type WorkflowEngine,
   type WorkflowSignal,
 } from '../../src/workflow/workflow.engine.js';
@@ -73,6 +77,10 @@ import {
 import { PROVIDER_RUNTIME } from '../../src/providers/providers.service.js';
 import { INGESTION_DISPATCHER, OBJECT_STORE } from '../../src/sources/ingestion.providers.js';
 import { DATABASE_POOL } from '../../src/tokens.js';
+import {
+  RequestCorrelationInterceptor,
+  validatedRequestId,
+} from '../../src/common/request-correlation.js';
 
 export const adminUrl = process.env['DATABASE_TEST_ADMIN_URL'];
 export const webOrigin = 'http://localhost:3000';
@@ -195,7 +203,10 @@ export class TemporalTestRuntime implements WorkflowEngine {
       ) => Promise<void>)
     | null = null;
 
-  constructor(private readonly pool: Pool) {
+  constructor(
+    private readonly pool: Pool,
+    private readonly correlation = false,
+  ) {
     // The same analyst, researcher and judge the stack uses for provider kind `fake`; tests may script their own.
     this.fake.responder = fakeResponder;
     this.fake.toolResponder = fakeToolResponder;
@@ -218,26 +229,39 @@ export class TemporalTestRuntime implements WorkflowEngine {
       kind === 'fake' ? this.fake : createAdapter(kind, options),
     );
     const activities = createOrchestrationActivities(this.pool, runtime, { delayScale: 0.002 });
+    const handlers = {
+      ...activities,
+      runAnalysisRound: async (ref: Parameters<typeof activities.runAnalysisRound>[0]) => {
+        await this.beforeAnalysisRound?.(ref);
+        return activities.runAnalysisRound(ref);
+      },
+      blockRun: async (ref: Parameters<typeof activities.blockRun>[0]) => {
+        await activities.blockRun(ref);
+        await this.afterProjectBlocked?.(ref);
+      },
+      writingBlock: async (ref: Parameters<typeof activities.writingBlock>[0]) => {
+        await activities.writingBlock(ref);
+        await this.afterWritingBlocked?.(ref);
+      },
+      ...createDecisionResearchActivities(this.pool),
+    };
     this.worker = await Worker.create({
       connection: this.native,
       taskQueue: this.taskQueue,
       workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
-      activities: {
-        ...activities,
-        runAnalysisRound: async (ref: Parameters<typeof activities.runAnalysisRound>[0]) => {
-          await this.beforeAnalysisRound?.(ref);
-          return activities.runAnalysisRound(ref);
-        },
-        blockRun: async (ref: Parameters<typeof activities.blockRun>[0]) => {
-          await activities.blockRun(ref);
-          await this.afterProjectBlocked?.(ref);
-        },
-        writingBlock: async (ref: Parameters<typeof activities.writingBlock>[0]) => {
-          await activities.writingBlock(ref);
-          await this.afterWritingBlocked?.(ref);
-        },
-        ...createDecisionResearchActivities(this.pool),
-      },
+      activities: this.correlation
+        ? correlatedActivities(
+            handlers,
+            () => {
+              const info = Context.current().info;
+              return {
+                workflowId: info.workflowExecution?.workflowId,
+                temporalRunId: info.workflowExecution?.runId,
+              };
+            },
+            'worker-agent',
+          )
+        : handlers,
     });
     this.running = this.worker.run();
   }
@@ -258,7 +282,7 @@ export class TemporalTestRuntime implements WorkflowEngine {
       await this.client.workflow.start('projectWorkflow', {
         taskQueue: this.taskQueue,
         workflowId,
-        args: [ref],
+        args: [this.correlation ? correlateWorkflowRef(ref) : ref],
       });
     } catch (error) {
       if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
@@ -271,7 +295,7 @@ export class TemporalTestRuntime implements WorkflowEngine {
       await this.client.workflow.start('documentWritingWorkflow', {
         taskQueue: this.taskQueue,
         workflowId,
-        args: [ref],
+        args: [this.correlation ? correlateWorkflowRef(ref) : ref],
       });
     } catch (error) {
       if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
@@ -284,7 +308,7 @@ export class TemporalTestRuntime implements WorkflowEngine {
       await this.client.workflow.start('decisionResearchWorkflow', {
         taskQueue: this.taskQueue,
         workflowId,
-        args: [ref],
+        args: [this.correlation ? correlateWorkflowRef(ref) : ref],
       });
     } catch (error) {
       if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
@@ -375,7 +399,7 @@ export interface Harness {
  */
 export async function createHarness(
   name: string,
-  options: { workflow?: boolean } = {},
+  options: { workflow?: boolean; correlation?: boolean } = {},
 ): Promise<Harness> {
   const parsed = new URL(adminUrl!);
   if (!['postgres:', 'postgresql:'].includes(parsed.protocol) || parsed.pathname !== '/docoo_ci') {
@@ -451,7 +475,7 @@ export async function createHarness(
   const ingestion = new InlineIngestion(runtimePool, objects);
   let engine: RecordingEngine | TemporalTestRuntime;
   if (options.workflow) {
-    const temporal = new TemporalTestRuntime(runtimePool);
+    const temporal = new TemporalTestRuntime(runtimePool, options.correlation);
     await temporal.connect();
     engine = temporal;
   } else {
@@ -485,9 +509,25 @@ export async function createHarness(
     .overrideProvider(NOTIFICATION_MAIL_TRANSPORT)
     .useValue(mailbox)
     .compile();
-  const app = module.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
+  const adapter = new FastifyAdapter(
+    options.correlation
+      ? {
+          requestIdHeader: false,
+          genReqId: (request: IncomingMessage) =>
+            validatedRequestId(request.headers['x-request-id']),
+        }
+      : {},
+  );
+  const app = module.createNestApplication<NestFastifyApplication>(adapter, {
     logger: false,
   });
+  if (options.correlation) {
+    app.useGlobalInterceptors(new RequestCorrelationInterceptor());
+    adapter.getInstance().addHook('onRequest', (request, reply, done) => {
+      reply.header('x-request-id', request.id);
+      done();
+    });
+  }
   await app.register(cookie, { secret: testPepper });
   await app.register(rateLimit, {
     max: 1000,

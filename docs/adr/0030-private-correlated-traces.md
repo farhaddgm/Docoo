@@ -1,0 +1,21 @@
+# ADR-0030 — Correlated logs and private trace export
+
+Status: accepted implementation decision; production acceptance remains tracked by #148.
+
+Authenticated API requests inherit only the authorized workspace and validated resource identifiers. The browser sends a fresh UUID for each logical request and retains it for a read retry. An observable interceptor establishes asynchronous correlation before controller work; the API echoes the validated request ID. Workflow start arguments carry only that ID and an optional bounded W3C trace parent. Existing workflow histories retain their original argument shapes; instrumentation wraps activities rather than deterministic workflow commands.
+
+Every first-party API/worker/provider log record has nullable tenant, project, workflow, domain run, Temporal run, stage, attempt, request, trace and span IDs. Startup and work without a particular entity keep that field null. Switching tenant clears inherited identifiers. Payloads, exception messages, arbitrary SDK metadata, prompt text and keys are excluded by a whitelist. SDK severities and LOG_LEVEL remain effective.
+
+Provider invocation records, usage, pricing, error classification and retry semantics remain unchanged. Provider spans and activity spans share the originating HTTP trace. Ingestion carries the same request correlation; its workers use the same scoped adapter and metadata-only logger.
+
+Automatic instrumentation may collect URLs, SQL, exception events, process resources or vendor trace state. A final exporter projection removes those fields before any trace leaves the process. It retains validated IDs, HTTP method/status, fixed span names, timestamps, status codes and bounded service/version metadata. Metrics retain their existing pipeline. SDK tests inspect real exported spans and failure paths with canary content.
+
+Production tracing is opt-in through DOCOO_OBSERVABILITY=1. The tracked compose override adds only private backend Collector/Tempo services and sets the endpoint for API and both workers. No query, ingestion or metrics port is published. The trace volume retains metadata for24hours; it is diagnostic storage, not project backup. Tempo2.10.8 uses the established single-server architecture; Tempo3 requires an additional Kafka-compatible queue.
+
+The previously pinned development images have fixable HIGH/CRITICAL findings. Tracing images are therefore rebuilt in CI with pinned Go1.27.2, bounded upstream components/source checksums and patched vulnerable dependencies. Security jobs scan the actual images before exporting image archives with exact source/run/image identity and SHA256 provenance. Current-server installation imports those verified CI archives and performs fresh identity scans; it does not run the Go build on the server. A signed main release and successful production trace are required before #148 closes.
+
+Validation covers asynchronous tenant isolation, original handler/result/error identity, deferred API subscriptions, browser retry identity, SDK severity, exporter privacy, optional compose selection and rollback after first enablement. Production acceptance must retain the existing owner-review document/gate and prove one actual UI→HTTP→activity→configured-provider trace without model/prompt/secret content.
+
+The connected regression executes authorized API activation, the production carrier helper, real Temporal serialization and activity execution, and recorded fake-provider invocations. It verifies one trace and its parent chain, all JSON log fields and absent synthetic problem/prompt/secret canaries. Its HTTP root span is supplied by the fixture; it is not evidence of a production browser run. Native Temporal logs explicitly forward through the same private logger instead of bypassing it to the console.
+
+Sources: [OpenTelemetry Collector Builder](https://opentelemetry.io/docs/collector/extend/ocb/), [upstream component manifest0.162.0](https://github.com/open-telemetry/opentelemetry-collector-releases/blob/v0.162.0/distributions/otelcol/manifest.yaml), [Tempo deployment](https://grafana.com/docs/tempo/latest/set-up-for-tracing/setup-tempo/deploy/), [Tempo2.10 configuration](https://grafana.com/docs/tempo/v2.10.x/configuration/).

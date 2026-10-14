@@ -27,6 +27,11 @@ describe('api client', () => {
       await vi.runAllTimersAsync();
       expect(await read).toEqual({ ok: true });
       expect(fetchMock).toHaveBeenCalledTimes(2);
+      const headers = fetchMock.mock.calls.map(
+        (call) => (call[1] as RequestInit).headers as Record<string, string>,
+      );
+      expect(headers[0]!['x-request-id']).toMatch(/^[0-9a-f-]{36}$/u);
+      expect(headers[1]!['x-request-id']).toBe(headers[0]!['x-request-id']);
     }
   });
 

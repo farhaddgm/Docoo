@@ -7,6 +7,7 @@ import {
   type ObjectStore,
 } from '@docoo/ingestion';
 import { Client, Connection, WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
+import { captureWorkflowCorrelation } from '@docoo/observability';
 
 import { API_CONFIG } from '../tokens.js';
 
@@ -59,7 +60,7 @@ export class TemporalIngestionDispatcher implements IngestionDispatcher, OnModul
       await client.workflow.start('ingestSourceVersion', {
         taskQueue: INGESTION_TASK_QUEUE,
         workflowId: `ingest-${input.versionId}`,
-        args: [input],
+        args: [{ ...input, correlation: captureWorkflowCorrelation(input.correlationId) }],
       });
     } catch (error) {
       // A running or finished workflow for this version already owns it.
