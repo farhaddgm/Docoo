@@ -2,9 +2,9 @@
 doc_id: DOCOO-DOCUMENT-PIPELINE
 title: خط لوله ورود و تولید اسناد
 status: proposed
-version: 1.0.0
+version: 1.1.0
 owner: Document Platform
-last_updated: 2026-09-24
+last_updated: 2026-10-14
 notion_sync: true
 ---
 
@@ -105,7 +105,7 @@ PPTX فقط خلاصهٔ مدیریتی final solution است، نه کپی تم
 9. KPI؛
 10. تصمیم/اقدام بعدی.
 
-تعداد slide با level و template قابل‌تنظیم. overflow text باید validation failure باشد.
+تعداد slide با level و template قابل‌تنظیم. `pptx-summary-v3` جمله یا آیتم بلند را برای نمایش، در مرز واژه با «…» کوتاه می‌کند؛ اصل کامل گزیده‌های کوتاه‌شده، شروط مصوب و انتساب منابع در یادداشت بومی اسلاید اول باقی می‌مانند و راهنما روی اسلاید عنوان دیده می‌شود. عنوان بلند یا متن بدون مرز واژه که در سقف تعیین‌شده جا نشود، همچنان validation failure است. دادهٔ کامل سند و حدهای شمارش نگارش تغییر نمی‌کنند.
 
 ## ۹. جدول و نمودار
 

@@ -3,7 +3,7 @@ import { strToU8, zipSync } from 'fflate';
 import type { RenderMeta } from './docx.js';
 import { walkBlocks, type Block, type StructuredDocument } from './model.js';
 
-export const PPTX_TEMPLATE_VERSION = 'pptx-summary-v2';
+export const PPTX_TEMPLATE_VERSION = 'pptx-summary-v3';
 const FIXED_DATE = new Date('2020-01-01T00:00:00Z');
 const MAX_BULLETS = 6;
 const MAX_BULLET_CHARS = 220;
@@ -53,6 +53,14 @@ function blockBullets(block: Block): string[] {
   }
 }
 
+/** A visible excerpt; its original text is retained in decisionNotes. Unbreakable text fails. */
+function summaryBullet(text: string): string {
+  if (text.length <= MAX_BULLET_CHARS) return text;
+  const prefix = text.slice(0, MAX_BULLET_CHARS - 1);
+  const boundary = /^(.*)\s+\S*$/su.exec(prefix)?.[1]?.trimEnd();
+  return boundary ? `${boundary}…` : text;
+}
+
 /** Slide count by level: a management summary, not a copy of the document (§8). */
 export function slideLimit(level: number): number {
   return level <= 1 ? 5 : level === 2 ? 7 : 10;
@@ -70,7 +78,11 @@ export function planSlides(document: StructuredDocument, level: number): Slide[]
     } else {
       const target = current ?? titleSlide;
       if (target.bullets.length < MAX_BULLETS)
-        target.bullets.push(...blockBullets(block).slice(0, MAX_BULLETS - target.bullets.length));
+        target.bullets.push(
+          ...blockBullets(block)
+            .slice(0, MAX_BULLETS - target.bullets.length)
+            .map(summaryBullet),
+        );
     }
   }
   if (current) slides.push(current);
@@ -121,18 +133,26 @@ function shape(
 /** Full decision conditions and source identity remain accessible in native speaker notes. */
 function decisionNotes(document: StructuredDocument): string[] {
   const notes: string[] = [];
+  const excerpts: string[] = [];
   for (const block of walkBlocks(document.blocks)) {
     if (block.type === 'list' && block.id === 'approved-decision-condition-list')
       notes.push(
         document.language === 'fa' ? 'شروط مصوب تصمیم' : 'Approved decision conditions',
         ...block.items,
       );
+    if (block.id !== 'approved-decision-condition-list')
+      excerpts.push(...blockBullets(block).filter((text) => summaryBullet(text) !== text));
     if (block.type === 'bibliography' && block.entries.length > 0)
       notes.push(
         document.language === 'fa' ? 'منابع' : 'References',
         ...block.entries.map((entry) => `${entry.text}${entry.url ? ` ${entry.url}` : ''}`),
       );
   }
+  if (excerpts.length > 0)
+    notes.push(
+      document.language === 'fa' ? 'متن کامل گزیده‌های اسلاید' : 'Full text of slide excerpts',
+      ...excerpts,
+    );
   return notes;
 }
 
@@ -238,8 +258,8 @@ export function renderPptx(
             400000,
             [
               rtl
-                ? 'متن کامل شروط و منابع در یادداشت‌های اسلاید اول است.'
-                : 'Full conditions and references are in the first slide’s notes.',
+                ? 'متن کامل شروط، منابع و گزیده‌های اسلاید در یادداشت‌های اسلاید اول است.'
+                : 'Full conditions, references and slide excerpts are in the first slide’s notes.',
             ],
             rtl,
             1400,

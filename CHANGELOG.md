@@ -2,6 +2,15 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.27.2] — 2026-10-14
+
+### Fixed
+
+- Keep tab foreground and background changes together to preserve contrast in WebKit. Run the complete Firefox and WebKit acceptance suites in isolated parallel CI jobs alongside Chromium.
+- Keep the original quick-analysis answers, file identities and progress visible while a continued full-analysis session initializes; full analysis still requires at least30 questions.
+- Ensure every authentication tampering probe actually changes the token, with a deterministic regression covering all1024 canonical32-byte token endings.
+- Export valid real-provider documents whose summary sentences or list items exceed a slide's bullet limit. PPTX uses visibly abbreviated excerpts at word boundaries and retains their unabridged original text in native notes, alongside complete approved conditions and source identity. Slide, title and unbreakable-text overflow checks remain enforced; template version is `pptx-summary-v3`.
+
 ## [0.27.1] — 2026-10-14
 
 ### Fixed

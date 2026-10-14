@@ -268,6 +268,37 @@ describe('renderers and artifacts (DOC-103)', () => {
     expect(strFromU8(files['[Content_Types].xml']!)).toContain('notesSlide+xml');
   });
 
+  it('exports word-boundary slide excerpts while preserving the original long text in native notes', () => {
+    const sentence =
+      'The transfer to a café is a tentative hypothesis that requires local validation, ' +
+      'with the same survey eligibility, baseline and endpoint windows, privacy rules and ' +
+      'aggregate denominator; no causal lift is established by this source and proposed ' +
+      'costs and all combined staff time must remain within the approved pilot limits.';
+    const item = 'Track all planning, training, survey handling and evaluation. '.repeat(6).trim();
+    const document: StructuredDocument = {
+      title: 'Synthetic real-provider regression',
+      language: 'en',
+      blocks: [
+        { type: 'heading', id: 'assumptions', level: 1, text: 'Assumptions' },
+        { type: 'paragraph', id: 'assumptions-1', runs: [{ text: sentence }] },
+        { type: 'heading', id: 'plan', level: 1, text: 'Implementation plan' },
+        { type: 'list', id: 'plan-1', ordered: false, items: [item] },
+      ],
+    };
+    const result = renderPptx(document, 3, meta);
+    for (const slide of result.slides)
+      for (const bullet of slide.bullets) {
+        expect(bullet.length).toBeLessThanOrEqual(220);
+        expect(bullet.endsWith('…')).toBe(true);
+      }
+    const files = unzipSync(result.bytes);
+    const notes = strFromU8(files['ppt/notesSlides/notesSlide1.xml']!);
+    expect(notes).toContain(sentence);
+    expect(notes).toContain(item);
+    expect(strFromU8(files['ppt/slides/slide1.xml']!)).toContain('first slide’s notes');
+    expect(renderPptx(document, 3, meta).bytes).toEqual(result.bytes);
+  });
+
   it('signs artifacts and detects tampering', async () => {
     const artifact = await renderArtifact('docx', persian, 2, meta);
     expect(artifact.manifest).toMatchObject({
