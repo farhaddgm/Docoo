@@ -188,6 +188,7 @@ export class TemporalTestRuntime implements WorkflowEngine {
   fakeScript: FakeScript = () => null;
   readonly fake = new FakeAdapter((request, call) => this.fakeScript(request, call));
   afterWritingBlocked: ((ref: WritingRef) => Promise<void>) | null = null;
+  afterProjectBlocked: ((ref: RunRef) => Promise<void>) | null = null;
 
   constructor(private readonly pool: Pool) {
     // The same analyst, researcher and judge the stack uses for provider kind `fake`; tests may script their own.
@@ -218,6 +219,10 @@ export class TemporalTestRuntime implements WorkflowEngine {
       workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
       activities: {
         ...activities,
+        blockRun: async (ref: Parameters<typeof activities.blockRun>[0]) => {
+          await activities.blockRun(ref);
+          await this.afterProjectBlocked?.(ref);
+        },
         writingBlock: async (ref: Parameters<typeof activities.writingBlock>[0]) => {
           await activities.writingBlock(ref);
           await this.afterWritingBlocked?.(ref);
