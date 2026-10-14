@@ -2,9 +2,9 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.9.0
+version: 1.10.0
 owner: API Architecture
-last_updated: 2026-10-06
+last_updated: 2026-10-14
 notion_sync: true
 ---
 
@@ -142,6 +142,8 @@ notion_sync: true
 - هر فهرست دانش، ادعا و منبع cursor بسته به فیلترهایش دارد؛ cursor یک فیلتر با فیلتر دیگر `400 *_CURSOR_INVALID` می‌گیرد.
 - `POST /knowledge/retrieve` — بازیابی ترکیبی lexical (FTS) و vector (`hash-ngram-v1`، pgvector) فقط روی دانش approved، جاری، معتبر و داخل scope/نقش؛ هر نتیجه `conflictWarnings` دارد و کل پاسخ در `retrieval_snapshots` با hash ثابت pin می‌شود. `GET /retrieval-snapshots/{id}` همان نتیجه را برمی‌گرداند.
 
+`provenance.sourceCitation` در ساخت/نسخهٔ دانش اختیاری است: `{title, url, author?, publisher?, publishedAt?}`. عنوان و URL لازم‌اند؛ URL HTTP(S) بدون credential است. داده از نسخهٔ ثابت دانش به snapshot و کتاب‌نامه منتقل و به‌عنوان انتساب اعلام‌شده نمایش داده می‌شود؛ شاهد واکشی یا تأیید اصل وب نیست.
+
 ## ۹. راه‌حل و ارزیابی (پیاده‌شده در 0.6.0)
 
 - `GET /solution-criteria/defaults` (`workspace.read`): معیارهای پیش‌فرضی که پروژهٔ تازه با آن‌ها شروع می‌کند (برای wizard)؛ `GET|PUT /projects/{id}/solution-criteria`: معیارهای نسخه‌دار؛ وزن معیارهای فعال باید ۱۰۰ شود (`SOLUTION_CRITERIA_INVALID`).
@@ -154,6 +156,8 @@ notion_sync: true
 - `PATCH /evaluation-findings/{id}` با `{targetStage, reason}`.
 
 ## ۱۰. سند (پیاده‌شده در 0.6.0)
+
+- نگارش `writing-v2` شروط و نسخهٔ تعریف مصوب را pin و متن شروط را در سند و خروجی‌ها حفظ می‌کند. اگر گنجایش سطح کافی نباشد، `POST .../writings` پیش از شروع نگارش 422 `DOCUMENT_LEVEL_TOO_SHORT` با `conditionsLetters`، `minimumLetters`، `suggestedLevel` (nullable) و `continueFullAnalysis` می‌دهد. مسیر سریع سطح بلندتر انتخاب نمی‌کند؛ باید تحلیل کامل ادامه یابد. `report.decisionConditions` شامل `approvedProblemVersionId` و `count` است. قالب‌ها و rubric تغییر نمی‌کنند؛ [ADR-0029](../adr/0029-approved-decision-conditions.md).
 
 - `GET /projects/{id}/documents`؛ `GET /documents/{id}` با `ETag` و `defaultExportFormat` (از `document.default_export_format`؛ همهٔ قالب‌ها مجازند، فقط اولی پیشنهاد می‌شود).
 - `PUT /documents/{id}/content` با `If-Match` و `{content, reason, level?}`؛ ساختار نامعتبر 422 `DOCUMENT_INVALID` با `problems`، سند locked 409 `DOCUMENT_LOCKED`.

@@ -1,6 +1,7 @@
 import { normalizeForSearch } from '@docoo/knowledge';
 
 import type { RetrievedPassage } from './knowledge-retrieval.js';
+import type { SourceCitation } from './source-citation.js';
 
 /**
  * Pure rules of the research stage with approved knowledge (ADR-0017): which queries the
@@ -91,6 +92,7 @@ export interface KnowledgePassage {
   readonly versionId: string;
   readonly versionNo: number;
   readonly title: string;
+  readonly sourceCitation?: SourceCitation;
   readonly confidentiality: string;
   /** The text shown to the model; quotes are checked against exactly this. */
   readonly text: string;
@@ -157,6 +159,7 @@ function toKnowledgePassage(
     versionId: passage.versionId,
     versionNo: passage.versionNo,
     title: passage.title,
+    ...(passage.sourceCitation ? { sourceCitation: passage.sourceCitation } : {}),
     confidentiality: passage.confidentiality,
     text: clip(passage.text, RESEARCH_LIMITS.maxPassageChars),
     approval: passage.effectiveDecision === 'approved_by_override' ? 'override' : 'audit',
@@ -209,6 +212,7 @@ function nextRef(known: readonly KnowledgePassage[]): number {
 export interface KnowledgePromptItem {
   readonly ref: string;
   readonly title: string;
+  readonly declaredSource?: SourceCitation;
   readonly version: number;
   readonly approval: string;
   readonly text: string;
@@ -219,6 +223,7 @@ export function knowledgePromptItems(passages: readonly KnowledgePassage[]): Kno
   return passages.map((passage) => ({
     ref: passage.ref,
     title: passage.title,
+    ...(passage.sourceCitation ? { declaredSource: passage.sourceCitation } : {}),
     version: passage.versionNo,
     approval: passage.approval === 'override' ? 'approved by administrator override' : 'approved',
     text: passage.text,

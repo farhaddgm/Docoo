@@ -22,6 +22,7 @@ import {
   SYSTEM_RUBRIC,
   validateDocument,
   verifyArtifact,
+  type Block,
   type StructuredDocument,
 } from './index.js';
 
@@ -214,6 +215,57 @@ describe('renderers and artifacts (DOC-103)', () => {
       ],
     };
     expect(() => planSlides(overflowing, 3)).toThrow(SlideOverflowError);
+  });
+
+  it('keeps unabridged conditions and source identity in native PPTX notes beyond the summary slide limit', () => {
+    const document: StructuredDocument = {
+      title: 'Synthetic decision',
+      language: 'en',
+      blocks: [
+        ...Array.from({ length: 7 }, (_, index): Block => ({
+          type: 'heading',
+          id: `heading-${index}`,
+          level: 1,
+          text: `Section ${index}`,
+        })),
+        {
+          type: 'list',
+          id: 'approved-decision-condition-list',
+          ordered: false,
+          items: [
+            'Absolute30%; margin58.8%; ' + 'mandatory '.repeat(50),
+            'All staff time <=4h weekly.',
+          ],
+        },
+        {
+          type: 'bibliography',
+          id: 'refs',
+          entries: [
+            {
+              id: 'B1',
+              text: 'Declared original source; not independently verified.',
+              url: 'https://example.org/original',
+            },
+          ],
+        },
+      ],
+    };
+    const result = renderPptx(document, 1, meta);
+    expect(result.slides).toHaveLength(5);
+    expect(renderPptx(document, 1, meta).bytes).toEqual(result.bytes);
+    const files = unzipSync(result.bytes);
+    const notes = strFromU8(files['ppt/notesSlides/notesSlide1.xml']!);
+    expect(notes).toContain('Absolute30%; margin58.8%');
+    expect(notes).toContain('mandatory '.repeat(50).trim());
+    expect(notes).toContain('https://example.org/original');
+    expect(strFromU8(files['ppt/slides/slide1.xml']!)).toContain('first slide’s notes');
+    expect(strFromU8(files['ppt/slides/_rels/slide1.xml.rels']!)).toContain(
+      '../notesSlides/notesSlide1.xml',
+    );
+    expect(strFromU8(files['ppt/notesSlides/_rels/notesSlide1.xml.rels']!)).toContain(
+      '../notesMasters/notesMaster1.xml',
+    );
+    expect(strFromU8(files['[Content_Types].xml']!)).toContain('notesSlide+xml');
   });
 
   it('signs artifacts and detects tampering', async () => {

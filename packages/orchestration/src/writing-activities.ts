@@ -23,7 +23,8 @@ import {
   SECTION_SCHEMA_NAME,
   subsectionVerdict,
   visibleText,
-  WRITING_VERSION,
+  decisionConditionBlocks,
+  minimumWritingBody,
   type Block,
   type Criterion,
   type Level,
@@ -64,6 +65,7 @@ import {
   type CitationState,
   type WritingMaterial,
   type WritingSettings,
+  type StoredReference,
 } from './writing.js';
 
 /** What the writing workflow passes to every activity. */
@@ -237,11 +239,16 @@ export function createWritingActivities(
     ).rows[0];
     if (!solution) return null;
 
-    const approved = project.approved
+    const pinned = row.settings as { approvedProblemVersionId?: string | null };
+    const approvedId = Object.hasOwn(pinned, 'approvedProblemVersionId')
+      ? pinned.approvedProblemVersionId
+      : project.approved;
+    const approved = approvedId
       ? (
           await client.query<{ content: Record<string, unknown> }>(
-            'select content from stage_outputs where id = $1',
-            [project.approved],
+            `select o.content from stage_outputs o join stage_runs s on s.id = o.stage_run_id
+             where o.id = $1 and s.project_id = $2 and s.stage = 'analysis'`,
+            [approvedId, row.project_id],
           )
         ).rows[0]?.content
       : undefined;
@@ -448,7 +455,7 @@ export function createWritingActivities(
       ...(built[section.key] ?? []),
       ...section.subsections.flatMap((sub) => written[sub.id] ?? []),
     ]);
-    const document = assembleDocument({
+    let document = assembleDocument({
       title: row.document_title,
       language: row.language,
       plan,
@@ -456,6 +463,19 @@ export function createWritingActivities(
       built,
       references: citedReferences(flat, citationState(row).references, row.language),
     });
+    const conditions = (row.settings as { decisionConditions?: unknown }).decisionConditions;
+    if (
+      Array.isArray(conditions) &&
+      conditions.every((item: unknown) => typeof item === 'string')
+    ) {
+      const blocks = decisionConditionBlocks(conditions, row.language);
+      const bibliographyIndex = document.blocks.findIndex((block) => block.type === 'bibliography');
+      const index = bibliographyIndex < 0 ? document.blocks.length : bibliographyIndex;
+      document = {
+        ...document,
+        blocks: [...document.blocks.slice(0, index), ...blocks, ...document.blocks.slice(index)],
+      };
+    }
     return row.document_analysis_profile === 'quick' ? markQuickDraft(document) : document;
   }
 
@@ -714,19 +734,60 @@ export function createWritingActivities(
             fixedLetters: 0,
           });
           const built = builtBlocks(planned0, material.score, row.language, tablesAllowed);
+          const conditions =
+            (row.settings as { decisionConditions?: string[] }).decisionConditions ?? [];
+          const passages = await loadPassages(client, row, settings);
+          const referenceVersions = new Set<string>();
+          const possibleReferences: StoredReference[] = [];
+          for (const passage of passages) {
+            if (referenceVersions.has(passage.versionId)) continue;
+            referenceVersions.add(passage.versionId);
+            possibleReferences.push({
+              id: `B${possibleReferences.length + 1}`,
+              ref: passage.ref,
+              knowledgeId: passage.knowledgeId,
+              versionId: passage.versionId,
+              versionNo: passage.versionNo,
+              title: passage.title,
+              ...(passage.sourceCitation ? { sourceCitation: passage.sourceCitation } : {}),
+            });
+          }
+          const referenceBudget = countBlocks(
+            [
+              {
+                type: 'bibliography',
+                id: 'reference-budget',
+                entries: citedReferences(
+                  [
+                    {
+                      type: 'paragraph',
+                      id: 'reference-budget-citations',
+                      runs: [{ text: '', citations: possibleReferences.map((entry) => entry.id) }],
+                    },
+                  ],
+                  possibleReferences,
+                  row.language,
+                ),
+              },
+            ],
+            row.language,
+          );
           const fixed =
+            countBlocks(decisionConditionBlocks(conditions, row.language), row.language) +
             countBlocks([...skeleton, ...Object.values(built).flat()], row.language) +
             countBlocks(
               [{ type: 'heading', id: 't', level: 1, text: row.document_title }],
               row.language,
             ) +
-            Math.min(6, Math.max(0, settings.knowledgeLimit)) * 70 +
+            referenceBudget +
             (row.document_analysis_profile === 'quick'
               ? countBlocks(
                   markQuickDraft({ title: '', language: row.language, blocks: [] }).blocks,
                   row.language,
                 )
               : 0);
+          if (fixed + minimumWritingBody(template) > levelBounds.max)
+            return { status: 'blocked', code: 'document_level_too_short', reason: 'configuration' };
           const plan = planWriting({
             template,
             language: row.language,
@@ -1074,7 +1135,7 @@ export function createWritingActivities(
             [level]: plan.bounds,
           });
           const json = canonicalJson(document);
-          const reason = `Written by the documenter (v${definition.sequence}, ${plan.templateVersion}, ${WRITING_VERSION})`;
+          const reason = `Written by the documenter (v${definition.sequence}, ${plan.templateVersion}, ${plan.version})`;
           const version = (
             await client.query<{ id: string }>(
               `insert into document_versions (workspace_id, document_id, version_no, content, content_sha256, char_count, count_algorithm,
@@ -1119,7 +1180,7 @@ export function createWritingActivities(
             .slice(0, 20)
             .map(({ kind, term, found, count }) => ({ kind, term, found, count }));
           const report: WritingReport = {
-            version: WRITING_VERSION,
+            version: plan.version,
             level,
             bounds: plan.bounds,
             count: compliance.count,
@@ -1142,6 +1203,17 @@ export function createWritingActivities(
               0,
             ),
             notes,
+            ...(Object.hasOwn(row.settings as object, 'decisionConditions')
+              ? {
+                  decisionConditions: {
+                    approvedProblemVersionId: (
+                      row.settings as { approvedProblemVersionId: string | null }
+                    ).approvedProblemVersionId,
+                    count: (row.settings as { decisionConditions: string[] }).decisionConditions
+                      .length,
+                  },
+                }
+              : {}),
             ...(terms.length > 0 ? { termIssues } : {}),
           };
           await client.query(

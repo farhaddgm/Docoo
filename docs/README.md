@@ -130,4 +130,5 @@ notion_sync: true
 - [بنچ‌مارک ۲۰ ایده و شش قابلیت منتخب](01-product/08-advanced-ideas-benchmark.md)
 
 - [ADR-0027: خط مبنای جاری دسترسی](adr/0027-current-access-baseline.md)
+- [ADR-0029: حفظ شروط مصوب در نگارش و انتساب منبع](adr/0029-approved-decision-conditions.md)
 - [نگاشت ASVS 5.0.0 L2 و شکاف‌های باز](05-security/04-asvs-5-l2-control-map.md)

@@ -3,6 +3,9 @@ import { documentWritingWorkflowId, fakeResponder } from '@docoo/orchestration';
 import { ProviderError, type NormalizedModelRequest } from '@docoo/providers';
 import { Worker } from '@temporalio/worker';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { unzipSync, strFromU8 } from 'fflate';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { TemporalTestRuntime } from './support/harness.js';
@@ -16,6 +19,7 @@ interface Block {
   runs?: { text: string; citations?: string[] }[];
   entries?: { id: string; text: string }[];
   kind?: string;
+  items?: string[];
 }
 interface Content {
   title: string;
@@ -109,7 +113,16 @@ async function knowledge(title: string, content: string): Promise<string> {
   const created = await post<{ knowledge: { id: string } }>('/knowledge', {
     title,
     sourceType: 'admin_provided',
-    provenance: { declaration: 'Approved by the churn committee' },
+    provenance: {
+      declaration: 'Approved by the churn committee',
+      sourceCitation: {
+        title: 'Synthetic source attribution fixture',
+        author: 'Declared fixture author',
+        publisher: 'Fixture publisher',
+        publishedAt: '2026-10-13',
+        url: 'https://example.org/synthetic-source',
+      },
+    },
     scopes: [{ type: 'workspace', id: h.ids.workspaceA }],
     content,
   });
@@ -142,6 +155,43 @@ async function documentFor(prefix: string): Promise<{ projectId: string; documen
   });
   const list = await get<{ items: { id: string }[] }>(`/projects/${projectId}/documents`);
   return { projectId, documentId: list.items[0]!.id };
+}
+
+async function approvedDefinition(
+  projectId: string,
+  content: Record<string, unknown>,
+  versionNo = 1,
+) {
+  let stageId: string;
+  if (versionNo === 1) {
+    const run = await h.admin.query<{ id: string }>(
+      `insert into workflow_runs (workspace_id,project_id,run_no,temporal_workflow_id) values ($1,$2,1,$3) returning id`,
+      [h.ids.workspaceA, projectId, `writing-conditions-${projectId}`],
+    );
+    const stage = await h.admin.query<{ id: string }>(
+      `insert into stage_runs (workspace_id,project_id,run_id,stage,sequence,status) values ($1,$2,$3,'analysis',1,'completed') returning id`,
+      [h.ids.workspaceA, projectId, run.rows[0]!.id],
+    );
+    stageId = stage.rows[0]!.id;
+  } else {
+    stageId = (
+      await h.admin.query<{ id: string }>(
+        `select id from stage_runs where project_id=$1 and stage='analysis'`,
+        [projectId],
+      )
+    ).rows[0]!.id;
+  }
+  const json = JSON.stringify(content);
+  const output = await h.admin.query<{ id: string }>(
+    `insert into stage_outputs (workspace_id,stage_run_id,version_no,content,content_sha256,origin) values ($1,$2,$3,$4::jsonb,$5,'model') returning id`,
+    [h.ids.workspaceA, stageId, versionNo, json, createHash('sha256').update(json).digest('hex')],
+  );
+  const id = output.rows[0]!.id;
+  await h.admin.query('update projects set approved_problem_version_id=$2 where id=$1', [
+    projectId,
+    id,
+  ]);
+  return id;
 }
 
 const documentView = async (documentId: string) =>
@@ -289,6 +339,28 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       );
       expect(bibliography?.entries).toHaveLength(1);
       expect(bibliography!.entries![0]!.text).toContain('Support response and churn');
+      expect(bibliography!.entries![0]!.text).toContain('Synthetic source attribution fixture');
+      expect(bibliography!.entries![0]).toMatchObject({
+        url: 'https://example.org/synthetic-source',
+      });
+      for (const format of ['docx', 'pptx']) {
+        const exported = await post<{ artifact: { id: string } }>(
+          `/documents/${documentId}/exports`,
+          { format },
+        );
+        const downloaded = await h.request(
+          'GET',
+          api(`/documents/${documentId}/artifacts/${exported.artifact.id}/download`),
+          { cookie },
+        );
+        expect(downloaded.statusCode).toBe(200);
+        const xml = Object.entries(unzipSync(downloaded.rawPayload))
+          .filter(([name]) => name.endsWith('.xml'))
+          .map(([, bytes]) => strFromU8(bytes))
+          .join('');
+        expect(xml).toContain('https://example.org/synthetic-source');
+        expect(xml).toContain('Synthetic source attribution fixture');
+      }
       const cited = blocksOf(after.currentVersion.content)
         .flatMap((block) => block.runs ?? [])
         .flatMap((run) => run.citations ?? []);
@@ -356,6 +428,118 @@ describe.skipIf(!adminUrl || !temporalAddress)(
           'document.written',
         ]),
       );
+    });
+
+    it('DOC-W12: refuses a length that cannot contain the approved conditions before starting a writing', async () => {
+      const { projectId, documentId } = await documentFor('w12');
+      const fixture = JSON.parse(
+        readFileSync(
+          new URL(
+            '../../../qa/regressions/short-writing/approved-synthetic-cafe.json',
+            import.meta.url,
+          ),
+          'utf8',
+        ),
+      ) as { problem: Record<string, unknown> };
+      await approvedDefinition(projectId, fixture.problem);
+      const before = await documentView(documentId);
+      const rejected = await post<{
+        code: string;
+        conditionsLetters: number;
+        suggestedLevel: number;
+      }>(`/documents/${documentId}/writings`, { level: 1 }, 422);
+      expect(rejected.code).toBe('DOCUMENT_LEVEL_TOO_SHORT');
+      expect(rejected.conditionsLetters).toBeGreaterThan(3000);
+      expect(rejected.suggestedLevel).toBeGreaterThan(1);
+      expect((await get<{ items: Writing[] }>(`/documents/${documentId}/writings`)).items).toEqual(
+        [],
+      );
+      expect(sectionCalls()).toEqual([]);
+      expect((await documentView(documentId)).currentVersion.id).toBe(before.currentVersion.id);
+    });
+
+    it('DOC-W13: preserves pinned approved conditions even when model prose omits them and the project definition changes', async () => {
+      const { projectId, documentId } = await documentFor('w13');
+      const constraints = [
+        'Synthetic declared endpoint: absolute30%; margin floor58.8%.',
+        'SEK12000 total; four combined staff hours weekly.',
+        'Voluntary anonymous adults18+; no IDs; groups>=10; delete forms weekly.',
+      ];
+      const pinnedId = await approvedDefinition(projectId, {
+        problemStatement: 'Original synthetic problem',
+        constraints,
+      });
+      await temporal.stopWorker();
+      let started: { writing: Writing };
+      try {
+        started = await startWriting(documentId, { level: 1 });
+        await approvedDefinition(
+          projectId,
+          { problemStatement: 'Later version', constraints: ['Changed endpoint 99%'] },
+          2,
+        );
+      } finally {
+        await temporal.startWorker();
+      }
+      const done = await waitForWriting(documentId, started!.writing.id);
+      expect(done.status, JSON.stringify(done)).toBe('succeeded');
+      const view = await documentView(documentId);
+      const conditions = view.currentVersion.content.blocks.find(
+        (block) => block.id === 'approved-decision-condition-list',
+      ) as Block & { items: string[] };
+      expect(conditions.items).toEqual(constraints);
+      expect(view.currentVersion.withinBounds).toBe(true);
+      for (const request of sectionCalls()) {
+        const problem = dataOf(request)['problem'] as {
+          problemStatement: string;
+          constraints: string[];
+        };
+        expect(problem.problemStatement).toBe('Original synthetic problem');
+        expect(problem.constraints).toEqual(constraints);
+      }
+      const settings = (
+        await h.admin.query<{ settings: { approvedProblemVersionId: string } }>(
+          'select settings from document_writings where id=$1',
+          [done.id],
+        )
+      ).rows[0]!.settings;
+      expect(settings.approvedProblemVersionId).toBe(pinnedId);
+      for (const format of ['docx', 'pptx']) {
+        const exported = await post<{ artifact: { id: string } }>(
+          `/documents/${documentId}/exports`,
+          { format },
+        );
+        const downloaded = await h.request(
+          'GET',
+          api(`/documents/${documentId}/artifacts/${exported.artifact.id}/download`),
+          { cookie },
+        );
+        expect(downloaded.statusCode).toBe(200);
+        const xml = Object.entries(unzipSync(downloaded.rawPayload))
+          .filter(([name]) => name.endsWith('.xml'))
+          .map(([, bytes]) => strFromU8(bytes))
+          .join('');
+        expect(xml).toContain('absolute30%');
+        expect(xml).toContain('four combined staff hours weekly');
+      }
+    });
+
+    it('DOC-W14: rejects unsafe source attribution before creating knowledge', async () => {
+      const rejected = await h.request('POST', api('/knowledge'), {
+        cookie,
+        payload: {
+          title: 'Unsafe attribution fixture',
+          sourceType: 'admin_provided',
+          scopes: [{ type: 'workspace', id: h.ids.workspaceA }],
+          content: CHURN,
+          provenance: {
+            declaration: 'Synthetic',
+            sourceCitation: { title: 'Declared title', url: 'javascript:alert(1)' },
+          },
+        },
+      });
+      expect(rejected.statusCode).toBe(400);
+      expect(rejected.json<{ code: string }>().code).toBe('KNOWLEDGE_INVALID_REQUEST');
     });
 
     it('DOC-W2: a detailed level-3 document builds its score table and chart itself', async () => {

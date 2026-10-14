@@ -18,6 +18,7 @@ import {
   type WritingPlan,
 } from '@docoo/documents';
 import { normalizeForSearch } from '@docoo/knowledge';
+import type { SourceCitation } from './source-citation.js';
 
 import {
   quoteInText,
@@ -49,6 +50,8 @@ export const WRITING_RULES: readonly string[] = [
   'Do not present as established what no passage supports: call it an assumption, an estimate or a proposal. Without approvedKnowledge, write without citations.',
   'Continue from alreadyWritten without repeating it; do not write headings (the system adds them) and do not number or label the part yourself.',
   'If the material is not enough for the part, write less and say plainly what is missing; never fill the gap with invented content.',
+  'The approved problem definition takes precedence over conflicting administrator notes. Its decision conditions are copied verbatim into the finished document by the system: explain how the selected solution meets them, and do not weaken thresholds, caps, eligibility, privacy or stop rules to fit the part budget.',
+  "A declaredSource identifies an attributed source behind an approved knowledge excerpt; it does not establish that the source supports the operator's local proposals or that the system fetched the original. Attribute quoted claims and local inferences accurately and never invent bibliographic metadata.",
 ];
 
 const OUTLINE_RULES: readonly string[] = [
@@ -303,6 +306,7 @@ export interface StoredReference {
   readonly versionId: string;
   readonly versionNo: number;
   readonly title: string;
+  readonly sourceCitation?: SourceCitation;
 }
 
 export interface CitationStats {
@@ -378,6 +382,7 @@ export class CitationRegistry {
       versionId: passage.versionId,
       versionNo: passage.versionNo,
       title: passage.title,
+      ...(passage.sourceCitation ? { sourceCitation: passage.sourceCitation } : {}),
     });
     return id;
   }
@@ -415,9 +420,17 @@ export function citedReferences(
   visit(blocks);
   return order.flatMap((id) => {
     const entry = stored.find((item) => item.id === id);
-    return entry
-      ? [{ id, text: `${entry.title} (${KNOWLEDGE_LABEL[language](entry.versionNo)})` }]
-      : [];
+    if (!entry) return [];
+    const source = entry.sourceCitation;
+    return [
+      {
+        id,
+        text: source
+          ? `${[source.author, source.title, source.publisher, source.publishedAt].filter(Boolean).join('. ')} — ${entry.title} (${KNOWLEDGE_LABEL[language](entry.versionNo)}; ${language === 'fa' ? 'انتساب اعلام‌شده برای گزیدهٔ دانش' : 'declared attribution for the knowledge excerpt'})`
+          : `${entry.title} (${KNOWLEDGE_LABEL[language](entry.versionNo)})`,
+        ...(source ? { url: source.url } : {}),
+      },
+    ];
   });
 }
 
