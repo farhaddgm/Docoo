@@ -2,6 +2,12 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [Unreleased]
+
+### Fixed
+
+- The Smart assistant can now read the Brain report open on the Brain page. The server looks the report up read-only under the administrator's own workspace and `knowledge.read` permission and gives the model its totals, role figures, rule-based deviations with evidence ids, and recommendations. It reports `none_selected`, `not_found` or `forbidden` plainly instead of guessing another report, and the evaluating model's free-text findings stay out of the context.
+
 ## [0.27.4] — 2026-10-15
 
 ### Fixed

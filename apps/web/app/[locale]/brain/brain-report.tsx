@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPost } from '../../api-client';
 import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
+import { smartPageContext } from '../../smart/page-context';
 import { SignedIn } from '../signed-in';
 import { Evaluations, type ModelEvaluationSummary, type RoleEvaluationView } from './evaluations';
 
@@ -86,6 +87,13 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Tell the Smart assistant which report is open so it can read it for its answers.
+  const openId = selected?.id ?? null;
+  useEffect(() => {
+    smartPageContext.setBrainReport(openId);
+  }, [openId]);
+  useEffect(() => () => smartPageContext.setBrainReport(null), []);
 
   // Move focus to the opened report once it has rendered.
   useEffect(() => {

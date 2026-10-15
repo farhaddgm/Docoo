@@ -25,6 +25,8 @@ interface ChatTabProps {
   readonly route: string;
   readonly projectId: string | null;
   readonly walkerStep: string | null;
+  /** The Brain report open on the page, if any; the server reads it for the answer. */
+  readonly brainReportId?: string | null;
 }
 
 /**
@@ -39,6 +41,7 @@ export function ChatTab({
   route,
   projectId,
   walkerStep,
+  brainReportId = null,
 }: ChatTabProps) {
   const text = smartMessagesFor(locale);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -147,6 +150,7 @@ export function ChatTab({
         locale,
         ...(projectId ? { projectId } : {}),
         ...(walkerStep ? { walkerStep } : {}),
+        ...(brainReportId ? { brainReportId } : {}),
       });
       setMessages((current) => [
         ...current.filter((item) => item.id !== pending.id),

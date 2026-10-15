@@ -4,7 +4,7 @@ title: اسمارت (Smart): واکر، گفتگو با AI، خطایاب و د�
 status: active
 version: 1.0.0
 owner: Product & Engineering
-last_updated: 2026-10-04
+last_updated: 2026-10-15
 notion_sync: true
 ---
 
@@ -87,8 +87,21 @@ notion_sync: true
 | ۱۰ خطای باز (پیام scrub‌شده، دسته، مسیر)                                                     | بدنهٔ درخواست‌ها و مقدار query        |
 | ۳۰ اقدام اخیر خود ادمین (نام اقدام، نوع هدف، زمان)                                           | `before`/`after` رویدادهای audit      |
 | در گفتگوی خطا: جزئیات همان خطا و stack scrub‌شده                                             |                                       |
+| در صفحهٔ Brain: گزارش بازِ صفحه (بخش «گزارش Brain در گفتگو»)                                 |                                       |
 
 عنوان و توضیح پروژه با قاعدهٔ `FR-AUD-004` محتوای محرمانه محسوب می‌شوند (audit آن‌ها را هش می‌کند)؛ اسمارت هم همان مرز را نگه می‌دارد. آنچه ادمین خودش در پیام می‌نویسد به انتخاب خودش به مدل می‌رود. دستورالعمل سیستم، کانتکست را داخل `<context>` می‌گذارد و به مدل می‌گوید آن را داده بداند، نه دستور.
+
+### گزارش Brain در گفتگو
+
+مدل ابزار ندارد و نمی‌تواند خودش گزارشی را بخواند؛ پس کد گزارش را می‌خواند و در کانتکست می‌گذارد. بدون این بخش، دستیار فقط می‌دید «گزارشی ساخته شده» و از کاربر می‌خواست متن را دستی بفرستد.
+
+- **کدام گزارش؟** صفحهٔ Brain شناسهٔ گزارشِ بازِ خود را منتشر می‌کند (`page-context.ts`) و گفتگو آن را در `brainReportId` پیام می‌فرستد. سرور هیچ گزارشی را حدس نمی‌زند و جای گزارش دیگری نمی‌گذارد؛ برچسب تاریخ شمسی کاربر با شناسه تطبیق داده نمی‌شود.
+- **کِی بخش اضافه می‌شود؟** وقتی مسیر `/{locale}/brain` است یا `brainReportId` آمده است؛ در بقیهٔ صفحه‌ها کانتکست و دستورالعمل تغییری نمی‌کند.
+- **فقط‌خواندنی و با مجوز:** خواندن زیر RLS همان workspace و فقط اگر نقش کاربر `knowledge.read` دارد (همان مجوز `GET /brain-reports/{id}`). گزارش workspace دیگر `not_found` می‌شود.
+- **وضعیت روشن به‌جای حدس:** `brainReports.status` یکی از این‌هاست: `available` (گزارش در `openOnPage`)، `none_selected` (گزارشی باز نیست)، `not_found`، `forbidden`. دستورالعمل می‌گوید در سه حالت آخر دلیل را بگوید و گزارش دیگری را جایگزین نکند. اگر کاربر گزارش دیگری از فهرست (`recent`، فقط metadata) بخواهد، باید آن را در صفحهٔ Brain باز کند.
+- **چه چیزی می‌رود:** جمع‌ها، نقش‌ها (انحراف، تعداد فراخوانی، هزینه، تأخیر، retry)، انحرافات (قاعده، بند منشور، نقش، شدت، تعداد، `detail` ساخته‌شده با قاعده و شناسهٔ شواهد تا ۵ مورد) و پیشنهادها (قاعده، مقصد، اقدام). این‌ها با قاعدهٔ ثابت `charter-v1` ساخته شده‌اند و محتوا ندارند.
+- **چه چیزی نمی‌رود:** متن آزاد ارزیابی مدل‌محور (`summary` و `detail`/`recommendation` هر finding) چون می‌تواند خروجی مرحله را بازگو کند (همان مرز «`feedback` ارزیاب»). فقط نقش، وضعیت، امتیاز و نوع/شدت finding می‌رود و `modelEvaluation.freeTextIncluded = false` به مدل می‌گوید متن‌ها را نمی‌بیند.
+- **سقف:** این بخش بودجهٔ جدا دارد (۱۶٬۰۰۰ نویسه) و بعد از بریدن کانتکست پایه اضافه می‌شود تا کانتکست طولانی گزارش را نبرد. اگر بزرگ باشد ابتدا شناسه‌های شواهد و بعد ردیف‌های انحراف/پیشنهاد کم می‌شوند و `truncated` می‌آید؛ JSON هیچ‌وقت وسط بریده نمی‌شود و `<` به `\u003c` تبدیل می‌شود.
 
 ## خطایاب (SMT-001)
 
@@ -134,19 +147,19 @@ notion_sync: true
 
 مسیرها نسبت به `/v1/workspaces/{workspaceId}/smart` هستند.
 
-| متد و مسیر                                | توضیح                                                                |
-| ----------------------------------------- | -------------------------------------------------------------------- |
-| `GET /summary`                            | `{openErrors, openIssues}` برای نشانگر دکمه                          |
-| `GET /walker/progress?projectId=`         | گام‌ها با `status`، `blockedBy`، `counter`، `attention` و `nextStep` |
-| `POST /errors`                            | گزارش خطای مرورگر؛ ۲۰۱ با `{error: {id, category}}`                  |
-| `GET /errors`                             | فهرست با فیلتر `status`، `source`، `category`، `search` و cursor     |
-| `GET /errors/feed?since=`                 | خطاهای باز دیده‌شده پس از `since` (حداکثر ۲۰) و `now` سرور           |
-| `GET /errors/{id}` · `PATCH /errors/{id}` | جزئیات؛ تغییر وضعیت                                                  |
-| `GET/POST /conversations`                 | فهرست گفتگوهای خود؛ شروع گفتگو (`walker` یا `error` با `errorId`)    |
-| `GET/DELETE /conversations/{id}`          | گفتگو با پیام‌ها؛ حذف                                                |
-| `POST /conversations/{id}/messages`       | ۲۰۱ با `{userMessage, assistantMessage}`؛ `mode = chat` یا `report`  |
-| `GET/POST /issues`                        | فهرست دفتر؛ ذخیره با `{messageId}` (`created: false` اگر تکراری)     |
-| `GET/PATCH/DELETE /issues/{id}`           | جزئیات کامل؛ ویرایش `status`، `title`، `note`؛ حذف                   |
+| متد و مسیر                                | توضیح                                                                                        |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `GET /summary`                            | `{openErrors, openIssues}` برای نشانگر دکمه                                                  |
+| `GET /walker/progress?projectId=`         | گام‌ها با `status`، `blockedBy`، `counter`، `attention` و `nextStep`                         |
+| `POST /errors`                            | گزارش خطای مرورگر؛ ۲۰۱ با `{error: {id, category}}`                                          |
+| `GET /errors`                             | فهرست با فیلتر `status`، `source`، `category`، `search` و cursor                             |
+| `GET /errors/feed?since=`                 | خطاهای باز دیده‌شده پس از `since` (حداکثر ۲۰) و `now` سرور                                   |
+| `GET /errors/{id}` · `PATCH /errors/{id}` | جزئیات؛ تغییر وضعیت                                                                          |
+| `GET/POST /conversations`                 | فهرست گفتگوهای خود؛ شروع گفتگو (`walker` یا `error` با `errorId`)                            |
+| `GET/DELETE /conversations/{id}`          | گفتگو با پیام‌ها؛ حذف                                                                        |
+| `POST /conversations/{id}/messages`       | ۲۰۱ با `{userMessage, assistantMessage}`؛ `mode = chat` یا `report`؛ `brainReportId` اختیاری |
+| `GET/POST /issues`                        | فهرست دفتر؛ ذخیره با `{messageId}` (`created: false` اگر تکراری)                             |
+| `GET/PATCH/DELETE /issues/{id}`           | جزئیات کامل؛ ویرایش `status`، `title`، `note`؛ حذف                                           |
 
 کد خطاها: `SMART_INVALID_REQUEST`، `SMART_ERROR_NOT_FOUND`، `SMART_CONVERSATION_NOT_FOUND`، `SMART_ISSUE_NOT_FOUND`، `SMART_MESSAGE_NOT_FOUND`، `SMART_MESSAGE_NOT_SAVABLE`، `SMART_PROJECT_NOT_FOUND`، `SMART_CURSOR_INVALID`، `AI_NOT_CONFIGURED`.
 
@@ -165,12 +178,12 @@ enumها: `app_error_source`، `app_error_category`، `app_error_status`، `smar
 
 ## کد
 
-- API: `apps/api/src/smart/` (کلاسیفایر `error-classifier.ts`، گام‌ها `walker-steps.ts`، سرویس‌ها، `smart-prompts.ts`، فیلتر و reporter).
+- API: `apps/api/src/smart/` (کلاسیفایر `error-classifier.ts`، گام‌ها `walker-steps.ts`، سرویس‌ها، `smart-prompts.ts`، `brain-report-context.ts`، فیلتر و reporter).
 - وب: `apps/web/app/smart/` (bus، reporter، state ذخیره‌شده، پنجره و تب‌ها، صفحه‌ها)، `app/[locale]/smart/*` و `app/[locale]/error.tsx`.
 
 ## محدودیت‌ها و خارج از دامنه
 
 - **جمع‌آوری کامل تعاملات** (لاگ کلیک و درخواست‌ها) پیاده‌سازی نشده است: با اصل محرمانگی محتوا در تضاد بالقوه است و audit فعلی برای «اقدام‌های اخیر» کافی است. افزودنش به تصمیم و بازبینی امنیتی جدا نیاز دارد.
-- مدل کوئری دلخواه یا tool نمی‌گیرد؛ فقط کانتکست ساخته‌شدهٔ بالا را می‌بیند.
+- مدل کوئری دلخواه یا tool نمی‌گیرد؛ فقط کانتکست ساخته‌شدهٔ بالا را می‌بیند. از این رو فقط گزارشِ بازِ صفحهٔ Brain خوانده می‌شود، نه هر گزارشی که کاربر با تاریخ نام ببرد.
 - جدول `app_errors` فقط با پاک‌سازی نگهداری (`POST /retention/purge`) کوچک می‌شود: خطاهای بستهٔ `fixed` و `ignored` که `retention.app_errors_days` روز (پیش‌فرض ۹۰، ۷ تا ۳۶۵۰؛ سطح workspace) از آخرین رخدادشان گذشته است حذف می‌شوند؛ خطای باز هرگز حذف نمی‌شود و پایگاه‌داده هر حذف دیگری را با trigger رد می‌کند (مهاجرت 0039؛ پاسخ پاک‌سازی `appErrors` را می‌شمارد).
 - پاسخ در همان درخواست ساخته می‌شود؛ سقف ۲۵ ثانیه کمتر از timeout ۳۰ ثانیه‌ای proxy وب است. اگر پاسخ‌های طولانی لازم شد، باید به کار پس‌زمینه یا streaming منتقل شود.

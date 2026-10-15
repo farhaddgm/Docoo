@@ -167,6 +167,7 @@ export const smartApi = {
       locale: 'fa' | 'en';
       projectId?: string;
       walkerStep?: string;
+      brainReportId?: string;
     },
   ) =>
     (await (

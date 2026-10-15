@@ -40,6 +40,13 @@ export interface SendMessageInput {
   readonly locale: SmartLocale;
   readonly projectId?: string | undefined;
   readonly walkerStep?: WalkerStepKey | undefined;
+  /** The Brain report open on the page; read for the answer, never listed or guessed. */
+  readonly brainReportId?: string | undefined;
+}
+
+/** What the caller's role allows beyond chatting; decided by the controller, not the browser. */
+export interface SendAccess {
+  readonly canReadBrainReports: boolean;
 }
 
 interface ConversationRow extends QueryResultRow {
@@ -169,7 +176,12 @@ export class SmartChatService {
    * Stores the administrator's message, asks the model once (no retries, no tools) and stores
    * the answer. A provider failure is kept as a failed answer so the thread shows what happened.
    */
-  async send(context: WorkspaceRequestContext, conversationId: string, input: SendMessageInput) {
+  async send(
+    context: WorkspaceRequestContext,
+    conversationId: string,
+    input: SendMessageInput,
+    access: SendAccess = { canReadBrainReports: false },
+  ) {
     const prepared = await this.database.run(context, async (client) => {
       const conversation = await this.load(client, conversationId);
       const projectId = await this.visibleProject(
@@ -192,6 +204,8 @@ export class SmartChatService {
         projectId,
         walkerStep: input.walkerStep ?? null,
         errorId: conversation.kind === 'error' ? conversation.error_id : null,
+        brainReportId: input.brainReportId ?? null,
+        canReadBrainReports: access.canReadBrainReports,
       });
       const history = (
         await client.query<{ role: 'user' | 'assistant'; content: string }>(
@@ -205,6 +219,7 @@ export class SmartChatService {
         route: input.route.slice(0, 300),
         projectId,
         walkerStep: input.walkerStep ?? null,
+        ...(input.brainReportId ? { brainReportId: input.brainReportId } : {}),
         locale: input.locale,
         mode: input.mode,
       });
