@@ -58,7 +58,16 @@ const icons: Record<NavigationKey, string> = {
     'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
 };
 
-function NavIcon({ name }: { name: NavigationKey }) {
+/** The two links only some administrators see carry an icon too, so the list reads as one. */
+const extraIcons = {
+  users:
+    'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
+  mail: 'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3 7l9 6 9-6',
+} as const;
+
+function NavIcon({ name }: { name: NavigationKey | keyof typeof extraIcons }) {
+  const path =
+    name in extraIcons ? extraIcons[name as keyof typeof extraIcons] : icons[name as NavigationKey];
   return (
     <svg
       className="nav-icon"
@@ -71,7 +80,7 @@ function NavIcon({ name }: { name: NavigationKey }) {
       aria-hidden="true"
       focusable="false"
     >
-      <path d={icons[name]} />
+      <path d={path} />
     </svg>
   );
 }
@@ -206,14 +215,18 @@ export function AppShell({
                 {identity?.user.role === 'super_admin' && (
                   <li>
                     <Link className="nav-item" href={`/${locale}/admin/users` as Route}>
-                      {locale === 'fa' ? 'کاربران' : 'Users'}
+                      <NavIcon name="users" />
+                      <span className="nav-label">{locale === 'fa' ? 'کاربران' : 'Users'}</span>
                     </Link>
                   </li>
                 )}
                 {identity?.user.isOwner && (
                   <li>
                     <Link className="nav-item" href={`/${locale}/settings/google-access` as Route}>
-                      {locale === 'fa' ? 'ورود با جیمیل' : 'Gmail sign-in'}
+                      <NavIcon name="mail" />
+                      <span className="nav-label">
+                        {locale === 'fa' ? 'ورود با جیمیل' : 'Gmail sign-in'}
+                      </span>
                     </Link>
                   </li>
                 )}

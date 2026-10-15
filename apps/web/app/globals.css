@@ -27,6 +27,10 @@
   --color-nav-current: light-dark(#e6f4ee, #14312a);
   --color-glow: light-dark(#d9f0e6, #12342a);
   --shadow-color: light-dark(rgb(16 24 40 / 8%), rgb(0 0 0 / 50%));
+  /* Older screens name these; keeping the aliases makes them follow the theme (dark mode too). */
+  --border: var(--color-border-strong);
+  --surface: var(--color-surface);
+  --color-accent-soft: light-dark(#eef2fb, #1a2235);
   --focus-ring: 3px solid var(--color-focus);
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
@@ -734,6 +738,7 @@ button:disabled {
 /* Reporting screens (REP-001..004) */
 .stack {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
 
@@ -1006,39 +1011,69 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   border-color: var(--color-danger-ink);
 }
 
+.section-nav {
+  position: relative;
+  border-bottom: 1px solid var(--color-border);
+}
+
 .section-nav ul {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
+  overflow-x: auto;
   list-style: none;
+  scrollbar-width: none;
+}
+
+.section-nav ul::-webkit-scrollbar {
+  display: none;
+}
+
+.section-nav li {
+  flex: none;
 }
 
 .section-nav button {
-  min-height: 2.5rem;
-  padding: var(--space-1) var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-ink);
+  position: relative;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: none;
+  color: var(--color-muted);
   font: inherit;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
-  /* Text changes with aria-current; keep its background in the same paint. */
-  transition: border-color var(--transition);
+  transition:
+    color var(--transition),
+    background-color var(--transition);
+}
+
+.section-nav button::after {
+  position: absolute;
+  inset-inline: var(--space-3);
+  inset-block-end: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+  content: '';
+  transition: background-color var(--transition);
 }
 
 .section-nav button:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
+  background: var(--color-surface-2);
+  color: var(--color-ink);
 }
 
 .section-nav button[aria-current='page'] {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  color: var(--color-primary-strong);
   font-weight: 700;
+}
+
+.section-nav button[aria-current='page']::after {
+  background: var(--color-primary);
 }
 
 .facts {
@@ -2318,18 +2353,742 @@ progress {
   overflow-wrap: anywhere;
 }
 .intelligence-page blockquote {
-  border-inline-start: 3px solid #7486b8;
+  border-inline-start: 3px solid var(--color-primary);
   margin-inline: 0;
   padding-inline: 1rem;
   white-space: pre-wrap;
 }
 .intelligence-assessment {
   padding: 0.75rem;
-  background: color-mix(in srgb, #7486b8 10%, transparent);
+  background: var(--color-accent-soft);
   border-radius: 0.5rem;
 }
 .intelligence-path {
   margin-block: 1rem;
   padding-inline-start: 1rem;
-  border-inline-start: 2px solid #7486b8;
+  border-inline-start: 2px solid var(--color-primary);
+}
+
+/* ------------------------------------------------------------------------------------------
+ * Polish pass: hierarchy, surfaces, tabs, and the business profile (ADR-0021).
+ * ---------------------------------------------------------------------------------------- */
+
+/* A heading that receives focus from code (route change, dialog) is not a control; no ring. */
+h1[tabindex='-1']:focus,
+h2[tabindex='-1']:focus,
+h3[tabindex='-1']:focus,
+main[tabindex='-1']:focus {
+  outline: none;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-block-start: var(--space-6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+h2,
+h3,
+h4 {
+  line-height: 1.4;
+}
+
+.card h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.card h4 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+}
+
+.card > p,
+.card .stack > p {
+  margin: 0;
+}
+
+.card {
+  border-radius: calc(var(--radius-md) + 0.125rem);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-primary-strong);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* A text-style button: looks like a link, behaves like a button. */
+button.link-button:not(.primary-button, .secondary-button) {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  cursor: pointer;
+}
+
+button.link-button:not(.primary-button, .secondary-button):hover {
+  text-decoration-thickness: 2px;
+}
+
+/* A thin bar for a share of something; the number is always written next to it. */
+.meter {
+  block-size: 0.5rem;
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  overflow: hidden;
+}
+
+.meter > span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--gradient-brand);
+}
+
+/* A score from 0 to 100 as a ring. */
+.score-ring {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 5rem;
+  block-size: 5rem;
+}
+
+.score-ring svg {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.score-ring circle {
+  fill: none;
+  stroke-width: 9;
+}
+
+.score-track {
+  stroke: var(--color-surface-2);
+}
+
+.score-value {
+  stroke: var(--score-color, var(--color-primary));
+  stroke-linecap: round;
+}
+
+.score-ok {
+  --score-color: var(--color-primary);
+}
+
+.score-warn {
+  --score-color: light-dark(#c98a00, #f0bf4a);
+}
+
+.score-danger {
+  --score-color: light-dark(#c2362b, #ff8f85);
+}
+
+.score-number {
+  font-size: 1.375rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.score-row > .stack {
+  flex: 1;
+  gap: var(--space-2);
+}
+
+/* Small numbers with a caption, in a row. */
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.stat-tile {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-tile dt {
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.stat-tile dd {
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 800;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-tile.tone-ok-edge {
+  border-inline-start: 4px solid var(--color-ok-ink);
+}
+
+.stat-tile.tone-danger-edge {
+  border-inline-start: 4px solid var(--color-danger-ink);
+}
+
+/* Placeholder while a panel loads. */
+.skeleton {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2) 25%,
+    var(--color-border) 50%,
+    var(--color-surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Text written elsewhere, laid out: headings, lists, short paragraphs. */
+.rich {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: 70ch;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.rich p,
+.rich ul,
+.rich ol {
+  margin: 0;
+}
+
+.rich-heading {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-primary-strong);
+}
+
+.rich-list {
+  display: grid;
+  gap: var(--space-1);
+  padding-inline-start: var(--space-6);
+}
+
+.rich-list li::marker {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.rich-qa {
+  display: grid;
+  gap: var(--space-1);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 3px solid var(--color-border-strong);
+}
+
+.rich-question {
+  font-weight: 700;
+}
+
+.rich a {
+  color: var(--color-link);
+}
+
+/* Long text folds to a few lines and opens on request. */
+.clamp {
+  position: relative;
+  max-block-size: 11rem;
+  overflow: hidden;
+}
+
+.clamp:not(.open)::after {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 4rem;
+  background: linear-gradient(to bottom, transparent, var(--color-surface));
+  content: '';
+  pointer-events: none;
+}
+
+.clamp.open {
+  max-block-size: none;
+}
+
+.clamp-toggle {
+  justify-self: start;
+}
+
+/* ---- The business of a project ---- */
+.biz-hero {
+  gap: var(--space-4);
+  background:
+    radial-gradient(40rem 12rem at 100% -20%, var(--color-glow), transparent 70%),
+    var(--color-surface);
+}
+
+.biz-hero-main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.biz-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 3.5rem;
+  block-size: 3.5rem;
+  border-radius: var(--radius-md);
+  background: var(--gradient-brand);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    var(--shadow-sm);
+}
+
+.biz-hero-title {
+  display: grid;
+  flex: 1;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.biz-hero-title h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.biz-tagline {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-md);
+}
+
+.biz-hero-chips {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.biz-hero-chips .badge,
+.topic-chips .badge,
+.chips .badge {
+  margin-inline-start: 0;
+}
+
+.biz-site {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-sm);
+}
+
+.biz-hero-score {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  flex: none;
+}
+
+.biz-note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+
+.biz-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding-block: var(--space-3);
+  border-block: 1px solid var(--color-border);
+}
+
+.biz-meta dt {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+
+.biz-meta dd {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.biz-tabs {
+  margin-block-start: var(--space-2);
+}
+
+.biz-profile {
+  display: grid;
+  grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.biz-toc {
+  position: sticky;
+  top: var(--space-4);
+  max-block-size: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding-inline-end: var(--space-2);
+  scrollbar-width: thin;
+}
+
+.biz-toc ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.biz-toc-title {
+  margin: 0 0 var(--space-2);
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.biz-toc-group {
+  display: block;
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.biz-toc a {
+  display: block;
+  padding: var(--space-1) var(--space-3);
+  border-inline-start: 2px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background-color var(--transition);
+}
+
+.biz-toc a:hover {
+  border-inline-start-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+.biz-profile-main {
+  min-inline-size: 0;
+}
+
+.biz-coverage {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.biz-coverage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.biz-coverage-head p {
+  margin: 0;
+}
+
+.biz-group {
+  gap: var(--space-3);
+}
+
+.biz-group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.biz-group-title::after {
+  flex: 1;
+  block-size: 1px;
+  background: var(--color-border);
+  content: '';
+}
+
+.biz-section {
+  display: grid;
+  gap: var(--space-3);
+  scroll-margin-block-start: var(--space-4);
+}
+
+.biz-section.is-draft {
+  border-inline-start: 4px solid var(--color-warn-ink);
+}
+
+.biz-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.biz-section-head .badge {
+  margin: 0;
+}
+
+.biz-section-foot {
+  margin: 0;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px dashed var(--color-border);
+}
+
+.biz-empty {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+
+.topic-chips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Audit issues carry their severity on the edge. */
+.issue {
+  border-inline-start: 4px solid var(--color-border-strong);
+}
+
+.issue-high {
+  border-inline-start-color: var(--color-danger-ink);
+}
+
+.issue-medium {
+  border-inline-start-color: var(--color-warn-ink);
+}
+
+.issue-fix {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-ok-bg);
+  color: var(--color-ok-ink);
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.analysis-grid dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+@media (max-width: 60rem) {
+  .biz-profile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .biz-toc {
+    display: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .biz-hero-main {
+    flex-wrap: wrap;
+  }
+
+  .biz-hero-score {
+    flex-direction: row;
+    inline-size: 100%;
+    justify-content: flex-start;
+  }
+
+  .score-row {
+    gap: var(--space-4);
+  }
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.breadcrumb .secondary-button {
+  min-height: 2.25rem;
+  padding-block: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.project-head {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.project-head h2 {
+  margin: 0;
+}
+
+.next-action {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+/* Links dressed as buttons are not underlined. */
+a.primary-button,
+a.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+/* A notice is a quiet panel with a coloured edge, not a bare coloured bar. */
+.notice:not(.error, .ok, .warn) {
+  border: 1px solid var(--color-border);
+  border-inline-start: 4px solid var(--color-primary);
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+}
+
+/* Account card: label/value pairs line up, and the password form folds away until needed. */
+.account-profile {
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin-block: 0;
+}
+
+.account-profile dt {
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.account-profile dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.disclosure {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.disclosure > summary {
+  padding: var(--space-3) var(--space-4);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.disclosure[open] > summary {
+  border-block-end: 1px solid var(--color-border);
+}
+
+.disclosure > .auth-form {
+  padding: var(--space-4);
+}
+
+.disclosure .auth-form {
+  max-inline-size: 28rem;
+}
+
+/* Dashboard: figures are links to their lists; keep the underline quiet until hover. */
+.counts a:not([class]) {
+  color: inherit;
+  text-decoration-color: var(--color-border-strong);
+}
+
+.counts a:not([class]):hover {
+  color: var(--color-primary-strong);
+  text-decoration-color: currentColor;
+}
+
+/* Project list filters: one compact row of fields, not a column of label/control pairs. */
+.filter-grid.project-filters {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  align-items: end;
+  max-inline-size: none;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.filter-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.filter-field label {
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.project-filters .filter-check {
+  min-block-size: 2.5rem;
+  align-self: end;
+}
+
+/* Codes and stage names stay on one line; titles take the room. */
+.title-cell {
+  min-inline-size: 14rem;
+}
+
+td a[href*='/projects/'] {
+  white-space: nowrap;
 }

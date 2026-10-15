@@ -148,7 +148,10 @@ function ProjectView({
   }
 
   const intelligenceLink = (
-    <Link href={`/${locale}/projects/${projectId}/intelligence` as Route}>
+    <Link
+      className="secondary-button link-button"
+      href={`/${locale}/projects/${projectId}/intelligence` as Route}
+    >
       {locale === 'fa' ? 'شواهد و تصمیم' : 'Evidence and decisions'}
     </Link>
   );
@@ -157,12 +160,13 @@ function ProjectView({
 
   return (
     <div className={accessReadOnly ? 'stack resource-view-only' : 'stack'}>
-      <p>
-        <Link href={`/${locale}/projects` as Route}>{text.backToList}</Link>
-      </p>
-
-      {intelligenceLink}
-      <section className="card" aria-labelledby="project-heading">
+      <div className="breadcrumb">
+        <Link href={`/${locale}/projects` as Route}>
+          <span aria-hidden="true">{locale === 'fa' ? '→' : '←'}</span> {text.backToList}
+        </Link>
+        {intelligenceLink}
+      </div>
+      <section className="card project-head" aria-labelledby="project-heading">
         <h2 id="project-heading" dir="auto">
           <span dir="ltr">{project.code}</span> — {project.title}
         </h2>
@@ -221,9 +225,11 @@ function ProjectView({
             </div>
           )}
         </dl>
-        <p>
-          <strong>{text.nextAction}:</strong> {text.nextActions[project.nextAction] ?? ''}
-        </p>
+        {(text.nextActions[project.nextAction] ?? '') !== '' && (
+          <p className="next-action">
+            <strong>{text.nextAction}:</strong> {text.nextActions[project.nextAction]}
+          </p>
+        )}
         {project.pauseReason && (
           <p className="notice error" role="status">
             <strong>{text.pauseReason}:</strong> <span dir="auto">{project.pauseReason}</span>

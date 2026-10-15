@@ -9,7 +9,15 @@ import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { AiView, VersionsView } from './business-ai';
-import { KnowledgeView, ProfileView, QualityView, SourcesView, safeHref } from './business-content';
+import {
+  Address,
+  KnowledgeView,
+  ProfileView,
+  QualityView,
+  ScoreRing,
+  SourcesView,
+  safeHref,
+} from './business-content';
 import { businessMessages } from '../business-messages';
 import { BusinessPicker } from '../business-picker';
 import type {
@@ -166,7 +174,18 @@ export function BusinessPanel({
       </div>
     );
   }
-  if (!view) return <p role="status">{text.loading}</p>;
+  if (!view) {
+    return (
+      <div className="stack" aria-busy="true">
+        <p role="status" className="visually-hidden">
+          {text.loading}
+        </p>
+        <span className="skeleton" style={{ blockSize: '11rem' }} aria-hidden="true" />
+        <span className="skeleton" style={{ blockSize: '2.75rem' }} aria-hidden="true" />
+        <span className="skeleton" style={{ blockSize: '14rem' }} aria-hidden="true" />
+      </div>
+    );
+  }
 
   const frozen = readOnly;
   // ---- not linked yet ----
@@ -207,17 +226,72 @@ export function BusinessPanel({
   const content = shown?.content ?? snapshot.content;
   const contenterHref = view.link.contenterUrl ? safeHref(view.link.contenterUrl) : null;
   const connectionBad = view.connection.status !== 'healthy';
+  const info = content.business;
 
   return (
     <div className="stack">
-      <section className="card stack" aria-labelledby={`${id}-head`} data-testid="business-header">
-        <h2 id={`${id}-head`} dir="auto">
-          {panel.title}: {view.link.name}
-        </h2>
-        <p className="muted" dir="auto">
+      <section
+        className="card stack biz-hero"
+        aria-labelledby={`${id}-head`}
+        data-testid="business-header"
+      >
+        <div className="biz-hero-main">
+          <span className="biz-avatar" aria-hidden="true">
+            {Array.from(view.link.name.trim())[0] ?? '•'}
+          </span>
+          <div className="biz-hero-title">
+            <p className="eyebrow">{panel.title}</p>
+            <h2 id={`${id}-head`} dir="auto">
+              {view.link.name}
+            </h2>
+            {info.tagline && (
+              <p className="biz-tagline" dir="auto">
+                {info.tagline}
+              </p>
+            )}
+            <ul className="chips biz-hero-chips" aria-label={panel.title}>
+              {info.industry && (
+                <li className="badge tone-neutral" dir="auto">
+                  {info.industry}
+                </li>
+              )}
+              {info.location && (
+                <li className="badge tone-neutral" dir="auto">
+                  {info.location}
+                </li>
+              )}
+              {info.language && (
+                <li className="badge tone-neutral">
+                  {panel.languages[info.language] ?? info.language}
+                </li>
+              )}
+              {info.status && (
+                <li className={`badge tone-${info.status === 'ACTIVE' ? 'ok' : 'neutral'}`}>
+                  {panel.businessStatuses[info.status] ?? info.status}
+                </li>
+              )}
+            </ul>
+            {info.website && (
+              <p className="biz-site">
+                <Address value={info.website} />
+              </p>
+            )}
+          </div>
+          {content.health && (
+            <div className="biz-hero-score">
+              <ScoreRing
+                value={content.health.score}
+                text={formatNumber(locale, content.health.score)}
+                label={text.quality.healthTitle}
+              />
+              <span className="muted">{text.quality.healthTitle}</span>
+            </div>
+          )}
+        </div>
+        <p className="muted biz-note" dir="auto">
           {panel.readOnlyNote}
         </p>
-        <dl className="facts">
+        <dl className="biz-meta">
           <div>
             <dt>{panel.version}</dt>
             <dd data-testid="business-version">{formatNumber(locale, snapshot.versionNo)}</dd>
@@ -378,7 +452,7 @@ export function BusinessPanel({
         )}
       </section>
 
-      <nav className="section-nav" aria-label={panel.views}>
+      <nav className="section-nav biz-tabs" aria-label={panel.views}>
         <ul>
           {VIEWS.map((item) => (
             <li key={item}>
