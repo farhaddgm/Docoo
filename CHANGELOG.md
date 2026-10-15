@@ -2,6 +2,12 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.27.6] — 2026-10-16
+
+### Fixed
+
+- Preserve images already staged for the target release during the updater's disk-space cleanup. A low-space refusal keeps both the running and target releases, images used by stopped containers and unrelated applications; the full-build capacity and reserve requirements remain enforced.
+
 ## [0.27.5] — 2026-10-15
 
 ### Fixed
