@@ -431,7 +431,7 @@ describe('Brain report in the Smart snapshot', () => {
       count: 3,
       evidence: { count: 8 },
     });
-    expect(section.openOnPage.deviations[0].evidence.items).toHaveLength(5);
+    expect(section.openOnPage.deviations[0]?.evidence.items).toHaveLength(5);
     expect(section.openOnPage.recommendations).toEqual([
       { rule: 'schema_compliance', target: 'stage_prompt', action: 'Tighten the analysis prompt.' },
     ]);
