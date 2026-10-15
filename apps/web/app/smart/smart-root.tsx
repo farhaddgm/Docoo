@@ -8,11 +8,20 @@ import type { SmartError } from './api';
 import type { ChatSeed } from './chat-tab';
 import { installErrorReporter, setReporterWorkspace } from './error-reporter';
 import { fill, smartMessagesFor } from './messages';
+import { smartPageContext } from './page-context';
 import { SmartPanel } from './panel';
 import { useSmartSummary } from './summary';
 import { SmartToasts } from './toasts';
 import { smartUi } from './ui-state';
 import { projectIdFromPath } from './walker';
+
+function usePageContext() {
+  return useSyncExternalStore(
+    smartPageContext.subscribe,
+    smartPageContext.getSnapshot,
+    smartPageContext.getServerSnapshot,
+  );
+}
 
 function useUi() {
   return useSyncExternalStore(smartUi.subscribe, smartUi.getSnapshot, smartUi.getServerSnapshot);
@@ -62,6 +71,7 @@ export function SmartToggle({ locale, workspaceId }: { locale: Locale; workspace
 export function SmartRoot({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
   const text = smartMessagesFor(locale);
   const ui = useUi();
+  const page = usePageContext();
   const pathname = usePathname() || `/${locale}`;
   const summary = useSmartSummary(workspaceId, ui.enabled);
   const [selectedErrorId, setSelectedErrorId] = useState<string | null>(null);
@@ -113,6 +123,7 @@ export function SmartRoot({ locale, workspaceId }: { locale: Locale; workspaceId
         ui={ui}
         route={pathname}
         walkerStep={walkerStep}
+        brainReportId={page.brainReportId}
         selectedErrorId={selectedErrorId}
         seed={seed}
         onWalkerStep={setWalkerStep}
