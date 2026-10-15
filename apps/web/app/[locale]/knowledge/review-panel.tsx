@@ -112,10 +112,10 @@ export function ReviewPanel({ locale, review }: { locale: Locale; review: Review
               return (
                 <li key={criterion}>
                   <div className="toolbar spread">
-                    <strong className="field-label">
-                      {name}
+                    <span className="field-label">
+                      <strong>{name}</strong>
                       <InfoTip text={text.criteriaHelp[criterion]} />
-                    </strong>
+                    </span>
                     <span>
                       {fill(text.overallValue, { n: formatNumber(locale, score) })}
                       {rubric && (

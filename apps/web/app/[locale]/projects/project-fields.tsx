@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { apiGet } from '../../api-client';
-import { FieldLabel, InfoTip } from '../../info-tip';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 import type { Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { projectMessages } from './messages';
@@ -201,10 +201,9 @@ export function TopicsSection({
   return (
     <>
       <section className="card" aria-labelledby="project-topics-title">
-        <div className="section-title">
-          <h2 id="project-topics-title">{text.topicsSection}</h2>
-          <InfoTip text={text.topicsHelp} />
-        </div>
+        <SectionTitle id="project-topics-title" help={text.topicsHelp}>
+          {text.topicsSection}
+        </SectionTitle>
         {loadFailed && (
           <p className="notice error" role="alert">
             {common.loadFailed}

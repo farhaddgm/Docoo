@@ -7,6 +7,43 @@ import { useLocale } from './locale-context';
 
 const helpLabel: Record<Locale, string> = { fa: 'راهنما', en: 'Help' };
 
+const buttonIcon = (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.25"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d="M12 11v5.5M12 7.5h.01" />
+  </svg>
+);
+
+/** The round "i" itself; `textId` names the hidden element that holds the explanation. */
+function TipButton({ textId }: { readonly textId: string }) {
+  const locale = useLocale();
+  return (
+    <button
+      type="button"
+      className="info-tip-button"
+      aria-label={helpLabel[locale]}
+      aria-describedby={textId}
+      aria-expanded="false"
+      data-info-tip={textId}
+    >
+      {buttonIcon}
+    </button>
+  );
+}
+
+function useTipId(id: string | undefined): string {
+  const generated = useId();
+  return id ?? `tip-${generated.replaceAll(':', '')}`;
+}
+
 /**
  * The "i" button that carries a field's explanation. The text sits in a hidden element the
  * button (and, through `aria-describedby`, the field) points at, so assistive technology reads
@@ -22,32 +59,10 @@ export function InfoTip({
   /** A stable id so the field can list it in `aria-describedby`. */
   readonly id?: string;
 }) {
-  const locale = useLocale();
-  const generated = useId();
-  const textId = id ?? `tip-${generated.replaceAll(':', '')}`;
+  const textId = useTipId(id);
   return (
     <span className="info-tip">
-      <button
-        type="button"
-        className="info-tip-button"
-        aria-label={helpLabel[locale]}
-        aria-describedby={textId}
-        aria-expanded="false"
-        data-info-tip={textId}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.25"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M12 11v5.5M12 7.5h.01" />
-        </svg>
-      </button>
+      <TipButton textId={textId} />
       <span id={textId} hidden>
         {text}
       </span>
@@ -99,7 +114,11 @@ export function GroupLabel({
   );
 }
 
-/** A heading with the "i" explanation of what the section is for, for a block that is not a field. */
+/**
+ * A heading with the "i" explanation of what the section is for. The button sits inside the
+ * heading and the hidden text right after it, so the heading stays a direct child of its section
+ * and the text of the heading is only its title.
+ */
 export function SectionTitle({
   as: Heading = 'h2',
   id,
@@ -107,17 +126,29 @@ export function SectionTitle({
   helpId,
   children,
 }: {
-  readonly as?: 'h2' | 'h3' | 'h4';
+  readonly as?: 'h2' | 'h3' | 'h4' | 'h5';
   readonly id?: string;
   readonly help?: string | undefined;
   readonly helpId?: string;
   readonly children: ReactNode;
 }) {
+  const textId = useTipId(helpId);
   return (
-    <div className="section-title">
-      <Heading {...(id ? { id } : {})}>{children}</Heading>
-      {help ? <InfoTip text={help} {...(helpId ? { id: helpId } : {})} /> : null}
-    </div>
+    <>
+      <Heading {...(id ? { id } : {})} {...(help ? { className: 'heading-with-tip' } : {})}>
+        {children}
+        {help ? (
+          <span className="info-tip">
+            <TipButton textId={textId} />
+          </span>
+        ) : null}
+      </Heading>
+      {help ? (
+        <span id={textId} hidden>
+          {help}
+        </span>
+      ) : null}
+    </>
   );
 }
 

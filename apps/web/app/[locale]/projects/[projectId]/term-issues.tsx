@@ -1,6 +1,6 @@
 import { formatNumber, type Locale } from '../../../i18n';
 import { editorMessages, fill } from './editor-messages';
-import { InfoTip } from '../../../info-tip';
+import { SectionTitle } from '../../../info-tip';
 
 export interface TermIssueView {
   readonly kind: 'USE' | 'AVOID';
@@ -26,13 +26,11 @@ export function TermIssues({
 }) {
   const text = editorMessages(locale);
   if (!issues || issues.length === 0) return null;
-  const Heading = level;
   return (
     <section aria-labelledby={`term-issues-${level}`} data-testid="term-issues">
-      <div className="section-title">
-        <Heading id={`term-issues-${level}`}>{text.termTitle}</Heading>
-        <InfoTip text={text.termHelp} />
-      </div>
+      <SectionTitle as={level} id={`term-issues-${level}`} help={text.termHelp}>
+        {text.termTitle}
+      </SectionTitle>
       <ul className="plain-list">
         {issues.map((issue, index) => (
           <li key={`${issue.kind}-${issue.term}-${issue.found}-${index}`} dir="auto">
