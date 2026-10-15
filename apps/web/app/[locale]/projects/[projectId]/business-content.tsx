@@ -4,6 +4,7 @@ import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { businessMessages, joinList, sectionTitle } from '../business-messages';
 import type { BusinessContent } from '../business-types';
+import { SectionTitle } from '../../../info-tip';
 
 /** The group of each profile section, in Contenter's order (the registry lives in @docoo/domain). */
 const SECTION_GROUP: Readonly<Record<string, string>> = {
@@ -161,8 +162,9 @@ export function ProfileView({
 
       {emptyKeys.length > 0 && (
         <section className="card stack" aria-labelledby="biz-empty">
-          <h3 id="biz-empty">{profile.emptySections}</h3>
-          <p className="muted">{profile.emptySectionsHelp}</p>
+          <SectionTitle as="h3" id="biz-empty" help={profile.emptySectionsHelp}>
+            {profile.emptySections}
+          </SectionTitle>
           <ul className="chips" aria-label={profile.emptySections}>
             {emptyKeys.map((key) => (
               <li key={key} className="badge tone-neutral">
@@ -208,8 +210,9 @@ export function KnowledgeView({
   return (
     <div className="stack">
       <section className="card stack" aria-labelledby="biz-facts">
-        <h3 id="biz-facts">{k.factsTitle}</h3>
-        <p className="muted">{k.factsHelp}</p>
+        <SectionTitle as="h3" id="biz-facts" help={k.factsHelp}>
+          {k.factsTitle}
+        </SectionTitle>
         {content.facts.length === 0 ? (
           <p className="muted">{k.noFacts}</p>
         ) : (
@@ -260,8 +263,9 @@ export function KnowledgeView({
       </section>
 
       <section className="card stack" aria-labelledby="biz-terms">
-        <h3 id="biz-terms">{k.termsTitle}</h3>
-        <p className="muted">{k.termsHelp}</p>
+        <SectionTitle as="h3" id="biz-terms" help={k.termsHelp}>
+          {k.termsTitle}
+        </SectionTitle>
         {content.terms.length === 0 ? (
           <p className="muted">{k.noTerms}</p>
         ) : (
@@ -298,8 +302,9 @@ export function KnowledgeView({
       </section>
 
       <section className="card stack" aria-labelledby="biz-notes">
-        <h3 id="biz-notes">{k.notesTitle}</h3>
-        <p className="muted">{k.notesHelp}</p>
+        <SectionTitle as="h3" id="biz-notes" help={k.notesHelp}>
+          {k.notesTitle}
+        </SectionTitle>
         {content.notes.length === 0 ? (
           <p className="muted">{k.noNotes}</p>
         ) : (
@@ -352,8 +357,9 @@ export function SourcesView({
   return (
     <div className="stack">
       <section className="card stack" aria-labelledby="biz-refs">
-        <h3 id="biz-refs">{s.referencesTitle}</h3>
-        <p className="muted">{s.referencesHelp}</p>
+        <SectionTitle as="h3" id="biz-refs" help={s.referencesHelp}>
+          {s.referencesTitle}
+        </SectionTitle>
         {content.references.length === 0 ? (
           <p className="muted">{s.noReferences}</p>
         ) : (
@@ -406,8 +412,9 @@ export function SourcesView({
       </section>
 
       <section className="card stack" aria-labelledby="biz-assets">
-        <h3 id="biz-assets">{s.assetsTitle}</h3>
-        <p className="muted">{s.assetsHelp}</p>
+        <SectionTitle as="h3" id="biz-assets" help={s.assetsHelp}>
+          {s.assetsTitle}
+        </SectionTitle>
         {content.assets.length === 0 ? (
           <p className="muted">{s.noAssets}</p>
         ) : (

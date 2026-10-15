@@ -9,7 +9,7 @@ import {
   direction,
   localizedPath,
   messagesFor,
-  navigation,
+  navigationGroups,
   type Locale,
   type NavigationKey,
 } from '../i18n';
@@ -35,8 +35,19 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   settings: '/settings',
 };
 
+/** What an editor or viewer may open; the rest of the navigation is for administrators. */
+const memberNavigation: readonly NavigationKey[] = [
+  'dashboard',
+  'projects',
+  'topics',
+  'knowledge',
+  'templates',
+];
+
+type IconName = NavigationKey | 'users' | 'mail' | 'logout' | 'menu' | 'close' | 'workspace';
+
 /** Stroke icon paths (24x24 grid), decorative only: the text label carries the meaning. */
-const icons: Record<NavigationKey, string> = {
+const icons: Record<IconName, string> = {
   dashboard: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
   projects: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   topics: 'M4 5h16M4 12h16M4 19h10',
@@ -56,12 +67,19 @@ const icons: Record<NavigationKey, string> = {
     'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
   settings:
     'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+  users:
+    'M16 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM21 20v-1a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
+  mail: 'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3 7l9 6 9-6',
+  logout: 'M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8l-4 4 4 4M6 12h10',
+  menu: 'M4 6h16M4 12h16M4 18h16',
+  close: 'M6 6l12 12M18 6L6 18',
+  workspace: 'M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6',
 };
 
-function NavIcon({ name }: { name: NavigationKey }) {
+function Icon({ name, className = 'nav-icon' }: { name: IconName; className?: string }) {
   return (
     <svg
-      className="nav-icon"
+      className={className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -76,6 +94,33 @@ function NavIcon({ name }: { name: NavigationKey }) {
   );
 }
 
+function Brand() {
+  return (
+    <p className="brand">
+      <span className="brand-mark" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          focusable="false"
+        >
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4" />
+        </svg>
+      </span>
+      Docoo
+    </p>
+  );
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/u).filter(Boolean);
+  const letters = parts.length > 1 ? [parts[0], parts[1]] : [...(parts[0] ?? '?')].slice(0, 2);
+  return letters.map((part) => [...(part ?? '')][0] ?? '').join('');
+}
+
 interface AppShellProps {
   readonly identity?: SessionIdentity | undefined;
   readonly locale: Locale;
@@ -85,6 +130,9 @@ interface AppShellProps {
   readonly showNavigation: boolean;
   /** Workspace of the signed-in administrator; enables Smart (docs/10-smart.md). */
   readonly workspaceId?: string | undefined;
+  /** Signs out in place (the sign-in page then shows its notice); otherwise the shell reloads. */
+  readonly onSignOut?: () => void;
+  readonly signOutBusy?: boolean;
   readonly children: ReactNode;
 }
 
@@ -99,169 +147,269 @@ export function AppShell({
   subtitle,
   showNavigation,
   workspaceId,
+  onSignOut,
+  signOutBusy = false,
   children,
 }: AppShellProps) {
   const content = messagesFor(locale);
   const alternate: Locale = locale === 'fa' ? 'en' : 'fa';
   const pathname = usePathname() || `/${locale}`;
-  // Narrow screens fold the navigation behind a button; it closes again on every page change.
+  // Narrow screens fold the navigation into a drawer; it closes again on every page change.
   const [menu, setMenu] = useState({ open: false, path: pathname });
   const menuOpen = menu.open && menu.path === pathname;
+  const [leaving, setLeaving] = useState(false);
+  const isAdmin = !identity || identity.user.role === 'super_admin';
 
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = direction(locale);
   }, [locale]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenu({ open: false, path: pathname });
+    };
+    document.addEventListener('keydown', close);
+    return () => document.removeEventListener('keydown', close);
+  }, [menuOpen, pathname]);
+
+  async function signOutHere() {
+    if (leaving) return;
+    setLeaving(true);
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
+      if (!response.ok) throw new Error('Logout failed');
+      location.assign(`/${locale}`);
+    } catch {
+      setLeaving(false);
+    }
+  }
+
+  const topbarActions = (
+    <div className="topbar-actions">
+      {showNavigation && workspaceId && (
+        <NotificationBell locale={locale} workspaceId={workspaceId} />
+      )}
+      {showNavigation && workspaceId && isAdmin && (
+        <SmartToggle locale={locale} workspaceId={workspaceId} />
+      )}
+      <ThemeToggle locale={locale} />
+      <a
+        className="locale-link"
+        href={localizedPath(pathname, alternate)}
+        // Keep the section the page is showing (`?tab=…`); the hash may hold a secret.
+        onClick={(event) => {
+          event.currentTarget.href = `${localizedPath(location.pathname, alternate)}${location.search}`;
+        }}
+        hrefLang={alternate}
+        lang={alternate}
+        aria-label={content.switchLanguageLabel}
+      >
+        {content.switchLanguage}
+      </a>
+    </div>
+  );
+
+  const pageHead = (
+    <div className="page-head">
+      <h1 id="page-title" tabIndex={-1}>
+        {title}
+      </h1>
+      {subtitle && <p>{subtitle}</p>}
+    </div>
+  );
+
+  const skipLink = (
+    <a className="skip-link" href="#main-content">
+      {content.skipToContent}
+    </a>
+  );
+
+  if (!showNavigation) {
+    return (
+      <>
+        {skipLink}
+        <div className="shell shell-guest">
+          <header className="guest-bar">
+            <Brand />
+            {topbarActions}
+          </header>
+          <div className="content">
+            {pageHead}
+            <main id="main-content" tabIndex={-1}>
+              {children}
+            </main>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  const visible = (key: NavigationKey) => isAdmin || memberNavigation.includes(key);
+  const workspaceName = identity?.workspaces[0]?.name;
+  const roleLabel = identity
+    ? identity.user.isOwner
+      ? content.roles.owner
+      : content.roles[identity.user.role]
+    : '';
+  const closeMenu = () => setMenu({ open: false, path: pathname });
+
   return (
     <>
-      <a className="skip-link" href="#main-content">
-        {content.skipToContent}
-      </a>
-      <div className={showNavigation ? 'shell' : 'shell shell-guest'}>
-        <aside className={menuOpen ? 'sidebar sidebar-open' : 'sidebar'}>
+      {skipLink}
+      <div className="shell">
+        <aside id="app-sidebar" className={menuOpen ? 'sidebar sidebar-open' : 'sidebar'}>
           <div className="sidebar-head">
-            <p className="brand">
-              <span className="brand-mark" aria-hidden="true">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6" />
-                </svg>
-              </span>
-              Docoo
-            </p>
-            {showNavigation && (
-              <button
-                type="button"
-                className="menu-button"
-                aria-expanded={menuOpen}
-                aria-controls="primary-navigation"
-                onClick={() => setMenu({ open: !menuOpen, path: pathname })}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <path d={menuOpen ? 'M6 6l12 12M18 6L6 18' : 'M4 7h16M4 12h16M4 17h16'} />
-                </svg>
-                {content.menu}
-              </button>
-            )}
+            <Brand />
           </div>
-          {showNavigation && (
-            <nav id="primary-navigation" aria-label={content.navigation}>
-              <ul className="nav-list">
-                {navigation
-                  .filter(
-                    (key) =>
-                      !identity ||
-                      identity.user.role === 'super_admin' ||
-                      ['dashboard', 'projects', 'topics', 'knowledge', 'templates'].includes(key),
-                  )
-                  .map((key) => {
-                    const route = implemented[key];
-                    if (route === undefined) {
+          <nav className="sidebar-nav" aria-label={content.navigation}>
+            {navigationGroups.map((group) => {
+              const keys = group.items.filter(visible);
+              if (keys.length === 0) return null;
+              return (
+                <div className="nav-group" key={group.key}>
+                  <p className="nav-group-label">{content.navGroups[group.key]}</p>
+                  <ul className="nav-list">
+                    {keys.map((key) => {
+                      const route = implemented[key];
+                      if (route === undefined) {
+                        return (
+                          <li key={key}>
+                            <span className="nav-item" aria-disabled="true">
+                              <Icon name={key} />
+                              <span className="nav-label">
+                                {content.nav[key]} <small>{content.comingSoon}</small>
+                              </span>
+                            </span>
+                          </li>
+                        );
+                      }
+                      const href = `/${locale}${route}` as Route;
+                      // A page below a section (a project of /projects) keeps its section marked.
+                      const current =
+                        pathname === href ||
+                        (route !== '' && pathname.startsWith(`${href}/`)) ||
+                        // The two Smart pages share one navigation entry.
+                        (key === 'smart' && pathname.startsWith(`/${locale}/smart`));
                       return (
                         <li key={key}>
-                          <span className="nav-item" aria-disabled="true">
-                            <NavIcon name={key} />
-                            <span className="nav-label">
-                              {content.nav[key]} <small>{content.comingSoon}</small>
-                            </span>
-                          </span>
+                          <Link
+                            className="nav-item"
+                            href={href}
+                            aria-current={current ? 'page' : undefined}
+                          >
+                            <Icon name={key} />
+                            <span className="nav-label">{content.nav[key]}</span>
+                          </Link>
                         </li>
                       );
-                    }
-                    const href = `/${locale}${route}` as Route;
-                    // A page below a section (a project of /projects) keeps its section marked.
-                    const current =
-                      pathname === href ||
-                      (route !== '' && pathname.startsWith(`${href}/`)) ||
-                      // The two Smart pages share one navigation entry.
-                      (key === 'smart' && pathname.startsWith(`/${locale}/smart`));
-                    return (
-                      <li key={key}>
-                        <Link
-                          className="nav-item"
-                          href={href}
-                          aria-current={current ? 'page' : undefined}
-                        >
-                          <NavIcon name={key} />
-                          <span className="nav-label">{content.nav[key]}</span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                {identity?.user.role === 'super_admin' && (
-                  <li>
-                    <Link className="nav-item" href={`/${locale}/admin/users` as Route}>
-                      {locale === 'fa' ? 'کاربران' : 'Users'}
-                    </Link>
-                  </li>
-                )}
-                {identity?.user.isOwner && (
-                  <li>
-                    <Link className="nav-item" href={`/${locale}/settings/google-access` as Route}>
-                      {locale === 'fa' ? 'ورود با جیمیل' : 'Gmail sign-in'}
-                    </Link>
-                  </li>
-                )}
-              </ul>
-            </nav>
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
+            {(identity?.user.role === 'super_admin' || identity?.user.isOwner) && (
+              <div className="nav-group">
+                <p className="nav-group-label">{content.navGroups.admin}</p>
+                <ul className="nav-list">
+                  {identity.user.role === 'super_admin' && (
+                    <li>
+                      <Link
+                        className="nav-item"
+                        href={`/${locale}/admin/users` as Route}
+                        aria-current={
+                          pathname.startsWith(`/${locale}/admin/users`) ? 'page' : undefined
+                        }
+                      >
+                        <Icon name="users" />
+                        <span className="nav-label">{content.adminNav.users}</span>
+                      </Link>
+                    </li>
+                  )}
+                  {identity.user.isOwner && (
+                    <li>
+                      <Link
+                        className="nav-item"
+                        href={`/${locale}/settings/google-access` as Route}
+                        aria-current={
+                          pathname.startsWith(`/${locale}/settings/google-access`)
+                            ? 'page'
+                            : undefined
+                        }
+                      >
+                        <Icon name="mail" />
+                        <span className="nav-label">{content.adminNav.googleAccess}</span>
+                      </Link>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </nav>
+          {identity && (
+            <div className="sidebar-foot">
+              <div className="user-chip">
+                <span className="avatar" aria-hidden="true">
+                  {initials(identity.user.displayName)}
+                </span>
+                <span className="user-chip-text">
+                  <span className="user-chip-name">{identity.user.displayName}</span>
+                  <span className="user-chip-meta">{roleLabel}</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                className="sidebar-signout"
+                disabled={onSignOut ? signOutBusy : leaving}
+                onClick={onSignOut ? () => onSignOut() : () => void signOutHere()}
+              >
+                <Icon name="logout" className="" />
+                {onSignOut && signOutBusy ? content.signingOut : content.signOut}
+              </button>
+            </div>
           )}
         </aside>
-        <div className="content">
+        <div
+          className={menuOpen ? 'sidebar-overlay open' : 'sidebar-overlay'}
+          aria-hidden="true"
+          onClick={closeMenu}
+        />
+        <div className="main-column">
           <header className="topbar">
-            <div>
-              <h1 id="page-title" tabIndex={-1}>
-                {title}
-              </h1>
-              {subtitle && <p>{subtitle}</p>}
-            </div>
-            <div className="topbar-actions">
-              {showNavigation && workspaceId && (
-                <NotificationBell locale={locale} workspaceId={workspaceId} />
-              )}
-              {showNavigation &&
-                workspaceId &&
-                (!identity || identity.user.role === 'super_admin') && (
-                  <SmartToggle locale={locale} workspaceId={workspaceId} />
-                )}
-              <ThemeToggle locale={locale} />
-              <a
-                className="locale-link"
-                href={localizedPath(pathname, alternate)}
-                // Keep the section the page is showing (`?tab=…`); the hash may hold a secret.
-                onClick={(event) => {
-                  event.currentTarget.href = `${localizedPath(location.pathname, alternate)}${location.search}`;
-                }}
-                hrefLang={alternate}
-                lang={alternate}
-                aria-label={content.switchLanguageLabel}
-              >
-                {content.switchLanguage}
-              </a>
-            </div>
+            <button
+              type="button"
+              className="menu-button"
+              aria-controls="app-sidebar"
+              aria-expanded={menuOpen}
+              aria-label={menuOpen ? content.closeMenu : content.menu}
+              onClick={() => setMenu({ open: !menuOpen, path: pathname })}
+            >
+              <Icon name={menuOpen ? 'close' : 'menu'} className="" />
+            </button>
+            {workspaceName && (
+              <div className="topbar-context">
+                <span className="workspace-chip" title={content.workspaceLabel}>
+                  <Icon name="workspace" className="" />
+                  {workspaceName}
+                </span>
+              </div>
+            )}
+            {topbarActions}
           </header>
-          <main id="main-content" tabIndex={-1}>
-            {children}
-          </main>
+          <div className="content">
+            {pageHead}
+            <main id="main-content" tabIndex={-1}>
+              {children}
+            </main>
+          </div>
         </div>
       </div>
-      {showNavigation && workspaceId && (!identity || identity.user.role === 'super_admin') && (
-        <SmartRoot locale={locale} workspaceId={workspaceId} />
-      )}
+      {workspaceId && isAdmin && <SmartRoot locale={locale} workspaceId={workspaceId} />}
     </>
   );
 }

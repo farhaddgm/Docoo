@@ -45,7 +45,7 @@ export function SmartToggle({ locale, workspaceId }: { locale: Locale; workspace
       >
         <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z" />
       </svg>
-      {text.name}
+      <span className="smart-toggle-label">{text.name}</span>
       {open > 0 && (
         <span className="badge" title={fill(text.openCount, { n: open })}>
           {formatNumber(locale, open)}

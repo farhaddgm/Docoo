@@ -23,6 +23,7 @@ import {
 } from './problem-types';
 import { draftOf, draftProblem, QuestionEditor } from './question-editor';
 import { uploadProjectFile } from './upload-file';
+import { SectionTitle } from '../../../info-tip';
 
 const POLL_WORKING_MS = 4000;
 const POLL_IDLE_MS = 20000;
@@ -366,10 +367,9 @@ export function ProblemPanel({
           noValidate
           onSubmit={saveBatch}
         >
-          <h3 id="batch-heading">
+          <SectionTitle as="h3" id="batch-heading" help={text.batchHelp}>
             {fill(text.batchTitle, { n: formatNumber(locale, openBatch.batchNo) })}
-          </h3>
-          <p className="muted">{text.batchHelp}</p>
+          </SectionTitle>
           {openBatch.understood && (
             <p dir="auto">
               <strong>{text.understood}:</strong> {openBatch.understood}
@@ -425,8 +425,9 @@ export function ProblemPanel({
       )}
 
       <section className="card stack" aria-labelledby="coverage-heading">
-        <h3 id="coverage-heading">{text.coverageTitle}</h3>
-        <p className="muted">{text.coverageHelp}</p>
+        <SectionTitle as="h3" id="coverage-heading" help={text.coverageHelp}>
+          {text.coverageTitle}
+        </SectionTitle>
         {gaps.length > 0 && progress.asked > 0 && (
           <p className="notice" role="status">
             {fill(text.gapAlert, { list: gaps.join(locale === 'fa' ? '، ' : ', ') })}
@@ -468,8 +469,9 @@ export function ProblemPanel({
       </section>
 
       <section className="card stack" aria-labelledby="followups-heading">
-        <h3 id="followups-heading">{text.followUpsTitle}</h3>
-        <p className="muted">{text.followUpsHelp}</p>
+        <SectionTitle as="h3" id="followups-heading" help={text.followUpsHelp}>
+          {text.followUpsTitle}
+        </SectionTitle>
         {followUps.length === 0 ? (
           <p>{text.followUpsNone}</p>
         ) : (
@@ -538,8 +540,9 @@ export function ProblemPanel({
 
       {analysis.finish.available && !readOnly && (
         <section className="card stack" aria-labelledby="finish-heading">
-          <h3 id="finish-heading">{text.finishTitle}</h3>
-          <p className="muted">{text.finishHelp}</p>
+          <SectionTitle as="h3" id="finish-heading" help={text.finishHelp}>
+            {text.finishTitle}
+          </SectionTitle>
           {finishing === null ? (
             <div className="toolbar">
               <button

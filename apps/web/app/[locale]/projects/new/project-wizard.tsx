@@ -34,6 +34,7 @@ import {
 import { CriteriaEditor, criteriaIssue, sameCriteria, type Criterion } from './criteria-editor';
 import { quickDraftMessages } from '../quick-draft-messages';
 import { wizardMessages } from './wizard-messages';
+import { FieldLabel } from '../../../info-tip';
 
 /** The settings each step offers, in the order of UX §5 (steps 3 to 7). */
 const STEP_KEYS: Record<number, readonly string[]> = {
@@ -325,14 +326,19 @@ export function ProjectWizard({
       aria-label={project.newTitle}
     >
       <nav aria-label={text.stepsLabel}>
-        <ol className="plain-list toolbar">
+        <ol className="stepper">
           {text.steps.map((name, index) => (
-            <li key={name}>
-              <span
-                className={`badge tone-${index < step ? 'ok' : 'neutral'}`}
-                aria-current={index === step ? 'step' : undefined}
-              >
-                {formatNumber(locale, index + 1)}. {name}
+            <li
+              key={name}
+              className={index < step ? 'step-done' : undefined}
+              aria-current={index === step ? 'step' : undefined}
+            >
+              <span className="step-number" aria-hidden="true">
+                {formatNumber(locale, index + 1)}
+              </span>
+              <span className="step-name">
+                <span className="visually-hidden">{formatNumber(locale, index + 1)}. </span>
+                {name}
               </span>
             </li>
           ))}
@@ -363,8 +369,14 @@ export function ProjectWizard({
         {step === 0 && (
           <>
             <BasicsFields locale={locale} values={values} onChange={setValues} />
-            <div className="filter-form">
-              <label htmlFor="analysis-profile">{quickDraftMessages(locale).profile}</label>
+            <div className="filter-grid">
+              <FieldLabel
+                htmlFor="analysis-profile"
+                help={quickDraftMessages(locale).help}
+                helpId="analysis-profile-help"
+              >
+                {quickDraftMessages(locale).profile}
+              </FieldLabel>
               <select
                 id="analysis-profile"
                 value={values.analysisProfile ?? 'full'}
@@ -376,9 +388,6 @@ export function ProjectWizard({
                 <option value="full">{quickDraftMessages(locale).full}</option>
                 <option value="quick">{quickDraftMessages(locale).quick}</option>
               </select>
-              <p id="analysis-profile-help" className="muted">
-                {quickDraftMessages(locale).help}
-              </p>
               {values.analysisProfile === 'quick' && (
                 <p className="notice" role="status">
                   {quickDraftMessages(locale).warning}

@@ -8,6 +8,7 @@ import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { CatalogPrices } from './catalog-prices';
 import { priceMessages } from './price-messages';
+import { SectionTitle } from '../../info-tip';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
 
@@ -128,8 +129,9 @@ export function ModelPrices({
 
   return (
     <section className="card stack" aria-labelledby="prices-title">
-      <h2 id="prices-title">{text.title}</h2>
-      <p className="muted">{text.help}</p>
+      <SectionTitle id="prices-title" help={text.help}>
+        {text.title}
+      </SectionTitle>
       <CatalogPrices
         locale={locale}
         workspaceId={workspaceId}

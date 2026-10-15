@@ -16,6 +16,7 @@ import {
   type ClaimRow,
   type KnowledgeRow,
 } from './knowledge-types';
+import { SectionTitle } from '../../info-tip';
 
 type View = 'documents' | 'claims';
 type Support = '' | 'yes' | 'no' | 'unaudited';
@@ -132,8 +133,9 @@ export function QueuePanel({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.queueHeading}</h2>
-      <p className="muted">{text.queueHelp}</p>
+      <SectionTitle id={`${id}-heading`} help={text.queueHelp}>
+        {text.queueHeading}
+      </SectionTitle>
 
       {!scoped && (
         <div className="toolbar" role="group" aria-label={text.viewLabel}>
@@ -151,65 +153,79 @@ export function QueuePanel({
         </div>
       )}
 
-      <form className="filter-grid" aria-label={text.filters} onSubmit={(e) => e.preventDefault()}>
-        <label htmlFor={`${id}-status`}>{text.status}</label>
-        <select id={`${id}-status`} value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">{text.allStatuses}</option>
-          {knowledgeStatuses.map((item) => (
-            <option key={item} value={item}>
-              {text.statuses[item]}
-            </option>
-          ))}
-        </select>
+      <form
+        className="filter-grid filters-row"
+        aria-label={text.filters}
+        onSubmit={(e) => e.preventDefault()}
+      >
+        <div className="field">
+          <label htmlFor={`${id}-status`}>{text.status}</label>
+          <select id={`${id}-status`} value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">{text.allStatuses}</option>
+            {knowledgeStatuses.map((item) => (
+              <option key={item} value={item}>
+                {text.statuses[item]}
+              </option>
+            ))}
+          </select>
+        </div>
         {view === 'documents' ? (
           <>
-            <label htmlFor={`${id}-source`}>{text.sourceTypeFilter}</label>
-            <select
-              id={`${id}-source`}
-              value={sourceType}
-              onChange={(e) => setSourceType(e.target.value)}
-            >
-              <option value="">{text.allSourceTypes}</option>
-              {sourceTypes.map((item) => (
-                <option key={item} value={item}>
-                  {text.sourceTypes[item]}
-                </option>
-              ))}
-            </select>
-            <label htmlFor={`${id}-search`}>{text.search}</label>
-            <input
-              id={`${id}-search`}
-              type="search"
-              dir="auto"
-              value={search}
-              maxLength={100}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <div className="field">
+              <label htmlFor={`${id}-source`}>{text.sourceTypeFilter}</label>
+              <select
+                id={`${id}-source`}
+                value={sourceType}
+                onChange={(e) => setSourceType(e.target.value)}
+              >
+                <option value="">{text.allSourceTypes}</option>
+                {sourceTypes.map((item) => (
+                  <option key={item} value={item}>
+                    {text.sourceTypes[item]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor={`${id}-search`}>{text.search}</label>
+              <input
+                id={`${id}-search`}
+                type="search"
+                dir="auto"
+                value={search}
+                maxLength={100}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </>
         ) : (
           <>
-            <label htmlFor={`${id}-support`}>{text.supportFilter}</label>
-            <select
-              id={`${id}-support`}
-              value={support}
-              onChange={(e) => setSupport(e.target.value as Support)}
-            >
-              <option value="">{text.allSupport}</option>
-              {(['yes', 'no', 'unaudited'] as const).map((item) => (
-                <option key={item} value={item}>
-                  {text.support[item]}
-                </option>
-              ))}
-            </select>
-            <label htmlFor={`${id}-kind`}>{text.kindFilter}</label>
-            <select id={`${id}-kind`} value={kind} onChange={(e) => setKind(e.target.value)}>
-              <option value="">{text.allKinds}</option>
-              {claimKinds.map((item) => (
-                <option key={item} value={item}>
-                  {text.claimKinds[item]}
-                </option>
-              ))}
-            </select>
+            <div className="field">
+              <label htmlFor={`${id}-support`}>{text.supportFilter}</label>
+              <select
+                id={`${id}-support`}
+                value={support}
+                onChange={(e) => setSupport(e.target.value as Support)}
+              >
+                <option value="">{text.allSupport}</option>
+                {(['yes', 'no', 'unaudited'] as const).map((item) => (
+                  <option key={item} value={item}>
+                    {text.support[item]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor={`${id}-kind`}>{text.kindFilter}</label>
+              <select id={`${id}-kind`} value={kind} onChange={(e) => setKind(e.target.value)}>
+                <option value="">{text.allKinds}</option>
+                {claimKinds.map((item) => (
+                  <option key={item} value={item}>
+                    {text.claimKinds[item]}
+                  </option>
+                ))}
+              </select>
+            </div>
             <span />
             <label className="checkbox" htmlFor={`${id}-conflicted`}>
               <input

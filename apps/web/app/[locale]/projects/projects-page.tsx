@@ -143,58 +143,68 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
           </div>
         </div>
         <form
-          className="filter-grid project-filters"
+          className="filter-grid filters-row project-filters"
           aria-label={text.filters}
           onSubmit={(event) => event.preventDefault()}
         >
-          <label htmlFor="project-search">{text.searchLabel}</label>
-          <input
-            id="project-search"
-            type="search"
-            dir="auto"
-            value={filters.q}
-            maxLength={100}
-            onChange={(event) => setFilters({ ...filters, q: event.target.value })}
-          />
-          <label htmlFor="project-topic">{text.topicFilter}</label>
-          <select
-            id="project-topic"
-            value={filters.topicId}
-            onChange={(event) => setFilters({ ...filters, topicId: event.target.value })}
-          >
-            <option value="">{text.anyTopic}</option>
-            {topics.map((topic) => (
-              <option key={topic.id} value={topic.id}>
-                {topic.title}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="project-language">{text.languageFilter}</label>
-          <select
-            id="project-language"
-            value={filters.language}
-            onChange={(event) => setFilters({ ...filters, language: event.target.value })}
-          >
-            <option value="">{text.anyLanguage}</option>
-            <option value="fa">{text.languages.fa}</option>
-            <option value="en">{text.languages.en}</option>
-          </select>
-          <label htmlFor="project-from">{text.fromLabel}</label>
-          <input
-            id="project-from"
-            type="date"
-            value={filters.from}
-            max={filters.to || undefined}
-            onChange={(event) => setFilters({ ...filters, from: event.target.value })}
-          />
-          <label htmlFor="project-to">{text.toLabel}</label>
-          <input
-            id="project-to"
-            type="date"
-            value={filters.to}
-            min={filters.from || undefined}
-            onChange={(event) => setFilters({ ...filters, to: event.target.value })}
-          />
+          <div className="field">
+            <label htmlFor="project-search">{text.searchLabel}</label>
+            <input
+              id="project-search"
+              type="search"
+              dir="auto"
+              value={filters.q}
+              maxLength={100}
+              onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="project-topic">{text.topicFilter}</label>
+            <select
+              id="project-topic"
+              value={filters.topicId}
+              onChange={(event) => setFilters({ ...filters, topicId: event.target.value })}
+            >
+              <option value="">{text.anyTopic}</option>
+              {topics.map((topic) => (
+                <option key={topic.id} value={topic.id}>
+                  {topic.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="project-language">{text.languageFilter}</label>
+            <select
+              id="project-language"
+              value={filters.language}
+              onChange={(event) => setFilters({ ...filters, language: event.target.value })}
+            >
+              <option value="">{text.anyLanguage}</option>
+              <option value="fa">{text.languages.fa}</option>
+              <option value="en">{text.languages.en}</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="project-from">{text.fromLabel}</label>
+            <input
+              id="project-from"
+              type="date"
+              value={filters.from}
+              max={filters.to || undefined}
+              onChange={(event) => setFilters({ ...filters, from: event.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="project-to">{text.toLabel}</label>
+            <input
+              id="project-to"
+              type="date"
+              value={filters.to}
+              min={filters.from || undefined}
+              onChange={(event) => setFilters({ ...filters, to: event.target.value })}
+            />
+          </div>
           <span />
           <label className="checkbox" htmlFor="project-waiting">
             <input
