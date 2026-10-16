@@ -40,7 +40,7 @@ async function post(url: string, payload: unknown = {}, cookie = cookieA) {
 
 describe.skipIf(!adminUrl)('Stage conversation with the agent (ADR-0031 P1)', () => {
   beforeAll(async () => {
-    h = await createHarness('stage-chat');
+    h = await createHarness('stagechat');
     cookieA = await h.login(h.emails.a);
     cookieB = await h.login(h.emails.b);
     const connection = await post(api('/provider-connections'), {
