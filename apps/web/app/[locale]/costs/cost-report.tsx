@@ -10,6 +10,8 @@ import { formatNumber, type Locale } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
+import { SectionTitle } from '../../info-tip';
+import { PagedRows } from '../../table-pager';
 
 type GroupBy = 'stage' | 'project' | 'day' | 'model';
 
@@ -149,8 +151,9 @@ function Report({ locale, workspaceId }: { locale: Locale; workspaceId: string }
         </p>
       )}
       <section className="card" aria-labelledby="usage-title">
-        <h2 id="usage-title">{text.title}</h2>
-        <p className="muted">{text.estimate}</p>
+        <SectionTitle id="usage-title" help={text.estimate}>
+          {text.title}
+        </SectionTitle>
         {(usage?.totals.unpricedInvocations ?? 0) > 0 && usage && (
           <div className="notice warn" role="status">
             <p>
@@ -164,37 +167,46 @@ function Report({ locale, workspaceId }: { locale: Locale; workspaceId: string }
         {usage === null ? (
           <p role="status">{content.loading}</p>
         ) : (
-          <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="usage-title">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">{text.group}</th>
-                  <th scope="col">{content.dashboard.invocations}</th>
-                  <th scope="col">{text.inputTokens}</th>
-                  <th scope="col">{text.outputTokens}</th>
-                  <th scope="col">{content.dashboard.cost}</th>
-                  <th scope="col">{text.failures}</th>
-                  <th scope="col">{text.latency}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usage.groups.map((row) => (
-                  <tr key={row.key}>
-                    <th scope="row" dir="ltr">
-                      {row.label}
-                    </th>
-                    {cells(row)}
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row">{text.total}</th>
-                  {cells(usage.totals)}
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <PagedRows rows={usage.groups}>
+            {(pageRows) => (
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-labelledby="usage-title"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{text.group}</th>
+                      <th scope="col">{content.dashboard.invocations}</th>
+                      <th scope="col">{text.inputTokens}</th>
+                      <th scope="col">{text.outputTokens}</th>
+                      <th scope="col">{content.dashboard.cost}</th>
+                      <th scope="col">{text.failures}</th>
+                      <th scope="col">{text.latency}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((row) => (
+                      <tr key={row.key}>
+                        <th scope="row" dir="ltr">
+                          {row.label}
+                        </th>
+                        {cells(row)}
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th scope="row">{text.total}</th>
+                      {cells(usage.totals)}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
       </section>
     </div>

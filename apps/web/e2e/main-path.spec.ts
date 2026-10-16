@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { revealRow } from './support';
 
 const email = process.env['E2E_ADMIN_EMAIL'] ?? 'e2e-admin@example.test';
 const password = process.env['E2E_ADMIN_PASSWORD'] ?? 'e2e-admin-password-1';
@@ -187,7 +188,7 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     const nav = page.getByRole('navigation', { name: 'ناوبری اصلی' });
     await nav.getByRole('link', { name: 'ارائه‌دهندگان AI' }).click();
     await expect(page).toHaveURL(/\/fa\/providers$/u);
-    await expect(page.getByRole('rowheader', { name: connection.name })).toBeVisible();
+    await revealRow(page, page.getByRole('rowheader', { name: connection.name }));
     await expect(page.getByLabel('کلید API')).toHaveAttribute('type', 'password');
     await expectNoSeriousA11yViolations(page);
 

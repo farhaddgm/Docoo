@@ -8,6 +8,7 @@ import { fill } from '../../agents/agent-messages';
 import { businessMessages, joinList, sectionTitle } from '../business-messages';
 import type { ContextPreview, HistoryItem, RolePreview } from '../business-types';
 import { SectionTitle } from '../../../info-tip';
+import { PagedRows } from '../../../table-pager';
 
 const failedText = (error: unknown, locale: Locale): string => {
   const text = businessMessages(locale);
@@ -303,84 +304,92 @@ export function VersionsView({
       {items.length === 0 ? (
         <p className="muted">{v.none}</p>
       ) : (
-        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="biz-versions">
-          <table data-testid="business-versions">
-            <thead>
-              <tr>
-                <th scope="col">{v.version}</th>
-                <th scope="col">{v.fetchedAt}</th>
-                <th scope="col">{v.changes}</th>
-                <th scope="col">{v.used}</th>
-                <th scope="col">{v.shortHash}</th>
-                <th scope="col">
-                  <span className="visually-hidden">{v.show}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                const parts: string[] = [];
-                if (item.changes.sections.length > 0) {
-                  parts.push(
-                    fill(v.changeSections, {
-                      names: joinList(
-                        locale,
-                        item.changes.sections.map((key) => sectionTitle(locale, key)),
-                      ),
-                    }),
-                  );
-                }
-                if (item.changes.facts) parts.push(v.changeFacts);
-                if (item.changes.terms) parts.push(v.changeTerms);
-                if (item.changes.notes) parts.push(v.changeNotes);
-                if (item.changes.details) parts.push(v.changeDetails);
-                return (
-                  <tr key={item.id} data-testid={`business-version-${item.versionNo}`}>
-                    <th scope="row">
-                      {formatNumber(locale, item.versionNo)}
-                      {item.current && <span className="badge tone-ok">{v.current}</span>}
+        <PagedRows rows={items}>
+          {(pageRows) => (
+            <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="biz-versions">
+              <table data-testid="business-versions">
+                <thead>
+                  <tr>
+                    <th scope="col">{v.version}</th>
+                    <th scope="col">{v.fetchedAt}</th>
+                    <th scope="col">{v.changes}</th>
+                    <th scope="col">{v.used}</th>
+                    <th scope="col">{v.shortHash}</th>
+                    <th scope="col">
+                      <span className="visually-hidden">{v.show}</span>
                     </th>
-                    <td>{formatDateTime(locale, item.fetchedAt)}</td>
-                    <td dir="auto">
-                      {item.versionNo === 1 ? v.first : parts.length > 0 ? parts.join(' · ') : '—'}
-                    </td>
-                    <td>
-                      {item.runs + item.writings === 0
-                        ? '—'
-                        : [
-                            item.runs > 0
-                              ? fill(v.runs, { count: formatNumber(locale, item.runs) })
-                              : null,
-                            item.writings > 0
-                              ? fill(v.writings, { count: formatNumber(locale, item.writings) })
-                              : null,
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                    </td>
-                    <td dir="ltr">
-                      <code>{item.contentSha256.slice(0, 10)}</code>
-                    </td>
-                    <td>
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        aria-pressed={shownId === item.id}
-                        onClick={() => onShow(item)}
-                      >
-                        {v.show}
-                        <span className="visually-hidden">
-                          {' '}
-                          — {formatNumber(locale, item.versionNo)}
-                        </span>
-                      </button>
-                    </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {pageRows.map((item) => {
+                    const parts: string[] = [];
+                    if (item.changes.sections.length > 0) {
+                      parts.push(
+                        fill(v.changeSections, {
+                          names: joinList(
+                            locale,
+                            item.changes.sections.map((key) => sectionTitle(locale, key)),
+                          ),
+                        }),
+                      );
+                    }
+                    if (item.changes.facts) parts.push(v.changeFacts);
+                    if (item.changes.terms) parts.push(v.changeTerms);
+                    if (item.changes.notes) parts.push(v.changeNotes);
+                    if (item.changes.details) parts.push(v.changeDetails);
+                    return (
+                      <tr key={item.id} data-testid={`business-version-${item.versionNo}`}>
+                        <th scope="row">
+                          {formatNumber(locale, item.versionNo)}
+                          {item.current && <span className="badge tone-ok">{v.current}</span>}
+                        </th>
+                        <td>{formatDateTime(locale, item.fetchedAt)}</td>
+                        <td dir="auto">
+                          {item.versionNo === 1
+                            ? v.first
+                            : parts.length > 0
+                              ? parts.join(' · ')
+                              : '—'}
+                        </td>
+                        <td>
+                          {item.runs + item.writings === 0
+                            ? '—'
+                            : [
+                                item.runs > 0
+                                  ? fill(v.runs, { count: formatNumber(locale, item.runs) })
+                                  : null,
+                                item.writings > 0
+                                  ? fill(v.writings, { count: formatNumber(locale, item.writings) })
+                                  : null,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                        </td>
+                        <td dir="ltr">
+                          <code>{item.contentSha256.slice(0, 10)}</code>
+                        </td>
+                        <td>
+                          <button
+                            className="secondary-button"
+                            type="button"
+                            aria-pressed={shownId === item.id}
+                            onClick={() => onShow(item)}
+                          >
+                            {v.show}
+                            <span className="visually-hidden">
+                              {' '}
+                              — {formatNumber(locale, item.versionNo)}
+                            </span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PagedRows>
       )}
     </section>
   );

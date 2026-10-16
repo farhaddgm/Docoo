@@ -5,6 +5,7 @@ import { fill } from '../../agents/agent-messages';
 import { businessMessages, joinList, sectionTitle } from '../business-messages';
 import type { BusinessContent } from '../business-types';
 import { SectionTitle } from '../../../info-tip';
+import { PagedRows } from '../../../table-pager';
 
 /** The group of each profile section, in Contenter's order (the registry lives in @docoo/domain). */
 const SECTION_GROUP: Readonly<Record<string, string>> = {
@@ -216,49 +217,53 @@ export function KnowledgeView({
         {content.facts.length === 0 ? (
           <p className="muted">{k.noFacts}</p>
         ) : (
-          <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="biz-facts">
-            <table data-testid="business-facts">
-              <thead>
-                <tr>
-                  <th scope="col">{k.label}</th>
-                  <th scope="col">{k.value}</th>
-                  <th scope="col">{k.category}</th>
-                  <th scope="col">{k.state}</th>
-                  <th scope="col">{k.validUntil}</th>
-                  <th scope="col">{k.source}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {content.facts.map((fact, index) => {
-                  const stale = expired(fact.validUntil);
-                  return (
-                    <tr key={`${fact.label}-${index}`}>
-                      <th scope="row" dir="auto">
-                        {fact.label}
-                      </th>
-                      <td dir="auto">{fact.value}</td>
-                      <td>{k.categories[fact.category] ?? fact.category}</td>
-                      <td>
-                        <span className="chips">
-                          <span className={`badge tone-${fact.verified ? 'ok' : 'warn'}`}>
-                            {fact.verified ? k.verified : k.unverified}
-                          </span>
-                          {stale && <span className="badge tone-danger">{k.expired}</span>}
-                          {!fact.isActive && (
-                            <span className="badge tone-neutral">{k.inactive}</span>
-                          )}
-                        </span>
-                      </td>
-                      <td>
-                        <When locale={locale} value={fact.validUntil} />
-                      </td>
-                      <td>{fact.sourceUrl ? <Address value={fact.sourceUrl} /> : '—'}</td>
+          <PagedRows rows={content.facts}>
+            {(pageRows) => (
+              <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="biz-facts">
+                <table data-testid="business-facts">
+                  <thead>
+                    <tr>
+                      <th scope="col">{k.label}</th>
+                      <th scope="col">{k.value}</th>
+                      <th scope="col">{k.category}</th>
+                      <th scope="col">{k.state}</th>
+                      <th scope="col">{k.validUntil}</th>
+                      <th scope="col">{k.source}</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((fact, index) => {
+                      const stale = expired(fact.validUntil);
+                      return (
+                        <tr key={`${fact.label}-${index}`}>
+                          <th scope="row" dir="auto">
+                            {fact.label}
+                          </th>
+                          <td dir="auto">{fact.value}</td>
+                          <td>{k.categories[fact.category] ?? fact.category}</td>
+                          <td>
+                            <span className="chips">
+                              <span className={`badge tone-${fact.verified ? 'ok' : 'warn'}`}>
+                                {fact.verified ? k.verified : k.unverified}
+                              </span>
+                              {stale && <span className="badge tone-danger">{k.expired}</span>}
+                              {!fact.isActive && (
+                                <span className="badge tone-neutral">{k.inactive}</span>
+                              )}
+                            </span>
+                          </td>
+                          <td>
+                            <When locale={locale} value={fact.validUntil} />
+                          </td>
+                          <td>{fact.sourceUrl ? <Address value={fact.sourceUrl} /> : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
       </section>
 
@@ -269,35 +274,41 @@ export function KnowledgeView({
         {content.terms.length === 0 ? (
           <p className="muted">{k.noTerms}</p>
         ) : (
-          <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="biz-terms">
-            <table data-testid="business-terms">
-              <thead>
-                <tr>
-                  <th scope="col">{k.term}</th>
-                  <th scope="col">{k.kind}</th>
-                  <th scope="col">{k.alternatives}</th>
-                  <th scope="col">{k.note}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {content.terms.map((term, index) => (
-                  <tr key={`${term.term}-${index}`}>
-                    <th scope="row" dir="auto">
-                      {term.term}
-                    </th>
-                    <td>
-                      <span className={`badge tone-${term.kind === 'AVOID' ? 'danger' : 'ok'}`}>
-                        {k.kinds[term.kind] ?? term.kind}
-                      </span>
-                      {!term.isActive && <span className="badge tone-neutral">{k.inactive}</span>}
-                    </td>
-                    <td dir="auto">{joinList(locale, term.alternatives) || '—'}</td>
-                    <td dir="auto">{term.note || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PagedRows rows={content.terms}>
+            {(pageRows) => (
+              <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="biz-terms">
+                <table data-testid="business-terms">
+                  <thead>
+                    <tr>
+                      <th scope="col">{k.term}</th>
+                      <th scope="col">{k.kind}</th>
+                      <th scope="col">{k.alternatives}</th>
+                      <th scope="col">{k.note}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((term, index) => (
+                      <tr key={`${term.term}-${index}`}>
+                        <th scope="row" dir="auto">
+                          {term.term}
+                        </th>
+                        <td>
+                          <span className={`badge tone-${term.kind === 'AVOID' ? 'danger' : 'ok'}`}>
+                            {k.kinds[term.kind] ?? term.kind}
+                          </span>
+                          {!term.isActive && (
+                            <span className="badge tone-neutral">{k.inactive}</span>
+                          )}
+                        </td>
+                        <td dir="auto">{joinList(locale, term.alternatives) || '—'}</td>
+                        <td dir="auto">{term.note || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
       </section>
 
@@ -363,51 +374,55 @@ export function SourcesView({
         {content.references.length === 0 ? (
           <p className="muted">{s.noReferences}</p>
         ) : (
-          <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="biz-refs">
-            <table data-testid="business-references">
-              <thead>
-                <tr>
-                  <th scope="col">{s.title}</th>
-                  <th scope="col">{s.address}</th>
-                  <th scope="col">{text.knowledge.state}</th>
-                  <th scope="col">{s.chars}</th>
-                  <th scope="col">{s.fetchedAt}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {content.references.map((reference, index) => (
-                  <tr key={`${reference.url}-${index}`}>
-                    <th scope="row" dir="auto">
-                      {reference.title || s.referenceKinds[reference.kind] || reference.kind}
-                      {reference.excerpt && (
-                        <details>
-                          <summary>{s.excerpt}</summary>
-                          <div className="pre-text" dir="auto">
-                            {reference.excerpt}
-                          </div>
-                        </details>
-                      )}
-                    </th>
-                    <td>{reference.url ? <Address value={reference.url} /> : '—'}</td>
-                    <td>
-                      <span className="chips">
-                        <span className="badge tone-neutral">
-                          {s.referenceStatuses[reference.status] ?? reference.status}
-                        </span>
-                        {!reference.isActive && (
-                          <span className="badge tone-neutral">{s.inactive}</span>
-                        )}
-                      </span>
-                    </td>
-                    <td>{formatNumber(locale, reference.contentChars)}</td>
-                    <td>
-                      <When locale={locale} value={reference.fetchedAt} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PagedRows rows={content.references}>
+            {(pageRows) => (
+              <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="biz-refs">
+                <table data-testid="business-references">
+                  <thead>
+                    <tr>
+                      <th scope="col">{s.title}</th>
+                      <th scope="col">{s.address}</th>
+                      <th scope="col">{text.knowledge.state}</th>
+                      <th scope="col">{s.chars}</th>
+                      <th scope="col">{s.fetchedAt}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((reference, index) => (
+                      <tr key={`${reference.url}-${index}`}>
+                        <th scope="row" dir="auto">
+                          {reference.title || s.referenceKinds[reference.kind] || reference.kind}
+                          {reference.excerpt && (
+                            <details>
+                              <summary>{s.excerpt}</summary>
+                              <div className="pre-text" dir="auto">
+                                {reference.excerpt}
+                              </div>
+                            </details>
+                          )}
+                        </th>
+                        <td>{reference.url ? <Address value={reference.url} /> : '—'}</td>
+                        <td>
+                          <span className="chips">
+                            <span className="badge tone-neutral">
+                              {s.referenceStatuses[reference.status] ?? reference.status}
+                            </span>
+                            {!reference.isActive && (
+                              <span className="badge tone-neutral">{s.inactive}</span>
+                            )}
+                          </span>
+                        </td>
+                        <td>{formatNumber(locale, reference.contentChars)}</td>
+                        <td>
+                          <When locale={locale} value={reference.fetchedAt} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
       </section>
 

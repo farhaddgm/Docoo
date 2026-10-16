@@ -9,6 +9,8 @@ import { formatDateTime, formatNumber, type Locale } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge } from './knowledge-common';
 import { knowledgeMessages } from './knowledge-messages';
+import { SectionTitle } from '../../info-tip';
+import { PagedRows } from '../../table-pager';
 
 interface Use {
   id: string;
@@ -66,8 +68,9 @@ export function UsesPanel({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.usesTitle}</h2>
-      <p className="muted">{text.usesIntro}</p>
+      <SectionTitle id={`${id}-heading`} help={text.usesIntro}>
+        {text.usesTitle}
+      </SectionTitle>
       {failed && (
         <p className="notice error" role="alert">
           {text.usesFailed}
@@ -83,52 +86,61 @@ export function UsesPanel({
               cited: formatNumber(locale, uses.totals.cited),
             })}
           </p>
-          <div className="table-scroll" tabIndex={0} role="region" aria-label={text.usesCaption}>
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">{text.usesProject}</th>
-                  <th scope="col">{text.usesStage}</th>
-                  <th scope="col">{text.usesQuery}</th>
-                  <th scope="col">{text.usesVersion}</th>
-                  <th scope="col">{text.usesWhen}</th>
-                  <th scope="col">{text.usesResult}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {uses.items.map((use) => (
-                  <tr key={use.id}>
-                    <th scope="row" dir="auto">
-                      {use.projectId ? (
-                        <Link href={`/${locale}/projects/${use.projectId}` as Route}>
-                          {use.projectTitle ?? use.projectId}
-                        </Link>
-                      ) : (
-                        '—'
-                      )}
-                    </th>
-                    <td>
-                      {use.stage ? (text.usesStages[use.stage] ?? use.stage) : '—'}
-                      {use.attemptNo !== null && (
-                        <small className="muted">
-                          {' '}
-                          ({text.usesAttempt} {formatNumber(locale, use.attemptNo)})
-                        </small>
-                      )}
-                    </td>
-                    <td dir="auto">{use.query ?? '—'}</td>
-                    <td>{use.versionNos.map((n) => formatNumber(locale, n)).join(', ')}</td>
-                    <td>{formatDateTime(locale, use.createdAt)}</td>
-                    <td>
-                      <Badge tone={use.cited ? 'ok' : 'neutral'}>
-                        {use.cited ? text.usesCited : text.usesRetrievedOnly}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PagedRows rows={uses.items}>
+            {(pageRows) => (
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-label={text.usesCaption}
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{text.usesProject}</th>
+                      <th scope="col">{text.usesStage}</th>
+                      <th scope="col">{text.usesQuery}</th>
+                      <th scope="col">{text.usesVersion}</th>
+                      <th scope="col">{text.usesWhen}</th>
+                      <th scope="col">{text.usesResult}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((use) => (
+                      <tr key={use.id}>
+                        <th scope="row" dir="auto">
+                          {use.projectId ? (
+                            <Link href={`/${locale}/projects/${use.projectId}` as Route}>
+                              {use.projectTitle ?? use.projectId}
+                            </Link>
+                          ) : (
+                            '—'
+                          )}
+                        </th>
+                        <td>
+                          {use.stage ? (text.usesStages[use.stage] ?? use.stage) : '—'}
+                          {use.attemptNo !== null && (
+                            <small className="muted">
+                              {' '}
+                              ({text.usesAttempt} {formatNumber(locale, use.attemptNo)})
+                            </small>
+                          )}
+                        </td>
+                        <td dir="auto">{use.query ?? '—'}</td>
+                        <td>{use.versionNos.map((n) => formatNumber(locale, n)).join(', ')}</td>
+                        <td>{formatDateTime(locale, use.createdAt)}</td>
+                        <td>
+                          <Badge tone={use.cited ? 'ok' : 'neutral'}>
+                            {use.cited ? text.usesCited : text.usesRetrievedOnly}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         </>
       )}
     </section>

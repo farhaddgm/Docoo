@@ -18,6 +18,7 @@ import type {
   ContenterBusinessItem,
   HistoryItem,
 } from '../business-types';
+import { SectionTitle } from '../../../info-tip';
 
 const VIEWS = ['profile', 'knowledge', 'sources', 'quality', 'ai', 'versions'] as const;
 type ViewName = (typeof VIEWS)[number];
@@ -174,8 +175,9 @@ export function BusinessPanel({
     return (
       <div className="stack">
         <section className="card stack" aria-labelledby={`${id}-title`}>
-          <h2 id={`${id}-title`}>{panel.notLinked}</h2>
-          <p dir="auto">{panel.notLinkedHelp}</p>
+          <SectionTitle id={`${id}-title`} help={panel.notLinkedHelp}>
+            {panel.notLinked}
+          </SectionTitle>
           <Notice notice={notice} />
           {frozen ? null : (
             <>

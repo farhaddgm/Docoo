@@ -41,8 +41,12 @@ interface Grants {
 }
 const labels = {
   fa: {
-    users: 'مدیریت کاربران',
+    users: 'کاربران',
     google: 'ورود با جیمیل',
+    pageTitle: 'کاربران و ورود',
+    pageHelp:
+      'حساب‌ها، نقش‌ها و روش ورود را در یک‌جا مدیریت کنید. «ورود با جیمیل» فقط برای مالک است.',
+    tabsLabel: 'بخش‌های مدیریت دسترسی',
     description: 'حساب‌ها، نقش‌ها و روش ورود را مدیریت کنید.',
     googleDescription: 'فقط جیمیل‌هایی که مالک مجاز کرده است می‌توانند با گوگل وارد شوند.',
     back: 'نمای کلی',
@@ -96,8 +100,12 @@ const labels = {
     BOTH: 'جیمیل و رمز عبور',
   },
   en: {
-    users: 'Manage users',
+    users: 'Users',
     google: 'Gmail sign-in',
+    pageTitle: 'Users & sign-in',
+    pageHelp:
+      'Manage accounts, roles and sign-in methods in one place. Gmail sign-in is owner-only.',
+    tabsLabel: 'Access management sections',
     description: 'Manage accounts, roles and sign-in methods.',
     googleDescription: 'Google sign-in is limited to Gmail accounts approved by the owner.',
     back: 'Overview',
@@ -171,12 +179,15 @@ async function api<T>(url: string, method = 'GET', body?: unknown): Promise<T> {
 }
 export function AccountsScreen({
   locale,
-  googleOnly = false,
+  initialTab = 'users',
 }: {
   locale: Locale;
-  googleOnly?: boolean;
+  initialTab?: 'users' | 'google';
 }) {
   const t = labels[locale];
+  // One page for everything about who may sign in: the accounts, and (owner only) the Gmail list.
+  const [tab, setTab] = useState<'users' | 'google'>(initialTab);
+  const googleOnly = tab === 'google';
   const base = googleOnly ? '/owner/google-access' : '/admin/users';
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [data, setData] = useState<Page | null>(null);
@@ -201,13 +212,15 @@ export function AccountsScreen({
         if (!r.ok) throw new Error();
         const value = (await r.json()) as Identity;
         setIdentity(value);
-        setDenied(value.user.role !== 'super_admin' || (googleOnly && !value.user.isOwner));
+        setDenied(
+          value.user.role !== 'super_admin' || (initialTab === 'google' && !value.user.isOwner),
+        );
       })
       .catch(() => {
         if (!controller.signal.aborted) setError(t.failure);
       });
     return () => controller.abort();
-  }, [googleOnly, t.failure]);
+  }, [initialTab, t.failure]);
   useEffect(() => {
     if (!identity || denied) return;
     let cancelled = false;
@@ -245,8 +258,8 @@ export function AccountsScreen({
   const shell = (body: ReactNode) => (
     <AppShell
       locale={locale}
-      title={googleOnly ? t.google : t.users}
-      subtitle={googleOnly ? t.googleDescription : t.description}
+      title={t.pageTitle}
+      subtitle={t.pageHelp}
       identity={identity && !denied ? identity : undefined}
       showNavigation={Boolean(identity) && !denied}
       workspaceId={identity && !denied ? identity.workspaces[0]?.id : undefined}
@@ -288,111 +301,144 @@ export function AccountsScreen({
         <p role="status">{t.loading}</p>
       ) : (
         <>
+          {identity.user.isOwner && (
+            <div className="tabs" role="tablist" aria-label={t.tabsLabel}>
+              {(['users', 'google'] as const).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  id={`access-tab-${key}`}
+                  aria-selected={tab === key}
+                  aria-controls="access-panel"
+                  className="tab"
+                  onClick={() => {
+                    if (key === tab) return;
+                    setTab(key);
+                    setData(null);
+                    setQ('');
+                    setPage(1);
+                    setError('');
+                    setNotice('');
+                  }}
+                >
+                  {t[key]}
+                </button>
+              ))}
+            </div>
+          )}
           {googleOnly && (
             <p className="notice">
               {t.owner}: <span dir="ltr">{identity.user.email}</span>
             </p>
           )}
-          <div className="accounts-toolbar">
-            <label>
-              <span>{t.search}</span>
-              <input
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </label>
-            <button className="primary-button" onClick={() => setEditing({ user: null })}>
-              {t.add}
-            </button>
-          </div>
-          <div className="card accounts-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t.name}</th>
-                  <th>{t.role}</th>
-                  <th>{t.method}</th>
-                  <th>{t.active}</th>
-                  <th>{t.lastLogin}</th>
-                  <th>{t.created}</th>
-                  <th>{t.edit}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((user) => (
-                  <tr key={user.id}>
-                    <td>
-                      <strong>{user.displayName}</strong>{' '}
-                      {user.isOwner && <span className="status">{t.owner}</span>}
-                      <div dir="ltr">{user.email}</div>
-                    </td>
-                    <td>{t[user.role]}</td>
-                    <td>{t[user.loginMethod]}</td>
-                    <td>{user.isActive ? t.active : t.inactive}</td>
-                    <td>
-                      {user.lastLoginAt
-                        ? new Date(user.lastLoginAt).toLocaleString(
-                            locale === 'fa' ? 'fa-IR' : 'en-US',
-                          )
-                        : '—'}
-                    </td>
-                    <td>
-                      {new Date(user.createdAt).toLocaleDateString(
-                        locale === 'fa' ? 'fa-IR' : 'en-US',
-                      )}
-                    </td>
-                    <td>
-                      <div className="accounts-actions">
-                        <button
-                          className="secondary-button"
-                          disabled={user.isOwner && !identity.user.isOwner}
-                          onClick={() => setEditing({ user })}
-                        >
-                          {t.edit}
-                        </button>
-                        {identity.user.isOwner && user.role !== 'super_admin' && (
-                          <button className="secondary-button" onClick={() => setAccessFor(user)}>
-                            {t.access}
-                          </button>
-                        )}
-                        <button
-                          className="secondary-button"
-                          disabled={
-                            busy || user.isOwner || (!googleOnly && user.id === identity.user.id)
-                          }
-                          onClick={() => void remove(user)}
-                        >
-                          {googleOnly ? t.revoke : t.remove}
-                        </button>
-                      </div>
-                    </td>
+          <div
+            id="access-panel"
+            role="tabpanel"
+            aria-labelledby={`access-tab-${tab}`}
+            className="accounts-panel"
+          >
+            <div className="accounts-toolbar">
+              <label>
+                <span>{t.search}</span>
+                <input
+                  value={q}
+                  onChange={(e) => {
+                    setQ(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </label>
+              <button className="primary-button" onClick={() => setEditing({ user: null })}>
+                {t.add}
+              </button>
+            </div>
+            <div className="card accounts-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t.name}</th>
+                    <th>{t.role}</th>
+                    <th>{t.method}</th>
+                    <th>{t.active}</th>
+                    <th>{t.lastLogin}</th>
+                    <th>{t.created}</th>
+                    <th>{t.edit}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {!data.items.length && <p>{t.empty}</p>}
-          </div>
-          <div className="accounts-toolbar">
-            <button
-              className="secondary-button"
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              {t.previous}
-            </button>
-            <span>
-              {page} / {data.totalPages} · {data.total}
-            </span>
-            <button
-              className="secondary-button"
-              disabled={page >= data.totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              {t.next}
-            </button>
+                </thead>
+                <tbody>
+                  {data.items.map((user) => (
+                    <tr key={user.id}>
+                      <td>
+                        <strong>{user.displayName}</strong>{' '}
+                        {user.isOwner && <span className="status">{t.owner}</span>}
+                        <div dir="ltr">{user.email}</div>
+                      </td>
+                      <td>{t[user.role]}</td>
+                      <td>{t[user.loginMethod]}</td>
+                      <td>{user.isActive ? t.active : t.inactive}</td>
+                      <td>
+                        {user.lastLoginAt
+                          ? new Date(user.lastLoginAt).toLocaleString(
+                              locale === 'fa' ? 'fa-IR' : 'en-US',
+                            )
+                          : '—'}
+                      </td>
+                      <td>
+                        {new Date(user.createdAt).toLocaleDateString(
+                          locale === 'fa' ? 'fa-IR' : 'en-US',
+                        )}
+                      </td>
+                      <td>
+                        <div className="accounts-actions">
+                          <button
+                            className="secondary-button"
+                            disabled={user.isOwner && !identity.user.isOwner}
+                            onClick={() => setEditing({ user })}
+                          >
+                            {t.edit}
+                          </button>
+                          {identity.user.isOwner && user.role !== 'super_admin' && (
+                            <button className="secondary-button" onClick={() => setAccessFor(user)}>
+                              {t.access}
+                            </button>
+                          )}
+                          <button
+                            className="secondary-button"
+                            disabled={
+                              busy || user.isOwner || (!googleOnly && user.id === identity.user.id)
+                            }
+                            onClick={() => void remove(user)}
+                          >
+                            {googleOnly ? t.revoke : t.remove}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!data.items.length && <p>{t.empty}</p>}
+            </div>
+            <div className="accounts-toolbar">
+              <button
+                className="secondary-button"
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                {t.previous}
+              </button>
+              <span>
+                {page} / {data.totalPages} · {data.total}
+              </span>
+              <button
+                className="secondary-button"
+                disabled={page >= data.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                {t.next}
+              </button>
+            </div>
           </div>
           {editing && (
             <AccountForm
