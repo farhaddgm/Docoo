@@ -196,6 +196,7 @@ export class TemporalTestRuntime implements WorkflowEngine {
   fakeScript: FakeScript = () => null;
   readonly fake = new FakeAdapter((request, call) => this.fakeScript(request, call));
   afterWritingBlocked: ((ref: WritingRef) => Promise<void>) | null = null;
+  afterWritingPart: ((ref: WritingRef) => Promise<void>) | null = null;
   afterProjectBlocked: ((ref: RunRef) => Promise<void>) | null = null;
   beforeAnalysisRound:
     | ((
@@ -239,6 +240,11 @@ export class TemporalTestRuntime implements WorkflowEngine {
         await activities.blockRun(ref);
         await this.afterProjectBlocked?.(ref);
       },
+      writingWrite: async (ref: Parameters<typeof activities.writingWrite>[0]) => {
+        const result = await activities.writingWrite(ref);
+        await this.afterWritingPart?.(ref);
+        return result;
+      },
       writingBlock: async (ref: Parameters<typeof activities.writingBlock>[0]) => {
         await activities.writingBlock(ref);
         await this.afterWritingBlocked?.(ref);
@@ -269,8 +275,9 @@ export class TemporalTestRuntime implements WorkflowEngine {
   /** Simulates a worker crash/restart: workflow state must survive (WF-004). */
   async stopWorker(): Promise<void> {
     this.worker?.shutdown();
-    await this.running?.catch(() => undefined);
+    await this.running;
     await this.native?.close();
+    this.native = null;
     this.worker = null;
   }
 
