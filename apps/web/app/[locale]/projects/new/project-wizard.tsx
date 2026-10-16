@@ -233,8 +233,23 @@ export function ProjectWizard({
     // The overrides are recomputed from the same inputs; the review is read once per visit.
   }, [step]);
 
+  const focusedOnce = useRef(false);
   useEffect(() => {
-    if (ready) heading.current?.focus();
+    if (!ready) return;
+    const first = !focusedOnce.current;
+    focusedOnce.current = true;
+    // The form is enabled a tick before this effect runs, so a fast user may already be typing in
+    // a field; taking focus away on that first run would swallow the text. Later runs (a new
+    // step) always move focus to the step heading, also where a button click gives it no focus.
+    const active = document.activeElement;
+    if (
+      first &&
+      (active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        active instanceof HTMLSelectElement)
+    )
+      return;
+    heading.current?.focus();
   }, [step, ready]);
 
   const trimmed = {

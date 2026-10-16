@@ -236,7 +236,18 @@ input[type='radio'] {
 input[type='file'] {
   max-width: 100%;
   font: inherit;
-  color: var(--color-muted);
+  color: var(--color-ink);
+}
+
+/* A disabled file input keeps readable text; the dimmed look is the button's, not the label's. */
+input[type='file']:disabled {
+  background: none;
+  opacity: 1;
+}
+
+input[type='file']:disabled::file-selector-button {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 input[type='file']::file-selector-button {
