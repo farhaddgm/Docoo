@@ -266,7 +266,10 @@ function ProjectView({
               <button
                 type="button"
                 aria-current={tab === item ? 'page' : undefined}
-                onClick={() => choose(item)}
+                onClick={(event) => {
+                  choose(item);
+                  event.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+                }}
               >
                 {text.tabs[item]}
               </button>

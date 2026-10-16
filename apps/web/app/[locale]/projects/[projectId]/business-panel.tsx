@@ -459,7 +459,10 @@ export function BusinessPanel({
               <button
                 type="button"
                 aria-current={current === item ? 'page' : undefined}
-                onClick={() => setCurrent(item)}
+                onClick={(event) => {
+                  setCurrent(item);
+                  event.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+                }}
               >
                 {panel.viewNames[item]}
               </button>
