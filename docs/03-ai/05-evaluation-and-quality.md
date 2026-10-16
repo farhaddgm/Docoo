@@ -2,7 +2,7 @@
 doc_id: DOCOO-AI-EVALUATION
 title: ارزیابی و تضمین کیفیت خروجی AI
 status: proposed
-version: 1.0.2
+version: 1.0.3
 owner: AI Quality
 last_updated: 2026-10-16
 notion_sync: true
@@ -145,3 +145,13 @@ Regression بحرانی صفر و افت معیار کلیدی بیش از toler
 شواهد این مرحله: ۱۲ تست تازهٔ adapter، شامل هر پنج نقش، دو زبان، تطبیق prompt/schema، ترتیب commit، توقف retry در گم‌شدن acknowledgment، خطای مدل/خروجی، code drift، fake-production و opt-in زنده؛ کل orchestration ۱۲۱ تست پاس‌شده دارد. gate واقعی PostgreSQL با همان فرمان بخش قبل، ۶۰ تماس جفتی FakeAdapter در ProviderRuntime واقعی به‌علاوهٔ دو probe قطع پردازش/رقابت اجرا کرد؛ intent/receipt، invocation ledger، RLS، grant revoke، receipt scope و immutable بودن را سنجید. همهٔ تماس‌ها مصنوعی بودند و پایگاه/login تست حذف شدند. تست‌های contracts و application اکنون dist را exclude می‌کنند؛ تعدادهای یکتای منبع به‌ترتیب ۱۲ و ۱۵ است، نه شمار قبلی که اجرای فایل کامپایل‌شده را دوباره می‌شمرد.
 
 در بررسی CI برش قبلی، ورود `node:crypto` از barrel عمومی domain به `stages.ts` و bundle Temporal محلی بازتولید شد؛ build TypeScript به‌تنهایی این خطا را نمی‌دید. utilityهای ارزیابیِ وابسته به Node اکنون فقط در subpath `@docoo/domain/evaluation` صادر می‌شوند و root domain برای workflow امن می‌ماند. تست `apps/worker-agent/src/workflow-bundle.test.ts` bundle واقعی entry تولیدی را می‌سازد، بدون ignore کردن ماژول ممنوع؛ پس از اصلاح پاس شد. چهار تست خود آزمایشگاه در CI قبلی روی هر دو Firefox و WebKit پاس شده‌اند؛ این شاهد به‌تنهایی سبز بودن کل CI یا workflowهای دیگر را ثابت نمی‌کند.
+
+## ۱۲. اجرای بادوام و بازیابی رسید — ADV-013
+
+`pairedEvaluationWorkflow` و activityهای ثبت‌شده در worker فعلی، هر ordinal را جدا اجرا می‌کنند. تاریخچهٔ Temporal فقط شناسه‌ها، وضعیت و شمار دارد؛ متن prompt، ورودی یا خروجی مدل به history فرستاده نمی‌شود. هر activity قبل از هزینه، scope و مالک آزمایش را از پایگاه با initiating actor می‌سنجد. نتیجهٔ موجود بازاستفاده می‌شود؛ اگر receipt برگشته ولی نتیجه commit نشده باشد، `recoverEvaluationCaseResult` همان خروجی/hash و latency واقعی ledger را بدون تماس تازه به نتیجه تبدیل می‌کند. خطای ثبت نتیجه/acknowledgement می‌تواند retry شود، نه خود تماس pending/unknown. receipt دارای خطای قطعی خروجی، نتیجهٔ failed می‌سازد و اجرا می‌ایستد؛ مقدار latency غایب صفر فرض نمی‌شود.
+
+pending/unknown، تغییر دسترسی/config یا feature غیرفعال به `interrupted` می‌انجامد؛ خروجی موفق فرض نمی‌شود و ادامهٔ خودکار هزینه‌دار رخ نمی‌دهد. migration افزایشی 0047 این وضعیت را اضافه می‌کند. capability محدود `app.interrupt_evaluation_experiment` فقط فرادادهٔ آزمایش running خود initiating actor یا مدیر workspace را یک‌طرفه متوقف و audit می‌کند؛ حتی پس از revoke، محتوا/مجوز پروژه را برنمی‌گرداند. وضعیت پایانی و history قبلی بازنویسی نمی‌شوند. تشخیص نهایی و reconciliation تماس واقعاً نامعلوم هنوز تصمیم/برش جداست؛ اجرای تازهٔ کور به‌جای آن ممنوع می‌ماند.
+
+workflow بین پرونده‌ها لغو را می‌پذیرد؛ تماس در حال انجام ممکن است تا timeout خودش تمام و هزینه‌دار شود، بنابراین لغو وعدهٔ صفر بودن هزینه نیست. activity حداکثر شش دقیقه و سه تلاش دارد و هر تکرار فقط receipt/result را بازیابی یا pending را fence می‌کند. engine برای ارسالِ دوبارهٔ همان workflow شناسهٔ ثابت و `REJECT_DUPLICATE` دارد، حتی بعد از پایان. `EVALUATION_LAB_ENABLED` و `EVALUATION_LAB_LIVE_ENABLED` پیش‌فرض false هستند؛ هیچ شروع HTTP، صف outbox یا فرم آغاز در این برش فعال نشده است.
+
+تست activities روی PostgreSQL، بازخوانی رسید commit‌شده در اتصال تازه، ۶۰ فراخوانی دیگر، retry نتیجهٔ موجود، خروجی نامعتبر، قطع دسترسی، scope/مالک و توقف با switch خاموش را گذراند. تست واقعی `pnpm test:evaluation:workflow:local` image موجود و pin‌شدهٔ Temporal را با پورت تصادفی loopback و سقف CPU/RAM اجرا می‌کند؛ database/login و task queue آن مستقل‌اند. پس از commit اولین نتیجه، acknowledgement عمداً گم می‌شود؛ worker اول متوقف و worker تازه همان workflow را ادامه می‌دهد. دقیقاً ۶۰ تماس، نبود ارسال دوبارهٔ workflow در حین/پس از پایان، پایان دقیق پایگاه و replay واقعی تاریخچه با SDK تأیید شدند. کانتینر و پایگاه/login خود تست پاک شدند. این تست هیچ provider زنده یا API key مصرف نکرد و E2E کامل UI/فرم آغاز نیست. CI این gate را با Temporal اختصاصی همان job و task queue تصادفی اجرا می‌کند.

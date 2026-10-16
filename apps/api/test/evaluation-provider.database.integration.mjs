@@ -347,6 +347,34 @@ export async function verifyEvaluationProviderDatabase({
   );
   assert.notEqual(JSON.parse(latest.snapshots.model).catalogSnapshotHash, 'a'.repeat(64));
   await assert.rejects(capture(definition.id, 'catalog-changed'), /EXPERIMENT_INVALID/);
+  const { verifyEvaluationWorkerActivities } =
+    await import('./evaluation-worker.database.integration.mjs');
+  await verifyEvaluationWorkerActivities({
+    pool,
+    admin,
+    context,
+    projectId,
+    baseline,
+    candidate: challenger,
+    runtime,
+    getCalls: () => calls,
+    ownerId: actorId,
+    viewerId,
+    foreignWorkspaceId,
+    foreignActorId,
+  });
+  if (process.argv.includes('--with-workflow')) {
+    const { verifyEvaluationTemporal } = await import('./evaluation-temporal.integration.mjs');
+    await verifyEvaluationTemporal({
+      pool,
+      context,
+      projectId,
+      baseline,
+      candidate: challenger,
+      runtime,
+      getCalls: () => calls,
+    });
+  }
   process.stdout.write(
     'Production stage evaluation gate passed: actual role/catalog capture, 60 paired fake ProviderRuntime calls plus two crash/concurrency probes, durable intents/receipts, real invocation ledger, null measured cost, receipt scope, lost-commit fencing and revocation before model use.\n',
   );

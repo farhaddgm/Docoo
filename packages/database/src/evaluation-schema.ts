@@ -38,7 +38,7 @@ export const projectEvaluationExperiments = pgTable(
     }),
     check(
       'evaluation_experiment_status_check',
-      sql`${table.status} IN ('running','completed','failed','cancelled')`,
+      sql`${table.status} IN ('running','completed','failed','cancelled','interrupted')`,
     ),
     check(
       'evaluation_experiment_finish_check',

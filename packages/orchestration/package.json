@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@docoo/application": "workspace:*",
+    "@docoo/database": "workspace:*",
     "zod": "4.6.5",
     "@docoo/observability": "workspace:*",
     "@docoo/documents": "workspace:*",

@@ -2,7 +2,7 @@
 doc_id: DOCOO-IMPLEMENTATION-BACKLOG
 title: backlog اجرایی و ردیابی Docoo
 status: active
-version: 1.2.2
+version: 1.2.3
 owner: Product & Engineering
 last_updated: 2026-10-16
 notion_sync: true
@@ -140,4 +140,8 @@ notion_sync: true
 
 پس از این اصلاح، `pnpm verify` نهایی با Node 24 برای همهٔ بسته‌ها پاس شد و تست bundle واقعی worker نیز در آن اجرا شد. gate واقعی API/PostgreSQL یک‌بار دیگر روی build نهایی و بدون skip پاس شد؛ منابع موقت پاک شدند. این gate به job کیفیت CI اضافه شد و اجرای دوبارهٔ یکسان `qa:trace` حذف شد؛ کنترل ردیابی همچنان یک‌بار اجرا می‌شود. هیچ deploy، migration پایگاه عملیاتی یا تماس provider زنده انجام نشد.
 
-ADV-013 هنوز Done نیست: اتصال این مسیر به worker بادوام و reconciliation تماس نامعلوم، آغاز آزمایش از API/فرم با سقف هزینه و opt-in روشن، E2E واقعی UI/API/worker، کیفیت/هزینه و برچسب انسانی/judge-human واقعی و پالایش شکست واقعی باقی‌اند. حالت کامل ابزار/گردش‌کار با اجرای مرحلهٔ خودبسنده یکی نیست. این برش ادعای تکمیل همهٔ ۲۰ ایده یا استقرار ندارد.
+اتصال به worker فعلی اکنون انجام شد: workflow هر پرونده را جدا اجرا می‌کند؛ result یا receipt قطعی را بدون تماس تکراری بازیابی و pending/unknown را متوقف می‌کند. مهاجرت 0047 وضعیت `interrupted` و توقف یک‌طرفهٔ فراداده پس از revoke را دارد، بدون بازگرداندن محتوا یا مجوز. switchهای آزمایشگاه/تماس زنده پیش‌فرض خاموش‌اند. gate واقعی Temporal با کانتینر اختصاصی، پورت loopback و صف تصادفی پاس شد: worker اول پس از commit و گم‌شدن acknowledgement متوقف شد؛ worker جایگزین همان اجرا را با دقیقاً ۶۰ تماس ادامه داد، ارسال دوبارهٔ workflow هنگام اجرا/پس از پایان run جدید نساخت و replay واقعی تاریخچه نیز سبز بود. PostgreSQL، role و کانتینر موقت پاک شدند؛ سرویس‌های فعال تغییر نکردند. quality و Firefox روی commit قبلی a5a1e6c در CI38894506002 موفق ثبت شدند؛ نتیجهٔ کد تازه فقط با gateهای همین commit سنجیده می‌شود.
+
+برش worker با `pnpm verify` کامل Node 24، build همهٔ بسته‌ها و اعتبارسنجی ۷۴ سند پاس شد: قرارداد ۱۳، application برابر ۱۶، orchestration برابر ۱۲۱، config برابر ۵، web برابر ۹۶ و bundle واقعی worker برابر ۱ تست. integrationهای اختیاری verify جدا از gate واقعی PostgreSQL/Temporal بالا هستند. اجرای راه‌دور CI38894506002 روی a5a1e6c نیز در نهایت برای quality، Firefox و WebKit همگی موفق شد؛ این شاهد جای CI مربوط به commit تازه را نمی‌گیرد.
+
+ADV-013 هنوز Done نیست: outbox و آغاز آزمایش از API/فرم با سقف هزینه و opt-in روشن، تعیین تکلیف/اقدام انسانی برای تماس واقعاً نامعلوم، E2E کامل UI/API/worker، کیفیت/هزینه و برچسب انسانی/judge-human واقعی و پالایش شکست واقعی باقی‌اند. حالت کامل ابزار/گردش‌کار با اجرای مرحلهٔ خودبسنده یکی نیست. این برش ادعای تکمیل همهٔ ۲۰ ایده یا استقرار ندارد.

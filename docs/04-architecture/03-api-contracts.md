@@ -2,7 +2,7 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.11.0
+version: 1.11.1
 owner: API Architecture
 last_updated: 2026-10-16
 notion_sync: true
@@ -293,6 +293,8 @@ Cursor opaque، `limit` سقف ۱۰۰، sort allowlist. filter fieldها schema-
 اسناد از 0.27.0 فیلد ثابت `analysisProfile` دارند. سند سریع فقط سطح ۱ است (`400 QUICK_DRAFT_LEVEL` برای نگارش/ویرایش سطح دیگر) و هشدار ناقص‌بودن در هر نسخه و خروجی حفظ می‌شود. تولید راه‌حل سریع پیش از تأیید تعریف کوتاه `409 QUICK_DRAFT_NOT_READY` می‌دهد.
 
 ## ۲۰. آزمایشگاه مقایسهٔ ایجنت — ADV-013
+
+فهرست اجراها اکنون `interrupted` نیز دارد: کار متوقف و نیازمند بررسی است، نه completed یا مجوز retry. بستهٔ بازبینی همچنان فقط برای completed باز می‌شود. توقف metadata پس از revoke، مسیر HTTP تازه یا دسترسی خواندن محتوا ایجاد نمی‌کند. worker/Temporal با switchهای پیش‌فرض خاموش متصل شده‌اند؛ API/فرم آغاز و outbox بادوام هنوز در این برش نیستند.
 
 پیشوند همهٔ مسیرها: `/workspaces/{workspaceId}/projects/{projectId}/evaluation-experiments` زیر `/v1`؛ session و resource scope همان پروژه لازم است. `experimentId` شناسهٔ ASCII دو تا ۸۰ کاراکتری است. migrationهای افزایشی 0044/0045 پیش‌نیازند.
 

@@ -487,6 +487,46 @@ export function evaluationResultOrdinal(
   return index * 2 + (result.runId === firstRun ? 0 : 1);
 }
 
+/** Rebuilds a case result from a verified paid-call receipt; never invokes a model. */
+export function recoverEvaluationCaseResult(
+  value: EvaluationExperimentManifest,
+  input: {
+    readonly runId: string;
+    readonly caseId: string;
+    readonly response: EvaluationAgentResponse | null;
+    readonly latencyMs: number;
+    readonly errorCode: 'snapshot_mismatch' | 'invalid_response' | null;
+  },
+): EvaluationExecutionCaseResult {
+  const manifest = readEvaluationExperimentManifest(value);
+  const arm = [manifest.baseline, manifest.candidate].find((arm) => arm.runId === input.runId);
+  const testCase = manifest.dataset.cases.find((item) => item.id === input.caseId);
+  if (
+    !arm ||
+    !testCase ||
+    !Number.isFinite(input.latencyMs) ||
+    input.latencyMs < 0 ||
+    (input.response === null) !== (input.errorCode !== null)
+  )
+    throw new EvaluationExecutionError('EXECUTION_CHANGED');
+  const response = input.response === null ? null : readResponse(input.response, arm);
+  const row = {
+    experimentId: manifest.experimentId,
+    runId: arm.runId,
+    caseId: testCase.id,
+    requestHash: requestHash(manifest, arm, testCase),
+    status: response ? ('completed' as const) : ('failed' as const),
+    output: response?.output ?? null,
+    outputHash: response ? hashEvaluationSnapshotText(response.output) : null,
+    inputTokens: response?.inputTokens ?? null,
+    outputTokens: response?.outputTokens ?? null,
+    costUsd: response?.costUsd ?? null,
+    latencyMs: input.latencyMs,
+    errorCode: input.errorCode,
+  };
+  return readEvaluationExecutionResult(manifest, { ...row, contentHash: hashJson(row) });
+}
+
 function readResponse(value: unknown, arm: EvaluationExecutionArm): EvaluationAgentResponse {
   const response = record(value, 'invalid_response');
   keys(

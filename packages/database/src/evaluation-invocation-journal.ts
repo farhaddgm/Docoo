@@ -18,6 +18,7 @@ type JournalEntry = {
   intent: EvaluationInvocationIntent;
   status: 'pending' | 'returned' | 'unknown';
   receipt: EvaluationInvocationReceipt | null;
+  latencyMs: number | null;
 };
 
 /** A unique committed intent, not an expiring lease: losing its acknowledgement cannot permit replay. */
@@ -97,9 +98,12 @@ export class PostgresEvaluationInvocationJournal implements EvaluationInvocation
           status: JournalEntry['status'];
           receipt_json: unknown;
           receipt_hash: string | null;
+          latency_ms: number | null;
         }>(
-          `select intent_json,intent_hash,status,receipt_json,receipt_hash
-        from project_evaluation_invocation_journal where workspace_id=$1 and project_id=$2 and experiment_id=$3 and ordinal=$4`,
+          `select j.intent_json,j.intent_hash,j.status,j.receipt_json,j.receipt_hash,i.latency_ms
+        from project_evaluation_invocation_journal j left join model_invocations i on i.id=j.invocation_id
+         and i.workspace_id=j.workspace_id and i.project_id=j.project_id
+        where j.workspace_id=$1 and j.project_id=$2 and j.experiment_id=$3 and j.ordinal=$4`,
           [...this.scope(experimentId), ordinal],
         )
       ).rows[0];
@@ -118,7 +122,7 @@ export class PostgresEvaluationInvocationJournal implements EvaluationInvocation
           receipt.outputHash !== hashEvaluationSnapshotText(receipt.response.output))
       )
         throw new EvaluationInvocationError('RECEIPT_CHANGED');
-      return { intent, status: row.status, receipt };
+      return { intent, status: row.status, receipt, latencyMs: row.latency_ms };
     });
   }
 

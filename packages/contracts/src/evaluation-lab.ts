@@ -10,7 +10,7 @@ const score = z.number().finite().min(0).max(100);
 export const evaluationExperimentSummarySchema = z
   .object({
     id: evaluationExperimentIdSchema,
-    status: z.enum(['running', 'completed', 'failed', 'cancelled']),
+    status: z.enum(['running', 'completed', 'failed', 'cancelled', 'interrupted']),
     createdAt: z.iso.datetime(),
     datasetId: evaluationExperimentIdSchema,
     datasetVersion: z.number().int().positive(),

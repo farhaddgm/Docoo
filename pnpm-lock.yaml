@@ -587,6 +587,9 @@ importers:
       '@docoo/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@docoo/database':
+        specifier: workspace:*
+        version: link:../database
       '@docoo/documents':
         specifier: workspace:*
         version: link:../documents

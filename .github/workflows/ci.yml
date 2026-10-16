@@ -71,9 +71,10 @@ jobs:
         env:
           DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
       - name: Paired evaluation HTTP, runtime and invocation journal (ADV-013)
-        run: pnpm --filter @docoo/database exec node test/paired-evaluation.integration.mjs --with-api
+        run: pnpm --filter @docoo/database exec node test/paired-evaluation.integration.mjs --with-api --with-workflow
         env:
           DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+          TEMPORAL_EVAL_ADDRESS: 127.0.0.1:7233
       - name: Wait for ingestion services
         run: |
           for i in $(seq 1 60); do

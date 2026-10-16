@@ -1,5 +1,8 @@
 import { expect, it } from 'vitest';
-import { evaluationBlindReviewInputSchema } from './evaluation-lab.js';
+import {
+  evaluationBlindReviewInputSchema,
+  evaluationExperimentSummarySchema,
+} from './evaluation-lab.js';
 
 const input = {
   experimentHash: 'a'.repeat(64),
@@ -13,6 +16,24 @@ const input = {
     citationErrors: 0,
   })),
 };
+it('represents an interrupted execution without labelling unknown work completed', () => {
+  const summary = {
+    id: 'interrupted-run',
+    status: 'interrupted',
+    createdAt: '2026-10-16T12:00:00Z',
+    datasetId: 'synthetic-corpus',
+    datasetVersion: 1,
+    synthetic: true,
+    caseCount: 30,
+    resultCount: 1,
+    reviewCount: 0,
+    role: 'researcher',
+  };
+  expect(evaluationExperimentSummarySchema.parse(summary).status).toBe('interrupted');
+  expect(
+    evaluationExperimentSummarySchema.safeParse({ ...summary, status: 'assumed-success' }).success,
+  ).toBe(false);
+});
 it('requires complete human labels and rejects spoofed scope, reviewer, cost and judge fields', () => {
   expect(evaluationBlindReviewInputSchema.safeParse(input).success).toBe(true);
   for (const extra of [

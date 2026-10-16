@@ -9,12 +9,55 @@ import {
   executePairedEvaluation,
   hashEvaluationSnapshotText,
   prepareEvaluationExperiment,
+  recoverEvaluationCaseResult,
   type EvaluationAgentAdapter,
   type EvaluationExecutionArm,
   type EvaluationExecutionStore,
   type EvaluationExperimentInput,
   type PairedEvaluationExecution,
 } from './paired-evaluation-runner.js';
+
+it('reconstructs a paid receipt with the same request binding and rejects inconsistent recovery', () => {
+  const manifest = prepareEvaluationExperiment({
+    experimentId: 'recovery-test',
+    repetition: 1,
+    timeoutMs: 1000,
+    dataset: evaluationCorpusV1,
+    baseline: arm('baseline-recover', 'Baseline prompt.'),
+    candidate: arm('candidate-recover', 'Candidate prompt.'),
+  });
+  const input = {
+    runId: manifest.baseline.runId,
+    caseId: manifest.dataset.cases[0]!.id,
+    response: {
+      provider: manifest.baseline.configuration.provider,
+      modelId: manifest.baseline.configuration.modelId,
+      output: 'Saved paid output',
+      inputTokens: 10,
+      outputTokens: 4,
+      costUsd: null,
+    },
+    latencyMs: 7,
+    errorCode: null,
+  };
+  const result = recoverEvaluationCaseResult(manifest, input);
+  expect(result.status).toBe('completed');
+  expect(result.output).toBe('Saved paid output');
+  expect(result.latencyMs).toBe(7);
+  expect(recoverEvaluationCaseResult(manifest, input)).toEqual(result);
+  expect(() => recoverEvaluationCaseResult(manifest, { ...input, latencyMs: -1 })).toThrow();
+  expect(() =>
+    recoverEvaluationCaseResult(manifest, { ...input, caseId: 'unknown-case' }),
+  ).toThrow();
+  expect(() => recoverEvaluationCaseResult(manifest, { ...input, response: null })).toThrow();
+  expect(
+    recoverEvaluationCaseResult(manifest, {
+      ...input,
+      response: null,
+      errorCode: 'invalid_response',
+    }).status,
+  ).toBe('failed');
+});
 
 function arm(runId: string, prompt: string): EvaluationExecutionArm {
   const snapshots = {

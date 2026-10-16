@@ -89,6 +89,7 @@ const words = {
       completed: 'کامل‌شده',
       failed: 'ناموفق',
       cancelled: 'لغوشده',
+      interrupted: 'متوقف؛ نیازمند بررسی اجرا',
     },
   },
   en: {
@@ -158,6 +159,7 @@ const words = {
       completed: 'Completed',
       failed: 'Failed',
       cancelled: 'Cancelled',
+      interrupted: 'Interrupted; execution review required',
     },
   },
 } as const;

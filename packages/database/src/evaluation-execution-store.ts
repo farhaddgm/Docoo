@@ -14,7 +14,7 @@ import { setDatabaseRequestContext, type DatabaseRequestContext } from './contex
 
 export interface StoredEvaluationExperiment {
   readonly manifest: EvaluationExperimentManifest;
-  readonly status: 'running' | PairedEvaluationExecution['status'];
+  readonly status: 'running' | 'interrupted' | PairedEvaluationExecution['status'];
   readonly results: readonly EvaluationExecutionCaseResult[];
 }
 
@@ -141,6 +141,17 @@ export class PostgresEvaluationExecutionStore implements EvaluationExecutionStor
 
   async get(experimentId: string): Promise<StoredEvaluationExperiment> {
     return this.transaction((client) => this.load(client, experimentId));
+  }
+
+  /** One-way metadata-only stop, also usable by the initiator after access was revoked. */
+  async interrupt(experimentId: string): Promise<void> {
+    await this.transaction(async (client) => {
+      const result = await client.query<{ stopped: boolean }>(
+        'select app.interrupt_evaluation_experiment($1,$2,$3) as stopped',
+        this.scope(experimentId),
+      );
+      if (result.rows[0]?.stopped !== true) throw new EvaluationStoreError('NOT_FOUND');
+    });
   }
 
   async list(limit: number, after?: { readonly createdAt: string; readonly id: string }) {
