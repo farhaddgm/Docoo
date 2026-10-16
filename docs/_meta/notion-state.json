@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "686ff0f09c60357077f290190794a593d574bdc7"
+    "source_commit": "75880a7d3d5f0c8238acaf301b5e9bc09be99100"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-16T07:35:52.687Z",
+    "synced_at": "2026-10-16T15:43:57.522Z",
     "created": 0,
-    "updated": 1,
-    "unchanged": 73,
+    "updated": 2,
+    "unchanged": 72,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -176,16 +176,16 @@
     "DOCOO-BACKOFFICE-UX": {
       "path": "docs/01-product/05-backoffice-ux.md",
       "section": "01 Product",
-      "version": "1.8.0",
+      "version": "1.9.0",
       "status": "proposed",
       "owner": "Product Design",
-      "checksum_sha256": "5a89efdec7e70edfd03d838a59995064de2126ca4303a9721637f99c5ee1f228",
+      "checksum_sha256": "251e4632374a16a1a35215b9b23b53a4549c4c7705d789409b203185e9d6f722",
       "notion_page_id": "3e55a24a-6668-813a-a383-dae2ab20f78b",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668813aa383dae2ab20f78b?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81c0-8cf1-f939f466e9b8",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881c08cf1f939f466e9b8",
-      "synced_commit": "686ff0f09c60357077f290190794a593d574bdc7",
-      "synced_at": "2026-10-16T07:35:52.687Z"
+      "synced_commit": "75880a7d3d5f0c8238acaf301b5e9bc09be99100",
+      "synced_at": "2026-10-16T15:43:57.522Z"
     },
     "DOCOO-DOMAIN-MODEL": {
       "path": "docs/02-domain/01-domain-model.md",
@@ -949,13 +949,13 @@
       "version": "1.0.0",
       "status": "active",
       "owner": "Platform & Operations",
-      "checksum_sha256": "9b4f632c55622fd4e77b5e322adfaab541e47177447c23e44d6e2eb475888ca9",
+      "checksum_sha256": "0e53c7161716a8325d9636dd335563de11d9e552105f37ac190a2906d757ae72",
       "notion_page_id": "3f15a24a-6668-8176-8492-f94bf53aff65",
       "notion_page_url": "https://app.notion.com/p/3f15a24a666881768492f94bf53aff65",
       "index_row_page_id": "3f15a24a-6668-8153-99e8-dc647ce78274",
       "index_row_page_url": "https://app.notion.com/p/3f15a24a6668815399e8dc647ce78274",
-      "synced_commit": "31834043a0f8bf4e0ff88fc7a3be424088283df8",
-      "synced_at": "2026-10-06T21:37:02.351Z"
+      "synced_commit": "75880a7d3d5f0c8238acaf301b5e9bc09be99100",
+      "synced_at": "2026-10-16T15:43:57.522Z"
     },
     "DOCOO-ADR-0023": {
       "path": "docs/adr/0023-agent-tool-calling.md",
