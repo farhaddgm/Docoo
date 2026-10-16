@@ -32,6 +32,8 @@ export interface Settings {
   agentMaxToolCalls: number;
   /** Questions an agent may put to the administrator in one stage (`agents.max_human_questions`). */
   agentMaxHumanQuestions: number;
+  /** Ideation waits for the administrator to confirm the plan of deliverables (ADR-0031). */
+  requireDeliverableConfirmation: boolean;
 }
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
@@ -93,5 +95,6 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
     agentToolCalling: values['agents.tool_calling'] === true,
     agentMaxToolCalls: boundedInteger(values['agents.max_tool_calls'], 6, 1, 20),
     agentMaxHumanQuestions: boundedInteger(values['agents.max_human_questions'], 2, 0, 5),
+    requireDeliverableConfirmation: values['workflow.require_deliverable_confirmation'] !== false,
   };
 }

@@ -54,6 +54,9 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
 
   return (
     <div className="output-view">
+      <p className="notice" role="note">
+        {text.webOff}
+      </p>
       {verification && (
         <p>
           {fill(text.verificationSummary, {

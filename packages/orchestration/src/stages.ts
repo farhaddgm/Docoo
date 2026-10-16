@@ -1,4 +1,5 @@
 import {
+  DELIVERABLE_STAGE_RULES,
   STAGE_ROLE,
   composeInstructions,
   type AgentDefinitionContent,
@@ -8,6 +9,7 @@ import {
 import type { JsonSchema } from '@docoo/providers';
 
 import type { AnalysisContext } from './analysis.js';
+import type { PromptDeliverable } from './deliverables.js';
 import type { KnowledgePromptItem } from './research.js';
 
 /** Fixed stage order (FR-WF-001). */
@@ -196,6 +198,8 @@ export interface StageContext {
   readonly humanAnswers?: readonly HumanAnswer[] | undefined;
   /** Rules of a call that may use tools (`toolRules`). */
   readonly toolRules?: readonly string[] | undefined;
+  /** The deliverables the administrator confirmed (ADR-0031); absent when none were. */
+  readonly deliverables?: readonly PromptDeliverable[] | undefined;
 }
 
 /**
@@ -261,6 +265,7 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
             'This is an explicitly selected optional quick draft, less complete than full analysis. The complete-analysis minimum of30 is reserved for the full continuation. Preserve unresolved ambiguity and state that this draft does not complete full analysis.',
           ]
         : []),
+      ...(context.deliverables && context.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),
       ...(context.business?.rules ?? []),
       ...(context.toolRules ?? []),
       ...(context.humanAnswers && context.humanAnswers.length > 0 ? HUMAN_ANSWER_RULES : []),
@@ -287,6 +292,9 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
       ? { approvedKnowledge: context.knowledge }
       : {}),
     ...(context.business ? { businessProfile: context.business.data } : {}),
+    ...(context.deliverables && context.deliverables.length > 0
+      ? { confirmedDeliverables: context.deliverables }
+      : {}),
     ...(context.humanAnswers && context.humanAnswers.length > 0
       ? { humanAnswers: context.humanAnswers }
       : {}),

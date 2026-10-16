@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { BusinessModule } from './business/business.module.js';
 import { ConfigModule } from './config/config.module.js';
 import { CoreModule } from './core.module.js';
+import { DeliverablesModule } from './deliverables/deliverables.module.js';
 import { DocumentsModule } from './documents/documents.module.js';
 import { HealthController } from './health.controller.js';
 import { SecurityHealthController } from './security-health.controller.js';
@@ -16,6 +17,7 @@ import { ProjectsModule } from './projects/projects.module.js';
 import { ProvidersModule } from './providers/providers.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { SmartModule } from './smart/smart.module.js';
+import { StageChatModule } from './stage-chat/stage-chat.module.js';
 import { SourcesModule } from './sources/sources.module.js';
 import { TopicsModule } from './topics/topics.module.js';
 import { WorkflowModule } from './workflow/workflow.module.js';
@@ -34,6 +36,8 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
     KnowledgeModule,
     ProvidersModule,
     WorkflowModule,
+    StageChatModule,
+    DeliverablesModule,
     AgentsModule,
     AnalysisModule,
     BusinessModule,

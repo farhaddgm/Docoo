@@ -9,6 +9,7 @@ import { createAnalysisActivities, loadDefinitionContext } from './analysis-acti
 import { createWritingActivities, type WritingActivities } from './writing-activities.js';
 import type { AnalysisActivities } from './analysis-activities.js';
 import { businessForRole, loadRunBusiness } from './business.js';
+import { confirmedDeliverables, deliverableGate } from './deliverables.js';
 import { audit, inWorkspace } from './db.js';
 import type { RunRef, StageRef } from './refs.js';
 import { compactResearchForPrompt, knowledgePromptItems } from './research.js';
@@ -317,6 +318,25 @@ export function createOrchestrationActivities(
         ).rows;
         const openQuestion = questions.find((item) => item.status === 'open');
         if (openQuestion) return { needsInput: openQuestion.id } as const;
+        // Ideation does not start before the administrator confirmed what outputs are expected
+        // (ADR-0031). The stage waits like it does for an agent's question; confirming signals it.
+        if (stage.stage === 'ideation' && config.requireDeliverableConfirmation) {
+          const held = await deliverableGate(client, {
+            workspaceId: ref.workspaceId,
+            projectId: ref.projectId,
+            stageRunId: ref.stageRunId,
+            runId: ref.runId,
+          });
+          if (held.newlyOpened) {
+            await audit(client, ref.workspaceId, {
+              action: 'workflow.deliverables_awaiting',
+              targetType: 'stage_run',
+              targetId: ref.stageRunId,
+              projectId: ref.projectId,
+            });
+          }
+          if (held.waiting) return { needsInput: 'deliverables' } as const;
+        }
         await client.query(
           `update stage_runs set status = 'running' where id = $1 and status = 'waiting_for_human'`,
           [ref.stageRunId],
@@ -361,6 +381,12 @@ export function createOrchestrationActivities(
           knowledge: research ? knowledgePromptItems(research.passages) : undefined,
           business: business?.prompt,
           humanAnswers: questions.map((item) => ({ question: item.question, answer: item.answer })),
+          deliverables:
+            stage.stage === 'ideation' ||
+            stage.stage === 'documentation' ||
+            stage.stage === 'evaluation'
+              ? ((await confirmedDeliverables(client, ref.projectId)) ?? undefined)
+              : undefined,
         };
         const prompt = stagePrompt(promptInput);
         // Tools the model itself may call (ADR-0023): off unless the setting is on, and only those

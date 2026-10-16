@@ -150,6 +150,13 @@ export function ProblemPanel({
       throw error;
     }
   };
+  const suggest = async (question: Question): Promise<string> => {
+    const { suggestion } = await apiSend<{ suggestion: { text: string } }>(
+      'POST',
+      `${workspaceBase}/analysis-questions/${question.id}/suggest-answer`,
+    );
+    return suggestion.text;
+  };
   const forget = (ids: readonly string[]) =>
     setDrafts((current) => {
       const next = { ...current };
@@ -407,6 +414,7 @@ export function ProblemPanel({
                 }
                 onStopEditing={() => forget([question.id])}
                 onUpload={upload}
+                onSuggest={() => suggest(question)}
               />
             ))}
           </ol>
@@ -504,6 +512,7 @@ export function ProblemPanel({
                 }
                 onStopEditing={() => forget([question.id])}
                 onUpload={upload}
+                onSuggest={() => suggest(question)}
                 footer={
                   drafts[question.id] ? (
                     <button

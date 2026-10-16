@@ -406,7 +406,7 @@ export interface Harness {
  */
 export async function createHarness(
   name: string,
-  options: { workflow?: boolean; correlation?: boolean } = {},
+  options: { workflow?: boolean; correlation?: boolean; deliverableGate?: boolean } = {},
 ): Promise<Harness> {
   const parsed = new URL(adminUrl!);
   if (!['postgres:', 'postgresql:'].includes(parsed.protocol) || parsed.pathname !== '/docoo_ci') {
@@ -578,6 +578,32 @@ export async function createHarness(
     const setCookie = response.headers['set-cookie'];
     return String(Array.isArray(setCookie) ? setCookie[0] : setCookie).split(';')[0] ?? '';
   };
+
+  // Suites that run the stages are not about the plan of deliverables, so ideation does not wait
+  // for a confirmation there unless the suite asks for the real default (ADR-0031).
+  if (options.workflow && options.deliverableGate !== true) {
+    for (const [email, workspaceId] of [
+      [emails.a, ids.workspaceA],
+      [emails.b, ids.workspaceB],
+    ] as const) {
+      const cookie = await login(email);
+      const response = await request('PUT', `/v1/workspaces/${workspaceId}/settings/assignments`, {
+        cookie,
+        payload: {
+          key: 'workflow.require_deliverable_confirmation',
+          scopeType: 'workspace',
+          scopeId: workspaceId,
+          value: false,
+          reason: 'integration suite runs the stages without the confirmation gate',
+        },
+      });
+      if (response.statusCode !== 200) {
+        throw new Error(
+          `Could not relax the deliverables gate: ${response.statusCode} ${response.body}`,
+        );
+      }
+    }
+  }
 
   return {
     app,

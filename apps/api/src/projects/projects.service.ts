@@ -67,6 +67,8 @@ export interface Project {
   readonly business: ProjectBusiness | null;
   readonly configSnapshotId: string | null;
   readonly clonedFromId: string | null;
+  /** `copy`, `continuation` or `pivot` when the project was built on another one. */
+  readonly originKind: ProjectOriginKind | null;
   /** The approved analysis output that serves as the problem definition (FR-ANL-005). */
   readonly approvedProblemVersionId: string | null;
   readonly version: number;
@@ -117,9 +119,15 @@ export interface ProjectCommandInput {
   readonly reason?: string | undefined;
 }
 
+export type ProjectOriginKind = 'copy' | 'continuation' | 'pivot';
+
 export interface CloneProjectInput {
   readonly code: string;
   readonly title?: string | undefined;
+  /** Defaults to a plain copy. A continuation or pivot may start only from a completed project. */
+  readonly kind?: ProjectOriginKind | undefined;
+  /** The new direction of a pivot; a pivot needs it, the other kinds ignore it. */
+  readonly pivotProblem?: string | undefined;
 }
 
 export interface ListProjectsInput {
@@ -172,6 +180,7 @@ interface ProjectRow extends QueryResultRow {
   pause_reason: string | null;
   config_snapshot_id: string | null;
   cloned_from_id: string | null;
+  origin_kind: ProjectOriginKind | null;
   approved_problem_version_id: string | null;
   version: number;
   deleted_at: string | null;
@@ -194,7 +203,7 @@ interface LinkRow extends QueryResultRow {
 
 const projectColumns = `
   id, workspace_id, code, title, description, initial_problem, output_language, status,analysis_profile,analysis_continuation_session_id,
-  previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id,
+  previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id, origin_kind,
   approved_problem_version_id, version,
   ${isoColumn('deleted_at', 'deleted_at')},
   ${isoColumn('purge_after', 'purge_after')},
@@ -658,6 +667,16 @@ export class ProjectsService {
       if (source.status === 'deleted') {
         throw conflict('PROJECT_READ_ONLY', 'Restore the project before cloning it.');
       }
+      const kind = input.kind ?? 'copy';
+      if (kind !== 'copy' && source.status !== 'completed') {
+        throw conflict(
+          'PROJECT_NOT_COMPLETED',
+          'A continuation or a pivot can start only from a completed project.',
+        );
+      }
+      if (kind === 'pivot' && !input.pivotProblem?.trim()) {
+        throw badRequest('PROJECT_INVALID_REQUEST', 'A pivot needs its new direction.');
+      }
       const links = (await this.loadLinks(client, context, [sourceId])).get(sourceId) ?? [];
       const usable = links.filter((link) => link.topicStatus === 'active');
       let row: ProjectRow | undefined;
@@ -666,8 +685,8 @@ export class ProjectsService {
           `with inserted as (
              insert into projects (
                workspace_id, code, title, description, initial_problem, output_language,
-               created_by, cloned_from_id
-             ) values ($1, $2, $3, $4, $5, $6, $7, $8)
+               created_by, cloned_from_id, origin_kind
+             ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -676,10 +695,11 @@ export class ProjectsService {
             input.code,
             input.title ?? source.title,
             source.description,
-            source.initial_problem,
+            kind === 'pivot' ? input.pivotProblem!.trim() : source.initial_problem,
             source.output_language,
             context.actorId,
             sourceId,
+            kind,
           ],
         );
         row = result.rows[0];
@@ -712,7 +732,12 @@ export class ProjectsService {
         targetType: 'project',
         targetId: row.id,
         projectId: row.id,
-        after: { clonedFromId: sourceId, copiedSettings: copied, topics: usable.length },
+        after: {
+          clonedFromId: sourceId,
+          kind,
+          copiedSettings: copied,
+          topics: usable.length,
+        },
       });
       return {
         project: await this.read(client, context, row.id),
@@ -999,6 +1024,7 @@ export class ProjectsService {
       configSnapshotId: row.config_snapshot_id,
       approvedProblemVersionId: row.approved_problem_version_id,
       clonedFromId: row.cloned_from_id,
+      originKind: row.origin_kind,
       version: row.version,
       deletedAt: row.deleted_at,
       purgeAfter: row.purge_after,

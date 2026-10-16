@@ -63,6 +63,7 @@ const messages = {
       configuration: 'اتصال یا مدل AI تنظیم نشده است',
       cost_limit: 'سقف هزینهٔ این پروژه رسیده است',
       agent_question: 'یک ایجنت از شما سؤال پرسیده است',
+      deliverables_confirmation: 'خروجی‌های موردانتظار باید تأیید شوند',
     } as Record<string, string>,
     taskHelp: {
       analysis_answers: 'در بخش «مسئله» به پرسش‌ها پاسخ دهید یا برایشان وضعیت بگذارید.',
@@ -75,6 +76,8 @@ const messages = {
       cost_limit: 'سقف هزینه را در تنظیمات بالا ببرید یا پروژه را ببندید، سپس ادامه دهید.',
       agent_question:
         'در بخش «سؤال ایجنت» پایین همین صفحه پاسخ دهید؛ مرحله با پاسخ شما ادامه می‌یابد.',
+      deliverables_confirmation:
+        'در بخش «خروجی‌های موردانتظار» همین صفحه فهرست را ویرایش و تأیید کنید؛ ایده‌پردازی با تأیید شما شروع می‌شود.',
     } as Record<string, string>,
     openProviders: 'رفتن به ارائه‌دهندگان AI',
     providerSaid: 'پاسخ ارائه‌دهنده',
@@ -178,6 +181,8 @@ const messages = {
       knowledgeHeading: 'دانش تأییدشده‌ای که به مدل داده شد',
       knowledgeNone:
         'دانش تأییدشده‌ای برای این تحقیق پیدا نشد؛ یافته‌ها فقط بر دانش عمومی مدل تکیه دارند.',
+      webOff:
+        'جستجوی زندهٔ وب در این تحقیق انجام نشده است؛ منبع آن فقط دانش تأییدشدهٔ داخلی است (اگر چیزی پیدا شده باشد).',
       knowledgeDenied:
         'ابزار «بازیابی دانش» برای این نقش مجاز نیست؛ این خروجی بدون دانش تأییدشده نوشته شد. اجازهٔ ابزار را در صفحهٔ ایجنت‌ها تنظیم کنید.',
       verifierDenied:
@@ -280,6 +285,7 @@ const messages = {
       configuration: 'No AI connection or model is configured',
       cost_limit: "The project's cost ceiling was reached",
       agent_question: 'An agent asked you a question',
+      deliverables_confirmation: 'The expected deliverables need your confirmation',
     } as Record<string, string>,
     taskHelp: {
       analysis_answers: 'Answer the questions or give them a status in the "Problem" section.',
@@ -292,6 +298,8 @@ const messages = {
       cost_limit: 'Raise the cost ceiling in the settings or close the project, then resume.',
       agent_question:
         'Answer in the "Agent question" section lower on this page; the stage goes on with your answer.',
+      deliverables_confirmation:
+        'Edit and confirm the list in the "Expected deliverables" section of this page; ideation starts when you confirm.',
     } as Record<string, string>,
     openProviders: 'Go to AI providers',
     providerSaid: 'The provider said',
@@ -392,6 +400,8 @@ const messages = {
       knowledgeHeading: 'Approved knowledge given to the model',
       knowledgeNone:
         'No approved knowledge was found for this research; the findings rest on the model’s general knowledge only.',
+      webOff:
+        'No live web search was made for this research; its only source is approved internal knowledge, if any was found.',
       knowledgeDenied:
         'The "knowledge retrieval" tool is not allowed for this role, so this output was written without approved knowledge. Set the tool allowance on the Agents page.',
       verifierDenied:
