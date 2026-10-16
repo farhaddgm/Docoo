@@ -178,6 +178,8 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     await nav.getByRole('link', { name: 'ارائه‌دهندگان AI' }).click();
     await expect(page).toHaveURL(/\/fa\/providers$/u);
     await revealRow(page, page.getByRole('rowheader', { name: connection.name }));
+    // The sticky top bar must not sit over a row when the page is checked.
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expect(page.getByLabel('کلید API')).toHaveAttribute('type', 'password');
     await expectNoSeriousA11yViolations(page);
 

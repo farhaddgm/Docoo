@@ -231,12 +231,12 @@ export function SolutionsPanel({
         aria-labelledby="criteria-title"
         aria-busy={busy}
       >
-        <SectionTitle
-          id="criteria-title"
-          help={`${text.criteriaHelp} ${text.criteriaVersion.replace('{n}', formatNumber(locale, set.criteria.versionNo))}`}
-        >
+        <SectionTitle id="criteria-title" help={text.criteriaHelp}>
           {text.criteriaTitle}
         </SectionTitle>
+        <p className="muted">
+          {text.criteriaVersion.replace('{n}', formatNumber(locale, set.criteria.versionNo))}
+        </p>
         <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="criteria-title">
           <table>
             <thead>
