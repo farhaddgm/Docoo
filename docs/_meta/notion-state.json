@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "f7b660c245f4af5a6c7791a41a99f402ff26b7c5"
+    "source_commit": "686ff0f09c60357077f290190794a593d574bdc7"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-16T00:50:41.446Z",
+    "synced_at": "2026-10-16T07:35:52.687Z",
     "created": 0,
-    "updated": 4,
-    "unchanged": 70,
+    "updated": 1,
+    "unchanged": 73,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -176,16 +176,16 @@
     "DOCOO-BACKOFFICE-UX": {
       "path": "docs/01-product/05-backoffice-ux.md",
       "section": "01 Product",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "status": "proposed",
       "owner": "Product Design",
-      "checksum_sha256": "d41d475cb73fba60863affceed2c50348a718548cbb636cfba5c97c28439e2ad",
+      "checksum_sha256": "5a89efdec7e70edfd03d838a59995064de2126ca4303a9721637f99c5ee1f228",
       "notion_page_id": "3e55a24a-6668-813a-a383-dae2ab20f78b",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668813aa383dae2ab20f78b?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81c0-8cf1-f939f466e9b8",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881c08cf1f939f466e9b8",
-      "synced_commit": "92ab8a17360bdf0a661053ff30b9304832334cda",
-      "synced_at": "2026-10-07T05:47:49.814Z"
+      "synced_commit": "686ff0f09c60357077f290190794a593d574bdc7",
+      "synced_at": "2026-10-16T07:35:52.687Z"
     },
     "DOCOO-DOMAIN-MODEL": {
       "path": "docs/02-domain/01-domain-model.md",
