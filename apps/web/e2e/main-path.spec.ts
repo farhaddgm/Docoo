@@ -1,19 +1,8 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { revealRow } from './support';
+import { expectNoSeriousA11yViolations, revealRow } from './support';
 
 const email = process.env['E2E_ADMIN_EMAIL'] ?? 'e2e-admin@example.test';
 const password = process.env['E2E_ADMIN_PASSWORD'] ?? 'e2e-admin-password-1';
-
-async function expectNoSeriousA11yViolations(page: Page) {
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag22aa'])
-    .analyze();
-  const serious = results.violations.filter((violation) =>
-    ['serious', 'critical'].includes(violation.impact ?? ''),
-  );
-  expect(serious.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
-}
 
 async function signInWithKeyboard(page: Page) {
   await page.goto('/fa/auth/login-up');

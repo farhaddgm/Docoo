@@ -247,8 +247,11 @@ function SettingRow({
         <code dir="ltr">{definition.key}</code>
       </div>
       <p className="muted setting-meta">
-        <span className={`badge tone-${kind === 'system' ? 'neutral' : 'ok'}`}>
-          {text.sourceLabel}: {text.sources[kind]}
+        <span>
+          {text.sourceLabel}:{' '}
+          <span className={`badge tone-${kind === 'system' ? 'neutral' : 'ok'}`}>
+            {text.sources[kind]}
+          </span>
         </span>
         <span>
           {text.defaultValue}: {displayValue(locale, text, definition, definition.defaultValue)}
