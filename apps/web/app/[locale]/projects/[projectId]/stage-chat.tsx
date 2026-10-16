@@ -27,6 +27,8 @@ interface Conversation {
 const copy = {
   fa: {
     title: 'گفتگو با ایجنت این مرحله',
+    askOnly: 'این مرحله اکنون منتظر بازبینی شما نیست؛ فقط می‌توانید دربارهٔ خروجی بپرسید.',
+    open: 'گفتگو با ایجنت این مرحله',
     help: 'می‌توانید دربارهٔ همین خروجی بپرسید. ایجنت فقط توضیح می‌دهد و خروجی را تغییر نمی‌دهد؛ برای اصلاح، «درخواست بازبینی» بفرستید و سپس آن را به‌عنوان رد، برای تلاش بعدی ارسال کنید.',
     placeholder: 'پیام شما به ایجنت…',
     ask: 'پرسش',
@@ -53,6 +55,8 @@ const copy = {
   },
   en: {
     title: 'Talk to the agent of this stage',
+    askOnly: 'This stage is not waiting for your review now; you can only ask about its output.',
+    open: 'Talk to the agent of this stage',
     help: 'Ask about this output. The agent only explains and never changes it. To get it corrected, send a revision request, then send it back as a rejection for the next attempt.',
     placeholder: 'Your message to the agent…',
     ask: 'Ask',
@@ -92,11 +96,14 @@ export function StageChat({
   locale,
   stageBase,
   onChanged,
+  canRevise = true,
 }: {
   locale: Locale;
   /** `/workspaces/{id}/projects/{id}/stages/{stageRunId}` */
   stageBase: string;
   onChanged: () => Promise<void>;
+  /** A revision request can be sent back only while the output waits at a gate. */
+  canRevise?: boolean;
 }) {
   const text = copy[locale];
   const readOnly = useReadOnlyAccess();
@@ -169,7 +176,7 @@ export function StageChat({
   return (
     <section className="stack" aria-labelledby={`${id}-title`}>
       <h3 id={`${id}-title`}>{text.title}</h3>
-      <p className="muted">{text.help}</p>
+      <p className="muted">{canRevise ? text.help : text.askOnly}</p>
       {failed && !data ? (
         <p className="notice error" role="alert">
           {text.loadFailed}
@@ -245,15 +252,17 @@ export function StageChat({
                 >
                   {text.ask}
                 </button>
-                <button
-                  data-write-action
-                  className="secondary-button"
-                  type="button"
-                  disabled={busy || full || !input.trim()}
-                  onClick={() => void post('revision_request')}
-                >
-                  {text.revise}
-                </button>
+                {canRevise && (
+                  <button
+                    data-write-action
+                    className="secondary-button"
+                    type="button"
+                    disabled={busy || full || !input.trim()}
+                    onClick={() => void post('revision_request')}
+                  >
+                    {text.revise}
+                  </button>
+                )}
                 {data && (
                   <small className="muted">
                     {fill(text.used, {
@@ -278,5 +287,29 @@ export function StageChat({
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * The same conversation for a stage that is not waiting at a gate (running, finished): collapsed
+ * until opened, so the page does not read every stage's messages at once.
+ */
+export function StageChatDisclosure({
+  locale,
+  stageBase,
+  onChanged,
+}: {
+  locale: Locale;
+  stageBase: string;
+  onChanged: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>{copy[locale].open}</summary>
+      {open && (
+        <StageChat locale={locale} stageBase={stageBase} onChanged={onChanged} canRevise={false} />
+      )}
+    </details>
   );
 }

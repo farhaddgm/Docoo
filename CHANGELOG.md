@@ -11,6 +11,12 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - **Talk to the agent of a stage** ([ADR-0031](docs/adr/0031-expected-deliverables-and-stage-conversation.md) P1). Under each stage output the administrator can ask the stage's agent a question or state a revision request. The agent answers from its own output (and the approved earlier stages) and never changes it; revision requests become the ordinary rejection of the current output only when the administrator sends them back, which makes a new attempt and counts against the attempt limit. Messages are append-only (migration 0045), capped by `workflow.stage_chat_max_messages` (40), and audited by ids and counts. API: `GET|POST /projects/{id}/stages/{stageRunId}/messages`, `POST …/messages/send-as-rejection` (`workflow.reject`).
 
 - **Confirm the expected deliverables before ideation** ([ADR-0031](docs/adr/0031-expected-deliverables-and-stage-conversation.md) P2). Ideation now waits, like it does for an agent's question, until the administrator confirms a plan of expected outputs (strategy document, product documentation; code is shown as outside Docoo and cannot be the only item). The workflow tab shows the plan: ask the model for a proposal, edit it, and confirm. Every edit or proposal is a new version that needs confirming again; the confirmed plan goes to ideation, documentation and evaluation as data. The quick draft, projects whose ideation already produced output and workspaces that set `workflow.require_deliverable_confirmation` to false are not held. New Walker step `confirm_deliverables` (13 steps now). Migration 0046; API `GET|PUT /projects/{id}/deliverables`, `POST …/deliverables/propose` and `…/confirm`.
+- **Stage conversation outside the gate.** A stage that has an output but is not waiting for review (running or finished) now has the same conversation, collapsed in the stage list; there you can only ask, because a revision request goes back only at the gate.
+- **The document evaluator knows the confirmed deliverables.** It reports as findings any in-scope point of the item the document serves that is missing, and any content from a "scope out" entry.
+
+### Fixed
+
+- The new project wizard no longer fails silently when the default values of the settings cannot be loaded (`Failed to fetch` on `…/settings/preview`): it says so and offers **Try again**.
 
 ### Changed
 

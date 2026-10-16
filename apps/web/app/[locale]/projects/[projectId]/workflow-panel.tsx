@@ -9,7 +9,7 @@ import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../..
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { DeliverablesPanel } from './deliverables-panel';
-import { StageChat } from './stage-chat';
+import { StageChat, StageChatDisclosure } from './stage-chat';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
 import { FieldLabel } from '../../../info-tip';
@@ -33,6 +33,7 @@ interface StageItem {
   attemptsUsed?: number;
   passedByDecision?: boolean;
   pendingGateOutputId?: string | null;
+  latestOutputId?: string | null;
 }
 
 interface HumanTask {
@@ -357,6 +358,13 @@ export function WorkflowPanel({
                 </span>
               )}
               {stage.passedByDecision && <span className="muted">{text.passedByDecision}</span>}
+              {stage.id && stage.latestOutputId && !stage.pendingGateOutputId && (
+                <StageChatDisclosure
+                  locale={locale}
+                  stageBase={`${base}/stages/${stage.id}`}
+                  onChanged={afterChange}
+                />
+              )}
             </li>
           ))}
         </ol>
