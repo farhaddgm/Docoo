@@ -216,7 +216,26 @@ async function waitForWriting(
     if (done(last)) return last;
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
-  throw new Error(`Timed out waiting for the writing: ${JSON.stringify(last)}`);
+  const row = (
+    await h.admin.query<{ temporal_workflow_id: string }>(
+      'select temporal_workflow_id from document_writings where id=$1',
+      [writingId],
+    )
+  ).rows[0];
+  const history = row
+    ? await temporal.client.workflow.getHandle(row.temporal_workflow_id).fetchHistory()
+    : null;
+  const tail = history?.events
+    ?.slice(-15)
+    .map((event) => ({
+      id: String(event.eventId),
+      type: event.eventType,
+      activity: event.activityTaskScheduledEventAttributes?.activityType?.name,
+      retryState: event.activityTaskTimedOutEventAttributes?.retryState,
+    }));
+  throw new Error(
+    `Timed out waiting for the writing: ${JSON.stringify({ writing: last, historyTail: tail })}`,
+  );
 }
 
 async function written(documentId: string, payload: unknown = {}) {
@@ -910,28 +929,72 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       },
     );
 
-    it('DOC-W9: a restart of the worker in the middle of a writing resumes at the last finished subsection', async () => {
-      const { documentId } = await documentFor('w9');
-      let calls = 0;
-      temporal.fake.responder = (request) => {
-        captured.push(request);
-        if (request.responseSchema?.name === 'document_section') calls += 1;
-        return fakeResponder(request);
-      };
-      const started = await startWriting(documentId, { level: 3, template: 'detailed' });
-      await waitForWriting(
-        documentId,
-        started.writing.id,
-        (writing) => writing.progress.written >= 2 && writing.status === 'running',
-      );
-      await temporal.stopWorker();
-      await temporal.startWorker();
-      const done = await waitForWriting(documentId, started.writing.id);
-      expect(done.status, JSON.stringify(done)).toBe('succeeded');
-      // No subsection was written twice: every id appears in one stored part.
-      expect(done.progress.subsections.every((item) => item.state !== 'pending')).toBe(true);
-      expect(calls).toBeGreaterThanOrEqual(done.progress.total);
-    });
+    it.each([0, 25])(
+      'DOC-W9: controlled worker restart after two persisted parts (drain delay %ims)',
+      async (drainDelayMs) => {
+        const { documentId } = await documentFor('w9-' + drainDelayMs);
+        let calls = 0;
+        let parts = 0;
+        let release!: () => void;
+        let entered!: () => void;
+        const held = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const secondStored = new Promise<void>((resolve) => {
+          entered = resolve;
+        });
+        temporal.fake.responder = (request) => {
+          captured.push(request);
+          if (request.responseSchema?.name === 'document_section') calls += 1;
+          return fakeResponder(request);
+        };
+        temporal.afterWritingPart = async () => {
+          if (++parts === 2) {
+            entered();
+            await held;
+          }
+        };
+        try {
+          const started = await startWriting(documentId, { level: 3, template: 'detailed' });
+          await secondStored;
+          const partial = await waitForWriting(
+            documentId,
+            started.writing.id,
+            (writing) => writing.progress.written === 2,
+          );
+          expect(partial.status).toBe('running');
+          const stopped = temporal.stopWorker();
+          // Shutdown starts while the second part is persisted but its activity has not returned.
+          await new Promise((resolve) => setTimeout(resolve, drainDelayMs));
+          release();
+          await stopped;
+          temporal.afterWritingPart = null;
+          const beforeRestart = (
+            await get<{ writing: Writing }>(
+              `/documents/${documentId}/writings/${started.writing.id}`,
+            )
+          ).writing;
+          expect(beforeRestart.progress.written).toBe(2);
+          await temporal.startWorker();
+          const done = await waitForWriting(documentId, started.writing.id);
+          expect(done.status, JSON.stringify(done)).toBe('succeeded');
+          expect(done.progress.subsections.every((item) => item.state !== 'pending')).toBe(true);
+          expect(calls).toBeGreaterThanOrEqual(done.progress.total);
+          process.stdout.write(
+            JSON.stringify({
+              test: 'writer-controlled-restart',
+              drainDelayMs,
+              persistedBeforeRestart: beforeRestart.progress.written,
+              totalAfterRestart: done.progress.total,
+              status: done.status,
+            }) + '\n',
+          );
+        } finally {
+          release();
+          temporal.afterWritingPart = null;
+        }
+      },
+    );
 
     it('DOC-W10: the dry-run check counts and validates an edit without saving it', async () => {
       const { documentId } = await documentFor('w10');
