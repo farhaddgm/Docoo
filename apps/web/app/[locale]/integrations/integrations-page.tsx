@@ -7,6 +7,7 @@ import { formatDateTime, formatNumber, type Locale } from '../../i18n';
 import { Notice, explainError, useAction } from '../use-action';
 import { WorkspacePage } from '../workspace-page';
 import { integrationMessages } from './messages';
+import { FieldLabel } from '../../info-tip';
 
 interface Connection {
   apiUrl: string;
@@ -224,7 +225,9 @@ function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: st
       <form className="card filter-form" onSubmit={save} aria-busy={busy}>
         <h2>{configured ? text.save : text.contenter}</h2>
         <div className="filter-grid">
-          <label htmlFor={`${id}-api`}>{text.apiUrl}</label>
+          <FieldLabel htmlFor={`${id}-api`} help={text.apiUrlHelp} helpId={`${id}-api-help`}>
+            {text.apiUrl}
+          </FieldLabel>
           <input
             id={`${id}-api`}
             type="url"
@@ -236,11 +239,9 @@ function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: st
             autoComplete="off"
             aria-describedby={`${id}-api-help`}
           />
-          <span />
-          <p id={`${id}-api-help`} className="muted" dir="auto">
-            {text.apiUrlHelp}
-          </p>
-          <label htmlFor={`${id}-web`}>{text.webUrl}</label>
+          <FieldLabel htmlFor={`${id}-web`} help={text.webUrlHelp} helpId={`${id}-web-help`}>
+            {text.webUrl}
+          </FieldLabel>
           <input
             id={`${id}-web`}
             type="url"
@@ -251,11 +252,13 @@ function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: st
             autoComplete="off"
             aria-describedby={`${id}-web-help`}
           />
-          <span />
-          <p id={`${id}-web-help`} className="muted" dir="auto">
-            {text.webUrlHelp}
-          </p>
-          <label htmlFor={`${id}-token`}>{text.token}</label>
+          <FieldLabel
+            htmlFor={`${id}-token`}
+            help={configured ? `${text.tokenHelp} ${text.tokenKeep}` : text.tokenHelp}
+            helpId={`${id}-token-help`}
+          >
+            {text.token}
+          </FieldLabel>
           <input
             id={`${id}-token`}
             type="password"
@@ -268,10 +271,6 @@ function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: st
             autoComplete="off"
             aria-describedby={`${id}-token-help`}
           />
-          <span />
-          <p id={`${id}-token-help`} className="muted" dir="auto">
-            {text.tokenHelp} {configured && text.tokenKeep}
-          </p>
         </div>
         <div className="toolbar">
           <button className="primary-button" type="submit" disabled={busy}>

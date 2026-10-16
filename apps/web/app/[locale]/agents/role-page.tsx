@@ -11,6 +11,7 @@ import { explainError, Notice, useAction } from '../use-action';
 import { agentMessages, fill } from './agent-messages';
 import type { AgentRole, Definition, RoleDetail, RoleOutput } from './agent-types';
 import { RoleEditor } from './role-editor';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 export function RolePage({ locale, role }: { locale: Locale; role: AgentRole }) {
   const text = agentMessages(locale);
@@ -259,10 +260,13 @@ function Role({
       </section>
 
       <section className="card stack" aria-labelledby="history-heading">
-        <h2 id="history-heading">{text.historyHeading}</h2>
-        <p className="muted">{text.historyHelp}</p>
+        <SectionTitle id="history-heading" help={text.historyHelp}>
+          {text.historyHeading}
+        </SectionTitle>
         <div className="field-stack">
-          <label htmlFor={reasonId}>{text.activateReason}</label>
+          <FieldLabel htmlFor={reasonId} help={text.activateReasonHelp} helpId={`${reasonId}-help`}>
+            {text.activateReason}
+          </FieldLabel>
           <input
             id={reasonId}
             dir="auto"
@@ -271,9 +275,6 @@ function Role({
             onChange={(event) => setActivateReason(event.target.value)}
             aria-describedby={`${reasonId}-help`}
           />
-          <small id={`${reasonId}-help`} className="muted">
-            {text.activateReasonHelp}
-          </small>
         </div>
         <Notice notice={notice} />
         <ol className="version-list">
@@ -397,8 +398,9 @@ function Role({
       </section>
 
       <section className="card stack" aria-labelledby="outputs-heading">
-        <h2 id="outputs-heading">{text.outputsHeading}</h2>
-        <p className="muted">{text.outputsHelp}</p>
+        <SectionTitle id="outputs-heading" help={text.outputsHelp}>
+          {text.outputsHeading}
+        </SectionTitle>
         {!outputs ? (
           <p role="status">{text.loading}</p>
         ) : outputs.items.length === 0 ? (

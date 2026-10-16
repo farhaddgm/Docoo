@@ -16,6 +16,7 @@ import {
 } from './document-editor-model';
 import { editorMessages, fill } from './editor-messages';
 import { TermIssues, type TermIssueView } from './term-issues';
+import { SectionTitle } from '../../../info-tip';
 
 interface Check {
   valid: boolean;
@@ -140,8 +141,9 @@ export function DocumentEditor({
 
   return (
     <section className="card" aria-labelledby="editor-title">
-      <h2 id="editor-title">{text.editorTitle}</h2>
-      <p className="muted">{text.editorHelp}</p>
+      <SectionTitle id="editor-title" help={text.editorHelp}>
+        {text.editorTitle}
+      </SectionTitle>
       <Notice notice={notice} />
       <div className="editor-layout">
         <div className="stack">

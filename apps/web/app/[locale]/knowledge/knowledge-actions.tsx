@@ -11,6 +11,7 @@ import { explainError, useAction } from '../use-action';
 import { isoToLocal, localToIso } from './knowledge-common';
 import { knowledgeMessages } from './knowledge-messages';
 import type { BrainDecision, KnowledgeDetail, SourceStatus } from './knowledge-types';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 /** Statuses the API lets an audit start from (KNO-003). */
 const auditable = new Set(['draft', 'pending', 'in_review', 'needs_revision', 'rejected']);
@@ -190,8 +191,9 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
       <h2 id={`${id}-heading`}>{text.editHeading}</h2>
       {version && (
         <form className="field-stack" onSubmit={saveVersion}>
-          <h3>{text.newVersionHeading}</h3>
-          <p className="muted">{text.newVersionHelp}</p>
+          <SectionTitle as="h3" help={text.newVersionHelp}>
+            {text.newVersionHeading}
+          </SectionTitle>
           <label htmlFor={`${id}-content`}>{text.contentLabel}</label>
           <textarea
             id={`${id}-content`}
@@ -208,7 +210,9 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
             value={validFrom}
             onChange={(event) => setValidFrom(event.target.value)}
           />
-          <label htmlFor={`${id}-until`}>{text.validUntilLabel}</label>
+          <FieldLabel htmlFor={`${id}-until`} help={text.validityHelp} helpId={`${id}-until-help`}>
+            {text.validUntilLabel}
+          </FieldLabel>
           <input
             id={`${id}-until`}
             type="datetime-local"
@@ -216,10 +220,9 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
             aria-describedby={`${id}-until-help`}
             onChange={(event) => setValidUntil(event.target.value)}
           />
-          <small id={`${id}-until-help`} className="muted">
-            {text.validityHelp}
-          </small>
-          <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
+          <FieldLabel htmlFor={`${id}-reason`} help={text.reasonHelp} helpId={`${id}-reason-help`}>
+            {text.reasonLabel}
+          </FieldLabel>
           <input
             id={`${id}-reason`}
             dir="auto"
@@ -228,9 +231,6 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
             aria-describedby={`${id}-reason-help`}
             onChange={(event) => setReason(event.target.value)}
           />
-          <small id={`${id}-reason-help`} className="muted">
-            {text.reasonHelp}
-          </small>
           {!changed && !validityChanged && (
             <small className="muted" role="status">
               {text.unchangedContent}

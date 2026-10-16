@@ -10,6 +10,7 @@ import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { solutionMessages } from './solution-messages';
 import { SensitivityPanel } from './sensitivity-panel';
+import { FieldLabel, SectionTitle } from '../../../info-tip';
 
 interface Criterion {
   key: string;
@@ -194,10 +195,13 @@ export function SolutionsPanel({
           aria-labelledby="generate-title"
           aria-busy={busy}
         >
-          <h2 id="generate-title">{text.generateTitle}</h2>
-          <p className="muted">{text.generateHelp}</p>
+          <SectionTitle id="generate-title" help={text.generateHelp}>
+            {text.generateTitle}
+          </SectionTitle>
           <div className="filter-grid">
-            <label htmlFor="solution-count">{text.count}</label>
+            <FieldLabel htmlFor="solution-count" help={text.countHelp} helpId="solution-count-help">
+              {text.count}
+            </FieldLabel>
             <input
               id="solution-count"
               type="number"
@@ -208,10 +212,6 @@ export function SolutionsPanel({
               onChange={(event) => setCount(event.target.value)}
               aria-describedby="solution-count-help"
             />
-            <span />
-            <p id="solution-count-help" className="muted">
-              {text.countHelp}
-            </p>
           </div>
           <div className="toolbar">
             <button className="primary-button" type="submit" disabled={busy}>
@@ -465,8 +465,9 @@ export function SolutionsPanel({
           aria-labelledby="selection-title"
           aria-busy={busy}
         >
-          <h2 id="selection-title">{text.selectionTitle}</h2>
-          <p className="muted">{text.selectionHelp}</p>
+          <SectionTitle id="selection-title" help={text.selectionHelp}>
+            {text.selectionTitle}
+          </SectionTitle>
           {chosen.length === 0 ? (
             <p className="muted">{text.selectionEmpty}</p>
           ) : (

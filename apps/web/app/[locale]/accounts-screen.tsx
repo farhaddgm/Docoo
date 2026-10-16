@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   isGmail,
   type Account,
@@ -10,16 +10,17 @@ import {
   type AccessLevel,
 } from '@docoo/contracts';
 
+import { FieldLabel } from '../info-tip';
+import { AppShell } from './app-shell';
+import type { SessionIdentity } from './signed-in';
+
 type Locale = 'fa' | 'en';
 interface Workspace {
   id: string;
   code: string;
   name: string;
 }
-interface Identity {
-  user: { id: string; email: string; role: AccountRole; isOwner: boolean };
-  workspaces: Workspace[];
-}
+type Identity = SessionIdentity;
 interface Page {
   items: Account[];
   total: number;
@@ -241,36 +242,45 @@ export function AccountsScreen({
       setBusy(false);
     }
   }
+  const shell = (body: ReactNode) => (
+    <AppShell
+      locale={locale}
+      title={googleOnly ? t.google : t.users}
+      subtitle={googleOnly ? t.googleDescription : t.description}
+      identity={identity && !denied ? identity : undefined}
+      showNavigation={Boolean(identity) && !denied}
+      workspaceId={identity && !denied ? identity.workspaces[0]?.id : undefined}
+    >
+      {body}
+    </AppShell>
+  );
   if (guest)
-    return (
-      <main className="content">
+    return shell(
+      <section className="auth-card">
         <p>{t.denied}</p>
-        <Link href={`/${locale}/auth/login` as Route}>{t.login}</Link>
-      </main>
+        <Link className="primary-button link-button" href={`/${locale}/auth/login` as Route}>
+          {t.login}
+        </Link>
+      </section>,
     );
   if (denied)
-    return (
-      <main className="content">
+    return shell(
+      <section className="auth-card">
         <p role="alert">{t.denied}</p>
-        <Link href={`/${locale}`}>{t.back}</Link>
-      </main>
+        <Link className="secondary-button link-button" href={`/${locale}`}>
+          {t.back}
+        </Link>
+      </section>,
     );
-  return (
-    <main className="content accounts-page" dir={locale === 'fa' ? 'rtl' : 'ltr'}>
-      <header className="topbar">
-        <div>
-          <h1>{googleOnly ? t.google : t.users}</h1>
-          <p>{googleOnly ? t.googleDescription : t.description}</p>
-        </div>
-        <Link href={`/${locale}`}>{t.back}</Link>
-      </header>
+  return shell(
+    <div className="accounts-page">
       {error && (
         <p role="alert" className="notice error">
           {error}
         </p>
       )}
       {notice && (
-        <p role="status" className="notice success">
+        <p role="status" className="notice ok">
           {notice}
         </p>
       )}
@@ -409,9 +419,29 @@ export function AccountsScreen({
           )}
         </>
       )}
-    </main>
+    </div>,
   );
 }
+
+/** A modal dialog takes focus when it opens and closes on Escape. */
+function useDialog(onClose: () => void) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    ref.current?.focus();
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('keydown', close);
+      previous?.focus?.();
+    };
+    // The dialog opens once per mount; `onClose` only closes it.
+  }, []);
+  return ref;
+}
+
 function AccountForm({
   locale,
   user,
@@ -447,6 +477,7 @@ function AccountForm({
   const [busy, setBusy] = useState(false);
   const canChoose = identity.user.isOwner && isGmail(email);
   const self = user?.id === identity.user.id;
+  const dialog = useDialog(onClose);
   async function save(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
@@ -477,6 +508,8 @@ function AccountForm({
   return (
     <div className="account-modal-backdrop">
       <section
+        ref={dialog}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="account-dialog-title"
@@ -519,7 +552,12 @@ function AccountForm({
               </option>
             ))}
           </select>
-          <label htmlFor="account-method">{t.method}</label>
+          <FieldLabel
+            htmlFor="account-method"
+            help={canChoose ? undefined : identity.user.isOwner ? t.gmailOnly : t.ownerOnly}
+          >
+            {t.method}
+          </FieldLabel>
           <select
             id="account-method"
             value={method}
@@ -538,10 +576,11 @@ function AccountForm({
               </option>
             ))}
           </select>
-          {!canChoose && <p>{identity.user.isOwner ? t.gmailOnly : t.ownerOnly}</p>}
           {method !== 'GOOGLE' ? (
             <>
-              <label htmlFor="account-password">{t.password}</label>
+              <FieldLabel htmlFor="account-password" help={t.passwordHint}>
+                {t.password}
+              </FieldLabel>
               <input
                 id="account-password"
                 type="password"
@@ -553,7 +592,6 @@ function AccountForm({
                 maxLength={128}
                 required={!user?.hasPassword}
               />
-              <p>{t.passwordHint}</p>
             </>
           ) : (
             <p>{t.googleOnly}</p>
@@ -622,6 +660,7 @@ function AccessDialog({
   const [q, setQ] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const dialog = useDialog(onClose);
   useEffect(() => {
     let cancelled = false;
     if (workspaceId)
@@ -666,6 +705,8 @@ function AccessDialog({
   return (
     <div className="account-modal-backdrop">
       <section
+        ref={dialog}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="access-dialog-title"
