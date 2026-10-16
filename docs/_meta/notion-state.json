@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "92956c9c9c85a53ddde45035e1aff9f38d7c4cf5"
+    "source_commit": "f7b660c245f4af5a6c7791a41a99f402ff26b7c5"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-14T15:26:21.384Z",
+    "synced_at": "2026-10-16T00:50:41.446Z",
     "created": 0,
-    "updated": 1,
-    "unchanged": 73,
+    "updated": 4,
+    "unchanged": 70,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -459,13 +459,13 @@
       "version": "1.1.0",
       "status": "approved-baseline",
       "owner": "Product Quality",
-      "checksum_sha256": "740299f5c7dbf2db46d1a1d8c34a8c3616449c8ac7b502752fd9931f619a6d74",
+      "checksum_sha256": "23dc86fe7fbd3442a0599bbf604cb531849b1f036dbceeddaff46d152960b71f",
       "notion_page_id": "3e55a24a-6668-810d-8763-edaf9a51e130",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668810d8763edaf9a51e130?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a6-9c20-fc6d024c9eba",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a69c20fc6d024c9eba",
-      "synced_commit": "92ab8a17360bdf0a661053ff30b9304832334cda",
-      "synced_at": "2026-10-07T05:47:49.814Z"
+      "synced_commit": "f7b660c245f4af5a6c7791a41a99f402ff26b7c5",
+      "synced_at": "2026-10-16T00:50:41.446Z"
     },
     "DOCOO-NOTION-GITHUB": {
       "path": "docs/07-integrations/01-notion-and-github.md",
@@ -613,13 +613,13 @@
       "version": "1.11.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "0e284d5d7ffd6891de25a1b741416b50e29a3416e025b781313043f49787bb05",
+      "checksum_sha256": "2c0baa78065e39e2f480ee56e5385fc3a2ea6328f9c3ec6a41d0daab822eebb3",
       "notion_page_id": "3e55a24a-6668-815d-b2f0-d451feffe55e",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668815db2f0d451feffe55e",
       "index_row_page_id": "3e55a24a-6668-81d3-9a8e-d3b801cb1eb3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881d39a8ed3b801cb1eb3",
-      "synced_commit": "92ab8a17360bdf0a661053ff30b9304832334cda",
-      "synced_at": "2026-10-07T05:47:49.814Z"
+      "synced_commit": "f7b660c245f4af5a6c7791a41a99f402ff26b7c5",
+      "synced_at": "2026-10-16T00:50:41.446Z"
     },
     "DOCOO-ADR-0006": {
       "path": "docs/adr/0006-application-platform-and-toolchain.md",
@@ -795,13 +795,13 @@
       "version": "1.0.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "d6edcac26b412d317cc164ba60f7500b0cf805943ec5d9fb972da537a23378a8",
+      "checksum_sha256": "e9da755745a31ec7d4b0c0e1bd9236d5a00ccadb99a4f6af70147998146c9a1a",
       "notion_page_id": "3ef5a24a-6668-8135-a88d-e9e876b34ecf",
       "notion_page_url": "https://app.notion.com/p/3ef5a24a66688135a88de9e876b34ecf",
       "index_row_page_id": "3ef5a24a-6668-819c-8303-f8a3426a4921",
       "index_row_page_url": "https://app.notion.com/p/3ef5a24a6668819c8303f8a3426a4921",
-      "synced_commit": "92ab8a17360bdf0a661053ff30b9304832334cda",
-      "synced_at": "2026-10-07T05:47:49.814Z"
+      "synced_commit": "f7b660c245f4af5a6c7791a41a99f402ff26b7c5",
+      "synced_at": "2026-10-16T00:50:41.446Z"
     },
     "DOCOO-ADR-0014": {
       "path": "docs/adr/0014-analyst-questions-and-answers.md",
@@ -1019,13 +1019,13 @@
       "version": "1.1.0",
       "status": "proposed",
       "owner": "Product & Engineering",
-      "checksum_sha256": "df8a718f5a27d3dac4b333c7657f9ae4e78e7b80d46cff9bcb0b6661d2a2e05b",
+      "checksum_sha256": "6741fb168ce7aca17eb4dd631eb4f71fc11dbe0f8130efbda5e115478481ffb1",
       "notion_page_id": "3f45a24a-6668-810d-9072-f13313d20d89",
       "notion_page_url": "https://app.notion.com/p/3f45a24a6668810d9072f13313d20d89",
       "index_row_page_id": "3f45a24a-6668-81d1-8009-f2950eae69ed",
       "index_row_page_url": "https://app.notion.com/p/3f45a24a666881d18009f2950eae69ed",
-      "synced_commit": "b5124cd76ba5d41ff66f5434c967926b8ecf05ef",
-      "synced_at": "2026-10-13T07:43:48.793Z"
+      "synced_commit": "f7b660c245f4af5a6c7791a41a99f402ff26b7c5",
+      "synced_at": "2026-10-16T00:50:41.446Z"
     },
     "DOCOO-SEARCH-API-SPIKE": {
       "path": "docs/06-delivery/16-search-api-spike.md",
