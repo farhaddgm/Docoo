@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { evaluationCorpusV1, hashEvaluationDataset } from '@docoo/domain';
+import { evaluationCorpusV1, hashEvaluationDataset } from '@docoo/domain/evaluation';
 import {
   createEvaluationBlindReviewPack,
   prepareEvaluationBlindReview,

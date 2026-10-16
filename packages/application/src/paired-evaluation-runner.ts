@@ -9,7 +9,7 @@ import {
   type EvaluationDatasetCase,
   type EvaluationDatasetSnapshot,
   type EvaluationProvider,
-} from '@docoo/domain';
+} from '@docoo/domain/evaluation';
 
 export interface EvaluationAgentSnapshots {
   /** Exact serialized production model/config snapshot, including provider and modelId. */

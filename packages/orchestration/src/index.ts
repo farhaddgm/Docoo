@@ -45,3 +45,4 @@ export * from './business.js';
 export * from './decision-evidence.js';
 export * from './adaptive-research.js';
 export * from './decision-research-activities.js';
+export * from './paired-evaluation-provider.js';

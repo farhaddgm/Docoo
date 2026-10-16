@@ -2,7 +2,7 @@
 doc_id: DOCOO-AI-EVALUATION
 title: ارزیابی و تضمین کیفیت خروجی AI
 status: proposed
-version: 1.0.1
+version: 1.0.2
 owner: AI Quality
 last_updated: 2026-10-16
 notion_sync: true
@@ -131,3 +131,17 @@ Regression بحرانی صفر و افت معیار کلیدی بیش از toler
 باقی‌ماندهٔ ADV-013: snapshot و adapter مسیر واقعی نقش‌ها با runtime فعلی، orchestration بادوام و تعیین تکلیف تماس نامعلوم، API/فرم آغاز اجرا، E2E کامل UI/API/worker، هزینهٔ ledger واقعی، برچسب انسانی و judge-human واقعی و پیشنهاد case پالایش‌شده از شکست واقعی. برای این برش هیچ provider زنده یا API key استفاده نشد.
 
 مرز اتصال بعدی در این main، `packages/orchestration/src/stages.ts` با `stagePrompt` و `STAGE_SCHEMAS`، profileهای نسخه‌دار `agents.ts`، `ProviderRuntime` در `runtime.ts` و worker فعلی `apps/worker-agent` است؛ ساخت مسیر موازی روی worker شاخهٔ قدیمی مجاز نیست. runtime کنونی `costUsd` را تخمین می‌زند؛ این مقدار نباید به فیلد هزینهٔ واقعی آزمایش کپی شود. تا وجود منبع هزینهٔ واقعی با provenance روشن، هزینهٔ واقعی آزمایش null می‌ماند. snapshotها باید سمت سرور از نسخه‌های مجاز ساخته شوند، نه از prompt، کلید یا هزینهٔ دلخواه مرورگر.
+
+## ۱۱. snapshot تولیدی و fencing فراخوانی — ADV-013
+
+`captureStageEvaluationArm` نسخهٔ immutable نقش در همان workspace/پروژه، مدل حاضر در آخرین catalog، قابلیت text/structured output، سقف خروجی و snapshot قیمت موجود را سمت سرور می‌گیرد. نقش نادرست، نسخهٔ پروژهٔ دیگر، مدل غایب/ناسازگار و پروژهٔ خارج دسترسی یا آرشیوشده رد می‌شوند. `prepareStageEvaluationArm` برای هر پنج نقش همان `stagePrompt` و `STAGE_SCHEMAS` تولیدی را برای هر پرونده و زبان pin می‌کند؛ مدل، نسخهٔ نقش، catalog hash، متن واقعی prompt، schema، سقف و timeout hash می‌شوند. پیش از اجرا، بازسازی snapshot از کد فعلی باید دقیقاً برابر باشد؛ code drift مجاز نیست.
+
+این حالت صریحاً `stage-structured-output` است: corpus خودبسندهٔ مصنوعی، بدون ابزار خارجی، دادهٔ پروژه یا خروجی upstream. بنابراین مقایسهٔ کامل tool loop یا workflow نیست؛ API/فرم یا worker هنوز این مسیر را آغاز نمی‌کنند. fake در production ممنوع و تماس زنده نیازمند opt-in صریح caller است. کلید هیچ‌گاه در snapshot یا بدنهٔ کاربر قرار نمی‌گیرد. `app.evaluation_model_snapshot` فقط descriptor مدل انتخابی و قیمت غیرمحرمانه را پس از کنترل همان actor، workspace و EDIT برمی‌گرداند؛ RLS خواندن secret برای editor باز نشده است. runtime با اختیار داخلی سرور credential را آماده می‌کند و پیش و پس از آن، مجوز initiating actor را دوباره می‌سنجد؛ استفاده از اختیار worker به‌جای کاربر لغوشده ممنوع است.
+
+مهاجرت افزایشی `0046_evaluation_invocation_journal` جدول پنجم `project_evaluation_invocation_journal` را اضافه می‌کند. پیش از تماس، intent شامل manifest/run/case/model hash و hash درخواست واقعی commit می‌شود. کلید یکتای ordinal و guard ترتیب، فقط یک مجوز تماس می‌دهند؛ وجود pending یا unknown lease منقضی‌شونده نیست و retry خودکار را مجاز نمی‌کند. پس از پاسخ، رسید مستقل شامل شناسهٔ واقعی `model_invocations`، hash خروجی، مدل مشاهده‌شده، پاسخ معتبر یا خطای امن ثبت می‌شود و سپس نتیجه به runner می‌رسد. SQL scope/purpose/provider/model/request hash رسید را با ledger می‌سنجد؛ یک invocation نمی‌تواند برای دو intent مصرف شود. رسید پایانی و intent تغییرپذیر نیستند. خطای سرویس به unknown بدون متن exception تبدیل می‌شود. هزینهٔ receipt فقط null است؛ تخمین runtime به هزینهٔ واقعی تبدیل نمی‌شود.
+
+قطع پردازش بین commit رسید و نتیجهٔ پرونده، رسید قابل‌بازخوانی باقی می‌گذارد و همان تماس دوباره ارسال نمی‌شود. لغو مجوز پس از intent نیز فراخوانی را متوقف می‌کند و ممکن است pending باقی بگذارد. اجرای پس از restart، reconciliation این حالت و تصمیم ادامه/توقف هنوز باید در worker بادوام پیاده شوند؛ این برش ادعای پایان آن کار ندارد.
+
+شواهد این مرحله: ۱۲ تست تازهٔ adapter، شامل هر پنج نقش، دو زبان، تطبیق prompt/schema، ترتیب commit، توقف retry در گم‌شدن acknowledgment، خطای مدل/خروجی، code drift، fake-production و opt-in زنده؛ کل orchestration ۱۲۱ تست پاس‌شده دارد. gate واقعی PostgreSQL با همان فرمان بخش قبل، ۶۰ تماس جفتی FakeAdapter در ProviderRuntime واقعی به‌علاوهٔ دو probe قطع پردازش/رقابت اجرا کرد؛ intent/receipt، invocation ledger، RLS، grant revoke، receipt scope و immutable بودن را سنجید. همهٔ تماس‌ها مصنوعی بودند و پایگاه/login تست حذف شدند. تست‌های contracts و application اکنون dist را exclude می‌کنند؛ تعدادهای یکتای منبع به‌ترتیب ۱۲ و ۱۵ است، نه شمار قبلی که اجرای فایل کامپایل‌شده را دوباره می‌شمرد.
+
+در بررسی CI برش قبلی، ورود `node:crypto` از barrel عمومی domain به `stages.ts` و bundle Temporal محلی بازتولید شد؛ build TypeScript به‌تنهایی این خطا را نمی‌دید. utilityهای ارزیابیِ وابسته به Node اکنون فقط در subpath `@docoo/domain/evaluation` صادر می‌شوند و root domain برای workflow امن می‌ماند. تست `apps/worker-agent/src/workflow-bundle.test.ts` bundle واقعی entry تولیدی را می‌سازد، بدون ignore کردن ماژول ممنوع؛ پس از اصلاح پاس شد. چهار تست خود آزمایشگاه در CI قبلی روی هر دو Firefox و WebKit پاس شده‌اند؛ این شاهد به‌تنهایی سبز بودن کل CI یا workflowهای دیگر را ثابت نمی‌کند.

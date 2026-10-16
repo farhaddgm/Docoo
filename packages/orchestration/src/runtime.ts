@@ -22,6 +22,10 @@ import { fakeResponder, fakeToolResponder } from './fake-responders.js';
 
 export interface InvocationScope {
   readonly workspaceId: string;
+  /** Opt-in user context for evaluations; old workflow calls retain their service context. */
+  readonly actorId?: string;
+  readonly correlationId?: string;
+  readonly expectedProvider?: ProviderKind;
   readonly projectId: string | null;
   readonly stageRunId: string | null;
   readonly attemptId: string | null;
@@ -179,11 +183,20 @@ export class ProviderRuntime {
     connectionId: string,
     request: NormalizedModelRequest,
   ): Promise<{ response: NormalizedModelResponse; invocationId: string; costUsd: number | null }> {
+    if (scope.actorId) await this.assertActorAccess(scope);
+    // Credentials are a server capability, never a new SELECT grant to the editor.
+    // Project access is checked as the real actor both before decrypting and before calling.
     const { adapter, connection } = await inWorkspace(
       this.pool,
       { workspaceId: scope.workspaceId },
-      (client) => this.adapterFor(client, connectionId),
+      async (client) => {
+        const resolved = await this.adapterFor(client, connectionId);
+        if (scope.expectedProvider && scope.expectedProvider !== resolved.connection.provider)
+          throw new ProviderError('permanent', 'evaluation_provider_changed');
+        return resolved;
+      },
     );
+    if (scope.actorId) await this.assertActorAccess(scope);
     try {
       // Every call carries an output limit that fits what it is for and what the model can give.
       const sent =
@@ -199,8 +212,10 @@ export class ProviderRuntime {
               ),
             };
       const response = await adapter.invoke(sent);
-      return await inWorkspace(this.pool, { workspaceId: scope.workspaceId }, async (client) => {
-        const price = await this.price(client, connection.provider, response.model, request.model);
+      const price = await inWorkspace(this.pool, { workspaceId: scope.workspaceId }, (client) =>
+        this.price(client, connection.provider, response.model, request.model),
+      );
+      return await inWorkspace(this.pool, scope, async (client) => {
         // No entered price: estimate with the deliberately high fallback so the ceiling still works;
         // the row keeps price_id null, which is how the pages tell an estimate from a priced call.
         const costUsd = estimateCostUsd(response.usage, price?.snapshot ?? FALLBACK_PRICE);
@@ -221,7 +236,7 @@ export class ProviderRuntime {
               'transient',
               sanitizeError(error instanceof Error ? error.message : 'provider_error'),
             );
-      await inWorkspace(this.pool, { workspaceId: scope.workspaceId }, (client) =>
+      await inWorkspace(this.pool, scope, (client) =>
         this.record(client, scope, connection, request.model, {
           status: providerError.retryable ? 'transient_failed' : 'permanent_failed',
           response: null,
@@ -233,6 +248,20 @@ export class ProviderRuntime {
       );
       throw providerError;
     }
+  }
+
+  private async assertActorAccess(scope: InvocationScope): Promise<void> {
+    await inWorkspace(this.pool, scope, async (client) => {
+      const allowed = (
+        await client.query(
+          `select 1 from projects where workspace_id=$1 and id=$2 and deleted_at is null
+          and status not in ('archived','deleted') and app.actor_role($1) in ('super_admin','editor')
+          and app.resource_access('project',$1,$2)='EDIT'`,
+          [scope.workspaceId, scope.projectId],
+        )
+      ).rowCount;
+      if (!allowed) throw new ProviderError('permanent', 'evaluation_scope_unavailable');
+    });
   }
 
   /** What the latest model list of the connection says the model can generate, if it says. */

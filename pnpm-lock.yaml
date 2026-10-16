@@ -478,6 +478,9 @@ importers:
       '@docoo/application':
         specifier: workspace:*
         version: link:../application
+      '@docoo/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       drizzle-orm:
         specifier: 0.45.2
         version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(pg@8.23.0)
@@ -578,6 +581,9 @@ importers:
 
   packages/orchestration:
     dependencies:
+      '@docoo/application':
+        specifier: workspace:*
+        version: link:../application
       '@docoo/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -602,6 +608,9 @@ importers:
       pg:
         specifier: 8.23.0
         version: 8.23.0
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/pg':
         specifier: 8.15.6

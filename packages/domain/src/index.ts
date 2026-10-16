@@ -7,5 +7,3 @@ export * from './calculator.js';
 export * from './question-quality.js';
 export * from './knowledge-intelligence.js';
 export * from './question-priority.js';
-export * from './paired-evaluation.js';
-export * from './evaluation-corpus.js';

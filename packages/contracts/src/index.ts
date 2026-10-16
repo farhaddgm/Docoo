@@ -5,3 +5,4 @@ export * from './account.js';
 export * from './decision-intelligence.js';
 export * from './project-research-workflow.js';
 export * from './evaluation-lab.js';
+export * from './evaluation-invocation.js';

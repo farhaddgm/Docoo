@@ -18,7 +18,7 @@ import {
   prepareEvaluationBlindReview,
   EvaluationExecutionError,
 } from '@docoo/application';
-import { PairedEvaluationError } from '@docoo/domain';
+import { PairedEvaluationError } from '@docoo/domain/evaluation';
 import { EvaluationStoreError, PostgresEvaluationExecutionStore } from '@docoo/database';
 import type { Pool } from 'pg';
 import { z } from 'zod';

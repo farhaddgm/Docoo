@@ -8,7 +8,7 @@ import {
   hashEvaluationSnapshotText,
   prepareEvaluationExperiment,
 } from '@docoo/application';
-import { evaluationCorpusV1 } from '../../domain/dist/index.js';
+import { evaluationCorpusV1 } from '../../domain/dist/paired-evaluation-entry.js';
 import { PostgresEvaluationExecutionStore, setDatabaseRequestContext } from '../dist/src/index.js';
 
 // This gate always creates its own database and login role; it never migrates a deployed database.
@@ -403,12 +403,25 @@ try {
       foreignWorkspaceId: foreignWid,
       foreignActorId: foreignActor,
     });
+    const { verifyEvaluationProviderDatabase } =
+      await import('../../../apps/api/test/evaluation-provider.database.integration.mjs');
+    await verifyEvaluationProviderDatabase({
+      pool: runtime,
+      admin: seededAdmin,
+      workspaceId: wid,
+      projectId: pid,
+      actorId: actor,
+      reviewerId: reviewer,
+      viewerId: viewer,
+      foreignWorkspaceId: foreignWid,
+      foreignActorId: foreignActor,
+    });
   }
   // Revoking the project grant also revokes stored outputs and comparisons immediately.
   await seededAdmin.query('delete from resource_access where user_id=$1', [reviewer]);
   await assert.rejects(reviewStore.get('persisted-01'), /NOT_FOUND/);
   process.stdout.write(
-    'Paired evaluation PostgreSQL gate passed: 60 persisted calls, exact reload, human review, idempotency, isolation, VIEW/EDIT, revocation and immutable history. Synthetic labels only; no provider called.\n',
+    'Paired evaluation PostgreSQL gate passed: 60 persisted calls, exact reload, human review, idempotency, isolation, VIEW/EDIT, revocation and immutable history. Synthetic labels only; no live provider called.\n',
   );
 } finally {
   await closePool(runtime);

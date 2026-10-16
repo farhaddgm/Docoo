@@ -60,7 +60,6 @@ jobs:
       - run: pnpm docs:validate
       - run: pnpm qa:corpus
       - run: pnpm qa:trace
-      - run: pnpm qa:trace
       - run: pnpm docs:test
       - run: pnpm security:test
       - run: pnpm deploy:test
@@ -71,6 +70,10 @@ jobs:
       - run: pnpm db:test:rls
         env:
           DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+      - name: Paired evaluation HTTP, runtime and invocation journal (ADV-013)
+        run: pnpm --filter @docoo/database exec node test/paired-evaluation.integration.mjs --with-api
+        env:
+          DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
       - name: Wait for ingestion services
         run: |
           for i in $(seq 1 60); do
