@@ -7,6 +7,9 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 ### Fixed
 
 - Preserve images already staged for the target release during the updater's disk-space cleanup. A low-space refusal keeps both the running and target releases, images used by stopped containers and unrelated applications; the full-build capacity and reserve requirements remain enforced.
+- Keep the selected notifications filter when an older list request finishes late, including failed older requests. Read actions reload the current filter and a workspace change resets the list.
+- Make writer restart acceptance stop after exactly two persisted parts, verify completion after restart, and include safe history metadata on a future timeout. Production workflow behavior and timeouts are unchanged.
+- Record the actual v0.27.4 browser-to-provider trace acceptance and retire the two observability waivers; human model-quality approval remains separate.
 
 ## [0.27.5] — 2026-10-15
 

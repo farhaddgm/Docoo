@@ -225,14 +225,12 @@ async function waitForWriting(
   const history = row
     ? await temporal.client.workflow.getHandle(row.temporal_workflow_id).fetchHistory()
     : null;
-  const tail = history?.events
-    ?.slice(-15)
-    .map((event) => ({
-      id: String(event.eventId),
-      type: event.eventType,
-      activity: event.activityTaskScheduledEventAttributes?.activityType?.name,
-      retryState: event.activityTaskTimedOutEventAttributes?.retryState,
-    }));
+  const tail = history?.events?.slice(-15).map((event) => ({
+    id: String(event.eventId),
+    type: event.eventType,
+    activity: event.activityTaskScheduledEventAttributes?.activityType?.name,
+    retryState: event.activityTaskTimedOutEventAttributes?.retryState,
+  }));
   throw new Error(
     `Timed out waiting for the writing: ${JSON.stringify({ writing: last, historyTail: tail })}`,
   );
