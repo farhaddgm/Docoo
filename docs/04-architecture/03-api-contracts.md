@@ -2,9 +2,9 @@
 doc_id: DOCOO-API-CONTRACTS
 title: اصول و سطح قرارداد API
 status: proposed
-version: 1.10.0
+version: 1.12.0
 owner: API Architecture
-last_updated: 2026-10-14
+last_updated: 2026-10-16
 notion_sync: true
 ---
 
@@ -291,3 +291,23 @@ Cursor opaque، `limit` سقف ۱۰۰، sort allowlist. filter fieldها schema-
 - پارامتر نامعتبر `400 NOTIFICATION_INVALID_REQUEST`.
 
 اسناد از 0.27.0 فیلد ثابت `analysisProfile` دارند. سند سریع فقط سطح ۱ است (`400 QUICK_DRAFT_LEVEL` برای نگارش/ویرایش سطح دیگر) و هشدار ناقص‌بودن در هر نسخه و خروجی حفظ می‌شود. تولید راه‌حل سریع پیش از تأیید تعریف کوتاه `409 QUICK_DRAFT_NOT_READY` می‌دهد.
+
+## ۲۰. آزمایشگاه مقایسهٔ ایجنت — ADV-013
+
+فهرست اجراها اکنون `interrupted` نیز دارد: کار متوقف و نیازمند بررسی است، نه completed یا مجوز retry. بستهٔ بازبینی همچنان فقط برای completed باز می‌شود. توقف metadata پس از revoke، مسیر HTTP تازه یا دسترسی خواندن محتوا ایجاد نمی‌کند. API/فرم آغاز و outbox بادوام به worker متصل‌اند؛ هر دو switch پیش‌فرض خاموش‌اند.
+
+پیشوند همهٔ مسیرها: `/workspaces/{workspaceId}/projects/{projectId}/evaluation-experiments` زیر `/v1`؛ session و resource scope همان پروژه لازم است. `experimentId` شناسهٔ ASCII دو تا ۸۰ کاراکتری است. migrationهای افزایشی 0044 تا 0048 پیش‌نیازند.
+
+| روش و پسوند                       | مجوز                    | پاسخ                                                                                                                                                                                  |
+| --------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`                            | `project.update` و EDIT | ۲۰۲ `{experimentId,status,delivery,replayed}`؛ header اجباری `Idempotency-Key` و body strict شامل role، baseline/candidate نسخهٔ role و مدل. تنها corpus مصنوعی سمت سرور اجرا می‌شود. |
+| `GET ?limit=&cursor=`             | `project.read`          | `{items,nextCursor}`؛ limit پیش‌فرض ۲۰، سقف ۵۰؛ cursor به workspace/project و ترتیب `(createdAt,id)` متصل است.                                                                        |
+| `GET /{experimentId}/review-pack` | `project.read`          | manifest/rubric hash، متن rubric، ورودی/زبان/انتظارات هر پرونده و دو متن A/B با itemId و outputHash؛ بدون شناسهٔ مدل یا run.                                                          |
+| `GET /{experimentId}/comparisons` | `project.read`          | حداکثر ۲۰ مقایسهٔ ذخیره‌شدهٔ جدید، همراه شناسه، تاریخ و reviewer؛ سنجه‌های FA/EN/all و config pin‌شده.                                                                                |
+| `POST /{experimentId}/reviews`    | `project.update` و EDIT | ۲۰۰ `{id}`؛ header اجباری `Idempotency-Key` و بدنهٔ strict زیر.                                                                                                                       |
+
+درخواست آغاز `{role,repetition,timeoutMs,baseline:{definitionVersionId,connectionId,modelId},candidate:{...}}` است؛ خروجی‌های ثابت dataset، prompt/schema، rubric و هر snapshot فقط در سرور ساخته می‌شوند. migration `0048` اجرا، کلید idempotency و outbox را در یک تراکنش ثبت می‌کند. dispatcher API با lease و claim امن، شروع Temporal را بعد از restart یا outage دوباره امتحان می‌کند؛ workflow ID ثابت و سیاست reject-duplicate مانع اجرای دوباره می‌شود. تکرار HTTP با همان کلید/بدنه همان شناسه را برمی‌گرداند. برای ارسال زنده، هر دو `EVALUATION_LAB_ENABLED` و `EVALUATION_LAB_LIVE_ENABLED` باید توسط مدیر سرور روشن شوند. حداکثر ۶۰ درخواست زنده ارسال می‌شود؛ این سقف هزینهٔ دلاری نیست، و چون هزینهٔ runtime تخمینی است گزارش هزینهٔ واقعی را null نگه می‌دارد.
+
+بدنهٔ بازبینی: `{experimentHash,rubricHash,reviewedAt,ratings:[{itemId,outputHash,humanScore,humanAccepted,citationErrors}]}`. نمره ۰ تا ۱۰۰، citationErrors عدد صحیح نامنفی، humanAccepted برابر true/false/null است. همهٔ خروجی‌ها دقیقاً یک‌بار لازم‌اند؛ actor از session گرفته می‌شود. فیلد judge، reviewer یا workspace اضافی رد می‌شود. کلید فرمان ASCII با طول ۸ تا ۲۰۰ و مجموعهٔ `[A-Za-z0-9._:-]` است. ledger به پروژه/آزمایش، actor و hash معنایی بازبینی متصل است؛ ترتیب ratingها hash را تغییر نمی‌دهد. تکرار همان فرمان یا همان بازبینی با کلید تازه همان review را برمی‌گرداند؛ کلید مصرف‌شده با actor یا محتوای دیگر حتی در رقابت هم‌زمان 409 می‌دهد. زمان و کلید هنگام retry شبکه ثابت می‌مانند.
+
+خطاها: `400 EVALUATION_LAB_INVALID_REQUEST/INVALID_CURSOR/INVALID_REVIEW`؛ `401` برای session غایب؛ `403 AUTH_PERMISSION_DENIED/EVALUATION_LAB_DISABLED` برای نوشتن VIEW، origin نامعتبر یا switch خاموش؛ `404 EVALUATION_LAB_NOT_FOUND` برای پروژه/آزمایش خارج scope؛ `409 EVALUATION_LAB_INCOMPLETE/REVIEW_CHANGED/IDEMPOTENCY_CONFLICT` برای اجرای ناقص، hash خروجی نامنطبق یا برخورد فرمان. خروجی مقایسه تصمیم خودکار ندارد و هزینه/توافق judge نامعلوم null است. [جزئیات رفتار و آزمون](../03-ai/05-evaluation-and-quality.md#۱۰-آزمایشگاه-مقایسهٔ-جفتی--adv-013).

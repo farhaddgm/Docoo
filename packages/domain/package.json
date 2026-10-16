@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./evaluation": {
+      "types": "./dist/paired-evaluation-entry.d.ts",
+      "default": "./dist/paired-evaluation-entry.js"
     }
   },
   "scripts": {

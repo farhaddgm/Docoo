@@ -41,7 +41,17 @@ export function projectWorkflowId(projectId: string, runNo: number): string {
 export function documentWritingWorkflowId(writingId: string): string {
   return `document-writing-${writingId}`;
 }
+
+export function pairedEvaluationWorkflowId(
+  workspaceId: string,
+  projectId: string,
+  experimentId: string,
+): string {
+  return `evaluation-${workspaceId}-${projectId}-${experimentId}`;
+}
 export * from './business.js';
 export * from './decision-evidence.js';
 export * from './adaptive-research.js';
 export * from './decision-research-activities.js';
+export * from './paired-evaluation-provider.js';
+export * from './paired-evaluation-activities.js';

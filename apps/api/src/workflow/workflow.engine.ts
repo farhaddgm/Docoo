@@ -5,6 +5,7 @@ import {
   type RunRef,
   type WritingRef,
   type DecisionResearchRef,
+  type PairedEvaluationRef,
 } from '@docoo/orchestration';
 import { Client, Connection, WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
 import { captureWorkflowCorrelation, currentCorrelation } from '@docoo/observability';
@@ -22,6 +23,7 @@ export interface WorkflowEngine {
   /** Starts the documenter's writing of one document (ADR-0019). */
   startWriting(workflowId: string, ref: WritingRef): Promise<void>;
   startDecisionResearch?(workflowId: string, ref: DecisionResearchRef): Promise<void>;
+  startPairedEvaluation?(workflowId: string, ref: PairedEvaluationRef): Promise<void>;
   signal(workflowId: string, signal: WorkflowSignal, payload?: unknown): Promise<void>;
 }
 
@@ -115,9 +117,30 @@ export class TemporalWorkflowEngine implements WorkflowEngine, OnModuleDestroy {
     }
   }
 
+  async startPairedEvaluation(workflowId: string, ref: PairedEvaluationRef): Promise<void> {
+    const client = await this.client();
+    try {
+      await client.workflow.start('pairedEvaluationWorkflow', {
+        taskQueue: this.evaluationTaskQueue(),
+        workflowId,
+        args: [ref],
+        workflowExecutionTimeout: '8 hours',
+        workflowIdReusePolicy: 'REJECT_DUPLICATE',
+      });
+    } catch (error) {
+      if (error instanceof WorkflowExecutionAlreadyStartedError) return;
+      throw new WorkflowEngineUnavailableError('temporal_start_failed');
+    }
+  }
+
   async onModuleDestroy(): Promise<void> {
     const current = this.connection;
     this.connection = null;
     if (current) await (await current.catch(() => null))?.connection.close();
+  }
+
+  /** Test fixtures override only routing, never the actual Temporal client or start policy. */
+  protected evaluationTaskQueue(): string {
+    return AGENT_TASK_QUEUE;
   }
 }
