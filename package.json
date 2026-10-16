@@ -32,6 +32,7 @@
     "db:generate": "pnpm --filter @docoo/database db:generate",
     "db:migrate": "pnpm --filter @docoo/database db:migrate",
     "db:test:rls": "pnpm --filter @docoo/database test:rls",
+    "test:evaluation:lab:local": "pnpm --filter @docoo/api... build && pnpm --filter @docoo/database exec node test/paired-evaluation.integration.mjs --with-api",
     "stack:up": "docker compose up -d postgres redis object-store temporal temporal-ui malware-scanner",
     "stack:observability": "docker compose --profile observability up -d",
     "stack:down": "docker compose down",

@@ -19,6 +19,7 @@
     "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "dependencies": {
+    "@docoo/contracts": "workspace:*",
     "@docoo/domain": "workspace:*"
   }
 }
