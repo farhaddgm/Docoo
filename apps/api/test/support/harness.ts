@@ -587,20 +587,25 @@ export async function createHarness(
       [emails.b, ids.workspaceB],
     ] as const) {
       const cookie = await login(email);
-      const response = await request('PUT', `/v1/workspaces/${workspaceId}/settings/assignments`, {
-        cookie,
-        payload: {
-          key: 'workflow.require_deliverable_confirmation',
-          scopeType: 'workspace',
-          scopeId: workspaceId,
-          value: false,
-          reason: 'integration suite runs the stages without the confirmation gate',
-        },
-      });
-      if (response.statusCode !== 200) {
-        throw new Error(
-          `Could not relax the deliverables gate: ${response.statusCode} ${response.body}`,
+      for (const key of ['workflow.require_deliverable_confirmation', 'research.web_enabled']) {
+        const response = await request(
+          'PUT',
+          `/v1/workspaces/${workspaceId}/settings/assignments`,
+          {
+            cookie,
+            payload: {
+              key,
+              scopeType: 'workspace',
+              scopeId: workspaceId,
+              value: false,
+              reason:
+                'integration suite runs the stages without the confirmation gate and web search',
+            },
+          },
         );
+        if (response.statusCode !== 200) {
+          throw new Error(`Could not relax ${key}: ${response.statusCode} ${response.body}`);
+        }
       }
     }
   }

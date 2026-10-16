@@ -16,6 +16,7 @@ export * from './runtime.js';
 export * from './self-check.js';
 export * from './stages.js';
 export * from './tool-calls.js';
+export * from './web-research.js';
 export * from './writing.js';
 export * from './writing-activities.js';
 export {

@@ -330,6 +330,13 @@
       "when": 1792339956910,
       "tag": "0046_deliverable_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792426356910,
+      "tag": "0047_research_web_settings",
+      "breakpoints": true
     }
   ]
 }
