@@ -69,6 +69,7 @@ export type CorrelationEvent =
   | 'provider.invoke.started'
   | 'provider.invoke.completed'
   | 'provider.invoke.failed'
+  | 'provider.capacity.release.failed'
   | 'worker.ready'
   | 'worker.stopping'
   | 'worker.failed'
