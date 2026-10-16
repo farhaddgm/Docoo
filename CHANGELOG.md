@@ -13,6 +13,13 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - Show lists with more than ten rows ten at a time, with Previous / Next and **Load more**.
 - Lay the settings out as compact tiles (three per row on wide screens) with the reason, Save and Reset on one line, so the page is about two thirds shorter.
 
+## [0.28.1] — 2026-10-16
+
+### Changed
+
+- Redesign the business tab of a project (the profile read from Contenter). Section text is laid out instead of shown as one run of raw text: headings, bold, bullet and numbered lists (Persian digits too), long runs of sentences broken into short paragraphs, and customer questions paired with their answers. Only web addresses become links; nothing is rendered as HTML.
+- Add a header with the business name, tagline, industry, location, language, status and website, a profile health ring, a sticky section index, a coverage bar, a marker on unconfirmed AI drafts, and folding of long sections. The facts tab gains summary figures and shows validity as a date; audit issues carry their severity on the edge; the tab shows a placeholder while it loads.
+
 ## [0.28.0] — 2026-10-15
 
 ### Changed
