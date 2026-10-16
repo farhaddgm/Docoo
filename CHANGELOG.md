@@ -2,6 +2,17 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.29.0] — 2026-10-16
+
+### Changed
+
+- Put the sidebar and the sign-in card in the exact style of the Bee Researcher backoffice. **Sign out** moves from the sidebar to the top bar, and a hamburger button next to the sidebar folds it to an icon rail on wide screens (the choice is remembered) or opens the drawer on narrow ones.
+- Add the nine colour themes of the Bee Researcher backoffice (match system, light, dark, attractive blue, honey amber, forest green, faded gray, black & yellow, professional red) behind a **Theme** menu in the top bar. A theme changes the page, accents and sidebar colours only, and every text/background pair keeps a 4.5:1 contrast.
+- Move the remaining descriptions under page and section titles into the **"i" button** (page titles, role, usage cost, Contenter, evidence override, knowledge uses, project roles, criteria, question quality, decision evidence). Warnings stay visible.
+- Merge user management and **Gmail sign-in** into one page, **Users & sign-in**, with a Users tab and an owner-only Gmail tab. `/settings/google-access` opens the same page on the Gmail tab.
+- Show lists with more than ten rows ten at a time, with Previous / Next and **Load more**.
+- Lay the settings out as compact tiles (three per row on wide screens) with the reason, Save and Reset on one line, so the page is about two thirds shorter.
+
 ## [0.28.1] — 2026-10-16
 
 ### Changed

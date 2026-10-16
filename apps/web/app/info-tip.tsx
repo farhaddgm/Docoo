@@ -122,12 +122,15 @@ export function GroupLabel({
 export function SectionTitle({
   as: Heading = 'h2',
   id,
+  focusable = false,
   help,
   helpId,
   children,
 }: {
-  readonly as?: 'h2' | 'h3' | 'h4' | 'h5';
+  readonly as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5';
   readonly id?: string;
+  /** Lets a script move focus to the heading (the page title after a navigation). */
+  readonly focusable?: boolean;
   readonly help?: string | undefined;
   readonly helpId?: string;
   readonly children: ReactNode;
@@ -135,7 +138,11 @@ export function SectionTitle({
   const textId = useTipId(helpId);
   return (
     <>
-      <Heading {...(id ? { id } : {})} {...(help ? { className: 'heading-with-tip' } : {})}>
+      <Heading
+        {...(id ? { id } : {})}
+        {...(focusable ? { tabIndex: -1 } : {})}
+        {...(help ? { className: 'heading-with-tip' } : {})}
+      >
         {children}
         {help ? (
           <span className="info-tip">

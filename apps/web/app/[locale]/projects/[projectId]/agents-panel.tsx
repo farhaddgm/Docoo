@@ -150,8 +150,9 @@ export function AgentsPanel({
           const active = formFor(role);
           return (
             <li key={role} className="agent-row card stack">
-              <h3>{name}</h3>
-              <p className="muted">{text.roles[role].mission}</p>
+              <SectionTitle as="h3" help={text.roles[role].mission}>
+                {name}
+              </SectionTitle>
               <p>
                 <span className={`badge ${profile.customized ? 'state-warn' : ''}`}>{state}</span>
               </p>

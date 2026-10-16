@@ -17,6 +17,7 @@ import {
   type KnowledgeRow,
 } from './knowledge-types';
 import { SectionTitle } from '../../info-tip';
+import { PagedRows } from '../../table-pager';
 
 type View = 'documents' | 'claims';
 type Support = '' | 'yes' | 'no' | 'unaudited';
@@ -257,139 +258,149 @@ export function QueuePanel({
       )}
 
       {view === 'documents' && documents && documents.length > 0 && (
-        <div className="table-scroll">
-          <table>
-            <caption className="visually-hidden">{text.queueCaption}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{text.columns.title}</th>
-                {!scoped && <th scope="col">{text.columns.scope}</th>}
-                <th scope="col">{text.columns.status}</th>
-                <th scope="col">{text.columns.score}</th>
-                <th scope="col">{text.columns.claims}</th>
-                <th scope="col">{text.columns.validUntil}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.map((row) => (
-                <tr key={row.id}>
-                  <th scope="row" dir="auto" className="title-cell">
-                    <Link href={`/${locale}/knowledge/${row.id}` as Route}>{row.title}</Link>
-                    <br />
-                    <small className="muted">
-                      {text.sourceTypes[row.sourceType]}
-                      {row.versionNo !== null &&
-                        ` · ${fill(text.versionLabel, { n: formatNumber(locale, row.versionNo) })}`}
-                      {` · ${formatDate(locale, row.updatedAt)}`}
-                    </small>
-                  </th>
-                  {!scoped && (
-                    <td>
-                      <ScopeList text={text} scopes={row.scopes} />
-                    </td>
-                  )}
-                  <td>
-                    <span className="badge-stack">
-                      {row.status && (
-                        <Badge tone={statusTone(row.status)}>{text.statuses[row.status]}</Badge>
-                      )}
-                      {/* The Brain's decision is the status; only a human override or a changed
-                          source says something more. */}
-                      {(row.effectiveDecision === 'approved_by_override' ||
-                        row.effectiveDecision === 'rejected_by_override' ||
-                        row.effectiveDecision === 'stale') && (
-                        <Badge tone={decisionTone(row.effectiveDecision)}>
-                          {text.decisions[row.effectiveDecision]}
-                        </Badge>
-                      )}
-                    </span>
-                  </td>
-                  <td>
-                    {row.overall === null
-                      ? text.noScore
-                      : fill(text.scoreOf, { n: formatNumber(locale, Math.round(row.overall)) })}
-                  </td>
-                  <td>
-                    {formatNumber(locale, row.claimCount)}
-                    {row.openConflicts > 0 && (
-                      <>
+        <PagedRows rows={documents}>
+          {(pageRows) => (
+            <div className="table-scroll">
+              <table>
+                <caption className="visually-hidden">{text.queueCaption}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{text.columns.title}</th>
+                    {!scoped && <th scope="col">{text.columns.scope}</th>}
+                    <th scope="col">{text.columns.status}</th>
+                    <th scope="col">{text.columns.score}</th>
+                    <th scope="col">{text.columns.claims}</th>
+                    <th scope="col">{text.columns.validUntil}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((row) => (
+                    <tr key={row.id}>
+                      <th scope="row" dir="auto" className="title-cell">
+                        <Link href={`/${locale}/knowledge/${row.id}` as Route}>{row.title}</Link>
                         <br />
-                        <Badge tone="danger">
-                          {fill(text.claimConflicts, {
-                            n: formatNumber(locale, row.openConflicts),
-                          })}
-                        </Badge>
-                      </>
-                    )}
-                  </td>
-                  <td>{row.validUntil ? formatDate(locale, row.validUntil) : text.noExpiry}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        <small className="muted">
+                          {text.sourceTypes[row.sourceType]}
+                          {row.versionNo !== null &&
+                            ` · ${fill(text.versionLabel, { n: formatNumber(locale, row.versionNo) })}`}
+                          {` · ${formatDate(locale, row.updatedAt)}`}
+                        </small>
+                      </th>
+                      {!scoped && (
+                        <td>
+                          <ScopeList text={text} scopes={row.scopes} />
+                        </td>
+                      )}
+                      <td>
+                        <span className="badge-stack">
+                          {row.status && (
+                            <Badge tone={statusTone(row.status)}>{text.statuses[row.status]}</Badge>
+                          )}
+                          {/* The Brain's decision is the status; only a human override or a changed
+                          source says something more. */}
+                          {(row.effectiveDecision === 'approved_by_override' ||
+                            row.effectiveDecision === 'rejected_by_override' ||
+                            row.effectiveDecision === 'stale') && (
+                            <Badge tone={decisionTone(row.effectiveDecision)}>
+                              {text.decisions[row.effectiveDecision]}
+                            </Badge>
+                          )}
+                        </span>
+                      </td>
+                      <td>
+                        {row.overall === null
+                          ? text.noScore
+                          : fill(text.scoreOf, {
+                              n: formatNumber(locale, Math.round(row.overall)),
+                            })}
+                      </td>
+                      <td>
+                        {formatNumber(locale, row.claimCount)}
+                        {row.openConflicts > 0 && (
+                          <>
+                            <br />
+                            <Badge tone="danger">
+                              {fill(text.claimConflicts, {
+                                n: formatNumber(locale, row.openConflicts),
+                              })}
+                            </Badge>
+                          </>
+                        )}
+                      </td>
+                      <td>{row.validUntil ? formatDate(locale, row.validUntil) : text.noExpiry}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PagedRows>
       )}
 
       {view === 'claims' && claims && claims.length > 0 && (
-        <div className="table-scroll">
-          <table>
-            <caption className="visually-hidden">{text.claimCaption}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{text.columns.claim}</th>
-                <th scope="col">{text.columns.kind}</th>
-                <th scope="col">{text.columns.document}</th>
-                <th scope="col">{text.columns.support}</th>
-                <th scope="col">{text.columns.citations}</th>
-                <th scope="col">{text.columns.conflicts}</th>
-                <th scope="col">{text.columns.decision}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {claims.map((claim) => (
-                <tr key={claim.id}>
-                  <th scope="row" dir="auto" className="claim-cell">
-                    {claim.text}
-                  </th>
-                  <td>{text.claimKinds[claim.kind] ?? claim.kind}</td>
-                  <td dir="auto">
-                    <Link href={`/${locale}/knowledge/${claim.knowledgeId}` as Route}>
-                      {claim.title}
-                    </Link>
-                    <br />
-                    <small className="muted">
-                      {fill(text.versionLabel, { n: formatNumber(locale, claim.versionNo) })} ·{' '}
-                      {fill(text.claimOrdinal, { n: formatNumber(locale, claim.ordinal) })}
-                    </small>
-                  </td>
-                  <td>
-                    {claim.supported === null ? (
-                      <Badge tone="neutral">{text.notAudited}</Badge>
-                    ) : (
-                      <Badge tone={claim.supported ? 'ok' : 'danger'}>
-                        {claim.supported ? text.supported : text.notSupported}
-                      </Badge>
-                    )}
-                  </td>
-                  <td>
-                    {claim.citations.total === 0
-                      ? text.noCitations
-                      : fill(text.citationsOf, {
-                          complete: formatNumber(locale, claim.citations.complete),
-                          total: formatNumber(locale, claim.citations.total),
-                        })}
-                  </td>
-                  <td>{formatNumber(locale, claim.openConflicts)}</td>
-                  <td>
-                    <Badge tone={decisionTone(claim.effectiveDecision)}>
-                      {text.decisions[claim.effectiveDecision]}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PagedRows rows={claims}>
+          {(pageRows) => (
+            <div className="table-scroll">
+              <table>
+                <caption className="visually-hidden">{text.claimCaption}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{text.columns.claim}</th>
+                    <th scope="col">{text.columns.kind}</th>
+                    <th scope="col">{text.columns.document}</th>
+                    <th scope="col">{text.columns.support}</th>
+                    <th scope="col">{text.columns.citations}</th>
+                    <th scope="col">{text.columns.conflicts}</th>
+                    <th scope="col">{text.columns.decision}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((claim) => (
+                    <tr key={claim.id}>
+                      <th scope="row" dir="auto" className="claim-cell">
+                        {claim.text}
+                      </th>
+                      <td>{text.claimKinds[claim.kind] ?? claim.kind}</td>
+                      <td dir="auto">
+                        <Link href={`/${locale}/knowledge/${claim.knowledgeId}` as Route}>
+                          {claim.title}
+                        </Link>
+                        <br />
+                        <small className="muted">
+                          {fill(text.versionLabel, { n: formatNumber(locale, claim.versionNo) })} ·{' '}
+                          {fill(text.claimOrdinal, { n: formatNumber(locale, claim.ordinal) })}
+                        </small>
+                      </td>
+                      <td>
+                        {claim.supported === null ? (
+                          <Badge tone="neutral">{text.notAudited}</Badge>
+                        ) : (
+                          <Badge tone={claim.supported ? 'ok' : 'danger'}>
+                            {claim.supported ? text.supported : text.notSupported}
+                          </Badge>
+                        )}
+                      </td>
+                      <td>
+                        {claim.citations.total === 0
+                          ? text.noCitations
+                          : fill(text.citationsOf, {
+                              complete: formatNumber(locale, claim.citations.complete),
+                              total: formatNumber(locale, claim.citations.total),
+                            })}
+                      </td>
+                      <td>{formatNumber(locale, claim.openConflicts)}</td>
+                      <td>
+                        <Badge tone={decisionTone(claim.effectiveDecision)}>
+                          {text.decisions[claim.effectiveDecision]}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PagedRows>
       )}
 
       {nextCursor && (

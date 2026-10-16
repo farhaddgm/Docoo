@@ -15,7 +15,7 @@ import {
   type Override,
 } from './knowledge-types';
 import { brainTone } from './review-panel';
-import { FieldLabel } from '../../info-tip';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 type Decision = 'approve' | 'reject';
 type Validity = 'version' | 'date';
@@ -135,8 +135,9 @@ export function OverridePanel({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.overrideHeading}</h2>
-      <p className="muted">{text.overrideIntro}</p>
+      <SectionTitle id={`${id}-heading`} help={text.overrideIntro}>
+        {text.overrideHeading}
+      </SectionTitle>
       <Notice notice={notice} />
 
       <dl className="facts">
