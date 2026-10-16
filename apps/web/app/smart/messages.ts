@@ -127,7 +127,7 @@ const fa = {
       evaluate_document: {
         title: 'ارزیابی سند',
         summary:
-          'ارزیاب پوشش نیازمندی، شواهد، ریسک و انطباق طول و قالب را می‌سنجد؛ سند باید قبول شود.',
+          'ارزیاب پوشش نیازمندی، شواهد، ریسک و انطباق طول و قالب را می‌سنجد؛ سند باید قبول شود. این گام جدا از مرحلهٔ «ارزیابی» گردش‌کار است: آن مرحله می‌تواند تمام شده باشد و سند هنوز ارزیابی‌نشده و پیش‌نویس بماند.',
         todo: [
           'سند را برای ارزیابی ارسال کنید.',
           'یافته‌های ارزیابی را بخوانید.',
@@ -405,7 +405,7 @@ const en: SmartMessages = {
       evaluate_document: {
         title: 'Evaluate the document',
         summary:
-          'The evaluator checks requirement coverage, evidence, risk and length/format compliance; it must pass.',
+          'The evaluator checks requirement coverage, evidence, risk and length/format compliance; it must pass. This step is separate from the workflow stage called "evaluation": that stage can be finished while the document is still unevaluated and a draft.',
         todo: [
           'Submit the document for evaluation.',
           'Read the evaluation findings.',

@@ -178,6 +178,8 @@ const messages = {
       knowledgeHeading: 'دانش تأییدشده‌ای که به مدل داده شد',
       knowledgeNone:
         'دانش تأییدشده‌ای برای این تحقیق پیدا نشد؛ یافته‌ها فقط بر دانش عمومی مدل تکیه دارند.',
+      webOff:
+        'جستجوی زندهٔ وب در این تحقیق انجام نشده است؛ منبع آن فقط دانش تأییدشدهٔ داخلی است (اگر چیزی پیدا شده باشد).',
       knowledgeDenied:
         'ابزار «بازیابی دانش» برای این نقش مجاز نیست؛ این خروجی بدون دانش تأییدشده نوشته شد. اجازهٔ ابزار را در صفحهٔ ایجنت‌ها تنظیم کنید.',
       verifierDenied:
@@ -392,6 +394,8 @@ const messages = {
       knowledgeHeading: 'Approved knowledge given to the model',
       knowledgeNone:
         'No approved knowledge was found for this research; the findings rest on the model’s general knowledge only.',
+      webOff:
+        'No live web search was made for this research; its only source is approved internal knowledge, if any was found.',
       knowledgeDenied:
         'The "knowledge retrieval" tool is not allowed for this role, so this output was written without approved knowledge. Set the tool allowance on the Agents page.',
       verifierDenied:

@@ -8,6 +8,7 @@ import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
+import { StageChat } from './stage-chat';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
 import { FieldLabel } from '../../../info-tip';
@@ -700,6 +701,8 @@ function ReviewPanel({
               {JSON.stringify(output.content, null, 2)}
             </pre>
           </details>
+
+          <StageChat locale={locale} stageBase={stageBase} onChanged={onChanged} />
 
           {editing ? (
             <form data-write-action className="stack" onSubmit={saveEdit} aria-busy={busy}>

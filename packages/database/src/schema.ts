@@ -1044,6 +1044,29 @@ export const stageReviews = pgTable(
   (table) => [index('stage_reviews_stage_idx').on(table.stageRunId, table.createdAt)],
 );
 
+/** The administrator's conversation with the agent of a stage (ADR-0031); append-only. */
+export const stageMessages = pgTable(
+  'stage_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    stageRunId: uuid('stage_run_id').notNull(),
+    outputId: uuid('output_id'),
+    role: text('role').notNull(),
+    kind: text('kind').notNull(),
+    content: text('content').notNull(),
+    status: text('status').notNull().default('done'),
+    replyTo: uuid('reply_to'),
+    invocationId: uuid('invocation_id'),
+    authorId: uuid('author_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('stage_messages_stage_idx').on(table.stageRunId, table.createdAt)],
+);
+
 export const gateDecisions = pgTable(
   'gate_decisions',
   {
