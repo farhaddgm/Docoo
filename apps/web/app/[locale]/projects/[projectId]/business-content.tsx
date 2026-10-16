@@ -1,10 +1,13 @@
 'use client';
 
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { useId, useState, type ReactNode } from 'react';
+
+import { formatDate, formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { businessMessages, joinList, sectionTitle } from '../business-messages';
 import type { BusinessContent } from '../business-types';
 import { SectionTitle } from '../../../info-tip';
+import { RichText } from './rich-text';
 
 /** The group of each profile section, in Contenter's order (the registry lives in @docoo/domain). */
 const SECTION_GROUP: Readonly<Record<string, string>> = {
@@ -32,7 +35,7 @@ export function safeHref(value: string): string | null {
   return /^https?:\/\/\S+$/iu.test(value) ? value : null;
 }
 
-function Address({ value }: { readonly value: string }) {
+export function Address({ value }: { readonly value: string }) {
   const href = safeHref(value);
   return href ? (
     <a href={href} target="_blank" rel="noopener noreferrer" dir="ltr">
@@ -43,9 +46,87 @@ function Address({ value }: { readonly value: string }) {
   );
 }
 
-function When({ locale, value }: { readonly locale: Locale; readonly value: string | null }) {
-  return <>{value ? formatDateTime(locale, value) : '—'}</>;
+function When({
+  locale,
+  value,
+  dateOnly = false,
+}: {
+  readonly locale: Locale;
+  readonly value: string | null;
+  readonly dateOnly?: boolean;
+}) {
+  if (!value) return <>—</>;
+  return <>{dateOnly ? formatDate(locale, value) : formatDateTime(locale, value)}</>;
 }
+
+/** A score from 0 to 100 as a ring; the number is also given as text for assistive technology. */
+export function ScoreRing({
+  value,
+  text,
+  label,
+}: {
+  readonly value: number;
+  readonly text: string;
+  readonly label: string;
+}) {
+  const percent = Math.max(0, Math.min(100, Math.round(value)));
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  const tone = percent >= 80 ? 'ok' : percent >= 50 ? 'warn' : 'danger';
+  return (
+    <div className={`score-ring score-${tone}`} role="img" aria-label={`${label}: ${text}`}>
+      <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+        <circle className="score-track" cx="50" cy="50" r={radius} />
+        <circle
+          className="score-value"
+          cx="50"
+          cy="50"
+          r={radius}
+          strokeDasharray={`${(circumference * percent) / 100} ${circumference}`}
+          transform="rotate(-90 50 50)"
+        />
+      </svg>
+      <span className="score-number" aria-hidden="true">
+        {text}
+      </span>
+    </div>
+  );
+}
+
+/** A long section shows its first lines and opens on request, so the page stays scannable. */
+function Collapsible({
+  long,
+  children,
+  more,
+  less,
+}: {
+  readonly long: boolean;
+  readonly children: ReactNode;
+  readonly more: string;
+  readonly less: string;
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  if (!long) return <>{children}</>;
+  return (
+    <>
+      <div id={id} className={open ? 'clamp open' : 'clamp'}>
+        {children}
+      </div>
+      <button
+        type="button"
+        className="link-button clamp-toggle"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+      >
+        {open ? less : more}
+      </button>
+    </>
+  );
+}
+
+const LONG_SECTION = 520;
 
 /** The sections of the profile, grouped, with who wrote each one and whether it is confirmed. */
 export function ProfileView({
@@ -69,126 +150,135 @@ export function ProfileView({
     group,
     sections: ordered.filter((section) => (SECTION_GROUP[section.key] ?? 'OTHER') === group),
   })).filter((item) => item.sections.length > 0);
-  const info = content.business;
+  const drafts = filled.filter((section) => section.source === 'AI' && !section.reviewedAt).length;
+  const percent = Math.round((filled.length / SECTION_ORDER.length) * 100);
 
   return (
-    <div className="stack">
-      <section className="card stack" aria-labelledby="biz-identity">
-        <h3 id="biz-identity">{info.name}</h3>
-        {info.tagline && (
-          <p dir="auto">
-            <em>{info.tagline}</em>
-          </p>
-        )}
-        <dl className="facts">
-          {info.industry && (
-            <div>
-              <dt>{text.panel.industry}</dt>
-              <dd dir="auto">{info.industry}</dd>
-            </div>
-          )}
-          {info.website && (
-            <div>
-              <dt>{text.panel.website}</dt>
-              <dd>
-                <Address value={info.website} />
-              </dd>
-            </div>
-          )}
-          {info.location && (
-            <div>
-              <dt>{text.panel.location}</dt>
-              <dd dir="auto">{info.location}</dd>
-            </div>
-          )}
-          {info.language && (
-            <div>
-              <dt>{text.panel.language}</dt>
-              <dd>{text.panel.languages[info.language] ?? info.language}</dd>
-            </div>
-          )}
-          {info.status && (
-            <div>
-              <dt>{text.panel.status}</dt>
-              <dd>{text.panel.businessStatuses[info.status] ?? info.status}</dd>
-            </div>
-          )}
-          <div>
-            <dt>{profile.sectionsTitle}</dt>
-            <dd>
-              {fill(profile.filled, {
-                filled: formatNumber(locale, filled.length),
-                total: formatNumber(locale, SECTION_ORDER.length),
-              })}
-            </dd>
-          </div>
-        </dl>
-      </section>
-
-      {grouped.map(({ group, sections }) => (
-        <section
-          key={group}
-          className="card stack"
-          aria-labelledby={`biz-group-${group}`}
-          data-testid={`business-group-${group}`}
-        >
-          <h3 id={`biz-group-${group}`}>{profile.groups[group] ?? group}</h3>
-          {sections.map((section) => (
-            <details key={section.key} open data-testid={`business-section-${section.key}`}>
-              <summary>
-                <strong dir="auto">{sectionTitle(locale, section.key)}</strong>{' '}
-                <span
-                  className={`badge tone-${section.source === 'AI' && !section.reviewedAt ? 'warn' : 'ok'}`}
-                >
-                  {section.source === 'AI' && !section.reviewedAt
-                    ? profile.aiDraft
-                    : section.source === 'AI'
-                      ? profile.confirmed
-                      : profile.admin}
-                </span>
-              </summary>
-              <div className="pre-text" dir="auto">
-                {section.content}
-              </div>
-              {section.updatedAt && (
-                <p className="muted">
-                  {profile.updated}: <When locale={locale} value={section.updatedAt} />
-                </p>
-              )}
-            </details>
+    <div className="biz-profile">
+      <aside className="biz-toc" aria-label={profile.contents}>
+        <p className="biz-toc-title">{profile.contents}</p>
+        <ul>
+          {grouped.map(({ group, sections }) => (
+            <li key={group}>
+              <span className="biz-toc-group">{profile.groups[group] ?? group}</span>
+              <ul>
+                {sections.map((section) => (
+                  <li key={section.key}>
+                    <a href={`#biz-s-${section.key}`} dir="auto">
+                      {sectionTitle(locale, section.key)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </li>
           ))}
-        </section>
-      ))}
+        </ul>
+      </aside>
 
-      {emptyKeys.length > 0 && (
-        <section className="card stack" aria-labelledby="biz-empty">
-          <SectionTitle as="h3" id="biz-empty" help={profile.emptySectionsHelp}>
-            {profile.emptySections}
-          </SectionTitle>
-          <ul className="chips" aria-label={profile.emptySections}>
-            {emptyKeys.map((key) => (
-              <li key={key} className="badge tone-neutral">
-                {sectionTitle(locale, key)}
-              </li>
-            ))}
-          </ul>
+      <div className="stack biz-profile-main">
+        <section className="card biz-coverage" aria-labelledby="biz-coverage">
+          <div className="biz-coverage-head">
+            <h3 id="biz-coverage">{profile.sectionsTitle}</h3>
+            <p>
+              <strong>
+                {fill(profile.filled, {
+                  filled: formatNumber(locale, filled.length),
+                  total: formatNumber(locale, SECTION_ORDER.length),
+                })}
+              </strong>
+              {drafts > 0 && (
+                <span className="muted">
+                  {' · '}
+                  {fill(profile.sectionStats, {
+                    confirmed: formatNumber(locale, filled.length - drafts),
+                    drafts: formatNumber(locale, drafts),
+                  })}
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="meter" aria-hidden="true">
+            <span style={{ inlineSize: `${percent}%` }} />
+          </div>
         </section>
-      )}
 
-      <section className="card stack" aria-labelledby="biz-topics">
-        <h3 id="biz-topics">{profile.topics}</h3>
-        {content.topics.length === 0 ? (
-          <p className="muted">{profile.noTopics}</p>
-        ) : (
-          <ul className="plain-list">
-            {content.topics.map((topic) => (
-              <li key={topic.id} dir="auto">
-                {topic.title}
-              </li>
-            ))}
-          </ul>
+        {grouped.map(({ group, sections }) => (
+          <section
+            key={group}
+            className="biz-group stack"
+            aria-labelledby={`biz-group-${group}`}
+            data-testid={`business-group-${group}`}
+          >
+            <h3 id={`biz-group-${group}`} className="biz-group-title">
+              {profile.groups[group] ?? group}
+            </h3>
+            {sections.map((section) => {
+              const draft = section.source === 'AI' && !section.reviewedAt;
+              return (
+                <article
+                  key={section.key}
+                  id={`biz-s-${section.key}`}
+                  className={draft ? 'card biz-section is-draft' : 'card biz-section'}
+                  data-testid={`business-section-${section.key}`}
+                >
+                  <header className="biz-section-head">
+                    <h4 dir="auto">{sectionTitle(locale, section.key)}</h4>
+                    <span className={`badge tone-${draft ? 'warn' : 'ok'}`}>
+                      {draft
+                        ? profile.aiDraft
+                        : section.source === 'AI'
+                          ? profile.confirmed
+                          : profile.admin}
+                    </span>
+                  </header>
+                  <Collapsible
+                    long={section.content.length > LONG_SECTION}
+                    more={profile.showMore}
+                    less={profile.showLess}
+                  >
+                    <RichText text={section.content} />
+                  </Collapsible>
+                  {section.updatedAt && (
+                    <p className="muted biz-section-foot">
+                      {profile.updated}: <When locale={locale} value={section.updatedAt} />
+                    </p>
+                  )}
+                </article>
+              );
+            })}
+          </section>
+        ))}
+
+        {emptyKeys.length > 0 && (
+          <section className="card biz-empty stack" aria-labelledby="biz-empty">
+            <SectionTitle as="h3" id="biz-empty" help={profile.emptySectionsHelp}>
+              {profile.emptySections}
+            </SectionTitle>
+            <ul className="chips" aria-label={profile.emptySections}>
+              {emptyKeys.map((key) => (
+                <li key={key} className="badge tone-neutral">
+                  {sectionTitle(locale, key)}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
-      </section>
+
+        <section className="card stack" aria-labelledby="biz-topics">
+          <h3 id="biz-topics">{profile.topics}</h3>
+          {content.topics.length === 0 ? (
+            <p className="muted">{profile.noTopics}</p>
+          ) : (
+            <ul className="chips topic-chips">
+              {content.topics.map((topic) => (
+                <li key={topic.id} className="badge tone-neutral" dir="auto">
+                  {topic.title}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
@@ -207,8 +297,29 @@ export function KnowledgeView({
   const k = text.knowledge;
   const expired = (validUntil: string | null) =>
     validUntil !== null && new Date(validUntil).getTime() < now;
+  const verified = content.facts.filter((fact) => fact.verified).length;
+  const stale = content.facts.filter((fact) => expired(fact.validUntil)).length;
+  const avoid = content.terms.filter((term) => term.kind === 'AVOID').length;
+  const tiles: { label: string; value: number; tone?: 'ok' | 'danger' }[] = [
+    { label: k.statFacts, value: content.facts.length },
+    { label: k.statVerified, value: verified, tone: 'ok' },
+    { label: k.statExpired, value: stale, ...(stale > 0 ? { tone: 'danger' as const } : {}) },
+    { label: k.statUse, value: content.terms.length - avoid },
+    { label: k.statAvoid, value: avoid },
+  ];
   return (
     <div className="stack">
+      <dl className="stat-tiles" aria-label={k.factsTitle}>
+        {tiles.map((tile) => (
+          <div
+            key={tile.label}
+            className={tile.tone ? `stat-tile tone-${tile.tone}-edge` : 'stat-tile'}
+          >
+            <dt>{tile.label}</dt>
+            <dd>{formatNumber(locale, tile.value)}</dd>
+          </div>
+        ))}
+      </dl>
       <section className="card stack" aria-labelledby="biz-facts">
         <SectionTitle as="h3" id="biz-facts" help={k.factsHelp}>
           {k.factsTitle}
@@ -250,7 +361,7 @@ export function KnowledgeView({
                         </span>
                       </td>
                       <td>
-                        <When locale={locale} value={fact.validUntil} />
+                        <When locale={locale} value={fact.validUntil} dateOnly />
                       </td>
                       <td>{fact.sourceUrl ? <Address value={fact.sourceUrl} /> : '—'}</td>
                     </tr>
@@ -291,7 +402,19 @@ export function KnowledgeView({
                       </span>
                       {!term.isActive && <span className="badge tone-neutral">{k.inactive}</span>}
                     </td>
-                    <td dir="auto">{joinList(locale, term.alternatives) || '—'}</td>
+                    <td dir="auto">
+                      {term.alternatives.length === 0 ? (
+                        '—'
+                      ) : (
+                        <span className="chips">
+                          {term.alternatives.map((alternative, position) => (
+                            <span key={`${alternative}-${position}`} className="badge tone-neutral">
+                              {alternative}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </td>
                     <td dir="auto">{term.note || '—'}</td>
                   </tr>
                 ))}
@@ -311,9 +434,7 @@ export function KnowledgeView({
           <ul className="plain-list stack" data-testid="business-notes">
             {content.notes.map((note, index) => (
               <li key={`${note.createdAt}-${index}`} className="output-view">
-                <p className="pre-text" dir="auto">
-                  {note.text}
-                </p>
+                <RichText text={note.text} />
                 {note.summary && (
                   <p className="muted" dir="auto">
                     {note.summary}
@@ -433,11 +554,7 @@ export function SourcesView({
                   </span>
                   {!asset.isActive && <span className="badge tone-neutral">{s.inactive}</span>}
                 </h4>
-                {asset.description && (
-                  <p dir="auto" className="pre-text">
-                    {asset.description}
-                  </p>
-                )}
+                {asset.description && <RichText text={asset.description} />}
                 {(asset.url || asset.fileName) && (
                   <p>
                     {asset.url ? <Address value={asset.url} /> : null}
@@ -450,7 +567,7 @@ export function SourcesView({
                   </p>
                 )}
                 {asset.analysis && (
-                  <dl className="stack">
+                  <dl className="analysis-grid">
                     {Object.entries(asset.analysis).map(([key, value]) => (
                       <div key={key}>
                         <dt className="muted" dir="ltr">
@@ -508,22 +625,29 @@ export function QualityView({
           <p className="muted">{q.noHealth}</p>
         ) : (
           <>
-            <p>
-              <strong data-testid="business-health-score">
-                {fill(q.healthScore, { score: formatNumber(locale, health.score) })}
-              </strong>{' '}
-              ·{' '}
-              {fill(q.sectionsFilled, {
-                filled: formatNumber(locale, health.filled),
-                total: formatNumber(locale, health.total),
-              })}
-            </p>
-            <progress
-              className="progress-meter"
-              max={100}
-              value={health.score}
-              aria-label={q.healthTitle}
-            />
+            <div className="score-row">
+              <ScoreRing
+                value={health.score}
+                text={formatNumber(locale, health.score)}
+                label={q.healthTitle}
+              />
+              <div className="stack">
+                <p>
+                  <strong data-testid="business-health-score">
+                    {fill(q.healthScore, { score: formatNumber(locale, health.score) })}
+                  </strong>
+                </p>
+                <p className="muted">
+                  {fill(q.sectionsFilled, {
+                    filled: formatNumber(locale, health.filled),
+                    total: formatNumber(locale, health.total),
+                  })}
+                </p>
+                <div className="meter" aria-hidden="true">
+                  <span style={{ inlineSize: `${Math.min(100, health.score)}%` }} />
+                </div>
+              </div>
+            </div>
             <h4>{q.checksTitle}</h4>
             <ul className="plain-list stack">
               {health.checks.map((check) => (
@@ -578,11 +702,7 @@ export function QualityView({
                 </span>
               )}
             </p>
-            {audit.summary && (
-              <p dir="auto" className="pre-text">
-                {audit.summary}
-              </p>
-            )}
+            {audit.summary && <RichText text={audit.summary} />}
             {audit.strengths.length > 0 && (
               <>
                 <h4>{q.strengths}</h4>
@@ -601,7 +721,10 @@ export function QualityView({
             ) : (
               <ul className="plain-list stack" data-testid="business-audit-issues">
                 {audit.issues.map((issue, index) => (
-                  <li key={`${issue.title}-${index}`} className="output-view">
+                  <li
+                    key={`${issue.title}-${index}`}
+                    className={`output-view issue issue-${issue.severity.toLowerCase()}`}
+                  >
                     <p>
                       <span
                         className={`badge tone-${issue.severity === 'HIGH' ? 'danger' : issue.severity === 'MEDIUM' ? 'warn' : 'neutral'}`}
@@ -621,13 +744,9 @@ export function QualityView({
                         {sectionTitle(locale, issue.target)}
                       </p>
                     )}
-                    {issue.detail && (
-                      <p dir="auto" className="pre-text">
-                        {issue.detail}
-                      </p>
-                    )}
+                    {issue.detail && <RichText text={issue.detail} />}
                     {issue.fix && (
-                      <p dir="auto" className="pre-text">
+                      <p dir="auto" className="issue-fix">
                         <strong>{q.fix}:</strong> {issue.fix}
                       </p>
                     )}
