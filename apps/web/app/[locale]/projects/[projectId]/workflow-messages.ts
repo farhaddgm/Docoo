@@ -63,6 +63,7 @@ const messages = {
       configuration: 'اتصال یا مدل AI تنظیم نشده است',
       cost_limit: 'سقف هزینهٔ این پروژه رسیده است',
       agent_question: 'یک ایجنت از شما سؤال پرسیده است',
+      deliverables_confirmation: 'خروجی‌های موردانتظار باید تأیید شوند',
     } as Record<string, string>,
     taskHelp: {
       analysis_answers: 'در بخش «مسئله» به پرسش‌ها پاسخ دهید یا برایشان وضعیت بگذارید.',
@@ -75,6 +76,8 @@ const messages = {
       cost_limit: 'سقف هزینه را در تنظیمات بالا ببرید یا پروژه را ببندید، سپس ادامه دهید.',
       agent_question:
         'در بخش «سؤال ایجنت» پایین همین صفحه پاسخ دهید؛ مرحله با پاسخ شما ادامه می‌یابد.',
+      deliverables_confirmation:
+        'در بخش «خروجی‌های موردانتظار» همین صفحه فهرست را ویرایش و تأیید کنید؛ ایده‌پردازی با تأیید شما شروع می‌شود.',
     } as Record<string, string>,
     openProviders: 'رفتن به ارائه‌دهندگان AI',
     providerSaid: 'پاسخ ارائه‌دهنده',
@@ -282,6 +285,7 @@ const messages = {
       configuration: 'No AI connection or model is configured',
       cost_limit: "The project's cost ceiling was reached",
       agent_question: 'An agent asked you a question',
+      deliverables_confirmation: 'The expected deliverables need your confirmation',
     } as Record<string, string>,
     taskHelp: {
       analysis_answers: 'Answer the questions or give them a status in the "Problem" section.',
@@ -294,6 +298,8 @@ const messages = {
       cost_limit: 'Raise the cost ceiling in the settings or close the project, then resume.',
       agent_question:
         'Answer in the "Agent question" section lower on this page; the stage goes on with your answer.',
+      deliverables_confirmation:
+        'Edit and confirm the list in the "Expected deliverables" section of this page; ideation starts when you confirm.',
     } as Record<string, string>,
     openProviders: 'Go to AI providers',
     providerSaid: 'The provider said',

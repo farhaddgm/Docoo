@@ -106,6 +106,16 @@ const fa = {
           'پروژه را فعال کنید.',
         ],
       },
+      confirm_deliverables: {
+        title: 'تأیید خروجی‌های موردانتظار',
+        summary:
+          'پیش از ایده‌پردازی مشخص می‌کنید چه خروجی‌هایی می‌خواهید (سند راهبردی، مستندات محصول). ایده‌پردازی تا تأیید شما منتظر می‌ماند؛ کد خارج از Docoo است.',
+        todo: [
+          'تب جریان‌کار پروژه را باز کنید.',
+          'فهرست خروجی‌ها را با هوش مصنوعی پیشنهاد بگیرید یا خودتان بنویسید.',
+          'فهرست را ویرایش و تأیید کنید.',
+        ],
+      },
       complete_stages: {
         title: 'پیشبرد مرحله‌ها',
         summary: 'هر مرحله ممکن است برای تصمیم شما متوقف شود؛ کارهای منتظر را پاسخ دهید.',
@@ -382,6 +392,16 @@ const en: SmartMessages = {
           'Select the project in the walker.',
           'Make sure AI is configured.',
           'Activate the project.',
+        ],
+      },
+      confirm_deliverables: {
+        title: 'Confirm the expected deliverables',
+        summary:
+          'Before ideation you say which outputs you expect (a strategy document, product documentation). Ideation waits until you confirm; code is outside Docoo.',
+        todo: [
+          'Open the workflow tab of the project.',
+          'Ask for a proposed list or write it yourself.',
+          'Edit the list and confirm it.',
         ],
       },
       complete_stages: {

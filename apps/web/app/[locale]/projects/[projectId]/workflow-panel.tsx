@@ -8,6 +8,7 @@ import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
+import { DeliverablesPanel } from './deliverables-panel';
 import { StageChat } from './stage-chat';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
@@ -401,6 +402,8 @@ export function WorkflowPanel({
           </ul>
         )}
       </section>
+
+      <DeliverablesPanel locale={locale} base={base} onChanged={afterChange} />
 
       {decisionTasks.map((task) => {
         const stage = overview.stages.find((item) => item.id === task.stageRunId);

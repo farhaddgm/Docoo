@@ -18,6 +18,7 @@ import {
   WorkspacePermissionGuard,
 } from '../src/auth/auth.authorization.js';
 import type { AuthService } from '../src/auth/auth.service.js';
+import { DeliverablesController } from '../src/deliverables/deliverables.controller.js';
 import { DocumentsController } from '../src/documents/documents.controller.js';
 import { ReportsController } from '../src/reports/reports.controller.js';
 import { ConfigController } from '../src/config/config.controller.js';
@@ -163,6 +164,10 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/projects/:projectId/problem-definitions': 'project.read',
   'POST workspaces/:workspaceId/question-batches/:batchId/answers': 'analysis.answer',
   'POST workspaces/:workspaceId/analysis-questions/:questionId/suggest-answer': 'analysis.answer',
+  'GET workspaces/:workspaceId/projects/:projectId/deliverables': 'project.read',
+  'PUT workspaces/:workspaceId/projects/:projectId/deliverables': 'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/deliverables/propose': 'project.run',
+  'POST workspaces/:workspaceId/projects/:projectId/deliverables/confirm': 'workflow.approve',
   'GET workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/messages': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/messages': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/messages/send-as-rejection':
@@ -255,6 +260,7 @@ const controllers = [
   ProvidersController,
   WorkflowController,
   StageChatController,
+  DeliverablesController,
   AgentsController,
   AnalysisController,
   BusinessController,

@@ -1067,6 +1067,57 @@ export const stageMessages = pgTable(
   (table) => [index('stage_messages_stage_idx').on(table.stageRunId, table.createdAt)],
 );
 
+/** The plan of expected deliverables of a project, one version per edit (ADR-0031); append-only. */
+export const deliverablePlans = pgTable(
+  'deliverable_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    versionNo: integer('version_no').notNull(),
+    source: text('source').notNull(),
+    invocationId: uuid('invocation_id'),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('deliverable_plans_version_uq').on(table.projectId, table.versionNo)],
+);
+
+export const deliverableItems = pgTable(
+  'deliverable_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    planId: uuid('plan_id').notNull(),
+    ordinal: integer('ordinal').notNull(),
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    purpose: text('purpose').notNull().default(''),
+    scopeIn: text('scope_in').notNull().default(''),
+    scopeOut: text('scope_out').notNull().default(''),
+  },
+  (table) => [uniqueIndex('deliverable_items_ordinal_uq').on(table.planId, table.ordinal)],
+);
+
+export const deliverableConfirmations = pgTable(
+  'deliverable_confirmations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    planId: uuid('plan_id').notNull(),
+    confirmedBy: uuid('confirmed_by').notNull(),
+    note: text('note').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('deliverable_confirmations_plan_uq').on(table.planId)],
+);
+
 export const gateDecisions = pgTable(
   'gate_decisions',
   {

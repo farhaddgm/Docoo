@@ -18,6 +18,7 @@ const STEP_KEYS = [
   'approve_knowledge',
   'create_project',
   'activate_project',
+  'confirm_deliverables',
   'complete_stages',
   'choose_solution',
   'evaluate_document',
@@ -195,7 +196,7 @@ describe('walker helpers', () => {
     expect(stepHref('en', 'approve_knowledge')).toBe('/en/knowledge');
     // A project step without a selected project has nowhere to go.
     expect(stepHref('en', 'complete_stages')).toBeNull();
-    // Every one of the twelve steps now has a page once a project is selected.
+    // Every one of the thirteen steps now has a page once a project is selected.
     for (const key of [
       'connect_provider',
       'configure_ai',
@@ -204,6 +205,7 @@ describe('walker helpers', () => {
       'approve_knowledge',
       'create_project',
       'activate_project',
+      'confirm_deliverables',
       'complete_stages',
       'choose_solution',
       'evaluate_document',
