@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -815,6 +816,7 @@ export const providerConnections = pgTable(
     lastError: text('last_error'),
     currentSecretVersion: integer('current_secret_version').notNull().default(0),
     storeContent: boolean('store_content').notNull().default(false),
+    maxConcurrentInvocations: integer('max_concurrent_invocations').notNull().default(4),
     version: integer('version').notNull().default(1),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     disabledAt: timestamp('disabled_at', { withTimezone: true }),
@@ -822,6 +824,41 @@ export const providerConnections = pgTable(
   },
   (table) => [
     uniqueIndex('provider_connections_name_uq').on(table.workspaceId, sql`lower(${table.name})`),
+    uniqueIndex('provider_connections_scope_id_uq').on(table.workspaceId, table.id),
+    check(
+      'provider_connections_concurrency_range',
+      sql`${table.maxConcurrentInvocations} between 1 and 100`,
+    ),
+  ],
+);
+
+/** Shared leases bound provider HTTP concurrency across API and horizontally scaled workers. */
+export const providerInvocationLeases = pgTable(
+  'provider_invocation_leases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    connectionId: uuid('connection_id').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.workspaceId, table.connectionId],
+      foreignColumns: [providerConnections.workspaceId, providerConnections.id],
+      name: 'provider_capacity_connection_scope_fk',
+    }).onDelete('cascade'),
+    index('provider_invocation_leases_active_idx').on(
+      table.workspaceId,
+      table.connectionId,
+      table.expiresAt,
+    ),
+    check(
+      'provider_invocation_leases_positive_lifetime',
+      sql`${table.expiresAt} > ${table.createdAt}`,
+    ),
   ],
 );
 
