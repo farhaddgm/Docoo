@@ -267,6 +267,58 @@ describe.skipIf(!adminUrl)('Smart: errors, chat, walker and ledger (SMT-001..004
     expect(purposes.rows[0]!.purpose).toBe('smart_report');
   });
 
+  it('gives the model the Brain report open on the page and says why when it is unavailable', async () => {
+    const generated = await post(api('/brain-reports'), {});
+    expect(generated.statusCode, generated.body).toBe(201);
+    const reportId = generated.json<{ report: { id: string } }>().report.id;
+    // A report of the other workspace must stay invisible even when its id is named.
+    const foreign = await h.request('POST', api('/brain-reports', h.ids.workspaceB), {
+      cookie: cookieB,
+      payload: {},
+    });
+    expect(foreign.statusCode, foreign.body).toBe(201);
+    const foreignId = foreign.json<{ report: { id: string } }>().report.id;
+
+    const invoke = vi.spyOn(h.fake, 'invoke');
+    const ask = async (body: Record<string, unknown>) => {
+      invoke.mockClear();
+      const sent = await post(smart(`/conversations/${conversationId}/messages`), {
+        content: 'گزارش Brain را بررسی کن',
+        route: '/fa/brain',
+        locale: 'fa',
+        ...body,
+      });
+      expect(sent.statusCode, sent.body).toBe(201);
+      expect(invoke).toHaveBeenCalledTimes(1);
+      return invoke.mock.calls[0]![0].instructions ?? '';
+    };
+
+    const open = await ask({ brainReportId: reportId });
+    expect(open).toContain('Brain reports:');
+    expect(open).toContain('"status":"available"');
+    expect(open).toContain(`"openOnPage":{"id":"${reportId}"`);
+    expect(open).toContain('"charterVersion":"charter-v1"');
+    expect(open).toContain('"freeTextIncluded":false');
+    expect(open).not.toContain(foreignId);
+
+    const none = await ask({});
+    expect(none).toContain('"status":"none_selected"');
+    expect(none).toContain('"openOnPage":null');
+    expect(none).toContain(reportId); // listed as metadata only
+
+    const missing = await ask({ brainReportId: '99999999-9999-4999-8999-999999999999' });
+    expect(missing).toContain('"status":"not_found"');
+    expect(missing).toContain('"openOnPage":null');
+
+    const otherWorkspace = await ask({ brainReportId: foreignId });
+    expect(otherWorkspace).toContain('"status":"not_found"');
+    expect(otherWorkspace).not.toContain(foreignId);
+
+    const elsewhere = await ask({ route: '/fa/projects' });
+    expect(elsewhere).not.toContain('"brainReports"');
+    expect(elsewhere).not.toContain('Brain reports:');
+  });
+
   it('keeps a provider failure as a failed answer instead of failing the request', async () => {
     h.fake.script = () => 'permanent';
     try {

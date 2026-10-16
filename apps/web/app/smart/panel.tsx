@@ -16,6 +16,7 @@ interface SmartPanelProps {
   readonly ui: SmartUiState;
   readonly route: string;
   readonly walkerStep: string | null;
+  readonly brainReportId: string | null;
   readonly selectedErrorId: string | null;
   readonly seed: ChatSeed | null;
   readonly onWalkerStep: (key: string | null) => void;
@@ -125,6 +126,7 @@ export function SmartPanel(props: SmartPanelProps) {
           route={props.route}
           projectId={ui.projectId}
           walkerStep={props.walkerStep}
+          brainReportId={props.brainReportId}
         />
       </div>
       <div

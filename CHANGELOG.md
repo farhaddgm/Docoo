@@ -17,6 +17,21 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - Replace colour variables that did not exist (users page, project decision evidence), which left those pages unreadable in the dark theme.
 - Write the remaining Latin words of the Persian dashboard (workflow, retry, token, attempt) in Persian.
 
+## [0.27.6] — 2026-10-16
+
+### Fixed
+
+- Preserve images already staged for the target release during the updater's disk-space cleanup. A low-space refusal keeps both the running and target releases, images used by stopped containers and unrelated applications; the full-build capacity and reserve requirements remain enforced.
+- Keep the selected notifications filter when an older list request finishes late, including failed older requests. Read actions reload the current filter and a workspace change resets the list.
+- Make writer restart acceptance stop after exactly two persisted parts, verify completion after restart, and include safe history metadata on a future timeout. Production workflow behavior and timeouts are unchanged.
+- Record the actual v0.27.4 browser-to-provider trace acceptance and retire the two observability waivers; human model-quality approval remains separate.
+
+## [0.27.5] — 2026-10-15
+
+### Fixed
+
+- The Smart assistant can now read the Brain report open on the Brain page. The server looks the report up read-only under the administrator's own workspace and `knowledge.read` permission and gives the model its totals, role figures, rule-based deviations with evidence ids, and recommendations. It reports `none_selected`, `not_found` or `forbidden` plainly instead of guessing another report, and the evaluating model's free-text findings stay out of the context.
+
 ## [0.27.4] — 2026-10-15
 
 ### Fixed

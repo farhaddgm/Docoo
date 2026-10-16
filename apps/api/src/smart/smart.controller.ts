@@ -14,7 +14,7 @@ import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, roleHasPermission } from '../auth/auth.authorization.js';
 import { pageQuerySchema } from '../common/pagination.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
@@ -73,6 +73,7 @@ const messageBody = z
     locale: z.enum(['fa', 'en']),
     projectId: uuid.optional(),
     walkerStep: z.enum(WALKER_STEP_KEYS).optional(),
+    brainReportId: uuid.optional(),
   })
   .strict();
 const issuesQuery = z
@@ -229,7 +230,10 @@ export class SmartController {
     @Param('conversationId') raw: string,
     @Body() body: unknown,
   ) {
-    return this.chat.send(workspaceContext(request), idOf(raw), parse(messageBody, body));
+    const role = request.workspaceAuthorization?.workspace.role ?? '';
+    return this.chat.send(workspaceContext(request), idOf(raw), parse(messageBody, body), {
+      canReadBrainReports: roleHasPermission(role, 'knowledge.read'),
+    });
   }
 
   @Get('issues')

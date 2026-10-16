@@ -4,6 +4,7 @@ import type { SmartError, WalkerProgress } from './api';
 import { createLimiter } from './error-reporter';
 import { developerReport, normalizeDisplayPath } from './format';
 import { fill, smartErrorMessage, smartMessagesFor } from './messages';
+import { smartPageContext } from './page-context';
 import { createToastGate, isLocalEcho } from './toast-logic';
 import { defaultUiState, parseUiState } from './ui-state';
 import { defaultStepKey, neighbourKey, projectIdFromPath, stepHref } from './walker';
@@ -231,5 +232,23 @@ describe('display helpers', () => {
     expect(report).toContain('- Fix note: Looking');
     expect(report).toContain('```json');
     expect(report).toContain('"route": "/fa"');
+  });
+});
+
+describe('page context for the assistant', () => {
+  it('publishes the open Brain report and clears it again', () => {
+    const seen: (string | null)[] = [];
+    const stop = smartPageContext.subscribe(() =>
+      seen.push(smartPageContext.getSnapshot().brainReportId),
+    );
+    expect(smartPageContext.getSnapshot().brainReportId).toBeNull();
+    smartPageContext.setBrainReport('11111111-1111-4111-8111-111111111111');
+    smartPageContext.setBrainReport('11111111-1111-4111-8111-111111111111');
+    smartPageContext.setBrainReport(null);
+    stop();
+    smartPageContext.setBrainReport('22222222-2222-4222-8222-222222222222');
+    expect(seen).toEqual(['11111111-1111-4111-8111-111111111111', null]);
+    smartPageContext.setBrainReport(null);
+    expect(smartPageContext.getServerSnapshot().brainReportId).toBeNull();
   });
 });

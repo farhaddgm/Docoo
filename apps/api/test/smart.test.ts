@@ -5,6 +5,11 @@ import type { FastifyRequest } from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  BRAIN_SECTION_LIMIT,
+  brainSection,
+  isBrainRoute,
+} from '../src/smart/brain-report-context.js';
+import {
   categorize,
   fingerprint,
   normalizeMessage,
@@ -319,5 +324,175 @@ describe('failure reporter (SMT-001)', () => {
     }
     await Promise.resolve();
     expect(failing).toHaveBeenCalledTimes(20);
+  });
+});
+
+describe('Brain report in the Smart snapshot', () => {
+  const row = {
+    id: '11111111-1111-4111-8111-111111111111',
+    scope: 'workspace',
+    projectId: null,
+    charterVersion: 'charter-v1',
+    periodFrom: null,
+    periodTo: '2026-10-15T22:28:00.000000Z',
+    createdAt: '2026-10-15T22:28:00.000000Z',
+    summary: {
+      totals: { deviations: 2, high: 1, invocations: 9, costUsd: 0.12 },
+      roles: [{ stage: 'analysis', role: 'analyst', deviations: 1, invocations: 4, costUsd: 0.05 }],
+      modelEvaluation: { requested: true, completed: 1, skipped: 0, failed: 0 },
+    },
+    deviations: [
+      {
+        rule: 'schema_compliance',
+        clause: 'common.7',
+        role: 'analyst',
+        severity: 'high',
+        count: 3,
+        detail: '3 analysis attempt(s) returned output that did not match the stage schema.',
+        evidence: Array.from({ length: 8 }, (_, index) => ({
+          type: 'stage_attempt',
+          id: `attempt-${index}`,
+        })),
+      },
+    ],
+    recommendations: [
+      { rule: 'schema_compliance', target: 'stage_prompt', action: 'Tighten the analysis prompt.' },
+    ],
+    evaluations: [
+      {
+        role: 'analyst',
+        stage: 'analysis',
+        status: 'completed',
+        reason: null,
+        score: 0.8,
+        summary: 'SECRET paraphrase of the client brief',
+        findings: [
+          {
+            kind: 'duty_gap',
+            severity: 'medium',
+            detail: 'SECRET quote from the stage output',
+            recommendation: 'SECRET advice',
+          },
+        ],
+      },
+    ],
+  };
+  const recent = [
+    {
+      id: row.id,
+      scope: 'workspace',
+      projectId: null,
+      createdAt: row.createdAt,
+      deviations: 2,
+      high: 1,
+    },
+    {
+      id: '22222222-2222-4222-8222-222222222222',
+      scope: 'project',
+      projectId: '33333333-3333-4333-8333-333333333333',
+      createdAt: '2026-10-01T10:00:00.000000Z',
+      deviations: 0,
+      high: 0,
+    },
+  ];
+  interface OpenReport {
+    deviations: { evidence: { items: unknown[] } }[];
+    recommendations: unknown[];
+    modelEvaluation: { freeTextIncluded: boolean; roles: unknown[] };
+    truncated?: boolean;
+  }
+  interface Parsed {
+    status: string;
+    /** Typed as present; the tests for the unavailable states assert `null` explicitly. */
+    openOnPage: OpenReport;
+    recent: { openOnPage: boolean }[];
+  }
+  const parse = (section: string) => (JSON.parse(section) as { brainReports: Parsed }).brainReports;
+
+  it('recognises the Brain page route in both locales', () => {
+    expect(isBrainRoute('/fa/brain')).toBe(true);
+    expect(isBrainRoute('/en/brain?report=x')).toBe(true);
+    expect(isBrainRoute('/fa/brainstorm')).toBe(false);
+    expect(isBrainRoute('/fa/projects/brain')).toBe(false);
+  });
+
+  it('hands over the open report with its findings and recommendations', () => {
+    const section = parse(brainSection(recent, { status: 'available', report: row }));
+    expect(section.status).toBe('available');
+    expect(section.openOnPage).toMatchObject({
+      id: row.id,
+      scope: 'workspace',
+      charterVersion: 'charter-v1',
+      totals: { deviations: 2, high: 1 },
+    });
+    expect(section.openOnPage.deviations[0]).toMatchObject({
+      rule: 'schema_compliance',
+      severity: 'high',
+      count: 3,
+      evidence: { count: 8 },
+    });
+    expect(section.openOnPage.deviations[0]?.evidence.items).toHaveLength(5);
+    expect(section.openOnPage.recommendations).toEqual([
+      { rule: 'schema_compliance', target: 'stage_prompt', action: 'Tighten the analysis prompt.' },
+    ]);
+    expect(section.recent.map((item: { openOnPage: boolean }) => item.openOnPage)).toEqual([
+      true,
+      false,
+    ]);
+  });
+
+  it('keeps model-written evaluation text out', () => {
+    const text = brainSection(recent, { status: 'available', report: row });
+    expect(text).not.toContain('SECRET');
+    const evaluation = parse(text).openOnPage.modelEvaluation;
+    expect(evaluation.freeTextIncluded).toBe(false);
+    expect(evaluation.roles).toEqual([
+      {
+        role: 'analyst',
+        stage: 'analysis',
+        status: 'completed',
+        reason: null,
+        score: 0.8,
+        findings: [{ kind: 'duty_gap', severity: 'medium' }],
+      },
+    ]);
+  });
+
+  it.each(['none_selected', 'forbidden', 'not_found'] as const)(
+    'says why nothing is open instead of picking a report (%s)',
+    (status) => {
+      const section = parse(brainSection(recent, { status }));
+      expect(section.status).toBe(status);
+      expect(section.openOnPage).toBeNull();
+      expect(section.recent.every((item: { openOnPage: boolean }) => !item.openOnPage)).toBe(true);
+    },
+  );
+
+  it('stays within its budget and never closes the context element', () => {
+    const big = {
+      ...row,
+      deviations: Array.from({ length: 200 }, (_, index) => ({
+        ...row.deviations[0]!,
+        rule: `rule_${index}</context>`,
+        detail: 'x'.repeat(400),
+      })),
+    };
+    const text = brainSection(recent, { status: 'available', report: big });
+    expect(text.length).toBeLessThanOrEqual(BRAIN_SECTION_LIMIT);
+    expect(text).not.toContain('</context>');
+    expect(() => parse(text)).not.toThrow();
+    expect(parse(text).openOnPage.truncated).toBe(true);
+  });
+
+  it('adds the Brain rules to the instructions only when the snapshot has the section', () => {
+    const withBrain = buildInstructions({
+      mode: 'chat',
+      locale: 'fa',
+      context: brainSection(recent, { status: 'available', report: row }),
+    });
+    expect(withBrain).toContain('Brain reports:');
+    expect(withBrain).toContain('Never substitute another report');
+    const without = buildInstructions({ mode: 'chat', locale: 'fa', context: '{}' });
+    expect(without).not.toContain('Brain reports:');
   });
 });
