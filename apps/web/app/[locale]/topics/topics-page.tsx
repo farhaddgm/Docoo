@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
 
 import { apiGet, apiSend, query } from '../../api-client';
+import { FieldLabel } from '../../info-tip';
 import { formatDateTime, formatNumber, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { explainError, Notice, useAction } from '../use-action';
@@ -386,7 +387,9 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
         >
           <h2 id="topic-create-title">{text.create}</h2>
           <div className="filter-grid">
-            <label htmlFor="topic-code">{text.code}</label>
+            <FieldLabel htmlFor="topic-code" help={text.codeHelp} helpId="topic-code-help">
+              {text.code}
+            </FieldLabel>
             <input
               id="topic-code"
               dir="ltr"
@@ -397,10 +400,6 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
               autoComplete="off"
               required
             />
-            <span />
-            <p id="topic-code-help" className="muted">
-              {text.codeHelp}
-            </p>
             <label htmlFor="topic-title">{text.topicTitle}</label>
             <input
               id="topic-title"

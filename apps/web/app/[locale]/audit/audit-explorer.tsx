@@ -181,22 +181,32 @@ function Explorer({ locale, workspaceId }: { locale: Locale; workspaceId: string
         aria-busy={busy}
       >
         <h2 id="filters-title">{text.filters}</h2>
-        <div className="filter-grid">
-          <label htmlFor="audit-action">{text.action}</label>
-          <input {...field('action')} dir="ltr" autoComplete="off" />
-          <label htmlFor="audit-targetType">{text.targetType}</label>
-          <input {...field('targetType')} dir="ltr" autoComplete="off" />
-          <label htmlFor="audit-severity">{text.severity}</label>
-          <select {...field('severity')}>
-            <option value="">{text.anySeverity}</option>
-            <option value="info">info</option>
-            <option value="warning">warning</option>
-            <option value="critical">critical</option>
-          </select>
-          <label htmlFor="audit-from">{text.from}</label>
-          <input {...field('from')} type="date" />
-          <label htmlFor="audit-to">{text.to}</label>
-          <input {...field('to')} type="date" />
+        <div className="filter-grid filters-row">
+          <div className="field">
+            <label htmlFor="audit-action">{text.action}</label>
+            <input {...field('action')} dir="ltr" autoComplete="off" />
+          </div>
+          <div className="field">
+            <label htmlFor="audit-targetType">{text.targetType}</label>
+            <input {...field('targetType')} dir="ltr" autoComplete="off" />
+          </div>
+          <div className="field">
+            <label htmlFor="audit-severity">{text.severity}</label>
+            <select {...field('severity')}>
+              <option value="">{text.anySeverity}</option>
+              <option value="info">info</option>
+              <option value="warning">warning</option>
+              <option value="critical">critical</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="audit-from">{text.from}</label>
+            <input {...field('from')} type="date" />
+          </div>
+          <div className="field">
+            <label htmlFor="audit-to">{text.to}</label>
+            <input {...field('to')} type="date" />
+          </div>
           <span />
           <label className="checkbox">
             <input

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
-import { errorMessage, formatNumber, messagesFor, problemCode, type Locale } from '../i18n';
+import { errorMessage, messagesFor, problemCode, type Locale } from '../i18n';
 import { AppShell } from './app-shell';
 import type { AccountRole } from '@docoo/contracts';
 import { DashboardCards } from './dashboard-cards';
@@ -27,6 +27,30 @@ type View =
   | { kind: 'guest'; notice?: string }
   | { kind: 'unavailable' }
   | { kind: 'authenticated'; identity: SessionIdentity };
+
+/** The four-colour Google "G"; decorative, the button text names the action. */
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true" focusable="false">
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"
+      />
+    </svg>
+  );
+}
 
 export function AuthShell({
   locale,
@@ -176,8 +200,14 @@ export function AuthShell({
       identity={view.kind === 'authenticated' ? view.identity : undefined}
       showNavigation={authenticated}
       workspaceId={view.kind === 'authenticated' ? view.identity.workspaces[0]?.id : undefined}
+      onSignOut={() => void signOut()}
+      signOutBusy={busy}
     >
-      {view.kind === 'loading' && <p role="status">{content.checkingSession}</p>}
+      {view.kind === 'loading' && (
+        <p role="status" className="loading-line">
+          {content.checkingSession}
+        </p>
+      )}
       {view.kind === 'unavailable' && (
         <section className="auth-card" aria-live="polite">
           <p className="notice error">{content.unavailable}</p>
@@ -193,7 +223,7 @@ export function AuthShell({
               {view.notice}
             </p>
           )}
-          <p>
+          <p className="auth-lead">
             {locale === 'fa'
               ? 'با جیمیل مجاز وارد شوید.'
               : 'Sign in with an approved Gmail account.'}
@@ -204,7 +234,7 @@ export function AuthShell({
             </p>
           )}
           <a
-            className="primary-button link-button"
+            className="secondary-button link-button google-sign-in"
             aria-disabled={!googleEnabled}
             href={
               googleEnabled
@@ -212,10 +242,14 @@ export function AuthShell({
                 : undefined
             }
           >
+            <GoogleMark />
             {locale === 'fa' ? 'ورود با گوگل' : 'Sign in with Google'}
           </a>
           {withPassword && (
             <>
+              <p className="auth-divider" aria-hidden="true">
+                <span>{locale === 'fa' ? 'یا' : 'or'}</span>
+              </p>
               <form className="auth-form" onSubmit={(event) => void signIn(event)} aria-busy={busy}>
                 <label htmlFor="email">{content.email}</label>
                 <input
@@ -266,27 +300,7 @@ export function AuthShell({
         </section>
       )}
       {view.kind === 'authenticated' && (
-        <>
-          <div className="session-bar">
-            <p>
-              {content.signedInAs} <strong>{view.identity.user.displayName}</strong>
-              <span className="session-divider" aria-hidden="true">
-                ·
-              </span>
-              {content.workspaces} ({formatNumber(locale, view.identity.workspaces.length)}):{' '}
-              {view.identity.workspaces
-                .map((item) => item.name)
-                .join(locale === 'fa' ? '، ' : ', ')}
-            </p>
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={() => void signOut()}
-              disabled={busy}
-            >
-              {busy ? content.signingOut : content.signOut}
-            </button>
-          </div>
+        <div className="stack">
           {error && (
             <p className="notice error" role="alert" tabIndex={-1} ref={errorRef}>
               {error}
@@ -296,7 +310,7 @@ export function AuthShell({
             <DashboardCards locale={locale} workspaceId={view.identity.workspaces[0].id} />
           )}
           <AccountSecurity locale={locale} user={view.identity.user} />
-        </>
+        </div>
       )}
     </AppShell>
   );

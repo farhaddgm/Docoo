@@ -3,6 +3,13 @@ import type { PoolClient } from 'pg';
 
 import { isoColumn } from '../common/pagination.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
+import {
+  brainSection,
+  isBrainRoute,
+  type BrainReportListRow,
+  type BrainReportLookup,
+  type BrainReportRow,
+} from './brain-report-context.js';
 import { scrubMessage, scrubStack } from './error-classifier.js';
 import { WalkerProgressService } from './walker-progress.service.js';
 import type { WalkerStepKey } from './walker-steps.js';
@@ -12,6 +19,10 @@ export interface ContextTarget {
   readonly projectId: string | null;
   readonly walkerStep: WalkerStepKey | null;
   readonly errorId: string | null;
+  /** The Brain report open on the page, as the browser reports it. */
+  readonly brainReportId?: string | null;
+  /** Whether the administrator's role may read Brain reports (`knowledge.read`). */
+  readonly canReadBrainReports?: boolean;
 }
 
 export const CONTEXT_LIMIT = 12_000;
@@ -20,7 +31,9 @@ export const CONTEXT_LIMIT = 12_000;
  * Builds the read-only snapshot the Smart assistant reasons over (SMT-003). Code assembles it;
  * the model cannot query anything itself. It carries ids, statuses, counters, error codes and
  * the admin's recent action names, but never project titles, problem statements, document or
- * knowledge content, nor before/after values of audit events (docs/05-security).
+ * knowledge content, nor before/after values of audit events (docs/05-security). The one
+ * deliberate addition is the Brain report open on the page: a read-only, permission-checked view
+ * of its rule-based findings that carries no free text written by a model (brain-report-context).
  */
 @Injectable()
 export class SmartContextBuilder {
@@ -55,7 +68,44 @@ export class SmartContextBuilder {
     if (target.projectId) snapshot['project'] = await this.project(client, target.projectId);
     if (target.errorId) snapshot['error'] = await this.errorDetail(client, target.errorId);
     const text = JSON.stringify(snapshot);
-    return text.length > CONTEXT_LIMIT ? `${text.slice(0, CONTEXT_LIMIT)}…[truncated]` : text;
+    const base = text.length > CONTEXT_LIMIT ? `${text.slice(0, CONTEXT_LIMIT)}…[truncated]` : text;
+    // Own budget, appended after the cut, so a long snapshot never truncates the report.
+    const brain = await this.brainReports(client, target);
+    return brain ? `${base}\n${brain}` : base;
+  }
+
+  /**
+   * The Brain section is present on the Brain page or whenever the browser names a report. A
+   * report that cannot be read is reported with the reason; no other report is substituted.
+   */
+  private async brainReports(client: PoolClient, target: ContextTarget): Promise<string | null> {
+    const requested = target.brainReportId ?? null;
+    if (!requested && !isBrainRoute(target.route)) return null;
+    if (!target.canReadBrainReports) return brainSection([], { status: 'forbidden' });
+    const recent = (
+      await client.query<BrainReportListRow>(
+        `select id, scope, project_id as "projectId", ${isoColumn('created_at', '"createdAt"')},
+                jsonb_array_length(deviations)::int as deviations,
+                (select count(*) from jsonb_array_elements(deviations) item
+                  where item->>'severity' = 'high')::int as high
+           from brain_reports order by created_at desc, id desc limit 10`,
+      )
+    ).rows;
+    let lookup: BrainReportLookup = { status: 'none_selected' };
+    if (requested) {
+      const report = (
+        await client.query<BrainReportRow>(
+          `select id, scope, project_id as "projectId", charter_version as "charterVersion",
+                  ${isoColumn('period_from', '"periodFrom"')}, ${isoColumn('period_to', '"periodTo"')},
+                  ${isoColumn('created_at', '"createdAt"')}, summary, deviations, recommendations,
+                  evaluations
+             from brain_reports where id = $1`,
+          [requested],
+        )
+      ).rows[0];
+      lookup = report ? { status: 'available', report } : { status: 'not_found' };
+    }
+    return brainSection(recent, lookup);
   }
 
   private async providers(client: PoolClient) {

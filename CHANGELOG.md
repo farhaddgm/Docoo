@@ -2,6 +2,36 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.28.0] — 2026-10-15
+
+### Changed
+
+- Redesign the whole web interface in the visual language of Bee Researcher: a navy grouped sidebar, a sticky top bar, soft cards, blue primary colour, 40px controls, status pills and a numbered stepper for the project wizard. Light, dark and system themes still come from one set of `light-dark()` tokens; every text/background pair keeps at least a 4.5:1 contrast, and an axe scan of the main pages passes in both themes.
+- Show the signed-in user and a **Sign out** button in the sidebar of every page (it was only on the dashboard), and add a dashboard summary strip with colour for counts that need attention.
+- Put every field description behind an **"i" button** next to the field title. The explanation opens on hover, keyboard focus or tap in one shared tooltip that stays inside the viewport and closes with Escape; the same text stays in the page and is linked with `aria-describedby`. Section descriptions under card headings use the same button.
+- Lay forms out with the title above the control and filters in a responsive row. The users and Gmail sign-in page now uses the common shell, and its dialogs take focus and close with Escape. The sidebar becomes a drawer on narrow screens.
+
+### Fixed
+
+- Remove the focus frame drawn around page headings, the double card around wizard fields, and the invisible default look of link-style buttons.
+- Replace colour variables that did not exist (users page, project decision evidence), which left those pages unreadable in the dark theme.
+- Write the remaining Latin words of the Persian dashboard (workflow, retry, token, attempt) in Persian.
+
+## [0.27.6] — 2026-10-16
+
+### Fixed
+
+- Preserve images already staged for the target release during the updater's disk-space cleanup. A low-space refusal keeps both the running and target releases, images used by stopped containers and unrelated applications; the full-build capacity and reserve requirements remain enforced.
+- Keep the selected notifications filter when an older list request finishes late, including failed older requests. Read actions reload the current filter and a workspace change resets the list.
+- Make writer restart acceptance stop after exactly two persisted parts, verify completion after restart, and include safe history metadata on a future timeout. Production workflow behavior and timeouts are unchanged.
+- Record the actual v0.27.4 browser-to-provider trace acceptance and retire the two observability waivers; human model-quality approval remains separate.
+
+## [0.27.5] — 2026-10-15
+
+### Fixed
+
+- The Smart assistant can now read the Brain report open on the Brain page. The server looks the report up read-only under the administrator's own workspace and `knowledge.read` permission and gives the model its totals, role figures, rule-based deviations with evidence ids, and recommendations. It reports `none_selected`, `not_found` or `forbidden` plainly instead of guessing another report, and the evaluating model's free-text findings stay out of the context.
+
 ## [0.27.4] — 2026-10-15
 
 ### Fixed

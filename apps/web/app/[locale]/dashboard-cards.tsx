@@ -83,10 +83,11 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
   if (!data) return <p role="status">{content.loading}</p>;
 
   const number = (value: number) => formatNumber(locale, value);
-  const counts = (items: [string, number, string?][]) => (
+  /** A count that is not zero but should be is coloured, so the eye finds it first. */
+  const counts = (items: [string, number, (string | undefined)?, ('warn' | 'danger')?][]) => (
     <dl className="counts">
-      {items.map(([label, value, href]) => (
-        <div key={label}>
+      {items.map(([label, value, href, tone]) => (
+        <div key={label} className={tone && value > 0 ? `count-${tone}` : undefined}>
           <dt>{href ? <Link href={href as Route}>{label}</Link> : label}</dt>
           <dd>{number(value)}</dd>
         </div>
@@ -95,146 +96,176 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
   );
 
   return (
-    <div className="grid dashboard-grid">
-      <section className="card" aria-labelledby="waiting-title">
-        <h2 id="waiting-title">
-          {text.waiting} <span className="badge">{number(data.waiting.total)}</span>
-        </h2>
-        {data.waiting.items.length === 0 ? (
-          <p className="muted">{text.waitingEmpty}</p>
-        ) : (
-          <ul className="plain-list">
-            {data.waiting.items.map((item) => (
-              <li key={item.id}>
-                {item.projectId ? (
-                  <Link href={`/${locale}/projects/${item.projectId}?tab=workflow` as Route}>
+    <>
+      <dl className="kpis">
+        <div className="kpi">
+          <dt>{text.waiting}</dt>
+          <dd>{number(data.waiting.total)}</dd>
+        </div>
+        <div className="kpi">
+          <dt>
+            {text.workflows} · {text.active}
+          </dt>
+          <dd>{number(data.workflows.active)}</dd>
+        </div>
+        <div className={data.knowledge.pending > 0 ? 'kpi count-warn' : 'kpi'}>
+          <dt>
+            {text.knowledge} · {text.pending}
+          </dt>
+          <dd>{number(data.knowledge.pending)}</dd>
+        </div>
+        <div className="kpi">
+          <dt>{text.cost}</dt>
+          <dd>{money(locale, data.usage.costUsd)}</dd>
+        </div>
+      </dl>
+      <div className="grid dashboard-grid">
+        <section className="card" aria-labelledby="waiting-title">
+          <h2 id="waiting-title">
+            {text.waiting} <span className="badge">{number(data.waiting.total)}</span>
+          </h2>
+          {data.waiting.items.length === 0 ? (
+            <p className="muted">{text.waitingEmpty}</p>
+          ) : (
+            <ul className="plain-list">
+              {data.waiting.items.map((item) => (
+                <li key={item.id}>
+                  {item.projectId ? (
+                    <Link href={`/${locale}/projects/${item.projectId}?tab=workflow` as Route}>
+                      <strong>{item.title}</strong>
+                    </Link>
+                  ) : (
                     <strong>{item.title}</strong>
-                  </Link>
-                ) : (
-                  <strong>{item.title}</strong>
-                )}
-                {item.projectTitle && <span className="muted"> — {item.projectTitle}</span>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                  )}
+                  {item.projectTitle && <span className="muted"> — {item.projectTitle}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      <section className="card" aria-labelledby="workflows-title">
-        <h2 id="workflows-title">{text.workflows}</h2>
-        {counts([
-          [text.active, data.workflows.active],
-          [text.waitingForHuman, data.workflows.waitingForHuman],
-          [text.paused, data.workflows.paused],
-          [text.failed, data.workflows.failed],
-        ])}
-      </section>
+        <section className="card" aria-labelledby="workflows-title">
+          <h2 id="workflows-title">{text.workflows}</h2>
+          {counts([
+            [text.active, data.workflows.active],
+            [text.waitingForHuman, data.workflows.waitingForHuman],
+            [text.paused, data.workflows.paused],
+            [text.failed, data.workflows.failed, undefined, 'danger'],
+          ])}
+        </section>
 
-      <section className="card" aria-labelledby="knowledge-title">
-        <h2 id="knowledge-title">
-          <Link href={`/${locale}/knowledge` as Route}>{text.knowledge}</Link>
-        </h2>
-        {counts([
-          [text.pending, data.knowledge.pending, `/${locale}/knowledge?status=pending`],
-          [text.expired, data.knowledge.expired, `/${locale}/knowledge?status=expired`],
-          [
-            text.needsRevision,
-            data.knowledge.needsRevision,
-            `/${locale}/knowledge?status=needs_revision`,
-          ],
-          [text.conflicted, data.knowledge.conflicted, `/${locale}/knowledge?tab=conflicts`],
-        ])}
-      </section>
+        <section className="card" aria-labelledby="knowledge-title">
+          <h2 id="knowledge-title">
+            <Link href={`/${locale}/knowledge` as Route}>{text.knowledge}</Link>
+          </h2>
+          {counts([
+            [text.pending, data.knowledge.pending, `/${locale}/knowledge?status=pending`],
+            [text.expired, data.knowledge.expired, `/${locale}/knowledge?status=expired`, 'warn'],
+            [
+              text.needsRevision,
+              data.knowledge.needsRevision,
+              `/${locale}/knowledge?status=needs_revision`,
+              'warn',
+            ],
+            [
+              text.conflicted,
+              data.knowledge.conflicted,
+              `/${locale}/knowledge?tab=conflicts`,
+              'danger',
+            ],
+          ])}
+        </section>
 
-      <section className="card" aria-labelledby="providers-title">
-        <h2 id="providers-title">{text.providers}</h2>
-        {data.providers.items.length === 0 ? (
-          <p className="muted">{text.providersEmpty}</p>
-        ) : (
-          <ul className="plain-list">
-            {data.providers.items.map((item) => (
-              <li key={item.id}>
-                {item.name}{' '}
-                <span className={`badge state-${item.status}`}>
-                  {text.providerStatuses[item.status] ?? item.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {data.providers.costWarnings.map((warning) => (
-          <p key={warning.projectId} className="notice error">
-            {text.costWarning}: {warning.projectTitle} ({money(locale, warning.spentUsd)} /{' '}
-            {money(locale, warning.limitUsd)})
-          </p>
-        ))}
-      </section>
+        <section className="card" aria-labelledby="providers-title">
+          <h2 id="providers-title">{text.providers}</h2>
+          {data.providers.items.length === 0 ? (
+            <p className="muted">{text.providersEmpty}</p>
+          ) : (
+            <ul className="plain-list">
+              {data.providers.items.map((item) => (
+                <li key={item.id}>
+                  {item.name}{' '}
+                  <span className={`badge state-${item.status}`}>
+                    {text.providerStatuses[item.status] ?? item.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {data.providers.costWarnings.map((warning) => (
+            <p key={warning.projectId} className="notice error">
+              {text.costWarning}: {warning.projectTitle} ({money(locale, warning.spentUsd)} /{' '}
+              {money(locale, warning.limitUsd)})
+            </p>
+          ))}
+        </section>
 
-      <section className="card" aria-labelledby="retries-title">
-        <h2 id="retries-title">{text.retries}</h2>
-        {data.retriesNearLimit.length === 0 ? (
-          <p className="muted">{text.retriesEmpty}</p>
-        ) : (
-          <ul className="plain-list">
-            {data.retriesNearLimit.map((item) => (
-              <li key={item.id}>
-                {item.projectTitle} · {item.stage}: {number(item.attemptsUsed)}/
-                {number(item.attemptLimit)} {text.attempts}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <section className="card" aria-labelledby="retries-title">
+          <h2 id="retries-title">{text.retries}</h2>
+          {data.retriesNearLimit.length === 0 ? (
+            <p className="muted">{text.retriesEmpty}</p>
+          ) : (
+            <ul className="plain-list">
+              {data.retriesNearLimit.map((item) => (
+                <li key={item.id}>
+                  {item.projectTitle} · {item.stage}: {number(item.attemptsUsed)}/
+                  {number(item.attemptLimit)} {text.attempts}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      <section className="card" aria-labelledby="usage-title">
-        <h2 id="usage-title">{text.usage}</h2>
-        {counts([
-          [text.invocations, data.usage.invocations],
-          [text.tokens, data.usage.tokens],
-        ])}
-        <p>
-          {text.cost}: <strong>{money(locale, data.usage.costUsd)}</strong>
-        </p>
-      </section>
-
-      <section className="card" aria-labelledby="brain-title">
-        <h2 id="brain-title">{text.brain}</h2>
-        {data.latestBrainReport ? (
+        <section className="card" aria-labelledby="usage-title">
+          <h2 id="usage-title">{text.usage}</h2>
+          {counts([
+            [text.invocations, data.usage.invocations],
+            [text.tokens, data.usage.tokens],
+          ])}
           <p>
-            <Link href={`/${locale}/brain?report=${data.latestBrainReport.id}` as Route}>
-              {formatDateTime(locale, data.latestBrainReport.createdAt)}
-            </Link>{' '}
-            — {number(data.latestBrainReport.deviations)} {text.deviations},{' '}
-            {number(data.latestBrainReport.high)} {text.high}
+            {text.cost}: <strong>{money(locale, data.usage.costUsd)}</strong>
           </p>
-        ) : (
-          <p className="muted">{text.brainEmpty}</p>
-        )}
-      </section>
+        </section>
 
-      <section className="card" aria-labelledby="actions-title">
-        <h2 id="actions-title">{text.quickActions}</h2>
-        <ul className="plain-list">
-          <li>
-            <Link href={`/${locale}/projects/new` as Route}>{text.newProject}</Link>
-          </li>
-          <li>
-            <Link href={`/${locale}/topics` as Route}>{text.newTopic}</Link>
-          </li>
-          <li>
-            <Link href={`/${locale}/projects` as Route}>{text.openProjects}</Link>
-          </li>
-          <li>
-            <Link href={`/${locale}/brain` as Route}>{text.openBrain}</Link>
-          </li>
-          <li>
-            <Link href={`/${locale}/audit` as Route}>{text.openAudit}</Link>
-          </li>
-          <li>
-            <Link href={`/${locale}/costs` as Route}>{text.openCosts}</Link>
-          </li>
-        </ul>
-      </section>
-    </div>
+        <section className="card" aria-labelledby="brain-title">
+          <h2 id="brain-title">{text.brain}</h2>
+          {data.latestBrainReport ? (
+            <p>
+              <Link href={`/${locale}/brain?report=${data.latestBrainReport.id}` as Route}>
+                {formatDateTime(locale, data.latestBrainReport.createdAt)}
+              </Link>{' '}
+              — {number(data.latestBrainReport.deviations)} {text.deviations},{' '}
+              {number(data.latestBrainReport.high)} {text.high}
+            </p>
+          ) : (
+            <p className="muted">{text.brainEmpty}</p>
+          )}
+        </section>
+
+        <section className="card" aria-labelledby="actions-title">
+          <h2 id="actions-title">{text.quickActions}</h2>
+          <ul className="plain-list quick-links">
+            <li>
+              <Link href={`/${locale}/projects/new` as Route}>{text.newProject}</Link>
+            </li>
+            <li>
+              <Link href={`/${locale}/topics` as Route}>{text.newTopic}</Link>
+            </li>
+            <li>
+              <Link href={`/${locale}/projects` as Route}>{text.openProjects}</Link>
+            </li>
+            <li>
+              <Link href={`/${locale}/brain` as Route}>{text.openBrain}</Link>
+            </li>
+            <li>
+              <Link href={`/${locale}/audit` as Route}>{text.openAudit}</Link>
+            </li>
+            <li>
+              <Link href={`/${locale}/costs` as Route}>{text.openCosts}</Link>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </>
   );
 }

@@ -143,11 +143,11 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
           </div>
         </div>
         <form
-          className="filter-grid project-filters"
+          className="filter-grid filters-row project-filters"
           aria-label={text.filters}
           onSubmit={(event) => event.preventDefault()}
         >
-          <div className="filter-field">
+          <div className="field">
             <label htmlFor="project-search">{text.searchLabel}</label>
             <input
               id="project-search"
@@ -158,7 +158,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
               onChange={(event) => setFilters({ ...filters, q: event.target.value })}
             />
           </div>
-          <div className="filter-field">
+          <div className="field">
             <label htmlFor="project-topic">{text.topicFilter}</label>
             <select
               id="project-topic"
@@ -173,7 +173,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
               ))}
             </select>
           </div>
-          <div className="filter-field">
+          <div className="field">
             <label htmlFor="project-language">{text.languageFilter}</label>
             <select
               id="project-language"
@@ -185,7 +185,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
               <option value="en">{text.languages.en}</option>
             </select>
           </div>
-          <div className="filter-field">
+          <div className="field">
             <label htmlFor="project-from">{text.fromLabel}</label>
             <input
               id="project-from"
@@ -195,7 +195,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
               onChange={(event) => setFilters({ ...filters, from: event.target.value })}
             />
           </div>
-          <div className="filter-field">
+          <div className="field">
             <label htmlFor="project-to">{text.toLabel}</label>
             <input
               id="project-to"
@@ -205,7 +205,8 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
               onChange={(event) => setFilters({ ...filters, to: event.target.value })}
             />
           </div>
-          <label className="checkbox filter-check" htmlFor="project-waiting">
+          <span />
+          <label className="checkbox" htmlFor="project-waiting">
             <input
               id="project-waiting"
               type="checkbox"
@@ -216,9 +217,10 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
           </label>
           {filtered && (
             <>
+              <span />
               <button
                 type="button"
-                className="secondary-button filter-clear"
+                className="secondary-button"
                 onClick={() => {
                   setFilters(noFilters);
                   setApplied(noFilters);

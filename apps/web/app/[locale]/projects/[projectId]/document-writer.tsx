@@ -7,6 +7,7 @@ import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { explainError, Notice, useAction } from '../../use-action';
 import { editorMessages, fill } from './editor-messages';
 import { TermIssues, type TermIssueView } from './term-issues';
+import { FieldLabel, SectionTitle } from '../../../info-tip';
 
 interface WritingSummary {
   id: string;
@@ -188,8 +189,9 @@ export function DocumentWriter({
 
   return (
     <section className="card" aria-labelledby="writer-title">
-      <h2 id="writer-title">{text.writerTitle}</h2>
-      <p className="muted">{text.writerHelp}</p>
+      <SectionTitle id="writer-title" help={text.writerHelp}>
+        {text.writerTitle}
+      </SectionTitle>
       <Notice notice={notice} />
       {loadFailed && (
         <p className="notice error" role="alert">
@@ -226,7 +228,13 @@ export function DocumentWriter({
                 </option>
               ))}
             </select>
-            <label htmlFor="writer-notes">{text.writerNotes}</label>
+            <FieldLabel
+              htmlFor="writer-notes"
+              help={text.writerNotesHelp}
+              helpId="writer-notes-help"
+            >
+              {text.writerNotes}
+            </FieldLabel>
             <textarea
               id="writer-notes"
               rows={3}
@@ -238,9 +246,6 @@ export function DocumentWriter({
               onChange={(event) => setNotes(event.target.value)}
             />
           </div>
-          <p id="writer-notes-help" className="muted">
-            {text.writerNotesHelp}
-          </p>
           {selected && (
             <p className="muted" dir="auto">
               {selected.sections.map((section) => section.label[locale]).join(' · ')}

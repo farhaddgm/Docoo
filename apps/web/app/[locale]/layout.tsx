@@ -6,7 +6,9 @@ import type { ReactNode } from 'react';
 import '@fontsource-variable/vazirmatn/wght.css';
 
 import '../globals.css';
+import { InfoTipHost } from '../info-tip';
 import { direction, isLocale } from '../i18n';
+import { LocaleProvider } from '../locale-context';
 import { themeInitScript } from '../theme';
 
 export const metadata: Metadata = {
@@ -16,8 +18,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f6f7f9' },
-    { media: '(prefers-color-scheme: dark)', color: '#0b0f14' },
+    { media: '(prefers-color-scheme: light)', color: '#f6f8fb' },
+    { media: '(prefers-color-scheme: dark)', color: '#0e1522' },
   ],
 };
 
@@ -39,7 +41,12 @@ export default async function RootLayout({
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <LocaleProvider locale={locale}>
+          {children}
+          <InfoTipHost />
+        </LocaleProvider>
+      </body>
     </html>
   );
 }

@@ -104,32 +104,38 @@ function Report({ locale, workspaceId }: { locale: Locale; workspaceId: string }
     <div className="stack">
       <form className="card filter-form" onSubmit={submit} aria-labelledby="period-title">
         <h2 id="period-title">{content.audit.filters}</h2>
-        <div className="filter-grid">
-          <label htmlFor="cost-group">{text.groupBy}</label>
-          <select
-            id="cost-group"
-            value={groupBy}
-            onChange={(event) => setGroupBy(event.target.value as GroupBy)}
-          >
-            <option value="stage">{text.byStage}</option>
-            <option value="project">{text.byProject}</option>
-            <option value="day">{text.byDay}</option>
-            <option value="model">{text.byModel}</option>
-          </select>
-          <label htmlFor="cost-from">{audit.from}</label>
-          <input
-            id="cost-from"
-            type="date"
-            value={from}
-            onChange={(event) => setFrom(event.target.value)}
-          />
-          <label htmlFor="cost-to">{audit.to}</label>
-          <input
-            id="cost-to"
-            type="date"
-            value={to}
-            onChange={(event) => setTo(event.target.value)}
-          />
+        <div className="filter-grid filters-row">
+          <div className="field">
+            <label htmlFor="cost-group">{text.groupBy}</label>
+            <select
+              id="cost-group"
+              value={groupBy}
+              onChange={(event) => setGroupBy(event.target.value as GroupBy)}
+            >
+              <option value="stage">{text.byStage}</option>
+              <option value="project">{text.byProject}</option>
+              <option value="day">{text.byDay}</option>
+              <option value="model">{text.byModel}</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="cost-from">{audit.from}</label>
+            <input
+              id="cost-from"
+              type="date"
+              value={from}
+              onChange={(event) => setFrom(event.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="cost-to">{audit.to}</label>
+            <input
+              id="cost-to"
+              type="date"
+              value={to}
+              onChange={(event) => setTo(event.target.value)}
+            />
+          </div>
         </div>
         <div className="toolbar">
           <button className="primary-button" type="submit">

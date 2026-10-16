@@ -7,6 +7,7 @@ import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { businessMessages, joinList, sectionTitle } from '../business-messages';
 import type { ContextPreview, HistoryItem, RolePreview } from '../business-types';
+import { SectionTitle } from '../../../info-tip';
 
 const failedText = (error: unknown, locale: Locale): string => {
   const text = businessMessages(locale);
@@ -82,8 +83,9 @@ export function AiView({
 
   return (
     <section className="card stack" aria-labelledby="biz-ai">
-      <h3 id="biz-ai">{ai.title}</h3>
-      <p className="muted">{ai.help}</p>
+      <SectionTitle as="h3" id="biz-ai" help={ai.help}>
+        {ai.title}
+      </SectionTitle>
       <p>{fill(ai.budget, { chars: formatNumber(locale, context.budgetChars) })}</p>
       <p className="notice" role="note">
         {ai.privacy}
@@ -295,8 +297,9 @@ export function VersionsView({
 
   return (
     <section className="card stack" aria-labelledby="biz-versions">
-      <h3 id="biz-versions">{v.title}</h3>
-      <p className="muted">{v.help}</p>
+      <SectionTitle as="h3" id="biz-versions" help={v.help}>
+        {v.title}
+      </SectionTitle>
       {items.length === 0 ? (
         <p className="muted">{v.none}</p>
       ) : (

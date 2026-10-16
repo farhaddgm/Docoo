@@ -97,7 +97,7 @@ export function AccountSecurity({
     }
   }
   return (
-    <section className="card security-card stack">
+    <section className="card security-card">
       <h2>{fa ? 'حساب و امنیت' : 'Account and security'}</h2>
       {emailConfigured === false && (
         <p role="status" className="notice">
@@ -108,9 +108,7 @@ export function AccountSecurity({
       )}
       <dl className="account-profile">
         <dt>{fa ? 'ایمیل' : 'Email'}</dt>
-        <dd>
-          <bdi dir="ltr">{user.email}</bdi>
-        </dd>
+        <dd dir="ltr">{user.email}</dd>
         <dt>{fa ? 'نقش' : 'Role'}</dt>
         <dd>{role}</dd>
         <dt>{fa ? 'روش ورود' : 'Sign-in method'}</dt>
@@ -127,47 +125,44 @@ export function AccountSecurity({
         </p>
       )}
       {user.hasPassword !== false && user.loginMethod !== 'GOOGLE' ? (
-        <details className="disclosure" open={Boolean(error || feedback)}>
-          <summary>{fa ? 'تغییر رمز عبور' : 'Change password'}</summary>
-          <form className="auth-form" onSubmit={(event) => void change(event)}>
-            <label htmlFor="current-password">{fa ? 'گذرواژهٔ فعلی' : 'Current password'}</label>
-            <input
-              id="current-password"
-              type="password"
-              autoComplete="current-password"
-              value={current}
-              onChange={(e) => setCurrent(e.target.value)}
-              required
-            />
-            <label htmlFor="new-password">{fa ? 'گذرواژهٔ جدید' : 'New password'}</label>
-            <input
-              id="new-password"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              maxLength={128}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <label htmlFor="confirm-new-password">
-              {fa ? 'تکرار گذرواژهٔ جدید' : 'Confirm new password'}
-            </label>
-            <input
-              id="confirm-new-password"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              maxLength={128}
-              value={confirmation}
-              onChange={(e) => setConfirmation(e.target.value)}
-              required
-            />
-            <button className="primary-button" type="submit" disabled={busy}>
-              {fa ? 'تغییر رمز عبور' : 'Change password'}
-            </button>
-          </form>
-        </details>
+        <form className="auth-form" onSubmit={(event) => void change(event)}>
+          <label htmlFor="current-password">{fa ? 'گذرواژهٔ فعلی' : 'Current password'}</label>
+          <input
+            id="current-password"
+            type="password"
+            autoComplete="current-password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            required
+          />
+          <label htmlFor="new-password">{fa ? 'گذرواژهٔ جدید' : 'New password'}</label>
+          <input
+            id="new-password"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            maxLength={128}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <label htmlFor="confirm-new-password">
+            {fa ? 'تکرار گذرواژهٔ جدید' : 'Confirm new password'}
+          </label>
+          <input
+            id="confirm-new-password"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            maxLength={128}
+            value={confirmation}
+            onChange={(e) => setConfirmation(e.target.value)}
+            required
+          />
+          <button className="primary-button" type="submit" disabled={busy}>
+            {fa ? 'تغییر رمز عبور' : 'Change password'}
+          </button>
+        </form>
       ) : (
         <p>
           {fa
@@ -175,16 +170,14 @@ export function AccountSecurity({
             : 'This account uses Gmail only and has no password.'}
         </p>
       )}
-      <div className="toolbar">
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={busy}
-          onClick={() => void revoke()}
-        >
-          {fa ? 'خروج از همهٔ دستگاه‌ها' : 'Sign out all devices'}
-        </button>
-      </div>
+      <button
+        className="secondary-button"
+        type="button"
+        disabled={busy}
+        onClick={() => void revoke()}
+      >
+        {fa ? 'خروج از همهٔ دستگاه‌ها' : 'Sign out all devices'}
+      </button>
     </section>
   );
 }

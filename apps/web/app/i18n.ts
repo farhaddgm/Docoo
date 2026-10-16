@@ -59,6 +59,17 @@ export const navigation = [
 
 export type NavigationKey = (typeof navigation)[number];
 
+/** The sidebar sections, in the order they appear; every navigation key belongs to exactly one. */
+export const navigationGroups = [
+  { key: 'work', items: ['dashboard', 'projects', 'topics', 'knowledge', 'templates'] },
+  { key: 'intelligence', items: ['agents', 'brain', 'smart'] },
+  { key: 'setup', items: ['providers', 'integrations', 'settings'] },
+  { key: 'monitor', items: ['costs', 'audit'] },
+] as const satisfies readonly {
+  key: 'work' | 'intelligence' | 'setup' | 'monitor';
+  items: readonly NavigationKey[];
+}[];
+
 const messages = {
   fa: {
     skipToContent: 'رفتن به محتوای اصلی',
@@ -67,6 +78,17 @@ const messages = {
     switchLanguage: 'English',
     switchLanguageLabel: 'Switch to English',
     menu: 'منو',
+    closeMenu: 'بستن منو',
+    navGroups: {
+      work: 'فضای کار',
+      intelligence: 'هوش مصنوعی',
+      setup: 'پیکربندی',
+      monitor: 'پایش',
+      admin: 'مدیریت',
+    },
+    adminNav: { users: 'کاربران', googleAccess: 'ورود با جیمیل' },
+    roles: { owner: 'مالک', super_admin: 'مدیر', editor: 'ویرایشگر', viewer: 'مشاهده‌گر' },
+    workspaceLabel: 'فضای کار',
     theme: {
       label: 'پوسته',
       system: 'هماهنگ با سیستم',
@@ -142,6 +164,17 @@ const messages = {
     switchLanguage: 'فارسی',
     switchLanguageLabel: 'تغییر زبان به فارسی',
     menu: 'Menu',
+    closeMenu: 'Close menu',
+    navGroups: {
+      work: 'Workspace',
+      intelligence: 'Intelligence',
+      setup: 'Configuration',
+      monitor: 'Monitoring',
+      admin: 'Administration',
+    },
+    adminNav: { users: 'Users', googleAccess: 'Gmail sign-in' },
+    roles: { owner: 'Owner', super_admin: 'Administrator', editor: 'Editor', viewer: 'Viewer' },
+    workspaceLabel: 'Workspace',
     theme: {
       label: 'Theme',
       system: 'Match system',

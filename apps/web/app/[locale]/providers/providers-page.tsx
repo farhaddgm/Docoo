@@ -9,6 +9,7 @@ import { SignedIn } from '../signed-in';
 import { providerMessages } from './messages';
 import { ModelPrices } from './model-prices';
 import { ModelSelfCheck } from './model-self-check';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
 
@@ -299,7 +300,9 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
             onChange={(event) => setName(event.target.value)}
             autoComplete="off"
           />
-          <label htmlFor="provider-key">{text.apiKey}</label>
+          <FieldLabel htmlFor="provider-key" help={text.keyHelp[kind]} helpId="provider-key-help">
+            {text.apiKey}
+          </FieldLabel>
           <input
             id="provider-key"
             type="password"
@@ -311,10 +314,6 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
             required
             minLength={8}
           />
-          <span />
-          <p id="provider-key-help" className="muted" dir="auto">
-            {text.keyHelp[kind]}
-          </p>
         </div>
         <div className="toolbar">
           <button className="primary-button" type="submit" disabled={busy}>
@@ -329,8 +328,9 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
         aria-labelledby="defaults-title"
         aria-busy={busy}
       >
-        <h2 id="defaults-title">{text.defaults}</h2>
-        <p className="muted">{text.defaultsHelp}</p>
+        <SectionTitle id="defaults-title" help={text.defaultsHelp}>
+          {text.defaults}
+        </SectionTitle>
         <p>
           {text.current}:{' '}
           <strong dir="ltr">

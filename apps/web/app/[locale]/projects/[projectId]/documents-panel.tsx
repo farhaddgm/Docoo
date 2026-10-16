@@ -12,6 +12,7 @@ import { quickDraftMessages } from '../quick-draft-messages';
 import { documentMessages } from './document-messages';
 import { DocumentWriter } from './document-writer';
 import { editorMessages } from './editor-messages';
+import { SectionTitle } from '../../../info-tip';
 
 interface DocumentSummary {
   id: string;
@@ -652,8 +653,9 @@ function DocumentView({
       </section>
 
       <section className="card" aria-labelledby="exports-title">
-        <h2 id="exports-title">{text.exports}</h2>
-        <p className="muted">{text.exportHelp}</p>
+        <SectionTitle id="exports-title" help={text.exportHelp}>
+          {text.exports}
+        </SectionTitle>
         <div className="toolbar">
           {[
             doc.defaultExportFormat,

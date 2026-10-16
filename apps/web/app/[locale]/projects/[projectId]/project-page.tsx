@@ -141,17 +141,16 @@ function ProjectView({
           {text.notFound}
         </p>
         <p>
-          <Link href={`/${locale}/projects` as Route}>{text.backToList}</Link>
+          <Link className="back-link" href={`/${locale}/projects` as Route}>
+            {text.backToList}
+          </Link>
         </p>
       </div>
     );
   }
 
   const intelligenceLink = (
-    <Link
-      className="secondary-button link-button"
-      href={`/${locale}/projects/${projectId}/intelligence` as Route}
-    >
+    <Link href={`/${locale}/projects/${projectId}/intelligence` as Route}>
       {locale === 'fa' ? 'شواهد و تصمیم' : 'Evidence and decisions'}
     </Link>
   );
@@ -160,13 +159,14 @@ function ProjectView({
 
   return (
     <div className={accessReadOnly ? 'stack resource-view-only' : 'stack'}>
-      <div className="breadcrumb">
-        <Link href={`/${locale}/projects` as Route}>
-          <span aria-hidden="true">{locale === 'fa' ? '→' : '←'}</span> {text.backToList}
+      <p>
+        <Link className="back-link" href={`/${locale}/projects` as Route}>
+          {text.backToList}
         </Link>
-        {intelligenceLink}
-      </div>
-      <section className="card project-head" aria-labelledby="project-heading">
+      </p>
+
+      {intelligenceLink}
+      <section className="card" aria-labelledby="project-heading">
         <h2 id="project-heading" dir="auto">
           <span dir="ltr">{project.code}</span> — {project.title}
         </h2>
@@ -225,11 +225,9 @@ function ProjectView({
             </div>
           )}
         </dl>
-        {(text.nextActions[project.nextAction] ?? '') !== '' && (
-          <p className="next-action">
-            <strong>{text.nextAction}:</strong> {text.nextActions[project.nextAction]}
-          </p>
-        )}
+        <p>
+          <strong>{text.nextAction}:</strong> {text.nextActions[project.nextAction] ?? ''}
+        </p>
         {project.pauseReason && (
           <p className="notice error" role="status">
             <strong>{text.pauseReason}:</strong> <span dir="auto">{project.pauseReason}</span>
@@ -266,10 +264,7 @@ function ProjectView({
               <button
                 type="button"
                 aria-current={tab === item ? 'page' : undefined}
-                onClick={(event) => {
-                  choose(item);
-                  event.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest' });
-                }}
+                onClick={() => choose(item)}
               >
                 {text.tabs[item]}
               </button>

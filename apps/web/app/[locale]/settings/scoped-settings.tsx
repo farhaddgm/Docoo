@@ -27,6 +27,7 @@ import {
   type Scope,
 } from './settings-model';
 import { explainSettingError } from './settings-errors';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 export function displayValue(
   locale: Locale,
@@ -116,7 +117,7 @@ export function ScopedSettings({
 
   return (
     <div className="stack">
-      <p className="muted">{text.scopeHelp[scopeType]}</p>
+      <p className="notice info">{text.scopeHelp[scopeType]}</p>
       <Notice notice={action.notice} />
       {SETTING_GROUPS.map((group) => {
         const rows = group.keys
@@ -166,8 +167,9 @@ function GroupSection({
   const id = useId();
   return (
     <section className="card stack" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`}>{title}</h2>
-      <p className="muted">{help}</p>
+      <SectionTitle id={`${id}-title`} help={help}>
+        {title}
+      </SectionTitle>
       <ul className="plain-list stack">{children}</ul>
     </section>
   );
@@ -237,7 +239,7 @@ function SettingRow({
     }, okText);
 
   return (
-    <li className="stack" aria-labelledby={`${id}-name`}>
+    <li className="stack setting-row" aria-labelledby={`${id}-name`}>
       <div>
         <strong id={`${id}-name`} dir="auto">
           {description}
@@ -287,7 +289,13 @@ function SettingRow({
             </p>
           )}
           <div className="filter-grid">
-            <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
+            <FieldLabel
+              htmlFor={`${id}-reason`}
+              help={text.reasonHelp}
+              helpId={`${id}-reason-help`}
+            >
+              {text.reasonLabel}
+            </FieldLabel>
             <input
               id={`${id}-reason`}
               dir="auto"
@@ -297,9 +305,6 @@ function SettingRow({
               aria-describedby={`${id}-reason-help`}
               autoComplete="off"
             />
-            <p id={`${id}-reason-help`} className="muted">
-              {text.reasonHelp}
-            </p>
           </div>
           <div className="toolbar">
             <button
@@ -615,8 +620,9 @@ export function EditableProjectModelSection({
   const ready = inherited ? assignments.size > 0 : model !== '';
   return (
     <section className="card stack" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`}>{text.groups.ai.title}</h2>
-      <p className="muted">{text.groups.ai.help}</p>
+      <SectionTitle id={`${id}-title`} help={text.groups.ai.help}>
+        {text.groups.ai.title}
+      </SectionTitle>
       <Notice notice={action.notice} />
       {loaded && (
         <ModelPicker
