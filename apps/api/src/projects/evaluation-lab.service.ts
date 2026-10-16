@@ -16,14 +16,27 @@ import {
 import {
   createEvaluationBlindReviewPack,
   prepareEvaluationBlindReview,
+  prepareEvaluationExperiment,
   EvaluationExecutionError,
 } from '@docoo/application';
-import { PairedEvaluationError } from '@docoo/domain/evaluation';
-import { EvaluationStoreError, PostgresEvaluationExecutionStore } from '@docoo/database';
-import type { Pool } from 'pg';
+import { PairedEvaluationError, evaluationCorpusV1 } from '@docoo/domain/evaluation';
+import {
+  EvaluationStoreError,
+  PostgresEvaluationExecutionStore,
+  setDatabaseRequestContext,
+} from '@docoo/database';
+import { captureStageEvaluationArm, pairedEvaluationWorkflowId } from '@docoo/orchestration';
+import type { Environment } from '@docoo/config';
+import { createHash, randomUUID } from 'node:crypto';
+import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
-import { DATABASE_POOL } from '../tokens.js';
+import { API_CONFIG, DATABASE_POOL } from '../tokens.js';
 import type { WorkspaceRequestContext as ProjectRequestContext } from '../common/request-context.js';
+import {
+  WORKFLOW_ENGINE,
+  WorkflowEngineUnavailableError,
+  type WorkflowEngine,
+} from '../workflow/workflow.engine.js';
 
 const cursorSchema = z
   .object({
@@ -35,9 +48,143 @@ const cursorSchema = z
   })
   .strict();
 
+export const evaluationStartInputSchema = z
+  .object({
+    role: z.enum(['analyst', 'researcher', 'ideator', 'documenter', 'evaluator']),
+    repetition: z.number().int().min(1).max(1000).default(1),
+    timeoutMs: z.number().int().min(1000).max(300_000).default(90_000),
+    baseline: z
+      .object({
+        definitionVersionId: z.uuid(),
+        connectionId: z.uuid(),
+        modelId: z.string().min(1).max(200),
+      })
+      .strict(),
+    candidate: z
+      .object({
+        definitionVersionId: z.uuid(),
+        connectionId: z.uuid(),
+        modelId: z.string().min(1).max(200),
+      })
+      .strict(),
+  })
+  .strict();
+type EvaluationStartInput = z.infer<typeof evaluationStartInputSchema>;
+
 @Injectable()
 export class EvaluationLabService {
-  constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(DATABASE_POOL) private readonly pool: Pool,
+    @Inject(WORKFLOW_ENGINE) private readonly engine: WorkflowEngine,
+    @Inject(API_CONFIG) private readonly config: Environment,
+  ) {}
+
+  async start(
+    context: ProjectRequestContext,
+    projectId: string,
+    input: EvaluationStartInput,
+    commandKey: string,
+  ) {
+    if (!this.config.EVALUATION_LAB_ENABLED || !this.config.EVALUATION_LAB_LIVE_ENABLED)
+      throw new ForbiddenException({
+        status: 403,
+        code: 'EVALUATION_LAB_DISABLED',
+        detail: 'Evaluation runs are disabled by the server operator.',
+      });
+    return this.safe(async () => {
+      projectId = projectId.toLowerCase();
+      const requestHash = createHash('sha256').update(JSON.stringify(input)).digest('hex');
+      const store = this.store(context, projectId);
+      let queued: {
+        experimentId: string;
+        state: 'pending' | 'started';
+        replayed: boolean;
+      } | null = await store.findStartCommand(commandKey, requestHash);
+      if (!queued) {
+        const client = await this.pool.connect();
+        let manifest: ReturnType<typeof prepareEvaluationExperiment>;
+        try {
+          await client.query('begin');
+          await setDatabaseRequestContext(client, context);
+          const baseline = await this.capture(
+            client,
+            context,
+            projectId,
+            input,
+            input.baseline,
+            'baseline',
+          );
+          const candidate = await this.capture(
+            client,
+            context,
+            projectId,
+            input,
+            input.candidate,
+            'candidate',
+          );
+          manifest = prepareEvaluationExperiment({
+            experimentId: randomUUID(),
+            repetition: input.repetition,
+            timeoutMs: input.timeoutMs,
+            dataset: evaluationCorpusV1,
+            baseline,
+            candidate,
+          });
+          await client.query('commit');
+        } catch (error) {
+          await client.query('rollback').catch(() => undefined);
+          throw error;
+        } finally {
+          client.release();
+        }
+        queued = await store.enqueue(manifest, commandKey, requestHash);
+      }
+      let state = queued.state;
+      if (state === 'pending') {
+        try {
+          if (!this.engine.startPairedEvaluation) throw new WorkflowEngineUnavailableError();
+          await this.engine.startPairedEvaluation(
+            pairedEvaluationWorkflowId(context.workspaceId, projectId, queued.experimentId),
+            {
+              workspaceId: context.workspaceId.toLowerCase(),
+              projectId: projectId.toLowerCase(),
+              actorId: context.actorId.toLowerCase(),
+              experimentId: queued.experimentId.toLowerCase(),
+              correlationId: context.correlationId.toLowerCase(),
+            },
+          );
+          state = await store.recordStartAttempt(queued.experimentId, true);
+        } catch (error) {
+          if (!(error instanceof WorkflowEngineUnavailableError)) throw error;
+          state = await store.recordStartAttempt(queued.experimentId, false);
+        }
+      }
+      return {
+        experimentId: queued.experimentId,
+        status: state === 'started' ? 'running' : 'queued',
+        delivery: state,
+        replayed: queued.replayed,
+      } as const;
+    });
+  }
+
+  private async capture(
+    client: PoolClient,
+    context: ProjectRequestContext,
+    projectId: string,
+    input: EvaluationStartInput,
+    selection: EvaluationStartInput['baseline'],
+    runId: string,
+  ) {
+    return captureStageEvaluationArm(client, {
+      workspaceId: context.workspaceId,
+      projectId,
+      runId,
+      role: input.role,
+      timeoutMs: input.timeoutMs,
+      selection,
+    });
+  }
 
   async list(context: ProjectRequestContext, projectId: string, limit: number, rawCursor?: string) {
     let cursor: z.infer<typeof cursorSchema> | undefined;
@@ -165,6 +312,12 @@ export class EvaluationLabService {
           detail: 'This project action is not permitted.',
         });
       }
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === '23505')
+        throw new ConflictException({
+          status: 409,
+          code: 'EVALUATION_LAB_IDEMPOTENCY_CONFLICT',
+          detail: 'This command key was already used for a different request.',
+        });
       throw error;
     }
   }

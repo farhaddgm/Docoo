@@ -9,10 +9,16 @@ import { ProjectsController } from './projects.controller.js';
 import { ProjectsService } from './projects.service.js';
 import { EvaluationLabController } from './evaluation-lab.controller.js';
 import { EvaluationLabService } from './evaluation-lab.service.js';
+import { EvaluationStartDispatcher } from './evaluation-start-dispatcher.js';
 
 @Module({
   imports: [ConfigModule, BusinessModule, WorkflowModule],
   controllers: [ProjectsController, DecisionIntelligenceController, EvaluationLabController],
-  providers: [ProjectsService, DecisionIntelligenceService, EvaluationLabService],
+  providers: [
+    ProjectsService,
+    DecisionIntelligenceService,
+    EvaluationLabService,
+    EvaluationStartDispatcher,
+  ],
 })
 export class ProjectsModule {}

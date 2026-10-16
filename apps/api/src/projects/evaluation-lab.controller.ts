@@ -21,7 +21,7 @@ import {
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
-import { EvaluationLabService } from './evaluation-lab.service.js';
+import { EvaluationLabService, evaluationStartInputSchema } from './evaluation-lab.service.js';
 import { workspaceContext, type WorkspaceRequestContext } from '../common/request-context.js';
 
 const listQuery = z
@@ -102,6 +102,22 @@ export class EvaluationLabController {
       input.data,
       key.data,
     );
+  }
+
+  @Post()
+  @HttpCode(202)
+  @RequireWorkspacePermission('project.update')
+  start(
+    @Req() request: FastifyRequest,
+    @Param('projectId') projectId: string,
+    @Body() body: unknown,
+    @Headers('idempotency-key') rawKey: unknown,
+  ) {
+    const key = evaluationReviewCommandKeySchema.safeParse(rawKey);
+    if (!key.success) throw this.invalid();
+    const input = evaluationStartInputSchema.safeParse(body);
+    if (!input.success) throw this.invalid();
+    return this.service.start(this.context(request), this.project(projectId), input.data, key.data);
   }
 
   private context(request: FastifyRequest): WorkspaceRequestContext {

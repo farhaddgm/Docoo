@@ -5,6 +5,14 @@
 .evaluation-lab > .card {
   min-width: 0;
 }
+.evaluation-lab-start {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 44rem;
+}
+.evaluation-lab-start fieldset {
+  margin-block: var(--space-2);
+}
 .evaluation-lab .form-actions {
   display: flex;
   flex-wrap: wrap;

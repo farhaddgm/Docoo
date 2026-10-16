@@ -91,6 +91,137 @@ export class PostgresEvaluationExecutionStore implements EvaluationExecutionStor
     });
   }
 
+  /** Atomically records the immutable run, command key and durable Temporal start intent. */
+  async enqueue(
+    value: EvaluationExperimentManifest,
+    commandKey: string,
+    requestHash: string,
+  ): Promise<{ experimentId: string; state: 'pending' | 'started'; replayed: boolean }> {
+    const manifest = readEvaluationExperimentManifest(value);
+    if (!/^[A-Za-z0-9._:-]{8,200}$/.test(commandKey) || !/^[a-f0-9]{64}$/.test(requestHash))
+      throw new EvaluationStoreError('INVALID_TRANSITION');
+    return this.transaction(async (client) => {
+      await client.query('select pg_advisory_xact_lock(hashtextextended($1,0))', [
+        `evaluation-start:${this.context.workspaceId}:${this.projectId}:${commandKey}`,
+      ]);
+      const prior = (
+        await client.query<{ request_hash: string; experiment_id: string; created_by: string }>(
+          `select request_hash,experiment_id,created_by from project_evaluation_start_commands
+            where workspace_id=$1 and project_id=$2 and command_key=$3`,
+          [this.context.workspaceId, this.projectId, commandKey],
+        )
+      ).rows[0];
+      if (prior) {
+        if (prior.request_hash !== requestHash || prior.created_by !== this.context.actorId)
+          throw new EvaluationStoreError('IDEMPOTENCY_CONFLICT');
+        const state = (
+          await client.query<{ state: 'pending' | 'started' }>(
+            `select state from project_evaluation_start_outbox
+              where workspace_id=$1 and project_id=$2 and experiment_id=$3`,
+            [this.context.workspaceId, this.projectId, prior.experiment_id],
+          )
+        ).rows[0]?.state;
+        if (!state) throw new EvaluationStoreError('NOT_FOUND');
+        return { experimentId: prior.experiment_id, state, replayed: true };
+      }
+      await client.query(
+        `insert into project_evaluation_experiments
+          (workspace_id, project_id, experiment_id, manifest_json, manifest_hash, created_by)
+         values ($1,$2,$3,$4::jsonb,$5,$6)`,
+        [
+          ...this.scope(manifest.experimentId),
+          JSON.stringify(manifest),
+          manifest.contentHash,
+          this.context.actorId,
+        ],
+      );
+      await client.query(
+        `insert into project_evaluation_start_commands
+          (workspace_id,project_id,command_key,request_hash,experiment_id,created_by)
+         values ($1,$2,$3,$4,$5,$6)`,
+        [
+          this.context.workspaceId,
+          this.projectId,
+          commandKey,
+          requestHash,
+          manifest.experimentId,
+          this.context.actorId,
+        ],
+      );
+      await client.query(
+        `insert into project_evaluation_start_outbox (workspace_id,project_id,experiment_id,created_by)
+         values ($1,$2,$3,$4)`,
+        [...this.scope(manifest.experimentId), this.context.actorId],
+      );
+      await this.audit(client, 'project.evaluation_experiment.created', {
+        experimentId: manifest.experimentId,
+        manifestHash: manifest.contentHash,
+        caseCount: manifest.dataset.cases.length,
+        redacted: true,
+      });
+      return { experimentId: manifest.experimentId, state: 'pending', replayed: false };
+    });
+  }
+
+  async findStartCommand(
+    commandKey: string,
+    requestHash: string,
+  ): Promise<{ experimentId: string; state: 'pending' | 'started'; replayed: true } | null> {
+    if (!/^[A-Za-z0-9._:-]{8,200}$/.test(commandKey) || !/^[a-f0-9]{64}$/.test(requestHash))
+      throw new EvaluationStoreError('INVALID_TRANSITION');
+    return this.transaction(async (client) => {
+      const prior = (
+        await client.query<{ request_hash: string; experiment_id: string; created_by: string }>(
+          `select request_hash,experiment_id,created_by from project_evaluation_start_commands
+            where workspace_id=$1 and project_id=$2 and command_key=$3`,
+          [this.context.workspaceId, this.projectId, commandKey],
+        )
+      ).rows[0];
+      if (!prior) return null;
+      if (prior.request_hash !== requestHash || prior.created_by !== this.context.actorId)
+        throw new EvaluationStoreError('IDEMPOTENCY_CONFLICT');
+      const state = (
+        await client.query<{ state: 'pending' | 'started' }>(
+          `select state from project_evaluation_start_outbox
+            where workspace_id=$1 and project_id=$2 and experiment_id=$3`,
+          [this.context.workspaceId, this.projectId, prior.experiment_id],
+        )
+      ).rows[0]?.state;
+      if (!state) throw new EvaluationStoreError('NOT_FOUND');
+      return { experimentId: prior.experiment_id, state, replayed: true };
+    });
+  }
+
+  async recordStartAttempt(experimentId: string, started: boolean): Promise<'pending' | 'started'> {
+    return this.transaction(async (client) => {
+      const row = (
+        await client.query<{ state: 'pending' | 'started' }>(
+          `select state from project_evaluation_start_outbox
+            where workspace_id=$1 and project_id=$2 and experiment_id=$3 for update`,
+          this.scope(experimentId),
+        )
+      ).rows[0];
+      if (!row) throw new EvaluationStoreError('NOT_FOUND');
+      if (row.state === 'started') return row.state;
+      const updated = await client.query<{ state: 'pending' | 'started' }>(
+        `update project_evaluation_start_outbox set state=$4,attempts=attempts+1,lease_until=null,updated_at=clock_timestamp()
+          where workspace_id=$1 and project_id=$2 and experiment_id=$3 and state='pending' returning state`,
+        [...this.scope(experimentId), started ? 'started' : 'pending'],
+      );
+      return updated.rows[0]?.state ?? row.state;
+    });
+  }
+
+  async completeStartDelivery(experimentId: string): Promise<void> {
+    await this.transaction(async (client) => {
+      const result = await client.query<{ completed: boolean }>(
+        'select app.complete_evaluation_start($1,$2,$3) as completed',
+        this.scope(experimentId),
+      );
+      if (result.rows[0]?.completed !== true) throw new EvaluationStoreError('NOT_FOUND');
+    });
+  }
+
   async append(value: EvaluationExecutionCaseResult): Promise<void> {
     await this.transaction(async (client) => {
       const experiment = await this.header(client, value.experimentId, true);

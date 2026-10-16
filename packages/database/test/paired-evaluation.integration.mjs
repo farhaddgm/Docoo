@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { Pool } from 'pg';
 import {
@@ -270,6 +270,42 @@ try {
   const unfinished = prepareEvaluationExperiment(request('unfinished-01'));
   await store.create(unfinished);
   await assert.rejects(store.finish('unfinished-01', 'completed'), /INVALID_TRANSITION/);
+  const startRequestHash = createHash('sha256').update('fixed-start-body').digest('hex');
+  const startStore = new PostgresEvaluationExecutionStore(runtime, context(wid, actor), pid);
+  const enqueued = await startStore.enqueue(
+    prepareEvaluationExperiment(request('outbox-01')),
+    'start-command-0001',
+    startRequestHash,
+  );
+  assert.deepEqual(enqueued, {
+    experimentId: 'outbox-01',
+    state: 'pending',
+    replayed: false,
+  });
+  assert.deepEqual(await startStore.findStartCommand('start-command-0001', startRequestHash), {
+    experimentId: 'outbox-01',
+    state: 'pending',
+    replayed: true,
+  });
+  await assert.rejects(
+    startStore.findStartCommand('start-command-0001', 'f'.repeat(64)),
+    /IDEMPOTENCY_CONFLICT/,
+  );
+  const claim = await runtime.query('select * from app.claim_evaluation_start()');
+  assert.deepEqual(claim.rows[0], {
+    workspace_id: wid,
+    project_id: pid,
+    experiment_id: 'outbox-01',
+    actor_id: actor,
+  });
+  assert.equal((await runtime.query('select * from app.claim_evaluation_start()')).rowCount, 0);
+  await startStore.completeStartDelivery('outbox-01');
+  assert.deepEqual(await startStore.findStartCommand('start-command-0001', startRequestHash), {
+    experimentId: 'outbox-01',
+    state: 'started',
+    replayed: true,
+  });
+  assert.equal((await runtime.query('select * from app.claim_evaluation_start()')).rowCount, 0);
   // A provider failure is durable and cannot become a successful quality report.
   const failed = await executePairedEvaluation(request('failed-01'), {
     store,

@@ -16,7 +16,8 @@ import { AuthService } from '../dist/auth/auth.service.js';
 import { WorkspacePermissionGuard } from '../dist/auth/auth.authorization.js';
 import { EvaluationLabController } from '../dist/projects/evaluation-lab.controller.js';
 import { EvaluationLabService } from '../dist/projects/evaluation-lab.service.js';
-import { DATABASE_POOL } from '../dist/tokens.js';
+import { TemporalWorkflowEngine, WORKFLOW_ENGINE } from '../dist/workflow/workflow.engine.js';
+import { API_CONFIG, DATABASE_POOL } from '../dist/tokens.js';
 
 /** Called only by the isolated PostgreSQL gate, using its real sessions, guard and RLS role. */
 export async function verifyEvaluationLabHttp({
@@ -41,18 +42,18 @@ export async function verifyEvaluationLabHttp({
       [actor, createHmac('sha256', pepper).update(token).digest('hex')],
     );
   }
+  const config = parseEnvironment({ SESSION_PEPPER: pepper, NODE_ENV: 'test' });
   const module = await Test.createTestingModule({
     controllers: [EvaluationLabController],
     providers: [
       EvaluationLabService,
       WorkspacePermissionGuard,
       { provide: DATABASE_POOL, useValue: pool },
+      { provide: API_CONFIG, useValue: config },
+      { provide: WORKFLOW_ENGINE, useValue: new TemporalWorkflowEngine(config) },
       {
         provide: AuthService,
-        useValue: new AuthService(
-          pool,
-          parseEnvironment({ SESSION_PEPPER: pepper, NODE_ENV: 'test' }),
-        ),
+        useValue: new AuthService(pool, config),
       },
     ],
   }).compile();
@@ -82,6 +83,39 @@ export async function verifyEvaluationLabHttp({
   try {
     assert.equal((await inject(base, null)).statusCode, 401);
     assert.equal((await inject(base, foreignActorId)).statusCode, 404);
+    const beforeDisabledStart = await admin.query(
+      'select count(*)::int as count from project_evaluation_experiments where workspace_id=$1 and project_id=$2',
+      [workspaceId, projectId],
+    );
+    const disabledStart = await inject(
+      base,
+      actorId,
+      'POST',
+      {
+        role: 'analyst',
+        repetition: 1,
+        timeoutMs: 90_000,
+        baseline: {
+          definitionVersionId: actorId,
+          connectionId: actorId,
+          modelId: 'fixture-model-a',
+        },
+        candidate: {
+          definitionVersionId: actorId,
+          connectionId: actorId,
+          modelId: 'fixture-model-b',
+        },
+      },
+      'http://localhost:3000',
+      'http-start-disabled-01',
+    );
+    assert.equal(disabledStart.statusCode, 403);
+    assert.equal(disabledStart.json().code, 'EVALUATION_LAB_DISABLED');
+    const afterDisabledStart = await admin.query(
+      'select count(*)::int as count from project_evaluation_experiments where workspace_id=$1 and project_id=$2',
+      [workspaceId, projectId],
+    );
+    assert.equal(afterDisabledStart.rows[0].count, beforeDisabledStart.rows[0].count);
     const first = await inject(`${base}?limit=1`);
     assert.equal(first.statusCode, 200);
     assert.equal(first.headers['cache-control'], 'no-store');

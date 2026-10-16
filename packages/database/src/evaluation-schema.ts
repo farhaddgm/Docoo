@@ -203,3 +203,75 @@ export const projectEvaluationInvocationJournal = pgTable(
     ),
   ],
 );
+
+export const projectEvaluationStartCommands = pgTable(
+  'project_evaluation_start_commands',
+  {
+    workspaceId: uuid('workspace_id').notNull(),
+    projectId: uuid('project_id').notNull(),
+    commandKey: text('command_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    experimentId: text('experiment_id').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.projectId, table.commandKey] }),
+    unique('project_evaluation_start_command_experiment_uq').on(
+      table.workspaceId,
+      table.projectId,
+      table.experimentId,
+    ),
+    foreignKey({
+      columns: [table.workspaceId, table.projectId, table.experimentId],
+      foreignColumns: [
+        projectEvaluationExperiments.workspaceId,
+        projectEvaluationExperiments.projectId,
+        projectEvaluationExperiments.experimentId,
+      ],
+    }),
+    check(
+      'evaluation_start_command_key_check',
+      sql`${table.commandKey} ~ '^[A-Za-z0-9._:-]{8,200}$'`,
+    ),
+    check('evaluation_start_command_hash_check', sql`${table.requestHash} ~ '^[a-f0-9]{64}$'`),
+  ],
+);
+
+export const projectEvaluationStartOutbox = pgTable(
+  'project_evaluation_start_outbox',
+  {
+    workspaceId: uuid('workspace_id').notNull(),
+    projectId: uuid('project_id').notNull(),
+    experimentId: text('experiment_id').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    state: text('state').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    leaseUntil: timestamp('lease_until', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.projectId, table.experimentId] }),
+    foreignKey({
+      columns: [table.workspaceId, table.projectId, table.experimentId],
+      foreignColumns: [
+        projectEvaluationExperiments.workspaceId,
+        projectEvaluationExperiments.projectId,
+        projectEvaluationExperiments.experimentId,
+      ],
+    }),
+    check('evaluation_start_outbox_state_check', sql`${table.state} IN ('pending','started')`),
+    check('evaluation_start_outbox_attempt_check', sql`${table.attempts} BETWEEN 0 AND 1000000`),
+  ],
+);

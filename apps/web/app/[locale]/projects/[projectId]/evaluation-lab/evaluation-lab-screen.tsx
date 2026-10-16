@@ -10,6 +10,8 @@ import {
   type EvaluationExperimentSummary,
   type EvaluationSavedComparison,
 } from '@docoo/contracts';
+import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../../api-client';
+import type { AgentRole, Definition } from '../../../agents/agent-types';
 import { ProjectAccessBoundary, useReadOnlyAccess } from '../../../resource-access';
 import { SignedIn } from '../../../signed-in';
 import { buildEvaluationReview, type EvaluationRatingDraft } from './evaluation-lab-form';
@@ -20,6 +22,26 @@ class LabRequestError extends Error {
     super('Evaluation request failed');
   }
 }
+type ProviderChoice = {
+  id: string;
+  name: string;
+  status: string;
+  secret?: { configured: boolean };
+};
+type CatalogModel = {
+  id: string;
+  displayName?: string;
+  capabilities?: { text?: boolean; structuredOutput?: boolean };
+};
+type ModelChoice = { value: string; connectionId: string; modelId: string; label: string };
+type EvaluationArmChoice = { definitionVersionId: string; model: string };
+const evaluationRoles: AgentRole[] = [
+  'analyst',
+  'researcher',
+  'ideator',
+  'documenter',
+  'evaluator',
+];
 const words = {
   fa: {
     title: 'مقایسهٔ کیفیت ایجنت‌ها',
@@ -30,6 +52,22 @@ const words = {
     loading: 'در حال بارگذاری…',
     empty: 'هنوز آزمایشی برای این پروژه ثبت نشده است.',
     unavailable: 'اطلاعات بارگذاری نشد؛ دوباره تلاش کنید.',
+    startTitle: 'اجرای مقایسهٔ تازه',
+    role: 'نقش',
+    definition: 'نسخهٔ دستور نقش',
+    model: 'مدل',
+    start: 'شروع آزمایش',
+    retryStart: 'تلاش دوباره برای ثبت همان آزمایش',
+    startLoading: 'در حال ثبت و آغاز…',
+    startFailed: 'آزمایش شروع نشد. در صورت خطای شبکه، همان درخواست را دوباره بفرستید.',
+    startQueued: 'آزمایش ثبت شد و در صف شروع قرار گرفت؛ وضعیت را تازه کنید.',
+    startRunning: 'آزمایش ثبت و برای اجرا ارسال شد.',
+    startDisabled: 'اجرای زنده هنوز توسط مدیر سرور فعال نشده است.',
+    startCost:
+      'این کار تا ۶۰ درخواست زنده به ارائه‌دهنده می‌فرستد و ممکن است هزینه داشته باشد. هزینهٔ واقعی در این گزارش نامعلوم می‌ماند.',
+    choicesLoading: 'در حال بارگذاری نسخه‌ها و مدل‌های مجاز…',
+    choicesFailed:
+      'نسخه یا مدل سازگار پیدا نشد. دسترسی، اتصال ارائه‌دهنده و فهرست مدل‌ها را بررسی کنید.',
     guest: 'برای مشاهدهٔ آزمایش‌ها وارد حساب شوید.',
     denied: 'پروژه پیدا نشد یا دسترسی شما کافی نیست.',
     login: 'ورود',
@@ -100,6 +138,22 @@ const words = {
     loading: 'Loading…',
     empty: 'No experiment has been recorded for this project yet.',
     unavailable: 'Data could not be loaded. Try again.',
+    startTitle: 'Start a new comparison',
+    role: 'Role',
+    definition: 'Role definition version',
+    model: 'Model',
+    start: 'Start evaluation',
+    retryStart: 'Retry the same evaluation request',
+    startLoading: 'Saving and starting…',
+    startFailed: 'The evaluation did not start. After a network error, retry the same request.',
+    startQueued: 'The evaluation was saved and queued for start. Refresh its status.',
+    startRunning: 'The evaluation was saved and sent to the worker.',
+    startDisabled: 'Live runs have not been enabled by the server operator.',
+    startCost:
+      'This sends up to 60 live provider requests and may incur charges. Actual cost remains unknown in this report.',
+    choicesLoading: 'Loading available role versions and compatible models…',
+    choicesFailed:
+      'No compatible version or model was found. Check access, provider connection and model catalog.',
     guest: 'Sign in to view experiments.',
     denied: 'The project is unavailable or access is insufficient.',
     login: 'Sign in',
@@ -230,7 +284,7 @@ export function EvaluationLabScreen({
 }) {
   const t = words[locale];
   const readOnly = useReadOnlyAccess();
-  const base = `/api/workspaces/${workspaceId}/projects/${projectId}/evaluation-experiments`;
+  const base = `/workspaces/${workspaceId}/projects/${projectId}/evaluation-experiments`;
   const [items, setItems] = useState<EvaluationExperimentSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'guest' | 'denied'>('loading');
@@ -242,6 +296,24 @@ export function EvaluationLabScreen({
   const [drafts, setDrafts] = useState<Record<string, EvaluationRatingDraft>>({});
   const [casePage, setCasePage] = useState(0);
   const [focusField, setFocusField] = useState<string | null>(null);
+  const [role, setRole] = useState<AgentRole>('analyst');
+  const [definitions, setDefinitions] = useState<Definition[]>([]);
+  const [models, setModels] = useState<ModelChoice[]>([]);
+  const [baselineChoice, setBaselineChoice] = useState<EvaluationArmChoice>({
+    definitionVersionId: '',
+    model: '',
+  });
+  const [candidateChoice, setCandidateChoice] = useState<EvaluationArmChoice>({
+    definitionVersionId: '',
+    model: '',
+  });
+  const [choicesReady, setChoicesReady] = useState(false);
+  const [choicesFailed, setChoicesFailed] = useState(false);
+  const [startBusy, setStartBusy] = useState(false);
+  const [startRetryPending, setStartRetryPending] = useState(false);
+  const [startNotice, setStartNotice] = useState('');
+  const pendingStartKey = useRef<string | null>(null);
+  const pendingStartBody = useRef<Record<string, unknown> | null>(null);
   const listAbort = useRef<AbortController | null>(null);
   const detailAbort = useRef<AbortController | null>(null);
   const writeAbort = useRef<AbortController | null>(null);
@@ -276,7 +348,7 @@ export function EvaluationLabScreen({
       setError('');
       try {
         const response = await fetch(
-          `${base}?limit=20${after ? `&cursor=${encodeURIComponent(after)}` : ''}`,
+          `/api${base}?limit=20${after ? `&cursor=${encodeURIComponent(after)}` : ''}`,
           { cache: 'no-store', signal: controller.signal },
         );
         if (!response.ok) throw new LabRequestError(response.status);
@@ -311,6 +383,77 @@ export function EvaluationLabScreen({
       writeAbort.current?.abort();
     };
   }, [load]);
+
+  useEffect(() => {
+    let active = true;
+    setChoicesReady(false);
+    setChoicesFailed(false);
+    Promise.all([
+      apiGet<{ definition: Definition; defaultDefinition: Definition; ownVersions: Definition[] }>(
+        `/workspaces/${workspaceId}/projects/${projectId}/agents/${role}`,
+      ),
+      apiGet<{ items: ProviderChoice[] }>(`/workspaces/${workspaceId}/provider-connections`),
+    ])
+      .then(async ([profile, connectionPage]) => {
+        const connections = connectionPage.items.filter(
+          (connection) => connection.status !== 'disabled' && connection.secret?.configured,
+        );
+        const catalogs = await Promise.all(
+          connections.map(async (connection) => {
+            try {
+              const response = await apiGet<{ catalog: { models: CatalogModel[] } | null }>(
+                `/workspaces/${workspaceId}/provider-connections/${connection.id}/models`,
+              );
+              return { connection, models: response.catalog?.models ?? [] };
+            } catch {
+              return { connection, models: [] as CatalogModel[] };
+            }
+          }),
+        );
+        const options = catalogs.flatMap(({ connection, models: catalogModels }) =>
+          catalogModels
+            .filter(
+              (item) =>
+                item.capabilities?.text === true && item.capabilities.structuredOutput === true,
+            )
+            .map((item) => ({
+              value: `${connection.id}::${item.id}`,
+              connectionId: connection.id,
+              modelId: item.id,
+              label: `${connection.name} / ${item.displayName ?? item.id}`,
+            })),
+        );
+        const availableDefinitions = [
+          profile.definition,
+          profile.defaultDefinition,
+          ...profile.ownVersions,
+        ].filter(
+          (definition, index, all) =>
+            all.findIndex((candidate) => candidate.id === definition.id) === index,
+        );
+        if (active) {
+          setDefinitions(availableDefinitions);
+          setModels(options);
+          const defaultModel = options[0]?.value ?? '';
+          const selectedModel = profile.definition.modelPolicy
+            ? (options.find(
+                (item) =>
+                  item.connectionId === profile.definition.modelPolicy?.connectionId &&
+                  item.modelId === profile.definition.modelPolicy.model,
+              )?.value ?? defaultModel)
+            : defaultModel;
+          setBaselineChoice({ definitionVersionId: profile.definition.id, model: selectedModel });
+          setCandidateChoice({ definitionVersionId: profile.definition.id, model: defaultModel });
+          setChoicesReady(true);
+        }
+      })
+      .catch(() => {
+        if (active) setChoicesFailed(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectId, role, workspaceId]);
   useEffect(() => {
     if (focusField) document.getElementById(focusField)?.focus();
   }, [focusField, casePage]);
@@ -328,7 +471,7 @@ export function EvaluationLabScreen({
     pendingReview.current = null;
     pendingCommandKey.current = null;
     try {
-      const response = await fetch(`${base}/${encodeURIComponent(experimentId)}/${kind}`, {
+      const response = await fetch(`/api${base}/${encodeURIComponent(experimentId)}/${kind}`, {
         cache: 'no-store',
         signal: controller.signal,
       });
@@ -379,7 +522,7 @@ export function EvaluationLabScreen({
     writeAbort.current = controller;
     setBusy(true);
     try {
-      const response = await fetch(`${base}/${encodeURIComponent(pack.experimentId)}/reviews`, {
+      const response = await fetch(`/api${base}/${encodeURIComponent(pack.experimentId)}/reviews`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'idempotency-key': commandKey },
         body: JSON.stringify(input),
@@ -397,6 +540,70 @@ export function EvaluationLabScreen({
       if (!controller.signal.aborted) fail(failure, t.saveFailed);
     } finally {
       if (!controller.signal.aborted) setBusy(false);
+    }
+  }
+
+  async function startEvaluation(event: FormEvent) {
+    event.preventDefault();
+    if (readOnly || startBusy || !choicesReady || !baselineChoice.model || !candidateChoice.model)
+      return;
+    setStartBusy(true);
+    setStartNotice('');
+    const baselineModel = models.find((item) => item.value === baselineChoice.model);
+    const candidateModel = models.find((item) => item.value === candidateChoice.model);
+    if (!pendingStartBody.current) {
+      if (!baselineModel || !candidateModel) {
+        setStartNotice(t.choicesFailed);
+        setStartBusy(false);
+        return;
+      }
+      pendingStartBody.current = {
+        role,
+        repetition: 1,
+        timeoutMs: 90_000,
+        baseline: {
+          definitionVersionId: baselineChoice.definitionVersionId,
+          connectionId: baselineModel.connectionId,
+          modelId: baselineModel.modelId,
+        },
+        candidate: {
+          definitionVersionId: candidateChoice.definitionVersionId,
+          connectionId: candidateModel.connectionId,
+          modelId: candidateModel.modelId,
+        },
+      };
+      pendingStartKey.current = idempotencyKey();
+      setStartRetryPending(true);
+    }
+    try {
+      const result = await apiSend<{
+        experimentId: string;
+        status: 'queued' | 'running';
+        delivery: 'pending' | 'started';
+      }>('POST', base, pendingStartBody.current, {
+        headers: { 'idempotency-key': pendingStartKey.current! },
+      });
+      pendingStartBody.current = null;
+      pendingStartKey.current = null;
+      setStartRetryPending(false);
+      setStartNotice(result.status === 'queued' ? t.startQueued : t.startRunning);
+      await load();
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.code === 'EVALUATION_LAB_DISABLED') {
+        setStartNotice(t.startDisabled);
+        pendingStartBody.current = null;
+        pendingStartKey.current = null;
+        setStartRetryPending(false);
+      } else {
+        setStartNotice(t.startFailed);
+        if (failure instanceof ApiError && [400, 403, 404, 409].includes(failure.status)) {
+          pendingStartBody.current = null;
+          pendingStartKey.current = null;
+          setStartRetryPending(false);
+        }
+      }
+    } finally {
+      setStartBusy(false);
     }
   }
 
@@ -424,6 +631,101 @@ export function EvaluationLabScreen({
       )}
       {state === 'ready' && (
         <>
+          {!readOnly && (
+            <section className="card" aria-labelledby="evaluation-start-title">
+              <h2 id="evaluation-start-title">{t.startTitle}</h2>
+              <p>{t.startCost}</p>
+              {startNotice && (
+                <p className="notice" role="status">
+                  {startNotice}
+                </p>
+              )}
+              {choicesFailed ? (
+                <p className="notice error" role="alert">
+                  {t.choicesFailed}
+                </p>
+              ) : !choicesReady ? (
+                <p role="status">{t.choicesLoading}</p>
+              ) : (
+                <form
+                  className="evaluation-lab-start"
+                  onSubmit={(event) => void startEvaluation(event)}
+                >
+                  <label htmlFor="evaluation-role">{t.role}</label>
+                  <select
+                    id="evaluation-role"
+                    value={role}
+                    disabled={startBusy || startRetryPending}
+                    onChange={(event) => setRole(event.target.value as AgentRole)}
+                  >
+                    {evaluationRoles.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                  {(
+                    [
+                      ['baseline', t.baseline, baselineChoice, setBaselineChoice],
+                      ['candidate', t.candidate, candidateChoice, setCandidateChoice],
+                    ] as const
+                  ).map(([arm, label, choice, setChoice]) => (
+                    <fieldset key={arm} disabled={startBusy || startRetryPending}>
+                      <legend>{label}</legend>
+                      <label htmlFor={`evaluation-${arm}-definition`}>{t.definition}</label>
+                      <select
+                        id={`evaluation-${arm}-definition`}
+                        value={choice.definitionVersionId}
+                        onChange={(event) =>
+                          setChoice((previous) => ({
+                            ...previous,
+                            definitionVersionId: event.target.value,
+                          }))
+                        }
+                      >
+                        {definitions.map((definition) => (
+                          <option key={definition.id} value={definition.id}>
+                            {definition.sequence} — {definition.reason}
+                          </option>
+                        ))}
+                      </select>
+                      <label htmlFor={`evaluation-${arm}-model`}>{t.model}</label>
+                      <select
+                        id={`evaluation-${arm}-model`}
+                        value={choice.model}
+                        onChange={(event) =>
+                          setChoice((previous) => ({ ...previous, model: event.target.value }))
+                        }
+                      >
+                        {models.map((model) => (
+                          <option key={model.value} value={model.value}>
+                            {model.label}
+                          </option>
+                        ))}
+                      </select>
+                    </fieldset>
+                  ))}
+                  {models.length === 0 && (
+                    <p className="notice error" role="alert">
+                      {t.choicesFailed}
+                    </p>
+                  )}
+                  <button
+                    className="primary-button"
+                    type="submit"
+                    disabled={
+                      startBusy ||
+                      models.length === 0 ||
+                      !baselineChoice.definitionVersionId ||
+                      !candidateChoice.definitionVersionId
+                    }
+                  >
+                    {startBusy ? t.startLoading : startRetryPending ? t.retryStart : t.start}
+                  </button>
+                </form>
+              )}
+            </section>
+          )}
           <section className="card" aria-labelledby="lab-history">
             <h2 id="lab-history">{t.history}</h2>
             <button

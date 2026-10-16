@@ -5,6 +5,8 @@ const workspaceId = '11111111-1111-4111-8111-111111111111';
 const projectId = '22222222-2222-4222-8222-222222222222';
 const reviewerId = '33333333-3333-4333-8333-333333333333';
 const comparisonId = '44444444-4444-4444-8444-444444444444';
+const connectionId = '55555555-5555-4555-8555-555555555555';
+const definitionId = '66666666-6666-4666-8666-666666666666';
 const base = `/api/workspaces/${workspaceId}/projects/${projectId}/evaluation-experiments`;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const hostileOutput = '<img src=x onerror="window.untrustedEvaluationOutput=true">';
@@ -102,10 +104,16 @@ const report = {
   },
 };
 
-async function fixture(page: Page, options: { readOnly?: boolean; failFirstSave?: boolean } = {}) {
+async function fixture(
+  page: Page,
+  options: { readOnly?: boolean; failFirstSave?: boolean; failFirstStart?: boolean } = {},
+) {
   const writes: string[] = [];
   const commandKeys: string[] = [];
+  const startWrites: string[] = [];
+  const startKeys: string[] = [];
   let saved = false;
+  let startAttempts = 0;
   let denied = false;
   await page.route('**/api/**', async (route) => {
     const request = route.request();
@@ -132,6 +140,63 @@ async function fixture(page: Page, options: { readOnly?: boolean; failFirstSave?
     }
     if (path === '/api/auth/access')
       return route.fulfill({ status: 200, json: { access: options.readOnly ? 'VIEW' : 'EDIT' } });
+    if (path === `/api/workspaces/${workspaceId}/projects/${projectId}/agents/analyst`)
+      return route.fulfill({
+        status: 200,
+        json: {
+          definition: { id: definitionId, sequence: 1, reason: 'default', modelPolicy: null },
+          defaultDefinition: {
+            id: definitionId,
+            sequence: 1,
+            reason: 'default',
+            modelPolicy: null,
+          },
+          ownVersions: [],
+        },
+      });
+    if (path === `/api/workspaces/${workspaceId}/provider-connections`)
+      return route.fulfill({
+        status: 200,
+        json: {
+          items: [
+            {
+              id: connectionId,
+              name: 'Test provider',
+              status: 'active',
+              secret: { configured: true },
+            },
+          ],
+        },
+      });
+    if (path === `/api/workspaces/${workspaceId}/provider-connections/${connectionId}/models`)
+      return route.fulfill({
+        status: 200,
+        json: {
+          catalog: {
+            models: ['live-model-a', 'live-model-b'].map((id) => ({
+              id,
+              displayName: id,
+              capabilities: { text: true, structuredOutput: true },
+            })),
+          },
+        },
+      });
+    if (path === base && request.method() === 'POST') {
+      startAttempts += 1;
+      startKeys.push(request.headers()['idempotency-key'] ?? '');
+      startWrites.push(request.postData() ?? '');
+      if (options.failFirstStart && startAttempts === 1)
+        return route.fulfill({ status: 503, json: { code: 'UPSTREAM_UNAVAILABLE' } });
+      return route.fulfill({
+        status: 202,
+        json: {
+          experimentId: 'browser-started-experiment',
+          status: 'queued',
+          delivery: 'pending',
+          replayed: startAttempts > 1,
+        },
+      });
+    }
     if (path === base && request.method() === 'GET') {
       if (denied) return route.fulfill({ status: 403, json: { code: 'AUTH_PERMISSION_DENIED' } });
       return route.fulfill({
@@ -175,10 +240,46 @@ async function fixture(page: Page, options: { readOnly?: boolean; failFirstSave?
   return {
     writes,
     commandKeys,
+    startWrites,
+    startKeys,
     revoke: () => {
       denied = true;
     },
   };
+}
+
+for (const locale of ['fa', 'en'] as const) {
+  test(`starting a run retries the same bounded request (${locale})`, async ({ page }) => {
+    const state = await fixture(page, { failFirstStart: true });
+    await page.goto(`/${locale}/projects/${projectId}/evaluation-lab?workspaceId=${workspaceId}`);
+    const start = locale === 'fa' ? 'شروع آزمایش' : 'Start evaluation';
+    const retry =
+      locale === 'fa' ? 'تلاش دوباره برای ثبت همان آزمایش' : 'Retry the same evaluation request';
+    await expect(
+      page.getByText(
+        locale === 'fa'
+          ? 'این کار تا ۶۰ درخواست زنده'
+          : 'This sends up to 60 live provider requests',
+      ),
+    ).toBeVisible();
+    await page
+      .getByLabel(locale === 'fa' ? 'مدل' : 'Model')
+      .nth(1)
+      .selectOption(`${connectionId}::live-model-b`);
+    await page.getByRole('button', { name: start, exact: true }).click();
+    await expect(page.getByRole('button', { name: retry, exact: true })).toBeVisible();
+    await page.getByRole('button', { name: retry, exact: true }).click();
+    await expect(page.getByText(locale === 'fa' ? 'در صف شروع' : 'queued for start')).toBeVisible();
+    expect(state.startWrites).toHaveLength(2);
+    expect(state.startWrites[1]).toBe(state.startWrites[0]);
+    expect(state.startKeys[1]).toBe(state.startKeys[0]);
+    expect(state.startKeys[0]).toMatch(/^web-[a-f0-9-]{36}$/);
+    const sent = JSON.parse(state.startWrites[0]!) as Record<string, unknown>;
+    expect(sent).toMatchObject({ role: 'analyst', repetition: 1, timeoutMs: 90_000 });
+    expect(sent).not.toHaveProperty('dataset');
+    expect(sent).not.toHaveProperty('prompt');
+    expect(sent).not.toHaveProperty('apiKey');
+  });
 }
 
 async function fillVisibleRatings(page: Page) {

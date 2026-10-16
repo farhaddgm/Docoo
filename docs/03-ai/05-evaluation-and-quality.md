@@ -2,7 +2,7 @@
 doc_id: DOCOO-AI-EVALUATION
 title: ارزیابی و تضمین کیفیت خروجی AI
 status: proposed
-version: 1.0.3
+version: 1.0.4
 owner: AI Quality
 last_updated: 2026-10-16
 notion_sync: true
@@ -152,6 +152,14 @@ Regression بحرانی صفر و افت معیار کلیدی بیش از toler
 
 pending/unknown، تغییر دسترسی/config یا feature غیرفعال به `interrupted` می‌انجامد؛ خروجی موفق فرض نمی‌شود و ادامهٔ خودکار هزینه‌دار رخ نمی‌دهد. migration افزایشی 0047 این وضعیت را اضافه می‌کند. capability محدود `app.interrupt_evaluation_experiment` فقط فرادادهٔ آزمایش running خود initiating actor یا مدیر workspace را یک‌طرفه متوقف و audit می‌کند؛ حتی پس از revoke، محتوا/مجوز پروژه را برنمی‌گرداند. وضعیت پایانی و history قبلی بازنویسی نمی‌شوند. تشخیص نهایی و reconciliation تماس واقعاً نامعلوم هنوز تصمیم/برش جداست؛ اجرای تازهٔ کور به‌جای آن ممنوع می‌ماند.
 
-workflow بین پرونده‌ها لغو را می‌پذیرد؛ تماس در حال انجام ممکن است تا timeout خودش تمام و هزینه‌دار شود، بنابراین لغو وعدهٔ صفر بودن هزینه نیست. activity حداکثر شش دقیقه و سه تلاش دارد و هر تکرار فقط receipt/result را بازیابی یا pending را fence می‌کند. engine برای ارسالِ دوبارهٔ همان workflow شناسهٔ ثابت و `REJECT_DUPLICATE` دارد، حتی بعد از پایان. `EVALUATION_LAB_ENABLED` و `EVALUATION_LAB_LIVE_ENABLED` پیش‌فرض false هستند؛ هیچ شروع HTTP، صف outbox یا فرم آغاز در این برش فعال نشده است.
+workflow بین پرونده‌ها لغو را می‌پذیرد؛ تماس در حال انجام ممکن است تا timeout خودش تمام و هزینه‌دار شود، بنابراین لغو وعدهٔ صفر بودن هزینه نیست. activity حداکثر شش دقیقه و سه تلاش دارد و هر تکرار فقط receipt/result را بازیابی یا pending را fence می‌کند. engine برای ارسالِ دوبارهٔ همان workflow شناسهٔ ثابت و `REJECT_DUPLICATE` دارد، حتی بعد از پایان. هر دو `EVALUATION_LAB_ENABLED` و `EVALUATION_LAB_LIVE_ENABLED` پیش‌فرض false هستند.
 
 تست activities روی PostgreSQL، بازخوانی رسید commit‌شده در اتصال تازه، ۶۰ فراخوانی دیگر، retry نتیجهٔ موجود، خروجی نامعتبر، قطع دسترسی، scope/مالک و توقف با switch خاموش را گذراند. تست واقعی `pnpm test:evaluation:workflow:local` image موجود و pin‌شدهٔ Temporal را با پورت تصادفی loopback و سقف CPU/RAM اجرا می‌کند؛ database/login و task queue آن مستقل‌اند. پس از commit اولین نتیجه، acknowledgement عمداً گم می‌شود؛ worker اول متوقف و worker تازه همان workflow را ادامه می‌دهد. دقیقاً ۶۰ تماس، نبود ارسال دوبارهٔ workflow در حین/پس از پایان، پایان دقیق پایگاه و replay واقعی تاریخچه با SDK تأیید شدند. کانتینر و پایگاه/login خود تست پاک شدند. این تست هیچ provider زنده یا API key مصرف نکرد و E2E کامل UI/فرم آغاز نیست. CI این gate را با Temporal اختصاصی همان job و task queue تصادفی اجرا می‌کند.
+
+## ۱۳. شروع API و تحویل outbox — ADV-013
+
+`POST /workspaces/{workspaceId}/projects/{projectId}/evaluation-experiments` نیازمند `project.update`، EDIT و `Idempotency-Key` است. کلاینت فقط نقش، نسخه‌های تعریف، اتصال و مدل را انتخاب می‌کند. تعریف immutable، catalog، capability، قیمتِ موجود، rubric، corpus سی‌پرونده‌ای و promptهای واقعی stage از سمت سرور گرفته و pin می‌شوند؛ متن/کلید دلخواه از مرورگر پذیرفته نمی‌شود. درخواست اجرای ۶۰ تماس (۳۰ پرونده × دو arm) است و در فرم به کاربر گفته می‌شود.
+
+مهاجرت افزایشی `0048_evaluation_start_outbox` ثبت آزمایش، idempotency و intent شروع را atomic می‌کند. dispatcher API با lease سی‌ثانیه‌ای، `SKIP LOCKED` و شناسهٔ workflow ثابت پس از restart/outage دوباره تلاش می‌کند؛ Temporal شروع تکراری را رد می‌کند. خطای موقت، outbox را pending نگه می‌دارد. هر دو switch آزمایشگاه و live باید در تنظیم سرور روشن باشند؛ پیش‌فرض خاموش است و API key از بدنه گرفته نمی‌شود، بلکه اتصال provider موجود استفاده می‌شود.
+
+این مرحله سقف دلاری قطعی ندارد: catalog قیمت ممکن است ناقص/قدیمی باشد و runtime فقط هزینهٔ تخمینی را ثبت می‌کند. بنابراین تعداد درخواست ثابت و سقف خروجی مدل اعمال می‌شوند، اما هزینهٔ واقعی در گزارش همچنان نامعلوم می‌ماند. حل reconciliation تماس نامعلوم، E2E کامل صفحه تا API و worker، نتیجهٔ کیفیت واقعی، labelهای انسانی/judge و case پالایش‌شده از شکست واقعی هنوز باز هستند. هیچ تماس زنده‌ای با این تغییر انجام نشده است.
