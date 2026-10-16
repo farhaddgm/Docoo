@@ -149,6 +149,7 @@ notion_sync: true
 | `POST /projects/{id}/analysis/question-quality`                      | `project.run`               |
 | `GET /projects/{id}/problem-definitions`                             | `project.read`              |
 | `POST /question-batches/{id}/answers`                                | `analysis.answer`           |
+| `POST /analysis-questions/{id}/suggest-answer`                       | `analysis.answer`           |
 | `POST /projects/{id}/analysis/finish`                                | `workflow.approve`          |
 | `POST /projects/{id}/analysis/continue`                              | `project.run`               |
 | `GET /agent-roles`                                                   | `agent_definition.read`     |

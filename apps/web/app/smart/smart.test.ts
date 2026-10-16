@@ -81,9 +81,23 @@ describe('persisted Smart state', () => {
     const projectId = '3f2b7c1e-6a0e-4a39-9d52-0a5a1c3b9f10';
     expect(
       parseUiState(
-        JSON.stringify({ enabled: false, minimized: false, side: 'start', tab: 'chat', projectId }),
+        JSON.stringify({
+          enabled: false,
+          minimized: false,
+          maximized: true,
+          side: 'start',
+          tab: 'chat',
+          projectId,
+        }),
       ),
-    ).toEqual({ enabled: false, minimized: false, side: 'start', tab: 'chat', projectId });
+    ).toEqual({
+      enabled: false,
+      minimized: false,
+      maximized: true,
+      side: 'start',
+      tab: 'chat',
+      projectId,
+    });
     expect(
       parseUiState(
         JSON.stringify({ enabled: 'yes', side: 'top', tab: 'nope', projectId: '../../etc' }),

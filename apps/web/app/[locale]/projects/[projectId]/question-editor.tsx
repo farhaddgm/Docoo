@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 
 import { formatNumber, type Locale } from '../../../i18n';
 import { problemMessages } from './problem-messages';
@@ -39,6 +39,7 @@ export function QuestionEditor({
   onEdit,
   onStopEditing,
   onUpload,
+  onSuggest,
   footer = null,
 }: {
   locale: Locale;
@@ -54,6 +55,8 @@ export function QuestionEditor({
   onEdit: () => void;
   onStopEditing: () => void;
   onUpload: (file: File) => Promise<Attachment>;
+  /** Asks the model for a draft answer; the text lands in the field and is never saved by itself. */
+  onSuggest?: () => Promise<string>;
   /** Extra controls under the question, such as a button that saves only this one. */
   footer?: ReactNode;
 }) {
@@ -68,6 +71,7 @@ export function QuestionEditor({
   };
   const id = useId();
   const picker = useRef<HTMLInputElement>(null);
+  const [suggestState, setSuggestState] = useState<'idle' | 'busy' | 'failed' | 'done'>('idle');
   const heading = `${id}-heading`;
   const label = text.questionLabel.replace('{n}', formatNumber(locale, question.number));
   const title = (
@@ -147,6 +151,18 @@ export function QuestionEditor({
   const noteOnly =
     draft.mode === 'later' || draft.mode === 'irrelevant' || draft.mode === 'unanswered';
 
+  function suggest() {
+    if (!onSuggest) return;
+    setSuggestState('busy');
+    onSuggest().then(
+      (suggestion) => {
+        patch((current) => ({ ...current, mode: 'answered', text: suggestion }));
+        setSuggestState('done');
+      },
+      () => setSuggestState('failed'),
+    );
+  }
+
   function pick(files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
@@ -220,6 +236,24 @@ export function QuestionEditor({
             }));
           }}
         />
+        {onSuggest && !noteOnly && (
+          <div className="toolbar">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={disabled || suggestState === 'busy'}
+              onClick={suggest}
+            >
+              {suggestState === 'busy' ? text.suggesting : text.suggest}
+            </button>
+            {suggestState === 'done' && <small className="muted">{text.suggestNote}</small>}
+            {suggestState === 'failed' && (
+              <small className="field-error" role="alert">
+                {text.suggestFailed}
+              </small>
+            )}
+          </div>
+        )}
         {!noteOnly && (
           <div className="file-pick">
             <label htmlFor={`${id}-file`}>{text.attach}</label>

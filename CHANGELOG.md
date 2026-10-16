@@ -2,6 +2,17 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [Unreleased]
+
+### Added
+
+- **Next project from a completed one.** A completed project shows **Build the next project**: a continuation (same problem) or a pivot (a new direction, required). The clone route takes `kind` (`copy`, `continuation`, `pivot`) and `pivotProblem`; the new project is a draft that keeps the settings, topics and business of the source, records `clonedFromId` and `originKind` (migration 0044), and links back to the source on its overview. A continuation or pivot from a project that is not completed is refused with `409 PROJECT_NOT_COMPLETED`.
+- **Suggested answers for analyst questions.** Next to each question, **Suggest an answer with AI** drafts an answer from the project and the earlier answers and puts it in the answer field. Nothing is saved until the administrator edits and submits it. `POST /analysis-questions/{id}/suggest-answer` (`analysis.answer`; audit `analysis.answer_suggested`).
+
+### Changed
+
+- The Smart window is 10% wider and taller, has a maximise button (remembered), and a slimmer header and tabs. In the chat, **Delete chat** sits next to **New chat**, and the history list stays inside the window with long titles ending in an ellipsis.
+
 ## [0.29.0] — 2026-10-16
 
 ### Changed

@@ -225,6 +225,8 @@ export const projects = pgTable(
     pauseReason: text('pause_reason'),
     configSnapshotId: uuid('config_snapshot_id'),
     clonedFromId: uuid('cloned_from_id'),
+    /** How a project built on another began: 'copy', 'continuation' or 'pivot'; null when it did not. */
+    originKind: text('origin_kind'),
     /** The analysis stage output the administrator approved as the problem definition (FR-ANL-005). */
     approvedProblemVersionId: uuid('approved_problem_version_id'),
     analysisProfile: text('analysis_profile').notNull().default('full'),
