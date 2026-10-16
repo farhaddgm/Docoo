@@ -2,7 +2,7 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { apiGet, apiSend } from '../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../i18n';
@@ -32,7 +32,11 @@ export function NotificationsPage({ locale }: { locale: Locale }) {
     <SignedIn locale={locale} title={text.title} subtitle={text.subtitle}>
       {(identity) =>
         identity.workspaces[0] ? (
-          <List locale={locale} workspaceId={identity.workspaces[0].id} />
+          <List
+            key={identity.workspaces[0].id}
+            locale={locale}
+            workspaceId={identity.workspaces[0].id}
+          />
         ) : null
       }
     </SignedIn>
@@ -44,6 +48,8 @@ function List({ locale, workspaceId }: { locale: Locale; workspaceId: string }) 
   const text = notificationMessages(locale);
   const base = `/workspaces/${workspaceId}/notifications`;
   const [status, setStatus] = useState<'unread' | 'all'>('unread');
+  const selectedStatus = useRef<'unread' | 'all'>('unread');
+  const latestLoad = useRef(0);
   const [items, setItems] = useState<Item[] | null>(null);
   const [next, setNext] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -55,19 +61,30 @@ function List({ locale, workspaceId }: { locale: Locale; workspaceId: string }) 
 
   const load = useCallback(
     async (cursor?: string) => {
-      const query = `?status=${status}&limit=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
-      const page = await apiGet<Page>(`${base}${query}`);
-      setItems((current) => (cursor && current ? [...current, ...page.items] : page.items));
-      setNext(page.nextCursor);
-      setFailed(false);
-      window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
+      const mine = ++latestLoad.current;
+      // Read actions may complete after the filter changes; reload the current selection.
+      const query = `?status=${selectedStatus.current}&limit=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+      try {
+        const page = await apiGet<Page>(`${base}${query}`);
+        if (mine !== latestLoad.current) return;
+        setItems((current) => (cursor && current ? [...current, ...page.items] : page.items));
+        setNext(page.nextCursor);
+        setFailed(false);
+        window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
+      } catch (error) {
+        if (mine === latestLoad.current) throw error;
+      }
     },
-    [base, status],
+    [base],
   );
 
   useEffect(() => {
+    selectedStatus.current = status;
     load().catch(() => setFailed(true));
-  }, [load]);
+    return () => {
+      latestLoad.current++;
+    };
+  }, [load, status]);
 
   function markRead(id: string) {
     void run(async () => {
@@ -94,7 +111,10 @@ function List({ locale, workspaceId }: { locale: Locale; workspaceId: string }) 
             <select
               id="notification-filter"
               value={status}
-              onChange={(event) => setStatus(event.target.value as 'unread' | 'all')}
+              onChange={(event) => {
+                selectedStatus.current = event.target.value as 'unread' | 'all';
+                setStatus(selectedStatus.current);
+              }}
             >
               <option value="unread">{text.unread}</option>
               <option value="all">{text.all}</option>
