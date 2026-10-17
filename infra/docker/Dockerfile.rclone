@@ -6,7 +6,7 @@ ADD --checksum=sha256:7c2ceafb4e4204c04469bee42f8c852a4ffd0019090d0095261225ce40
 WORKDIR /source
 RUN tar -xzf /tmp/source.tgz --strip-components=1 -C /source && rm /tmp/source.tgz
 RUN go get google.golang.org/grpc@v1.84.0 golang.org/x/net@v0.60.0 && go build -p 2 -trimpath -buildvcs=false -ldflags '-s -w' -o /out/rclone .
-FROM rclone/rclone:latest@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+FROM rclone/rclone:latest@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
 USER root
 RUN apk upgrade --no-cache
 COPY --from=builder /out/rclone /usr/local/bin/rclone
