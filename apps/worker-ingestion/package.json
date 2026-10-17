@@ -24,6 +24,6 @@
   "devDependencies": {
     "@temporalio/client": "1.24.0",
     "@types/pg": "8.15.6",
-    "tsx": "4.23.13"
+    "tsx": "4.23.15"
   }
 }
