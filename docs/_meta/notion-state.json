@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "8a77815e7d09bff8036cf939284353f5db93dc21"
+    "source_commit": "986335dd24b78a5cf07849d70f3b55ffa5214687"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-16T22:51:05.805Z",
+    "synced_at": "2026-10-17T17:05:56.155Z",
     "created": 0,
-    "updated": 3,
-    "unchanged": 71,
+    "updated": 1,
+    "unchanged": 73,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -1044,16 +1044,16 @@
     "DOCOO-ADR-0026": {
       "path": "docs/adr/0026-web-research-adapter.md",
       "section": "ADRs",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "proposed",
       "owner": "AI Platform & Security",
-      "checksum_sha256": "65e6e38bd6fac343921e1ae29dca60609fc0a93601d1d14d21e71c79637e0a9e",
+      "checksum_sha256": "c3b7af7cc85c237233387efd14c820a04ac29d2f10d444754260e2f52a63a04d",
       "notion_page_id": "3f45a24a-6668-8147-b0b4-ff232824efad",
       "notion_page_url": "https://app.notion.com/p/3f45a24a66688147b0b4ff232824efad",
       "index_row_page_id": "3f45a24a-6668-813b-b9c9-f65d37b97cd9",
       "index_row_page_url": "https://app.notion.com/p/3f45a24a6668813bb9c9f65d37b97cd9",
-      "synced_commit": "bcbeec5e5b5092bc3d577f1734fdbda64758ffd8",
-      "synced_at": "2026-10-09T17:42:31.471Z"
+      "synced_commit": "986335dd24b78a5cf07849d70f3b55ffa5214687",
+      "synced_at": "2026-10-17T17:05:56.155Z"
     },
     "DOCOO-ADR-0027": {
       "path": "docs/adr/0027-current-access-baseline.md",
