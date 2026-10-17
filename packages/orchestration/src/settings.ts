@@ -32,6 +32,10 @@ export interface Settings {
   agentMaxToolCalls: number;
   /** Questions an agent may put to the administrator in one stage (`agents.max_human_questions`). */
   agentMaxHumanQuestions: number;
+  /** The research stage also searches the web with the provider's own search tool (ADR-0026). */
+  researchWebEnabled: boolean;
+  /** Searches the provider may run in one research attempt (`research.web_max_searches`). */
+  researchWebMaxSearches: number;
   /** Ideation waits for the administrator to confirm the plan of deliverables (ADR-0031). */
   requireDeliverableConfirmation: boolean;
 }
@@ -95,6 +99,8 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
     agentToolCalling: values['agents.tool_calling'] === true,
     agentMaxToolCalls: boundedInteger(values['agents.max_tool_calls'], 6, 1, 20),
     agentMaxHumanQuestions: boundedInteger(values['agents.max_human_questions'], 2, 0, 5),
+    researchWebEnabled: values['research.web_enabled'] !== false,
+    researchWebMaxSearches: boundedInteger(values['research.web_max_searches'], 5, 1, 10),
     requireDeliverableConfirmation: values['workflow.require_deliverable_confirmation'] !== false,
   };
 }

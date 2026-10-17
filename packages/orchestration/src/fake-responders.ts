@@ -35,6 +35,18 @@ export function fakeResearchResponder(request: NormalizedModelRequest): unknown 
       evidence: [{ ref: first['ref'], quote: sentence.slice(0, 200) }],
     });
   }
+  // A page from the web search is cited like knowledge: its ref and a quote from its own text.
+  const page = records(dataOf(request)['webSources'])[0];
+  if (page && typeof page['ref'] === 'string' && typeof page['text'] === 'string') {
+    const sentence = page['text'].split(/(?<=[.!؟?])\s/u)[0] ?? page['text'];
+    findings.push({
+      claim: persian
+        ? `صفحهٔ وب «${String(page['title'])}» به این مسئله مربوط است.`
+        : `The web page "${String(page['title'])}" bears on this problem.`,
+      source: String(page['url']),
+      evidence: [{ ref: page['ref'], quote: sentence.slice(0, 200) }],
+    });
+  }
   findings.push({
     claim: persian
       ? 'روش‌های مشابه در حوزه‌های دیگر هم به کار رفته‌اند.'

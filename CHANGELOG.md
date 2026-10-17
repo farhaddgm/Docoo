@@ -2,6 +2,12 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.31.0] — 2026-10-16
+
+### Added
+
+- **Live web search in the research stage** ([ADR-0026](docs/adr/0026-web-research-adapter.md) addendum). Research now asks the connected AI provider to search the web with its own search tool (OpenAI, Gemini or Anthropic; no new key). Pages found become `W#` sources: a finding's quote is checked against the page text, marked **Web** (or unverified), and linked to the page. Approved internal knowledge still counts first. The research view shows the queries, the pages and whether each was cited, or why the search was off, found nothing, was refused or failed (the research then goes on with internal knowledge). Settings `research.web_enabled` (default on) and `research.web_max_searches` (1–10, default 5). The search goes through the tool gateway, is recorded in the tool ledger and counts toward the cost limit. Privacy: the search queries are derived from the problem statement and are sent to the provider's search; switch it off with `research.web_enabled`.
+
 ## [0.30.0] — 2026-10-16
 
 ### Added

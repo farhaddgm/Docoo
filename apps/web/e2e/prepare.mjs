@@ -47,17 +47,17 @@ try {
       [workspace.rows[0].id, user.rows[0].id],
     );
   }
-  // The stages of the E2E flows run without waiting for a confirmation of the deliverables
-  // plan (ADR-0031); the gate itself is covered by the API integration suite.
-  await client.query(
-    `insert into config_assignments (workspace_id, setting_key, scope_type, scope_id, sequence, value, reason, created_by)
-     select $1, 'workflow.require_deliverable_confirmation', 'workspace', $1, 1, 'false'::jsonb,
-            'E2E flows run without the confirmation gate', $2
-      where not exists (select 1 from config_assignments
-                         where workspace_id = $1 and setting_key = 'workflow.require_deliverable_confirmation'
-                           and scope_type = 'workspace')`,
-    [workspace.rows[0].id, user.rows[0].id],
-  );
+  // The stages of the E2E flows run without waiting for a confirmation of the deliverables plan
+  // (ADR-0031) and without web search (ADR-0026); both are covered by the API integration suites.
+  for (const key of ['workflow.require_deliverable_confirmation', 'research.web_enabled']) {
+    await client.query(
+      `insert into config_assignments (workspace_id, setting_key, scope_type, scope_id, sequence, value, reason, created_by)
+       select $1, $3, 'workspace', $1, 1, 'false'::jsonb, 'E2E flows run without this extra step', $2
+        where not exists (select 1 from config_assignments
+                           where workspace_id = $1 and setting_key = $3 and scope_type = 'workspace')`,
+      [workspace.rows[0].id, user.rows[0].id, key],
+    );
+  }
   await client.query(
     'update sessions set revoked_at = now() where user_id = $1 and revoked_at is null',
     [user.rows[0].id],

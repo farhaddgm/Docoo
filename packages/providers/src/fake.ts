@@ -10,6 +10,7 @@ import {
   type ProviderErrorKind,
   type ProviderHealth,
   type ToolCall,
+  type WebSearchResult,
 } from './contract.js';
 
 /** Fails the n-th call (1-based) with the given error kind, for retry and pause tests. */
@@ -71,6 +72,17 @@ export class FakeAdapter implements ModelProviderAdapter {
 
   /** Optional canned structured answer per request (tests); null falls back to the schema sample. */
   responder: (request: NormalizedModelRequest) => unknown = () => null;
+  /** What a web search returns; tests replace it (an empty `sources` is a search that found nothing). */
+  webResponder: (request: NormalizedModelRequest) => WebSearchResult = () => ({
+    queries: ['fake web query'],
+    sources: [
+      {
+        url: 'https://example.test/fake-source',
+        title: 'Fake source',
+        text: 'Churn in subscription retail rises after the fourth month when onboarding is weak.',
+      },
+    ],
+  });
 
   /**
    * Optional tool calls per request (tests): when the request offers tools and this returns calls,
@@ -153,6 +165,12 @@ export class FakeAdapter implements ModelProviderAdapter {
     if (request.tools && request.tools.length > 0 && request.responseSchema) {
       return Promise.reject(new ProviderError('invalid_request', 'tools_with_response_schema'));
     }
+    if (request.webSearch && ((request.tools?.length ?? 0) > 0 || request.responseSchema)) {
+      return Promise.reject(
+        new ProviderError('invalid_request', 'web_search_with_tools_or_schema'),
+      );
+    }
+    const web = request.webSearch ? this.webResponder(request) : undefined;
     const calls = request.tools && request.tools.length > 0 ? this.toolResponder(request) : null;
     if (calls && calls.length > 0 && request.toolChoice !== 'none') {
       const text = '';
@@ -186,9 +204,11 @@ export class FakeAdapter implements ModelProviderAdapter {
     const text =
       json !== null
         ? JSON.stringify(json)
-        : toolTurn
-          ? `Fake answer from the tool result: ${toolTurn.content}`
-          : `Fake answer: ${createHash('sha256').update(prompt).digest('hex').slice(0, 16)}`;
+        : web
+          ? `Fake web notes: ${web.sources.map((source) => source.text).join(' ')}`
+          : toolTurn
+            ? `Fake answer from the tool result: ${toolTurn.content}`
+            : `Fake answer: ${createHash('sha256').update(prompt).digest('hex').slice(0, 16)}`;
     return Promise.resolve({
       provider: 'fake',
       model: request.model,
@@ -208,6 +228,7 @@ export class FakeAdapter implements ModelProviderAdapter {
         .digest('hex')
         .slice(0, 12)}`,
       latencyMs: 1,
+      ...(web ? { web } : {}),
     });
   }
 }
