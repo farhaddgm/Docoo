@@ -168,6 +168,12 @@ const messages = {
       topics: 'حوزه‌های محتوایی در Contenter',
       noTopics: 'حوزه‌ای ثبت نشده است.',
       inContenter: 'در Contenter',
+      contents: 'فهرست بخش‌ها',
+      missing: 'نوشته نشده',
+      missingHelp: 'این بخش در Contenter خالی است و ایجنت‌ها چیزی از آن نمی‌دانند.',
+      showMore: 'نمایش بیشتر',
+      showLess: 'نمایش کمتر',
+      sectionStats: '{confirmed} تأییدشده · {drafts} پیش‌نویس',
     },
     // ---- facts, terms, notes ----
     knowledge: {
@@ -211,6 +217,12 @@ const messages = {
       } as Record<string, string>,
       changed: 'بخش‌های تغییرکرده',
       createdAt: 'تاریخ',
+      statFacts: 'واقعیت',
+      statVerified: 'تأییدشده',
+      statExpired: 'منقضی',
+      statUse: 'اصطلاح مجاز',
+      statAvoid: 'اصطلاح ممنوع',
+      useArrow: 'به‌جای',
     },
     // ---- references and assets ----
     sources: {
@@ -529,6 +541,12 @@ const messages = {
       topics: 'Content topics in Contenter',
       noTopics: 'No topics.',
       inContenter: 'In Contenter',
+      contents: 'Sections',
+      missing: 'Not written',
+      missingHelp: 'This section is empty in Contenter, so the agents know nothing about it.',
+      showMore: 'Show more',
+      showLess: 'Show less',
+      sectionStats: '{confirmed} confirmed · {drafts} drafts',
     },
     knowledge: {
       factsTitle: 'Key facts',
@@ -573,6 +591,12 @@ const messages = {
       } as Record<string, string>,
       changed: 'Sections changed',
       createdAt: 'Date',
+      statFacts: 'Facts',
+      statVerified: 'Verified',
+      statExpired: 'Expired',
+      statUse: 'Preferred terms',
+      statAvoid: 'Avoided terms',
+      useArrow: 'instead of',
     },
     sources: {
       referencesTitle: 'Reference sources',

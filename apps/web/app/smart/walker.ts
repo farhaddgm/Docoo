@@ -17,6 +17,7 @@ const STEP_TARGETS: Readonly<
   approve_knowledge: () => '/knowledge',
   create_project: () => '/projects/new',
   activate_project: (projectId) => (projectId ? `/projects/${projectId}` : '/projects'),
+  confirm_deliverables: (projectId) => (projectId ? `/projects/${projectId}?tab=workflow` : null),
   complete_stages: (projectId) => (projectId ? `/projects/${projectId}?tab=workflow` : null),
   choose_solution: (projectId) => (projectId ? `/projects/${projectId}?tab=solutions` : null),
   evaluate_document: (projectId) => (projectId ? `/projects/${projectId}?tab=documents` : null),

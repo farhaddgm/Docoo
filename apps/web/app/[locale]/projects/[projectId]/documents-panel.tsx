@@ -13,6 +13,7 @@ import { documentMessages } from './document-messages';
 import { DocumentWriter } from './document-writer';
 import { editorMessages } from './editor-messages';
 import { SectionTitle } from '../../../info-tip';
+import { PagedRows } from '../../../table-pager';
 
 interface DocumentSummary {
   id: string;
@@ -144,57 +145,66 @@ export function DocumentsPanel({
       ) : items.length === 0 ? (
         <p className="muted">{text.none}</p>
       ) : (
-        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="documents-title">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">{text.priority}</th>
-                <th scope="col">{text.docTitle}</th>
-                <th scope="col">{text.level}</th>
-                <th scope="col">{text.status}</th>
-                <th scope="col">{text.updated}</th>
-                <th scope="col">
-                  <span className="visually-hidden">{text.open}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td>{formatNumber(locale, item.priority)}</td>
-                  <th scope="row" dir="auto">
-                    {item.title}
-                    {item.analysisProfile === 'quick' && (
-                      <span className="badge state-paused">
-                        {quickDraftMessages(locale).warning}
-                      </span>
-                    )}
-                  </th>
-                  <td>{formatNumber(locale, item.level)}</td>
-                  <td>
-                    <span className={`badge state-${item.status}`}>
-                      {text.statuses[item.status] ?? item.status}
-                    </span>
-                    {item.approvalKind === 'accepted_with_exception' && (
-                      <span className="badge state-paused">{text.exceptionBadge}</span>
-                    )}
-                  </td>
-                  <td>{formatDateTime(locale, item.updatedAt)}</td>
-                  <td>
-                    <button
-                      className="secondary-button"
-                      type="button"
-                      aria-label={`${text.open}: ${item.title}`}
-                      onClick={() => setOpenId(item.id)}
-                    >
-                      {text.open}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PagedRows rows={items}>
+          {(pageRows) => (
+            <div
+              className="table-scroll"
+              tabIndex={0}
+              role="region"
+              aria-labelledby="documents-title"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{text.priority}</th>
+                    <th scope="col">{text.docTitle}</th>
+                    <th scope="col">{text.level}</th>
+                    <th scope="col">{text.status}</th>
+                    <th scope="col">{text.updated}</th>
+                    <th scope="col">
+                      <span className="visually-hidden">{text.open}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((item) => (
+                    <tr key={item.id}>
+                      <td>{formatNumber(locale, item.priority)}</td>
+                      <th scope="row" dir="auto">
+                        {item.title}
+                        {item.analysisProfile === 'quick' && (
+                          <span className="badge state-paused">
+                            {quickDraftMessages(locale).warning}
+                          </span>
+                        )}
+                      </th>
+                      <td>{formatNumber(locale, item.level)}</td>
+                      <td>
+                        <span className={`badge state-${item.status}`}>
+                          {text.statuses[item.status] ?? item.status}
+                        </span>
+                        {item.approvalKind === 'accepted_with_exception' && (
+                          <span className="badge state-paused">{text.exceptionBadge}</span>
+                        )}
+                      </td>
+                      <td>{formatDateTime(locale, item.updatedAt)}</td>
+                      <td>
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          aria-label={`${text.open}: ${item.title}`}
+                          onClick={() => setOpenId(item.id)}
+                        >
+                          {text.open}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PagedRows>
       )}
     </section>
   );
@@ -682,98 +692,117 @@ function DocumentView({
         {artifacts.length === 0 ? (
           <p className="muted">{text.artifactsNone}</p>
         ) : (
-          <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="exports-title">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">{text.format}</th>
-                  <th scope="col">{text.version.replace('{n}', '')}</th>
-                  <th scope="col">{text.size}</th>
-                  <th scope="col">{text.created}</th>
-                  <th scope="col">
-                    <span className="visually-hidden">{text.download}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {artifacts.map((artifact) => (
-                  <tr key={artifact.id}>
-                    <th scope="row" dir="ltr">
-                      {artifact.format.toUpperCase()}
-                    </th>
-                    <td>{formatNumber(locale, artifact.documentVersion)}</td>
-                    <td>{formatNumber(locale, Math.ceil(artifact.sizeBytes / 1024))} KB</td>
-                    <td>{formatDateTime(locale, artifact.createdAt)}</td>
-                    <td>
-                      <a
-                        className="secondary-button link-button"
-                        href={`/api${base}/artifacts/${artifact.id}/download`}
-                        download
-                        aria-label={`${text.download}: ${artifact.format.toUpperCase()} ${formatNumber(locale, artifact.documentVersion)}`}
-                      >
-                        {text.download}
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PagedRows rows={artifacts}>
+            {(pageRows) => (
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-labelledby="exports-title"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{text.format}</th>
+                      <th scope="col">{text.version.replace('{n}', '')}</th>
+                      <th scope="col">{text.size}</th>
+                      <th scope="col">{text.created}</th>
+                      <th scope="col">
+                        <span className="visually-hidden">{text.download}</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((artifact) => (
+                      <tr key={artifact.id}>
+                        <th scope="row" dir="ltr">
+                          {artifact.format.toUpperCase()}
+                        </th>
+                        <td>{formatNumber(locale, artifact.documentVersion)}</td>
+                        <td>{formatNumber(locale, Math.ceil(artifact.sizeBytes / 1024))} KB</td>
+                        <td>{formatDateTime(locale, artifact.createdAt)}</td>
+                        <td>
+                          <a
+                            className="secondary-button link-button"
+                            href={`/api${base}/artifacts/${artifact.id}/download`}
+                            download
+                            aria-label={`${text.download}: ${artifact.format.toUpperCase()} ${formatNumber(locale, artifact.documentVersion)}`}
+                          >
+                            {text.download}
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
       </section>
 
       <section className="card" aria-labelledby="versions-title">
         <h2 id="versions-title">{text.versions}</h2>
-        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="versions-title">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">{text.version.replace('{n}', '')}</th>
-                <th scope="col">{text.versionOrigin}</th>
-                <th scope="col">{text.chars}</th>
-                <th scope="col">{text.withinBounds}</th>
-                <th scope="col">{text.reason}</th>
-                <th scope="col">{text.created}</th>
-                <th scope="col">
-                  <span className="visually-hidden">{text.restore}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {versions.map((version) => (
-                <tr key={version.id}>
-                  <th scope="row">{formatNumber(locale, version.versionNo)}</th>
-                  <td>{text.origins[version.origin] ?? version.origin}</td>
-                  <td>{formatNumber(locale, version.charCount)}</td>
-                  <td>{version.withinBounds ? text.yes : text.no}</td>
-                  <td dir="auto">{version.reason ?? '—'}</td>
-                  <td>{formatDateTime(locale, version.createdAt)}</td>
-                  <td>
-                    {version.id !== current?.id && !['locked', 'superseded'].includes(status) && (
-                      <button
-                        data-write-action
-                        className="secondary-button"
-                        type="button"
-                        disabled={busy || live}
-                        aria-label={`${text.restore}: ${formatNumber(locale, version.versionNo)}`}
-                        onClick={() =>
-                          setPending({
-                            kind: 'restore',
-                            versionId: version.id,
-                            versionNo: version.versionNo,
-                            reason: '',
-                          })
-                        }
-                      >
-                        {text.restore}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PagedRows rows={versions}>
+          {(pageRows) => (
+            <div
+              className="table-scroll"
+              tabIndex={0}
+              role="region"
+              aria-labelledby="versions-title"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{text.version.replace('{n}', '')}</th>
+                    <th scope="col">{text.versionOrigin}</th>
+                    <th scope="col">{text.chars}</th>
+                    <th scope="col">{text.withinBounds}</th>
+                    <th scope="col">{text.reason}</th>
+                    <th scope="col">{text.created}</th>
+                    <th scope="col">
+                      <span className="visually-hidden">{text.restore}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((version) => (
+                    <tr key={version.id}>
+                      <th scope="row">{formatNumber(locale, version.versionNo)}</th>
+                      <td>{text.origins[version.origin] ?? version.origin}</td>
+                      <td>{formatNumber(locale, version.charCount)}</td>
+                      <td>{version.withinBounds ? text.yes : text.no}</td>
+                      <td dir="auto">{version.reason ?? '—'}</td>
+                      <td>{formatDateTime(locale, version.createdAt)}</td>
+                      <td>
+                        {version.id !== current?.id &&
+                          !['locked', 'superseded'].includes(status) && (
+                            <button
+                              data-write-action
+                              className="secondary-button"
+                              type="button"
+                              disabled={busy || live}
+                              aria-label={`${text.restore}: ${formatNumber(locale, version.versionNo)}`}
+                              onClick={() =>
+                                setPending({
+                                  kind: 'restore',
+                                  versionId: version.id,
+                                  versionNo: version.versionNo,
+                                  reason: '',
+                                })
+                              }
+                            >
+                              {text.restore}
+                            </button>
+                          )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PagedRows>
         {versions.length > 1 && (
           <form className="filter-form" onSubmit={showDiff} aria-labelledby="compare-title">
             <h3 id="compare-title">{text.compare}</h3>

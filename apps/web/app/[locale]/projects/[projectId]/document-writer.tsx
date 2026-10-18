@@ -8,6 +8,7 @@ import { explainError, Notice, useAction } from '../../use-action';
 import { editorMessages, fill } from './editor-messages';
 import { TermIssues, type TermIssueView } from './term-issues';
 import { FieldLabel, SectionTitle } from '../../../info-tip';
+import { PagedRows } from '../../../table-pager';
 
 interface WritingSummary {
   id: string;
@@ -492,35 +493,39 @@ export function DocumentWriter({
       {history.length === 0 ? (
         <p className="muted">{text.noHistory}</p>
       ) : (
-        <div className="table-scroll" tabIndex={0} role="region" aria-label={text.history}>
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">{text.when}</th>
-                <th scope="col">{text.writerLevel}</th>
-                <th scope="col">{text.writerTemplate}</th>
-                <th scope="col">{text.result}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((item) => (
-                <tr key={item.id}>
-                  <th scope="row">{formatDateTime(locale, item.createdAt)}</th>
-                  <td>{formatNumber(locale, item.level)}</td>
-                  <td dir="ltr">{item.templateVersion}</td>
-                  <td>
-                    <span className={`badge state-${item.status}`}>
-                      {text.writingStatuses[item.status] ?? item.status}
-                    </span>
-                    {item.withinBounds === false && (
-                      <span className="badge state-failed">{text.reportOutside}</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PagedRows rows={history}>
+          {(pageRows) => (
+            <div className="table-scroll" tabIndex={0} role="region" aria-label={text.history}>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{text.when}</th>
+                    <th scope="col">{text.writerLevel}</th>
+                    <th scope="col">{text.writerTemplate}</th>
+                    <th scope="col">{text.result}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((item) => (
+                    <tr key={item.id}>
+                      <th scope="row">{formatDateTime(locale, item.createdAt)}</th>
+                      <td>{formatNumber(locale, item.level)}</td>
+                      <td dir="ltr">{item.templateVersion}</td>
+                      <td>
+                        <span className={`badge state-${item.status}`}>
+                          {text.writingStatuses[item.status] ?? item.status}
+                        </span>
+                        {item.withinBounds === false && (
+                          <span className="badge state-failed">{text.reportOutside}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PagedRows>
       )}
     </section>
   );

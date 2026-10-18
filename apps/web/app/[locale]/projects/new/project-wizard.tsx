@@ -135,6 +135,9 @@ export function ProjectWizard({
   const [baseline, setBaseline] = useState<Effective | null>(null);
   const [review, setReview] = useState<Effective | null>(null);
   const [reviewFailed, setReviewFailed] = useState(false);
+  // The inherited values could not be read (a dropped connection); the user may try again.
+  const [baselineFailed, setBaselineFailed] = useState(false);
+  const [baselineTry, setBaselineTry] = useState(0);
   const base = `/workspaces/${workspaceId}`;
 
   // A draft left earlier comes back; the wizard saves one after every change.
@@ -180,13 +183,17 @@ export function ProjectWizard({
       topicIds,
       settings: [],
     })
-      .then((result) => active && setBaseline(result.config))
-      .catch(() => undefined);
+      .then((result) => {
+        if (!active) return;
+        setBaseline(result.config);
+        setBaselineFailed(false);
+      })
+      .catch(() => active && setBaselineFailed(true));
     return () => {
       active = false;
     };
     // topicKey stands for topicIds (a new array every render would loop).
-  }, [base, topicKey]);
+  }, [base, topicKey, baselineTry]);
 
   const definition = useCallback(
     (key: string) => definitions.find((item) => item.key === key),
@@ -443,6 +450,20 @@ export function ProjectWizard({
         )}
         {step === 6 && values.analysisProfile === 'quick' && (
           <p className="notice">{quickDraftMessages(locale).level}</p>
+        )}
+        {baselineFailed && (
+          <div className="stack" role="alert">
+            <p className="notice error">{text.baselineFailed}</p>
+            <div className="toolbar">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => setBaselineTry((value) => value + 1)}
+              >
+                {text.baselineRetry}
+              </button>
+            </div>
+          </div>
         )}
         {keys && baseline && (
           <ul className="plain-list stack">

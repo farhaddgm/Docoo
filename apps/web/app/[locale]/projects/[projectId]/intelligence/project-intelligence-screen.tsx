@@ -9,6 +9,7 @@ import {
   type ProjectResearchPlan,
 } from '@docoo/contracts';
 import { useReadOnlyAccess } from '../../../resource-access';
+import { SectionTitle } from '../../../../info-tip';
 
 type Search = IntelligenceSearchResult;
 type Claim = Search['items'][number]['claim'];
@@ -334,13 +335,14 @@ export function ProjectIntelligenceScreen({
     <div className="page-shell intelligence-page" dir={fa ? 'rtl' : 'ltr'}>
       <header className="page-header">
         <div>
-          <h2>{t('شواهد و تصمیم پروژه', 'Project evidence and decisions')}</h2>
-          <p>
-            {t(
+          <SectionTitle
+            help={t(
               'جست‌وجو، پژوهش تطبیقی، تعارض‌ها و کفایت شواهد در یک مسیر.',
               'Search, adaptive research, conflicts and evidence sufficiency.',
             )}
-          </p>
+          >
+            {t('شواهد و تصمیم پروژه', 'Project evidence and decisions')}
+          </SectionTitle>
         </div>
         <Link
           className="secondary-button"
@@ -613,13 +615,14 @@ export function ProjectIntelligenceScreen({
         )}
       </section>
       <section className="panel">
-        <h2>{t('پیشنهادهای تعارض', 'Conflict suggestions')}</h2>
-        <p>
-          {t(
+        <SectionTitle
+          help={t(
             'پیشنهادهای خودکار نیازمند بررسی‌اند. تفاوت جامعه یا روش می‌تواند دو نتیجه را هم‌زمان معتبر کند.',
             'Automatic suggestions require review. Population or method differences can make both findings applicable.',
           )}
-        </p>
+        >
+          {t('پیشنهادهای تعارض', 'Conflict suggestions')}
+        </SectionTitle>
         {conflicts.length === 0 && (
           <p>
             {t(
@@ -690,13 +693,14 @@ export function ProjectIntelligenceScreen({
         </Link>
       </section>
       <section className="panel">
-        <h2>{t('پژوهش تطبیقی', 'Adaptive research')}</h2>
-        <p>
-          {t(
+        <SectionTitle
+          help={t(
             'هر خط یک پرسش است. موتور از دانش تأییدشدهٔ داخلی جست‌وجو می‌کند و با رسیدن به پوشش هدف یا سقف منابع متوقف می‌شود. نتیجهٔ پوشش معیار احتمال حقیقت نیست.',
             'One question per line. Searches approved internal knowledge and stops at target coverage or resource limits. Coverage is not a probability of truth.',
           )}
-        </p>
+        >
+          {t('پژوهش تطبیقی', 'Adaptive research')}
+        </SectionTitle>
         <form onSubmit={(e) => void submitResearch(e)}>
           <label>
             {t('پرسش‌ها؛ حداکثر ۲۰', 'Questions; maximum 20')}

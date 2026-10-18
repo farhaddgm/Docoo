@@ -8,6 +8,7 @@ import { apiGet, apiSend } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { explainError, Notice, useAction } from '../../use-action';
 import { questionQualityMessages } from './question-quality-messages';
+import { SectionTitle } from '../../../info-tip';
 
 interface Finding {
   kind: 'strength' | 'weakness';
@@ -117,8 +118,9 @@ export function QuestionQuality({
 
   return (
     <section className="card stack" aria-labelledby="quality-heading" aria-busy={busy}>
-      <h3 id="quality-heading">{text.title}</h3>
-      <p className="muted">{text.intro}</p>
+      <SectionTitle as="h3" id="quality-heading" help={text.intro}>
+        {text.title}
+      </SectionTitle>
       <p className="muted">
         {text.criteriaNote}{' '}
         <Link href={`/${locale}/settings` as Route}>

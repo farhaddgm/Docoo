@@ -8,6 +8,8 @@ import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
+import { DeliverablesPanel } from './deliverables-panel';
+import { StageChat, StageChatDisclosure } from './stage-chat';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
 import { FieldLabel } from '../../../info-tip';
@@ -31,6 +33,7 @@ interface StageItem {
   attemptsUsed?: number;
   passedByDecision?: boolean;
   pendingGateOutputId?: string | null;
+  latestOutputId?: string | null;
 }
 
 interface HumanTask {
@@ -355,6 +358,13 @@ export function WorkflowPanel({
                 </span>
               )}
               {stage.passedByDecision && <span className="muted">{text.passedByDecision}</span>}
+              {stage.id && stage.latestOutputId && !stage.pendingGateOutputId && (
+                <StageChatDisclosure
+                  locale={locale}
+                  stageBase={`${base}/stages/${stage.id}`}
+                  onChanged={afterChange}
+                />
+              )}
             </li>
           ))}
         </ol>
@@ -400,6 +410,8 @@ export function WorkflowPanel({
           </ul>
         )}
       </section>
+
+      <DeliverablesPanel locale={locale} base={base} onChanged={afterChange} />
 
       {decisionTasks.map((task) => {
         const stage = overview.stages.find((item) => item.id === task.stageRunId);
@@ -700,6 +712,8 @@ function ReviewPanel({
               {JSON.stringify(output.content, null, 2)}
             </pre>
           </details>
+
+          <StageChat locale={locale} stageBase={stageBase} onChanged={onChanged} />
 
           {editing ? (
             <form data-write-action className="stack" onSubmit={saveEdit} aria-busy={busy}>

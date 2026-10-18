@@ -6,6 +6,7 @@ import { ApiError, apiGet, apiPost, dayBoundary, query } from '../../api-client'
 import { formatDateTime, formatNumber, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
+import { PagedRows } from '../../table-pager';
 
 interface AuditEvent {
   id: string;
@@ -273,42 +274,51 @@ function Explorer({ locale, workspaceId }: { locale: Locale; workspaceId: string
         ) : items.length === 0 ? (
           <p className="muted">{content.none}</p>
         ) : (
-          <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="results-title">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">{text.when}</th>
-                  <th scope="col">action</th>
-                  <th scope="col">{text.severity}</th>
-                  <th scope="col">{text.target}</th>
-                  <th scope="col">{text.reason}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <time dateTime={item.occurredAt}>
-                        {formatDateTime(locale, item.occurredAt)}
-                      </time>
-                    </td>
-                    <td dir="ltr">{item.action}</td>
-                    <td>
-                      <span className={`badge severity-${item.severity}`}>{item.severity}</span>
-                      {item.securityRelevant && (
-                        <span className="badge severity-high">security</span>
-                      )}
-                    </td>
-                    <td dir="ltr">
-                      {item.targetType}
-                      {item.targetId && <code> {item.targetId.slice(0, 8)}</code>}
-                    </td>
-                    <td>{item.reason ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PagedRows rows={items}>
+            {(pageRows) => (
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-labelledby="results-title"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{text.when}</th>
+                      <th scope="col">action</th>
+                      <th scope="col">{text.severity}</th>
+                      <th scope="col">{text.target}</th>
+                      <th scope="col">{text.reason}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((item) => (
+                      <tr key={item.id}>
+                        <td>
+                          <time dateTime={item.occurredAt}>
+                            {formatDateTime(locale, item.occurredAt)}
+                          </time>
+                        </td>
+                        <td dir="ltr">{item.action}</td>
+                        <td>
+                          <span className={`badge severity-${item.severity}`}>{item.severity}</span>
+                          {item.securityRelevant && (
+                            <span className="badge severity-high">security</span>
+                          )}
+                        </td>
+                        <td dir="ltr">
+                          {item.targetType}
+                          {item.targetId && <code> {item.targetId.slice(0, 8)}</code>}
+                        </td>
+                        <td>{item.reason ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
         {cursor && (
           <button
