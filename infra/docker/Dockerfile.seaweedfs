@@ -1,5 +1,5 @@
 # Keep the deployed SeaweedFS source revision and storage format with patched Go.
-FROM golang:1.27.2-alpine@sha256:85dc1069ac644ea3c527b177303a406eb3358192816cd7f9e5848eb658851673 AS builder
+FROM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS builder
 RUN apk add --no-cache git
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOPROXY="https://proxy.golang.org|direct" GOMAXPROCS=2
 ADD --checksum=sha256:217b507e7457d10629e837cebea6542d8b7685819dafbb56ef910330594af0e1 https://codeload.github.com/seaweedfs/seaweedfs/tar.gz/530be3e37337488ecc34d58441e0bc476e121c93 /tmp/source.tgz
