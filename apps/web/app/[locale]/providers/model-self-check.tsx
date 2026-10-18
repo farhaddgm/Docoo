@@ -6,6 +6,7 @@ import { apiGet, apiSend } from '../../api-client';
 import { formatNumber, type Locale } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { selfCheckMessages } from './self-check-messages';
+import { SectionTitle } from '../../info-tip';
 
 interface Result {
   step: string;
@@ -196,8 +197,9 @@ export function ModelSelfCheck({
 
   return (
     <section className="card stack" aria-labelledby="selfcheck-title">
-      <h2 id="selfcheck-title">{text.title}</h2>
-      <p className="muted">{text.help}</p>
+      <SectionTitle id="selfcheck-title" help={text.help}>
+        {text.title}
+      </SectionTitle>
       <div className="filter-grid">
         <label htmlFor="selfcheck-connection">{text.connection}</label>
         <select

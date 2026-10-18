@@ -35,7 +35,7 @@ test.describe('Smart in Persian and English (SMT-001..004)', () => {
     const panel = page.getByRole('complementary', { name: 'پنجرهٔ اسمارت' });
     await expect(panel).toBeVisible();
     // The walker shows a step of 12 and says what to do (which step depends on earlier tests).
-    await expect(panel.getByText(/^مرحلهٔ .+ از ۱۲$/)).toBeVisible();
+    await expect(panel.getByText(/^مرحلهٔ .+ از ۱۳$/)).toBeVisible();
     await expect(panel.getByRole('heading', { level: 3 })).toBeVisible();
     await expect(panel.getByRole('heading', { name: 'چه کار کنم؟' })).toBeVisible();
     await expectNoSeriousA11yViolations(page);

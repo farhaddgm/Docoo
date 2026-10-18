@@ -4,6 +4,7 @@ import type { SmartError, WalkerProgress } from './api';
 import { createLimiter } from './error-reporter';
 import { developerReport, normalizeDisplayPath } from './format';
 import { fill, smartErrorMessage, smartMessagesFor } from './messages';
+import { smartPageContext } from './page-context';
 import { createToastGate, isLocalEcho } from './toast-logic';
 import { defaultUiState, parseUiState } from './ui-state';
 import { defaultStepKey, neighbourKey, projectIdFromPath, stepHref } from './walker';
@@ -17,6 +18,7 @@ const STEP_KEYS = [
   'approve_knowledge',
   'create_project',
   'activate_project',
+  'confirm_deliverables',
   'complete_stages',
   'choose_solution',
   'evaluate_document',
@@ -80,9 +82,23 @@ describe('persisted Smart state', () => {
     const projectId = '3f2b7c1e-6a0e-4a39-9d52-0a5a1c3b9f10';
     expect(
       parseUiState(
-        JSON.stringify({ enabled: false, minimized: false, side: 'start', tab: 'chat', projectId }),
+        JSON.stringify({
+          enabled: false,
+          minimized: false,
+          maximized: true,
+          side: 'start',
+          tab: 'chat',
+          projectId,
+        }),
       ),
-    ).toEqual({ enabled: false, minimized: false, side: 'start', tab: 'chat', projectId });
+    ).toEqual({
+      enabled: false,
+      minimized: false,
+      maximized: true,
+      side: 'start',
+      tab: 'chat',
+      projectId,
+    });
     expect(
       parseUiState(
         JSON.stringify({ enabled: 'yes', side: 'top', tab: 'nope', projectId: '../../etc' }),
@@ -180,7 +196,7 @@ describe('walker helpers', () => {
     expect(stepHref('en', 'approve_knowledge')).toBe('/en/knowledge');
     // A project step without a selected project has nowhere to go.
     expect(stepHref('en', 'complete_stages')).toBeNull();
-    // Every one of the twelve steps now has a page once a project is selected.
+    // Every one of the thirteen steps now has a page once a project is selected.
     for (const key of [
       'connect_provider',
       'configure_ai',
@@ -189,6 +205,7 @@ describe('walker helpers', () => {
       'approve_knowledge',
       'create_project',
       'activate_project',
+      'confirm_deliverables',
       'complete_stages',
       'choose_solution',
       'evaluate_document',
@@ -231,5 +248,23 @@ describe('display helpers', () => {
     expect(report).toContain('- Fix note: Looking');
     expect(report).toContain('```json');
     expect(report).toContain('"route": "/fa"');
+  });
+});
+
+describe('page context for the assistant', () => {
+  it('publishes the open Brain report and clears it again', () => {
+    const seen: (string | null)[] = [];
+    const stop = smartPageContext.subscribe(() =>
+      seen.push(smartPageContext.getSnapshot().brainReportId),
+    );
+    expect(smartPageContext.getSnapshot().brainReportId).toBeNull();
+    smartPageContext.setBrainReport('11111111-1111-4111-8111-111111111111');
+    smartPageContext.setBrainReport('11111111-1111-4111-8111-111111111111');
+    smartPageContext.setBrainReport(null);
+    stop();
+    smartPageContext.setBrainReport('22222222-2222-4222-8222-222222222222');
+    expect(seen).toEqual(['11111111-1111-4111-8111-111111111111', null]);
+    smartPageContext.setBrainReport(null);
+    expect(smartPageContext.getServerSnapshot().brainReportId).toBeNull();
   });
 });

@@ -11,6 +11,7 @@ import { explainError, Notice, useAction } from '../use-action';
 import { Badge, useScopeOptions } from './knowledge-common';
 import { knowledgeMessages } from './knowledge-messages';
 import { scopeRoles, type Retrieval, type ScopeRole } from './knowledge-types';
+import { SectionTitle } from '../../info-tip';
 
 /**
  * Shows what an agent would be given for a question (KNO-007): only approved, current and valid
@@ -59,8 +60,9 @@ export function RetrievalPanel({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.retrievalHeading}</h2>
-      <p className="muted">{text.retrievalHelp}</p>
+      <SectionTitle id={`${id}-heading`} help={text.retrievalHelp}>
+        {text.retrievalHeading}
+      </SectionTitle>
       <form className="field-stack" onSubmit={submit}>
         <label htmlFor={`${id}-q`}>{text.retrievalQuery}</label>
         <input

@@ -2,6 +2,80 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.31.0] — 2026-10-16
+
+### Added
+
+- **Live web search in the research stage** ([ADR-0026](docs/adr/0026-web-research-adapter.md) addendum). Research now asks the connected AI provider to search the web with its own search tool (OpenAI, Gemini or Anthropic; no new key). Pages found become `W#` sources: a finding's quote is checked against the page text, marked **Web** (or unverified), and linked to the page. Approved internal knowledge still counts first. The research view shows the queries, the pages and whether each was cited, or why the search was off, found nothing, was refused or failed (the research then goes on with internal knowledge). Settings `research.web_enabled` (default on) and `research.web_max_searches` (1–10, default 5). The search goes through the tool gateway, is recorded in the tool ledger and counts toward the cost limit. Privacy: the search queries are derived from the problem statement and are sent to the provider's search; switch it off with `research.web_enabled`.
+
+## [0.30.0] — 2026-10-16
+
+### Added
+
+- **Next project from a completed one.** A completed project shows **Build the next project**: a continuation (same problem) or a pivot (a new direction, required). The clone route takes `kind` (`copy`, `continuation`, `pivot`) and `pivotProblem`; the new project is a draft that keeps the settings, topics and business of the source, records `clonedFromId` and `originKind` (migration 0044), and links back to the source on its overview. A continuation or pivot from a project that is not completed is refused with `409 PROJECT_NOT_COMPLETED`.
+- **Suggested answers for analyst questions.** Next to each question, **Suggest an answer with AI** drafts an answer from the project and the earlier answers and puts it in the answer field. Nothing is saved until the administrator edits and submits it. `POST /analysis-questions/{id}/suggest-answer` (`analysis.answer`; audit `analysis.answer_suggested`).
+- **Talk to the agent of a stage** ([ADR-0031](docs/adr/0031-expected-deliverables-and-stage-conversation.md) P1). Under each stage output the administrator can ask the stage's agent a question or state a revision request. The agent answers from its own output (and the approved earlier stages) and never changes it; revision requests become the ordinary rejection of the current output only when the administrator sends them back, which makes a new attempt and counts against the attempt limit. Messages are append-only (migration 0045), capped by `workflow.stage_chat_max_messages` (40), and audited by ids and counts. API: `GET|POST /projects/{id}/stages/{stageRunId}/messages`, `POST …/messages/send-as-rejection` (`workflow.reject`).
+
+- **Confirm the expected deliverables before ideation** ([ADR-0031](docs/adr/0031-expected-deliverables-and-stage-conversation.md) P2). Ideation now waits, like it does for an agent's question, until the administrator confirms a plan of expected outputs (strategy document, product documentation; code is shown as outside Docoo and cannot be the only item). The workflow tab shows the plan: ask the model for a proposal, edit it, and confirm. Every edit or proposal is a new version that needs confirming again; the confirmed plan goes to ideation, documentation and evaluation as data. The quick draft, projects whose ideation already produced output and workspaces that set `workflow.require_deliverable_confirmation` to false are not held. New Walker step `confirm_deliverables` (13 steps now). Migration 0046; API `GET|PUT /projects/{id}/deliverables`, `POST …/deliverables/propose` and `…/confirm`.
+- **Stage conversation outside the gate.** A stage that has an output but is not waiting for review (running or finished) now has the same conversation, collapsed in the stage list; there you can only ask, because a revision request goes back only at the gate.
+- **The document evaluator knows the confirmed deliverables.** It reports as findings any in-scope point of the item the document serves that is missing, and any content from a "scope out" entry.
+
+### Fixed
+
+- The new project wizard no longer fails silently when the default values of the settings cannot be loaded (`Failed to fetch` on `…/settings/preview`): it says so and offers **Try again**.
+
+### Changed
+
+- The Smart window is 10% wider and taller, has a maximise button (remembered), and a slimmer header and tabs. In the chat, **Delete chat** sits next to **New chat**, and the history list stays inside the window with long titles ending in an ellipsis.
+
+## [0.29.0] — 2026-10-16
+
+### Changed
+
+- Put the sidebar and the sign-in card in the exact style of the Bee Researcher backoffice. **Sign out** moves from the sidebar to the top bar, and a hamburger button next to the sidebar folds it to an icon rail on wide screens (the choice is remembered) or opens the drawer on narrow ones.
+- Add the nine colour themes of the Bee Researcher backoffice (match system, light, dark, attractive blue, honey amber, forest green, faded gray, black & yellow, professional red) behind a **Theme** menu in the top bar. A theme changes the page, accents and sidebar colours only, and every text/background pair keeps a 4.5:1 contrast.
+- Move the remaining descriptions under page and section titles into the **"i" button** (page titles, role, usage cost, Contenter, evidence override, knowledge uses, project roles, criteria, question quality, decision evidence). Warnings stay visible.
+- Merge user management and **Gmail sign-in** into one page, **Users & sign-in**, with a Users tab and an owner-only Gmail tab. `/settings/google-access` opens the same page on the Gmail tab.
+- Show lists with more than ten rows ten at a time, with Previous / Next and **Load more**.
+- Lay the settings out as compact tiles (three per row on wide screens) with the reason, Save and Reset on one line, so the page is about two thirds shorter.
+
+## [0.28.1] — 2026-10-16
+
+### Changed
+
+- Redesign the business tab of a project (the profile read from Contenter). Section text is laid out instead of shown as one run of raw text: headings, bold, bullet and numbered lists (Persian digits too), long runs of sentences broken into short paragraphs, and customer questions paired with their answers. Only web addresses become links; nothing is rendered as HTML.
+- Add a header with the business name, tagline, industry, location, language, status and website, a profile health ring, a sticky section index, a coverage bar, a marker on unconfirmed AI drafts, and folding of long sections. The facts tab gains summary figures and shows validity as a date; audit issues carry their severity on the edge; the tab shows a placeholder while it loads.
+
+## [0.28.0] — 2026-10-15
+
+### Changed
+
+- Redesign the whole web interface in the visual language of Bee Researcher: a navy grouped sidebar, a sticky top bar, soft cards, blue primary colour, 40px controls, status pills and a numbered stepper for the project wizard. Light, dark and system themes still come from one set of `light-dark()` tokens; every text/background pair keeps at least a 4.5:1 contrast, and an axe scan of the main pages passes in both themes.
+- Show the signed-in user and a **Sign out** button in the sidebar of every page (it was only on the dashboard), and add a dashboard summary strip with colour for counts that need attention.
+- Put every field description behind an **"i" button** next to the field title. The explanation opens on hover, keyboard focus or tap in one shared tooltip that stays inside the viewport and closes with Escape; the same text stays in the page and is linked with `aria-describedby`. Section descriptions under card headings use the same button.
+- Lay forms out with the title above the control and filters in a responsive row. The users and Gmail sign-in page now uses the common shell, and its dialogs take focus and close with Escape. The sidebar becomes a drawer on narrow screens.
+
+### Fixed
+
+- Remove the focus frame drawn around page headings, the double card around wizard fields, and the invisible default look of link-style buttons.
+- Replace colour variables that did not exist (users page, project decision evidence), which left those pages unreadable in the dark theme.
+- Write the remaining Latin words of the Persian dashboard (workflow, retry, token, attempt) in Persian.
+
+## [0.27.6] — 2026-10-16
+
+### Fixed
+
+- Preserve images already staged for the target release during the updater's disk-space cleanup. A low-space refusal keeps both the running and target releases, images used by stopped containers and unrelated applications; the full-build capacity and reserve requirements remain enforced.
+- Keep the selected notifications filter when an older list request finishes late, including failed older requests. Read actions reload the current filter and a workspace change resets the list.
+- Make writer restart acceptance stop after exactly two persisted parts, verify completion after restart, and include safe history metadata on a future timeout. Production workflow behavior and timeouts are unchanged.
+- Record the actual v0.27.4 browser-to-provider trace acceptance and retire the two observability waivers; human model-quality approval remains separate.
+
+## [0.27.5] — 2026-10-15
+
+### Fixed
+
+- The Smart assistant can now read the Brain report open on the Brain page. The server looks the report up read-only under the administrator's own workspace and `knowledge.read` permission and gives the model its totals, role figures, rule-based deviations with evidence ids, and recommendations. It reports `none_selected`, `not_found` or `forbidden` plainly instead of guessing another report, and the evaluating model's free-text findings stay out of the context.
+
 ## [0.27.4] — 2026-10-15
 
 ### Fixed

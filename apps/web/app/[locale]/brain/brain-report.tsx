@@ -5,8 +5,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPost } from '../../api-client';
 import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
+import { smartPageContext } from '../../smart/page-context';
 import { SignedIn } from '../signed-in';
 import { Evaluations, type ModelEvaluationSummary, type RoleEvaluationView } from './evaluations';
+import { PagedRows } from '../../table-pager';
 
 interface ReportSummary {
   id: string;
@@ -86,6 +88,13 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Tell the Smart assistant which report is open so it can read it for its answers.
+  const openId = selected?.id ?? null;
+  useEffect(() => {
+    smartPageContext.setBrainReport(openId);
+  }, [openId]);
+  useEffect(() => () => smartPageContext.setBrainReport(null), []);
 
   // Move focus to the opened report once it has rendered.
   useEffect(() => {
@@ -174,48 +183,57 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
             {selected.deviations.length === 0 ? (
               <p>{text.noDeviations}</p>
             ) : (
-              <div className="table-scroll" tabIndex={0} role="region" aria-label={text.deviations}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th scope="col">{text.rule}</th>
-                      <th scope="col">{text.role}</th>
-                      <th scope="col">{text.severity}</th>
-                      <th scope="col">{text.count}</th>
-                      <th scope="col">{text.detail}</th>
-                      <th scope="col">{text.evidence}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selected.deviations.map((deviation) => (
-                      <tr key={`${deviation.rule}-${deviation.role}`}>
-                        <td dir="ltr">
-                          {deviation.rule}
-                          <br />
-                          <small>{deviation.clause}</small>
-                        </td>
-                        <td>{deviation.role}</td>
-                        <td>
-                          <span className={`badge severity-${deviation.severity}`}>
-                            {deviation.severity}
-                          </span>
-                        </td>
-                        <td>{formatNumber(locale, deviation.count)}</td>
-                        <td dir="ltr">{deviation.detail}</td>
-                        <td dir="ltr">
-                          <ul className="plain-list evidence">
-                            {deviation.evidence.map((item) => (
-                              <li key={item.id}>
-                                {item.type}: <code>{item.id.slice(0, 8)}</code>
-                              </li>
-                            ))}
-                          </ul>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <PagedRows rows={selected.deviations}>
+                {(pageRows) => (
+                  <div
+                    className="table-scroll"
+                    tabIndex={0}
+                    role="region"
+                    aria-label={text.deviations}
+                  >
+                    <table>
+                      <thead>
+                        <tr>
+                          <th scope="col">{text.rule}</th>
+                          <th scope="col">{text.role}</th>
+                          <th scope="col">{text.severity}</th>
+                          <th scope="col">{text.count}</th>
+                          <th scope="col">{text.detail}</th>
+                          <th scope="col">{text.evidence}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((deviation) => (
+                          <tr key={`${deviation.rule}-${deviation.role}`}>
+                            <td dir="ltr">
+                              {deviation.rule}
+                              <br />
+                              <small>{deviation.clause}</small>
+                            </td>
+                            <td>{deviation.role}</td>
+                            <td>
+                              <span className={`badge severity-${deviation.severity}`}>
+                                {deviation.severity}
+                              </span>
+                            </td>
+                            <td>{formatNumber(locale, deviation.count)}</td>
+                            <td dir="ltr">{deviation.detail}</td>
+                            <td dir="ltr">
+                              <ul className="plain-list evidence">
+                                {deviation.evidence.map((item) => (
+                                  <li key={item.id}>
+                                    {item.type}: <code>{item.id.slice(0, 8)}</code>
+                                  </li>
+                                ))}
+                              </ul>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </PagedRows>
             )}
             {(selected.evaluations.length > 0 || selected.summary.modelEvaluation) && (
               <Evaluations

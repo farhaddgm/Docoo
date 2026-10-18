@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
+import { AnswerSuggestionService } from './answer-suggestion.service.js';
 import { AnalysisService } from './analysis.service.js';
 import { QuestionQualityService } from './question-quality.service.js';
 
@@ -61,6 +62,7 @@ export class AnalysisController {
   constructor(
     private readonly analysis: AnalysisService,
     private readonly quality: QuestionQualityService,
+    private readonly suggestions: AnswerSuggestionService,
   ) {}
 
   @Get('projects/:projectId/analysis')
@@ -119,6 +121,16 @@ export class AnalysisController {
         idempotencyKey: idempotencyKey(request),
       }),
     };
+  }
+
+  @Post('analysis-questions/:questionId/suggest-answer')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Draft an answer to a question with the model; nothing is saved (costs a model call)',
+  })
+  @RequireWorkspacePermission('analysis.answer')
+  async suggestAnswer(@Req() request: FastifyRequest, @Param('questionId') raw: string) {
+    return this.suggestions.suggest(workspaceContext(request), id(raw));
   }
 
   @Post('projects/:projectId/analysis/finish')

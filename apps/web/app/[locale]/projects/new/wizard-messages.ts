@@ -38,6 +38,9 @@ const messages = {
     changedHere: 'تغییرکرده برای این پروژه',
     reviewLoading: 'در حال محاسبهٔ تنظیمات مؤثر…',
     reviewFailed: 'تنظیمات مؤثر محاسبه نشد؛ مقدارها را بررسی کنید.',
+    baselineFailed:
+      'مقدار پیش‌فرض تنظیم‌ها بارگذاری نشد (احتمالاً ارتباط با سرور قطع شد). تا بارگذاری دوباره، تنظیم‌های پروژه نمایش داده نمی‌شوند.',
+    baselineRetry: 'تلاش دوباره',
     reviewTable: 'تنظیمات مؤثر پروژه',
     setting: 'تنظیم',
     value: 'مقدار',
@@ -99,6 +102,9 @@ const messages = {
     changedHere: 'Changed for this project',
     reviewLoading: 'Working out the effective settings…',
     reviewFailed: 'The effective settings could not be worked out; check the values.',
+    baselineFailed:
+      'The default values of the settings could not be loaded (the connection to the server probably dropped). The project settings are hidden until they load.',
+    baselineRetry: 'Try again',
     reviewTable: 'Effective settings of the project',
     setting: 'Setting',
     value: 'Value',

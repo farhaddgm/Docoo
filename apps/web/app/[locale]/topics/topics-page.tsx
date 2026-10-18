@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
 
 import { apiGet, apiSend, query } from '../../api-client';
+import { FieldLabel } from '../../info-tip';
 import { formatDateTime, formatNumber, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
 import { topicMessages } from './messages';
+import { PagedRows } from '../../table-pager';
 
 type TopicStatus = 'active' | 'archived' | 'deleted';
 type TopicLanguage = 'fa' | 'en';
@@ -192,97 +194,103 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
         ) : items.length === 0 ? (
           <p className="muted">{text.empty}</p>
         ) : (
-          <div
-            className="table-scroll"
-            tabIndex={0}
-            role="region"
-            aria-labelledby="topic-list-title"
-          >
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">{text.code}</th>
-                  <th scope="col">{text.topicTitle}</th>
-                  <th scope="col">{text.language}</th>
-                  <th scope="col">{text.version}</th>
-                  <th scope="col">{view === 'deleted' ? text.purgeAfter : text.updated}</th>
-                  <th scope="col">
-                    <span className="visually-hidden">{text.actions}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((topic) => (
-                  <tr key={topic.id}>
-                    <th scope="row" dir="ltr">
-                      {topic.code}
-                    </th>
-                    <td dir="auto">{topic.title}</td>
-                    <td>{text.languages[topic.language]}</td>
-                    <td>{formatNumber(locale, topic.version)}</td>
-                    <td>
-                      {formatDateTime(
-                        locale,
-                        view === 'deleted' && topic.purgeAfter ? topic.purgeAfter : topic.updatedAt,
-                      )}
-                    </td>
-                    <td>
-                      <div className="toolbar">
-                        {topic.access === 'EDIT' && view === 'active' && (
-                          <button
-                            className="secondary-button"
-                            type="button"
-                            disabled={busy}
-                            aria-label={`${text.edit}: ${topic.title}`}
-                            onClick={() => {
-                              setConfirming(null);
-                              setNotice(null);
-                              setEditing(topic);
-                            }}
-                          >
-                            {text.edit}
-                          </button>
-                        )}
-                        {topic.access === 'EDIT' && view === 'active' && (
-                          <button
-                            className="secondary-button"
-                            type="button"
-                            disabled={busy}
-                            aria-label={`${text.archive}: ${topic.title}`}
-                            onClick={() => void askConfirmation('archive', topic)}
-                          >
-                            {text.archive}
-                          </button>
-                        )}
-                        {topic.access === 'EDIT' && view !== 'active' && (
-                          <button
-                            className="secondary-button"
-                            type="button"
-                            disabled={busy}
-                            aria-label={`${text.restore}: ${topic.title}`}
-                            onClick={() => restore(topic)}
-                          >
-                            {text.restore}
-                          </button>
-                        )}
-                        {isAdmin && view !== 'deleted' && (
-                          <button
-                            className="secondary-button danger"
-                            type="button"
-                            disabled={busy}
-                            aria-label={`${text.remove}: ${topic.title}`}
-                            onClick={() => void askConfirmation('delete', topic)}
-                          >
-                            {text.remove}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PagedRows rows={items}>
+            {(pageRows) => (
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-labelledby="topic-list-title"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{text.code}</th>
+                      <th scope="col">{text.topicTitle}</th>
+                      <th scope="col">{text.language}</th>
+                      <th scope="col">{text.version}</th>
+                      <th scope="col">{view === 'deleted' ? text.purgeAfter : text.updated}</th>
+                      <th scope="col">
+                        <span className="visually-hidden">{text.actions}</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((topic) => (
+                      <tr key={topic.id}>
+                        <th scope="row" dir="ltr">
+                          {topic.code}
+                        </th>
+                        <td dir="auto">{topic.title}</td>
+                        <td>{text.languages[topic.language]}</td>
+                        <td>{formatNumber(locale, topic.version)}</td>
+                        <td>
+                          {formatDateTime(
+                            locale,
+                            view === 'deleted' && topic.purgeAfter
+                              ? topic.purgeAfter
+                              : topic.updatedAt,
+                          )}
+                        </td>
+                        <td>
+                          <div className="toolbar">
+                            {topic.access === 'EDIT' && view === 'active' && (
+                              <button
+                                className="secondary-button"
+                                type="button"
+                                disabled={busy}
+                                aria-label={`${text.edit}: ${topic.title}`}
+                                onClick={() => {
+                                  setConfirming(null);
+                                  setNotice(null);
+                                  setEditing(topic);
+                                }}
+                              >
+                                {text.edit}
+                              </button>
+                            )}
+                            {topic.access === 'EDIT' && view === 'active' && (
+                              <button
+                                className="secondary-button"
+                                type="button"
+                                disabled={busy}
+                                aria-label={`${text.archive}: ${topic.title}`}
+                                onClick={() => void askConfirmation('archive', topic)}
+                              >
+                                {text.archive}
+                              </button>
+                            )}
+                            {topic.access === 'EDIT' && view !== 'active' && (
+                              <button
+                                className="secondary-button"
+                                type="button"
+                                disabled={busy}
+                                aria-label={`${text.restore}: ${topic.title}`}
+                                onClick={() => restore(topic)}
+                              >
+                                {text.restore}
+                              </button>
+                            )}
+                            {isAdmin && view !== 'deleted' && (
+                              <button
+                                className="secondary-button danger"
+                                type="button"
+                                disabled={busy}
+                                aria-label={`${text.remove}: ${topic.title}`}
+                                onClick={() => void askConfirmation('delete', topic)}
+                              >
+                                {text.remove}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
         {nextCursor && (
           <div className="toolbar">
@@ -386,7 +394,9 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
         >
           <h2 id="topic-create-title">{text.create}</h2>
           <div className="filter-grid">
-            <label htmlFor="topic-code">{text.code}</label>
+            <FieldLabel htmlFor="topic-code" help={text.codeHelp} helpId="topic-code-help">
+              {text.code}
+            </FieldLabel>
             <input
               id="topic-code"
               dir="ltr"
@@ -397,10 +407,6 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
               autoComplete="off"
               required
             />
-            <span />
-            <p id="topic-code-help" className="muted">
-              {text.codeHelp}
-            </p>
             <label htmlFor="topic-title">{text.topicTitle}</label>
             <input
               id="topic-title"

@@ -25,6 +25,8 @@ interface ChatTabProps {
   readonly route: string;
   readonly projectId: string | null;
   readonly walkerStep: string | null;
+  /** The Brain report open on the page, if any; the server reads it for the answer. */
+  readonly brainReportId?: string | null;
 }
 
 /**
@@ -39,6 +41,7 @@ export function ChatTab({
   route,
   projectId,
   walkerStep,
+  brainReportId = null,
 }: ChatTabProps) {
   const text = smartMessagesFor(locale);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -147,6 +150,7 @@ export function ChatTab({
         locale,
         ...(projectId ? { projectId } : {}),
         ...(walkerStep ? { walkerStep } : {}),
+        ...(brainReportId ? { brainReportId } : {}),
       });
       setMessages((current) => [
         ...current.filter((item) => item.id !== pending.id),
@@ -198,10 +202,17 @@ export function ChatTab({
 
   return (
     <div className="smart-chat">
-      <div className="toolbar">
-        <button type="button" className="secondary-button" onClick={fresh}>
-          {text.chat.new}
-        </button>
+      <div className="smart-chat-controls">
+        <div className="toolbar">
+          <button type="button" className="secondary-button" onClick={fresh}>
+            {text.chat.new}
+          </button>
+          {currentId && (
+            <button type="button" className="secondary-button" onClick={() => void remove()}>
+              {confirmRemove ? text.chat.removeConfirm : text.chat.remove}
+            </button>
+          )}
+        </div>
         <select
           aria-label={text.chat.history}
           value={currentId ?? ''}
@@ -216,11 +227,6 @@ export function ChatTab({
             </option>
           ))}
         </select>
-        {currentId && (
-          <button type="button" className="secondary-button" onClick={() => void remove()}>
-            {confirmRemove ? text.chat.removeConfirm : text.chat.remove}
-          </button>
-        )}
       </div>
 
       <div className="smart-messages" role="log" aria-live="polite">

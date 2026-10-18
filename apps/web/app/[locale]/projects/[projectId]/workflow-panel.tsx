@@ -8,8 +8,11 @@ import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
+import { DeliverablesPanel } from './deliverables-panel';
+import { StageChat, StageChatDisclosure } from './stage-chat';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
+import { FieldLabel } from '../../../info-tip';
 
 interface Run {
   id: string;
@@ -30,6 +33,7 @@ interface StageItem {
   attemptsUsed?: number;
   passedByDecision?: boolean;
   pendingGateOutputId?: string | null;
+  latestOutputId?: string | null;
 }
 
 interface HumanTask {
@@ -354,6 +358,13 @@ export function WorkflowPanel({
                 </span>
               )}
               {stage.passedByDecision && <span className="muted">{text.passedByDecision}</span>}
+              {stage.id && stage.latestOutputId && !stage.pendingGateOutputId && (
+                <StageChatDisclosure
+                  locale={locale}
+                  stageBase={`${base}/stages/${stage.id}`}
+                  onChanged={afterChange}
+                />
+              )}
             </li>
           ))}
         </ol>
@@ -399,6 +410,8 @@ export function WorkflowPanel({
           </ul>
         )}
       </section>
+
+      <DeliverablesPanel locale={locale} base={base} onChanged={afterChange} />
 
       {decisionTasks.map((task) => {
         const stage = overview.stages.find((item) => item.id === task.stageRunId);
@@ -700,11 +713,14 @@ function ReviewPanel({
             </pre>
           </details>
 
+          <StageChat locale={locale} stageBase={stageBase} onChanged={onChanged} />
+
           {editing ? (
             <form data-write-action className="stack" onSubmit={saveEdit} aria-busy={busy}>
-              <p className="muted">{text.editHelp}</p>
               <div className="field-stack">
-                <label htmlFor={`edit-content-${stage.stage}`}>{text.editContent}</label>
+                <FieldLabel htmlFor={`edit-content-${stage.stage}`} help={text.editHelp}>
+                  {text.editContent}
+                </FieldLabel>
                 <textarea
                   id={`edit-content-${stage.stage}`}
                   dir="ltr"
@@ -749,7 +765,13 @@ function ReviewPanel({
           ) : (
             <div className="stack">
               <div className="field-stack">
-                <label htmlFor={`review-comment-${stage.stage}`}>{text.commentLabel}</label>
+                <FieldLabel
+                  htmlFor={`review-comment-${stage.stage}`}
+                  help={text.commentHelp}
+                  helpId={`review-help-${stage.stage}`}
+                >
+                  {text.commentLabel}
+                </FieldLabel>
                 <textarea
                   id={`review-comment-${stage.stage}`}
                   dir="auto"
@@ -759,9 +781,6 @@ function ReviewPanel({
                   maxLength={5000}
                   aria-describedby={`review-help-${stage.stage}`}
                 />
-                <p id={`review-help-${stage.stage}`} className="muted">
-                  {text.commentHelp}
-                </p>
               </div>
               <div className="toolbar">
                 <button

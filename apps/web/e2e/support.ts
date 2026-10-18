@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
 import { problemMessages } from '../app/[locale]/projects/[projectId]/problem-messages';
@@ -27,6 +27,19 @@ export async function expectNoSeriousA11yViolations(page: Page) {
       })),
     })),
   ).toEqual([]);
+}
+
+/**
+ * Waits until a row is on screen, pressing "Load more" under a long table until it appears.
+ * Lists of more than ten rows are shown ten at a time, and a shared test database grows.
+ */
+export async function revealRow(page: Page, row: Locator) {
+  await expect(async () => {
+    if (await row.first().isVisible()) return;
+    const more = page.getByRole('button', { name: /^(بارگذاری بیشتر|Load more)$/u }).first();
+    if ((await more.isVisible()) && (await more.isEnabled())) await more.click();
+    await expect(row.first()).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
 }
 
 /** Signs in on the Persian sign-in page with the keyboard only. */
