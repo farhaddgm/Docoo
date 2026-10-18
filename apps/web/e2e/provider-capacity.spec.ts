@@ -50,52 +50,6 @@ test('provider concurrency edits persist across reload and both languages', asyn
     ).toBe(true);
     expect(await savedLimit()).toBe(Number(value));
     await input.fill(value);
-    // Scan with the field mid-screen, as a person sees it, not under the floating Smart button.
-    await input.evaluate((element) => element.scrollIntoView({ block: 'center' }));
-    // TEMP-DIAG: name whatever covers the field when the touch-target rule fails.
-    try {
-      await expectNoSeriousA11yViolations(page);
-    } catch (error) {
-      const covering = await input.evaluate((element) => {
-        const rect = element.getBoundingClientRect();
-        const found = new Set<string>();
-        for (const fx of [0.1, 0.5, 0.9])
-          for (const fy of [0.1, 0.5, 0.9]) {
-            const top = document.elementFromPoint(
-              rect.left + rect.width * fx,
-              rect.top + rect.height * fy,
-            );
-            if (top && top !== element)
-              found.add(
-                `${top.tagName}.${top.className}#${top.id} ${top.textContent?.slice(0, 40)}`,
-              );
-          }
-        const near = [...document.querySelectorAll('button, label, [role=tooltip]')].filter(
-          (other) => {
-            const box = other.getBoundingClientRect();
-            return (
-              box.width > 0 &&
-              box.left < rect.right &&
-              box.right > rect.left &&
-              box.top < rect.bottom &&
-              box.bottom > rect.top
-            );
-          },
-        );
-        return JSON.stringify({
-          rect,
-          found: [...found],
-          overlapping: near.map(
-            (o) =>
-              `${o.tagName}.${o.className} ${o.textContent?.slice(0, 30)} ${JSON.stringify(o.getBoundingClientRect())}`,
-          ),
-        });
-      });
-      throw new Error(
-        `${covering}
-${String(error)}`,
-        { cause: error },
-      );
-    }
+    await expectNoSeriousA11yViolations(page);
   }
 });

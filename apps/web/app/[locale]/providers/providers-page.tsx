@@ -263,14 +263,9 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
                               });
                             }}
                           >
-                            <label
-                              className="visually-hidden"
-                              htmlFor={`provider-capacity-${item.id}`}
-                            >
-                              {text.maxConcurrent} — {item.name}
-                            </label>
                             <input
                               id={`provider-capacity-${item.id}`}
+                              aria-label={`${text.maxConcurrent} — ${item.name}`}
                               name="maxConcurrentInvocations"
                               aria-describedby="provider-capacity-help"
                               type="number"
