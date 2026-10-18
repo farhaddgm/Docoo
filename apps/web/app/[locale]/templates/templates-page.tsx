@@ -17,6 +17,7 @@ import {
 import { Notice, useAction, explainError } from '../use-action';
 import { WorkspacePage } from '../workspace-page';
 import { templatesMessages } from './templates-messages';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 interface Template {
   key: string;
@@ -188,8 +189,9 @@ function LevelsSection({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`}>{text.levelsTitle}</h2>
-      <p className="muted">{text.levelsHelp}</p>
+      <SectionTitle id={`${id}-title`} help={text.levelsHelp}>
+        {text.levelsTitle}
+      </SectionTitle>
       <Notice notice={action.notice} />
       <div className="table-scroll" tabIndex={0} role="region" aria-label={text.levelsTitle}>
         <table>
@@ -279,7 +281,9 @@ function LevelsSection({
         </button>
       </div>
       <div className="filter-grid">
-        <label htmlFor={`${id}-level`}>{text.defaultLevel}</label>
+        <FieldLabel htmlFor={`${id}-level`} help={text.defaultLevelHelp}>
+          {text.defaultLevel}
+        </FieldLabel>
         <select id={`${id}-level`} value={level} onChange={(event) => setLevel(event.target.value)}>
           {[1, 2, 3, 4, 5].map((n) => (
             <option key={n} value={n}>
@@ -287,8 +291,9 @@ function LevelsSection({
             </option>
           ))}
         </select>
-        <p className="muted">{text.defaultLevelHelp}</p>
-        <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
+        <FieldLabel htmlFor={`${id}-reason`} help={text.reasonHelp} helpId={`${id}-reason-help`}>
+          {text.reasonLabel}
+        </FieldLabel>
         <input
           id={`${id}-reason`}
           dir="auto"
@@ -298,9 +303,6 @@ function LevelsSection({
           aria-describedby={`${id}-reason-help`}
           autoComplete="off"
         />
-        <p id={`${id}-reason-help`} className="muted">
-          {text.reasonHelp}
-        </p>
       </div>
       <div className="toolbar">
         <button
@@ -351,8 +353,9 @@ function TemplatesSection({
   const canSave = selected !== current.template && reason.trim() !== '';
   return (
     <section className="card stack" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`}>{text.templatesTitle}</h2>
-      <p className="muted">{text.templatesHelp}</p>
+      <SectionTitle id={`${id}-title`} help={text.templatesHelp}>
+        {text.templatesTitle}
+      </SectionTitle>
       <Notice notice={action.notice} />
       <fieldset className="stack">
         <legend>{text.defaultTemplate}</legend>

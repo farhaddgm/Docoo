@@ -39,7 +39,7 @@ export function NotificationBell({ locale, workspaceId }: { locale: Locale; work
 
   return (
     <Link
-      className="secondary-button smart-toggle"
+      className="secondary-button smart-toggle icon-only"
       href={`/${locale}/notifications` as Route}
       aria-label={
         unread > 0 ? text.bellUnread.replace('{n}', formatNumber(locale, unread)) : text.bell

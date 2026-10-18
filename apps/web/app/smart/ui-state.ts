@@ -4,6 +4,7 @@ export type SmartTab = 'walker' | 'chat' | 'errors';
 export interface SmartUiState {
   readonly enabled: boolean;
   readonly minimized: boolean;
+  readonly maximized: boolean;
   readonly side: 'start' | 'end';
   readonly tab: SmartTab;
   readonly projectId: string | null;
@@ -12,6 +13,7 @@ export interface SmartUiState {
 export const defaultUiState: SmartUiState = {
   enabled: true,
   minimized: true,
+  maximized: false,
   side: 'end',
   tab: 'walker',
   projectId: null,
@@ -36,6 +38,8 @@ export function parseUiState(raw: string | null): SmartUiState {
     enabled: typeof record['enabled'] === 'boolean' ? record['enabled'] : defaultUiState.enabled,
     minimized:
       typeof record['minimized'] === 'boolean' ? record['minimized'] : defaultUiState.minimized,
+    maximized:
+      typeof record['maximized'] === 'boolean' ? record['maximized'] : defaultUiState.maximized,
     side: record['side'] === 'start' || record['side'] === 'end' ? record['side'] : 'end',
     tab: tabs.find((tab) => tab === record['tab']) ?? defaultUiState.tab,
     projectId:

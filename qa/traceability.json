@@ -1,5 +1,5 @@
 {
-  "waiverBudget": 18,
+  "waiverBudget": 16,
   "requirements": {
     "FR-AUTH-001": {
       "status": "tested",
@@ -1004,14 +1004,25 @@
       "note": "The backup drill exports the full database and a checksummed object manifest and the runbook describes migration; an automated bundle with secrets references and config does not exist."
     },
     "NFR-OBS-001": {
-      "status": "waived",
-      "evidence": [],
-      "note": "API logs are Fastify/pino JSON with a request-id and redaction, but tenant, project, workflow, run and attempt IDs are not emitted per log line and no test asserts the fields."
+      "status": "tested",
+      "evidence": [
+        "packages/observability/src/correlation.test.ts",
+        "packages/observability/src/activity-correlation.test.ts",
+        "packages/observability/src/private-trace-exporter.test.ts",
+        "apps/api/test/request-correlation.test.ts",
+        "apps/api/test/trace-correlation.integration.test.ts",
+        "docs/06-delivery/16-production-trace-acceptance.md"
+      ],
+      "note": "First-party API, activity and provider logs carry all ten validated correlation fields, with null for unavailable IDs. Tests assert asynchronous tenant isolation, propagation, field presence and content exclusion; the production sample joins actual logs to a provider ledger row."
     },
     "NFR-OBS-002": {
-      "status": "waived",
-      "evidence": [],
-      "note": "OpenTelemetry auto-instrumentation and a dev-only Tempo/collector profile exist, but no production deployment or test demonstrates a trace from the UI through workflow to a provider call."
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/trace-correlation.integration.test.ts",
+        "scripts/deploy/telemetry-smoke.mjs",
+        "docs/06-delivery/16-production-trace-acceptance.md"
+      ],
+      "note": "CI connects authenticated API requests through actual Temporal activities to deterministic provider spans and boots the compiled tracing-enabled API. Signed v0.27.4 production acceptance additionally captured a real Chromium activation and configured-provider invocation in one private Tempo trace."
     },
     "NFR-OBS-003": {
       "status": "tested",
@@ -1026,12 +1037,16 @@
     "NFR-OBS-004": {
       "status": "tested",
       "evidence": [
-        "apps/api/test/topics.integration.test.ts",
+        "packages/observability/src/correlation.test.ts",
+        "packages/observability/src/activity-correlation.test.ts",
+        "packages/observability/src/private-trace-exporter.test.ts",
+        "apps/api/test/request-correlation.test.ts",
+        "apps/api/test/trace-correlation.integration.test.ts",
+        "docs/06-delivery/16-production-trace-acceptance.md",
         "apps/api/test/smart.test.ts",
-        "packages/providers/src/providers.test.ts",
-        "apps/api/src/main.ts"
+        "packages/providers/src/providers.test.ts"
       ],
-      "note": "Tests show audit events store redacted titles, provider errors and failure reports scrub keys, and pino redacts auth headers/secret fields; prompt/problem content absence from logs is by design, not asserted."
+      "note": "Canary tests exercise actual correlated logs and SDK span export and assert absence of private problem, prompt, secret, exception, URL and SQL content. Production acceptance checked the complete trace and all three execution-service logs for the private synthetic marker and temporary cookie."
     },
     "NFR-UX-001": {
       "status": "waived",

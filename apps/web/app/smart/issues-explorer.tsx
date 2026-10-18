@@ -81,7 +81,7 @@ export function IssuesExplorer({ locale, workspaceId }: { locale: Locale; worksp
   return (
     <div className="stack">
       <SmartSubnav locale={locale} />
-      <form className="card filter-grid" onSubmit={apply}>
+      <form className="card filter-grid filters-row" onSubmit={apply}>
         <label className="smart-field">
           <span>{text.errors.filterStatus}</span>
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
