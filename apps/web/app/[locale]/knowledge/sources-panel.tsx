@@ -33,6 +33,7 @@ import {
   type SourceRow,
 } from './knowledge-types';
 import { ACCEPTED_EXTENSIONS, uploadSourceFile } from './source-upload';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 type Mode = 'file' | 'text' | 'url';
 
@@ -200,8 +201,9 @@ export function SourcesPanel({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.sourcesHeading}</h2>
-      <p className="muted">{text.sourcesHelp}</p>
+      <SectionTitle id={`${id}-heading`} help={text.sourcesHelp}>
+        {text.sourcesHeading}
+      </SectionTitle>
       <Notice notice={notice} />
       {created && (
         <p className="notice ok" role="status">
@@ -556,19 +558,21 @@ function AddSource({
           <ScopeSelect
             id={`${id}-scope`}
             label={text.sourceScope}
+            help={text.sourceScopeHelp}
             value={scope}
             onChange={setScope}
             workspaceId={workspaceId}
             options={options}
             text={text}
           />
-          <small className="muted">{text.sourceScopeHelp}</small>
         </>
       )}
 
       {mode === 'file' && (
         <div className="file-pick">
-          <label htmlFor={`${id}-file`}>{text.file}</label>
+          <FieldLabel htmlFor={`${id}-file`} help={text.fileHelp} helpId={`${id}-file-help`}>
+            {text.file}
+          </FieldLabel>
           <input
             id={`${id}-file`}
             type="file"
@@ -576,14 +580,13 @@ function AddSource({
             aria-describedby={`${id}-file-help`}
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
-          <small id={`${id}-file-help`} className="muted">
-            {text.fileHelp}
-          </small>
         </div>
       )}
       {mode === 'text' && (
         <>
-          <label htmlFor={`${id}-text`}>{text.textLabel}</label>
+          <FieldLabel htmlFor={`${id}-text`} help={text.textHelp} helpId={`${id}-text-help`}>
+            {text.textLabel}
+          </FieldLabel>
           <textarea
             id={`${id}-text`}
             dir="auto"
@@ -593,14 +596,13 @@ function AddSource({
             aria-describedby={`${id}-text-help`}
             onChange={(event) => setBody(event.target.value)}
           />
-          <small id={`${id}-text-help`} className="muted">
-            {text.textHelp}
-          </small>
         </>
       )}
       {mode === 'url' && (
         <>
-          <label htmlFor={`${id}-url`}>{text.urlLabel}</label>
+          <FieldLabel htmlFor={`${id}-url`} help={text.urlHelp} helpId={`${id}-url-help`}>
+            {text.urlLabel}
+          </FieldLabel>
           <input
             id={`${id}-url`}
             type="url"
@@ -610,9 +612,6 @@ function AddSource({
             aria-describedby={`${id}-url-help`}
             onChange={(event) => setUrl(event.target.value)}
           />
-          <small id={`${id}-url-help`} className="muted">
-            {text.urlHelp}
-          </small>
         </>
       )}
       {mode !== 'file' && (
@@ -709,8 +708,9 @@ function CreateKnowledgeForm({
 
   return (
     <form className="card field-stack" onSubmit={submit} aria-labelledby={`${id}-heading`}>
-      <h4 id={`${id}-heading`}>{text.createHeading}</h4>
-      <p className="muted">{text.createHelp}</p>
+      <SectionTitle as="h4" id={`${id}-heading`} help={text.createHelp}>
+        {text.createHeading}
+      </SectionTitle>
       <Notice notice={notice} />
       <label htmlFor={`${id}-title`}>{text.knowledgeTitle}</label>
       <input
@@ -740,7 +740,13 @@ function CreateKnowledgeForm({
         text={text}
         disabled={busy}
       />
-      <label htmlFor={`${id}-declaration`}>{text.declarationLabel}</label>
+      <FieldLabel
+        htmlFor={`${id}-declaration`}
+        help={text.declarationHelp}
+        helpId={`${id}-declaration-help`}
+      >
+        {text.declarationLabel}
+      </FieldLabel>
       <textarea
         id={`${id}-declaration`}
         dir="auto"
@@ -750,9 +756,6 @@ function CreateKnowledgeForm({
         aria-describedby={`${id}-declaration-help`}
         onChange={(event) => setDeclaration(event.target.value)}
       />
-      <small id={`${id}-declaration-help`} className="muted">
-        {text.declarationHelp}
-      </small>
       {partial && (
         <label className="mode">
           <input
@@ -832,8 +835,9 @@ function NewSourceVersionForm({
 
   return (
     <form className="card field-stack" onSubmit={submit} aria-labelledby={`${id}-heading`}>
-      <h4 id={`${id}-heading`}>{text.newSourceVersion}</h4>
-      <p className="muted">{text.newSourceVersionHelp}</p>
+      <SectionTitle as="h4" id={`${id}-heading`} help={text.newSourceVersionHelp}>
+        {text.newSourceVersion}
+      </SectionTitle>
       <Notice notice={notice} />
       <label htmlFor={`${id}-file`}>{text.file}</label>
       <input

@@ -16,6 +16,7 @@ import {
   expectNoSeriousA11yViolations,
   signInWithKeyboard,
   useFakeProvider,
+  revealRow,
 } from './support';
 
 // Texts come from the same message modules the pages use, so a wording change cannot break
@@ -71,6 +72,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: topicText.createSubmit }).click();
     await expect(page.getByRole('status').filter({ hasText: topicText.created })).toBeVisible();
     const row = page.getByRole('row').filter({ has: page.getByRole('rowheader', { name: code }) });
+    await revealRow(page, row);
     await expect(row).toContainText(titles.market);
     await expectNoSeriousA11yViolations(page);
 
@@ -202,6 +204,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     const usedRow = page
       .getByRole('row')
       .filter({ has: page.getByRole('rowheader', { name: `pa-${stamp}` }) });
+    await revealRow(page, usedRow);
     await usedRow.getByRole('button', { name: topicText.remove }).click();
     await expect(page.locator('#confirm-title')).toBeFocused();
     await expect(page.locator('.confirm-panel')).toContainText(code);
@@ -212,7 +215,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.goto(`/en/projects`);
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
     await expect(page.getByRole('heading', { level: 1, name: 'Projects' })).toBeVisible();
-    await expect(page.getByRole('rowheader', { name: code })).toBeVisible();
+    await revealRow(page, page.getByRole('rowheader', { name: code }));
     await expectNoSeriousA11yViolations(page);
   });
 
@@ -308,8 +311,8 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
 
     // The timeline records the decisions.
     await page.getByRole('button', { name: detail.tabs.timeline, exact: true }).click();
-    await expect(page.getByRole('rowheader', { name: /workflow\.approve/u }).first()).toBeVisible();
-    await expect(page.getByRole('rowheader', { name: /workflow\.output_edited/u })).toBeVisible();
+    await revealRow(page, page.getByRole('rowheader', { name: /workflow\.approve/u }));
+    await revealRow(page, page.getByRole('rowheader', { name: /workflow\.output_edited/u }));
 
     // English view of the finished workflow.
     await page.getByRole('link', { name: 'Switch to English' }).click();

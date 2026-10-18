@@ -12,6 +12,7 @@ import { Badge } from './knowledge-common';
 import { knowledgeMessages, type KnowledgeText } from './knowledge-messages';
 import { MIN_RESOLUTION_LENGTH, type Conflict } from './knowledge-types';
 import { parseConflictAnalysis } from './reasons';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 function analysisText(text: KnowledgeText, locale: Locale, raw: string): string {
   const analysis = parseConflictAnalysis(raw);
@@ -106,7 +107,9 @@ export function ConflictCard({
       ) : (
         <form className="field-stack" onSubmit={submit}>
           <Notice notice={notice} />
-          <label htmlFor={`${id}-resolution`}>{text.resolveLabel}</label>
+          <FieldLabel htmlFor={`${id}-resolution`} help={text.resolveHelp} helpId={`${id}-help`}>
+            {text.resolveLabel}
+          </FieldLabel>
           <textarea
             id={`${id}-resolution`}
             dir="auto"
@@ -116,9 +119,6 @@ export function ConflictCard({
             aria-describedby={`${id}-help`}
             onChange={(event) => setResolution(event.target.value)}
           />
-          <small id={`${id}-help`} className="muted">
-            {text.resolveHelp}
-          </small>
           <p>
             <button type="submit" className="primary-button" disabled={busy || !ready}>
               {text.resolveSubmit}
@@ -159,8 +159,9 @@ export function ConflictsPanel({ locale, workspaceId }: { locale: Locale; worksp
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.conflictsHeading}</h2>
-      <p className="muted">{text.conflictsHelp}</p>
+      <SectionTitle id={`${id}-heading`} help={text.conflictsHelp}>
+        {text.conflictsHeading}
+      </SectionTitle>
       <div className="toolbar" role="group" aria-label={text.conflictsStatus}>
         {(['open', 'resolved'] as const).map((item) => (
           <button

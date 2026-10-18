@@ -141,7 +141,9 @@ function ProjectView({
           {text.notFound}
         </p>
         <p>
-          <Link href={`/${locale}/projects` as Route}>{text.backToList}</Link>
+          <Link className="back-link" href={`/${locale}/projects` as Route}>
+            {text.backToList}
+          </Link>
         </p>
       </div>
     );
@@ -158,7 +160,9 @@ function ProjectView({
   return (
     <div className={accessReadOnly ? 'stack resource-view-only' : 'stack'}>
       <p>
-        <Link href={`/${locale}/projects` as Route}>{text.backToList}</Link>
+        <Link className="back-link" href={`/${locale}/projects` as Route}>
+          {text.backToList}
+        </Link>
       </p>
 
       {intelligenceLink}

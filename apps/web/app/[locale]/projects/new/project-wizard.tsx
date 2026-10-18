@@ -34,6 +34,7 @@ import {
 import { CriteriaEditor, criteriaIssue, sameCriteria, type Criterion } from './criteria-editor';
 import { quickDraftMessages } from '../quick-draft-messages';
 import { wizardMessages } from './wizard-messages';
+import { FieldLabel } from '../../../info-tip';
 
 /** The settings each step offers, in the order of UX §5 (steps 3 to 7). */
 const STEP_KEYS: Record<number, readonly string[]> = {
@@ -134,6 +135,9 @@ export function ProjectWizard({
   const [baseline, setBaseline] = useState<Effective | null>(null);
   const [review, setReview] = useState<Effective | null>(null);
   const [reviewFailed, setReviewFailed] = useState(false);
+  // The inherited values could not be read (a dropped connection); the user may try again.
+  const [baselineFailed, setBaselineFailed] = useState(false);
+  const [baselineTry, setBaselineTry] = useState(0);
   const base = `/workspaces/${workspaceId}`;
 
   // A draft left earlier comes back; the wizard saves one after every change.
@@ -179,13 +183,17 @@ export function ProjectWizard({
       topicIds,
       settings: [],
     })
-      .then((result) => active && setBaseline(result.config))
-      .catch(() => undefined);
+      .then((result) => {
+        if (!active) return;
+        setBaseline(result.config);
+        setBaselineFailed(false);
+      })
+      .catch(() => active && setBaselineFailed(true));
     return () => {
       active = false;
     };
     // topicKey stands for topicIds (a new array every render would loop).
-  }, [base, topicKey]);
+  }, [base, topicKey, baselineTry]);
 
   const definition = useCallback(
     (key: string) => definitions.find((item) => item.key === key),
@@ -232,8 +240,23 @@ export function ProjectWizard({
     // The overrides are recomputed from the same inputs; the review is read once per visit.
   }, [step]);
 
+  const focusedOnce = useRef(false);
   useEffect(() => {
-    if (ready) heading.current?.focus();
+    if (!ready) return;
+    const first = !focusedOnce.current;
+    focusedOnce.current = true;
+    // The form is enabled a tick before this effect runs, so a fast user may already be typing in
+    // a field; taking focus away on that first run would swallow the text. Later runs (a new
+    // step) always move focus to the step heading, also where a button click gives it no focus.
+    const active = document.activeElement;
+    if (
+      first &&
+      (active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        active instanceof HTMLSelectElement)
+    )
+      return;
+    heading.current?.focus();
   }, [step, ready]);
 
   const trimmed = {
@@ -325,14 +348,19 @@ export function ProjectWizard({
       aria-label={project.newTitle}
     >
       <nav aria-label={text.stepsLabel}>
-        <ol className="plain-list toolbar">
+        <ol className="stepper">
           {text.steps.map((name, index) => (
-            <li key={name}>
-              <span
-                className={`badge tone-${index < step ? 'ok' : 'neutral'}`}
-                aria-current={index === step ? 'step' : undefined}
-              >
-                {formatNumber(locale, index + 1)}. {name}
+            <li
+              key={name}
+              className={index < step ? 'step-done' : undefined}
+              aria-current={index === step ? 'step' : undefined}
+            >
+              <span className="step-number" aria-hidden="true">
+                {formatNumber(locale, index + 1)}
+              </span>
+              <span className="step-name">
+                <span className="visually-hidden">{formatNumber(locale, index + 1)}. </span>
+                {name}
               </span>
             </li>
           ))}
@@ -363,8 +391,14 @@ export function ProjectWizard({
         {step === 0 && (
           <>
             <BasicsFields locale={locale} values={values} onChange={setValues} />
-            <div className="filter-form">
-              <label htmlFor="analysis-profile">{quickDraftMessages(locale).profile}</label>
+            <div className="filter-grid">
+              <FieldLabel
+                htmlFor="analysis-profile"
+                help={quickDraftMessages(locale).help}
+                helpId="analysis-profile-help"
+              >
+                {quickDraftMessages(locale).profile}
+              </FieldLabel>
               <select
                 id="analysis-profile"
                 value={values.analysisProfile ?? 'full'}
@@ -376,9 +410,6 @@ export function ProjectWizard({
                 <option value="full">{quickDraftMessages(locale).full}</option>
                 <option value="quick">{quickDraftMessages(locale).quick}</option>
               </select>
-              <p id="analysis-profile-help" className="muted">
-                {quickDraftMessages(locale).help}
-              </p>
               {values.analysisProfile === 'quick' && (
                 <p className="notice" role="status">
                   {quickDraftMessages(locale).warning}
@@ -419,6 +450,20 @@ export function ProjectWizard({
         )}
         {step === 6 && values.analysisProfile === 'quick' && (
           <p className="notice">{quickDraftMessages(locale).level}</p>
+        )}
+        {baselineFailed && (
+          <div className="stack" role="alert">
+            <p className="notice error">{text.baselineFailed}</p>
+            <div className="toolbar">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => setBaselineTry((value) => value + 1)}
+              >
+                {text.baselineRetry}
+              </button>
+            </div>
+          </div>
         )}
         {keys && baseline && (
           <ul className="plain-list stack">

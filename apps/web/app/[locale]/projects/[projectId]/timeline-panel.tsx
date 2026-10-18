@@ -6,6 +6,7 @@ import { apiGet, query } from '../../../api-client';
 import { formatDateTime, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { projectPageMessages } from './messages';
+import { PagedRows } from '../../../table-pager';
 
 interface Entry {
   id: string;
@@ -62,31 +63,42 @@ export function TimelinePanel({
       ) : items.length === 0 ? (
         <p className="muted">{text.timelineEmpty}</p>
       ) : (
-        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="timeline-title">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">{text.when}</th>
-                <th scope="col">{text.action}</th>
-                <th scope="col">{text.reason}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((entry) => (
-                <tr key={entry.id}>
-                  <td>{formatDateTime(locale, entry.occurredAt)}</td>
-                  <th scope="row" dir="ltr">
-                    {entry.action}
-                    {entry.severity !== 'info' && (
-                      <span className={`badge severity-${entry.severity}`}>{entry.severity}</span>
-                    )}
-                  </th>
-                  <td dir="auto">{entry.reason ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PagedRows rows={items}>
+          {(pageRows) => (
+            <div
+              className="table-scroll"
+              tabIndex={0}
+              role="region"
+              aria-labelledby="timeline-title"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{text.when}</th>
+                    <th scope="col">{text.action}</th>
+                    <th scope="col">{text.reason}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((entry) => (
+                    <tr key={entry.id}>
+                      <td>{formatDateTime(locale, entry.occurredAt)}</td>
+                      <th scope="row" dir="ltr">
+                        {entry.action}
+                        {entry.severity !== 'info' && (
+                          <span className={`badge severity-${entry.severity}`}>
+                            {entry.severity}
+                          </span>
+                        )}
+                      </th>
+                      <td dir="auto">{entry.reason ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PagedRows>
       )}
       {nextCursor && (
         <div className="toolbar">

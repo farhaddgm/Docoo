@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { apiGet } from '../../api-client';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 import type { Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { projectMessages } from './messages';
@@ -72,7 +73,9 @@ export function BasicsFields({
       <section className="card filter-form" aria-labelledby="project-basics-title">
         <h2 id="project-basics-title">{text.basics}</h2>
         <div className="filter-grid">
-          <label htmlFor="project-code">{text.codeLabel}</label>
+          <FieldLabel htmlFor="project-code" help={text.codeHelp} helpId="project-code-help">
+            {text.codeLabel}
+          </FieldLabel>
           <input
             id="project-code"
             dir="ltr"
@@ -83,10 +86,6 @@ export function BasicsFields({
             autoComplete="off"
             required
           />
-          <span />
-          <p id="project-code-help" className="muted">
-            {text.codeHelp}
-          </p>
           <label htmlFor="project-title">{text.titleLabel}</label>
           <input
             id="project-title"
@@ -106,7 +105,13 @@ export function BasicsFields({
             onChange={(event) => setValues({ ...values, description: event.target.value })}
             maxLength={10000}
           />
-          <label htmlFor="project-problem">{text.problemLabel}</label>
+          <FieldLabel
+            htmlFor="project-problem"
+            help={text.problemHelp}
+            helpId="project-problem-help"
+          >
+            {text.problemLabel}
+          </FieldLabel>
           <textarea
             id="project-problem"
             dir="auto"
@@ -118,10 +123,6 @@ export function BasicsFields({
             disabled={problemLocked}
             required
           />
-          <span />
-          <p id="project-problem-help" className="muted">
-            {text.problemHelp}
-          </p>
           <label htmlFor="project-language">{text.outputLanguage}</label>
           <select
             id="project-language"
@@ -200,8 +201,9 @@ export function TopicsSection({
   return (
     <>
       <section className="card" aria-labelledby="project-topics-title">
-        <h2 id="project-topics-title">{text.topicsSection}</h2>
-        <p className="muted">{text.topicsHelp}</p>
+        <SectionTitle id="project-topics-title" help={text.topicsHelp}>
+          {text.topicsSection}
+        </SectionTitle>
         {loadFailed && (
           <p className="notice error" role="alert">
             {common.loadFailed}

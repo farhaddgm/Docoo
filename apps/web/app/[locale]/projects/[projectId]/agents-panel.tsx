@@ -16,6 +16,7 @@ import { diffLines, diffText, hasChanges } from '../../agents/diff';
 import { DiffView } from '../../agents/diff-view';
 import { RoleEditor } from '../../agents/role-editor';
 import { explainError, Notice, useAction } from '../../use-action';
+import { SectionTitle } from '../../../info-tip';
 
 /** What a form below a role asks for: a reason, then the action. */
 type Form =
@@ -129,8 +130,9 @@ export function AgentsPanel({
 
   return (
     <section className="card stack" aria-labelledby="project-agents-heading">
-      <h2 id="project-agents-heading">{text.projectHeading}</h2>
-      <p className="muted">{text.projectHelp}</p>
+      <SectionTitle id="project-agents-heading" help={text.projectHelp}>
+        {text.projectHeading}
+      </SectionTitle>
       <p className="muted">{text.runningNote}</p>
       <Notice notice={notice} />
       <ul className="agent-list">
@@ -148,8 +150,9 @@ export function AgentsPanel({
           const active = formFor(role);
           return (
             <li key={role} className="agent-row card stack">
-              <h3>{name}</h3>
-              <p className="muted">{text.roles[role].mission}</p>
+              <SectionTitle as="h3" help={text.roles[role].mission}>
+                {name}
+              </SectionTitle>
               <p>
                 <span className={`badge ${profile.customized ? 'state-warn' : ''}`}>{state}</span>
               </p>

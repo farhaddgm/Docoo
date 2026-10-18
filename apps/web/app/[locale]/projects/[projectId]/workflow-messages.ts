@@ -63,6 +63,7 @@ const messages = {
       configuration: 'اتصال یا مدل AI تنظیم نشده است',
       cost_limit: 'سقف هزینهٔ این پروژه رسیده است',
       agent_question: 'یک ایجنت از شما سؤال پرسیده است',
+      deliverables_confirmation: 'خروجی‌های موردانتظار باید تأیید شوند',
     } as Record<string, string>,
     taskHelp: {
       analysis_answers: 'در بخش «مسئله» به پرسش‌ها پاسخ دهید یا برایشان وضعیت بگذارید.',
@@ -75,6 +76,8 @@ const messages = {
       cost_limit: 'سقف هزینه را در تنظیمات بالا ببرید یا پروژه را ببندید، سپس ادامه دهید.',
       agent_question:
         'در بخش «سؤال ایجنت» پایین همین صفحه پاسخ دهید؛ مرحله با پاسخ شما ادامه می‌یابد.',
+      deliverables_confirmation:
+        'در بخش «خروجی‌های موردانتظار» همین صفحه فهرست را ویرایش و تأیید کنید؛ ایده‌پردازی با تأیید شما شروع می‌شود.',
     } as Record<string, string>,
     openProviders: 'رفتن به ارائه‌دهندگان AI',
     providerSaid: 'پاسخ ارائه‌دهنده',
@@ -163,21 +166,35 @@ const messages = {
       summary: 'خلاصه',
       none: 'موردی نیست.',
       supportKnowledge: 'پشتیبانی‌شده با دانش تأییدشده',
+      supportWeb: 'بر پایهٔ صفحهٔ وب (دانش تأییدشده نیست)',
       supportUnverified: 'تأییدنشده',
       citationsHeading: 'ارجاع‌ها',
-      citationVerified: 'تأییدشده: نقل‌قول عیناً در متن دانش پیدا شد',
+      citationVerified: 'تأییدشده: نقل‌قول عیناً در متن ارجاع‌شده پیدا شد',
       citationFailed: 'تأیید نشد: {reason}',
       citationProblems: {
-        unknown_ref: 'چنین قطعه‌ای به مدل داده نشده بود',
+        unknown_ref: 'چنین قطعه یا صفحه‌ای به مدل داده نشده بود',
         quote_missing: 'نقل‌قولی نوشته نشده',
         quote_too_short: 'نقل‌قول برای سنجش بسیار کوتاه است',
-        quote_not_found: 'نقل‌قول در متن این دانش پیدا نشد',
+        quote_not_found: 'نقل‌قول در متن این منبع پیدا نشد',
         verifier_not_allowed: 'نقش اجازهٔ ابزار «تأیید ارجاع» را ندارد و ارجاع سنجیده نشد',
       } as Record<string, string>,
       versionShort: 'نسخهٔ {n}',
       knowledgeHeading: 'دانش تأییدشده‌ای که به مدل داده شد',
       knowledgeNone:
         'دانش تأییدشده‌ای برای این تحقیق پیدا نشد؛ یافته‌ها فقط بر دانش عمومی مدل تکیه دارند.',
+      webOff:
+        'جستجوی زندهٔ وب در این تحقیق انجام نشده است؛ منبع آن فقط دانش تأییدشدهٔ داخلی است (اگر چیزی پیدا شده باشد). تنظیم «research.web_enabled» آن را روشن می‌کند.',
+      webHeading: 'جستجوی وب',
+      webUsed:
+        '{queries} جست‌وجو انجام شد و {pages} صفحه به مدل داده شد. این صفحه‌ها دانش تأییدشده نیستند.',
+      webNone:
+        'جستجوی وب انجام شد ولی صفحهٔ مرتبطی پیدا نشد؛ تحقیق فقط بر دانش تأییدشده تکیه دارد.',
+      webFailed:
+        'جستجوی وب انجام نشد ({code}); تحقیق فقط بر دانش تأییدشده تکیه دارد. دوباره اجرا کنید یا مدل و اتصال را بررسی کنید.',
+      webDenied:
+        'ابزار «جستجوی وب» برای نقش تحقیق مجاز نیست؛ اجازه را در صفحهٔ ایجنت‌ها تنظیم کنید.',
+      webQueries: 'عبارت‌های جست‌وجو',
+      webPages: 'صفحه‌های یافت‌شده',
       knowledgeDenied:
         'ابزار «بازیابی دانش» برای این نقش مجاز نیست؛ این خروجی بدون دانش تأییدشده نوشته شد. اجازهٔ ابزار را در صفحهٔ ایجنت‌ها تنظیم کنید.',
       verifierDenied:
@@ -188,7 +205,7 @@ const messages = {
       notCited: 'ارجاع نشد',
       conflictsHeading: 'تعارض‌ها',
       verificationSummary:
-        '{findings} یافته: {supported} پشتیبانی‌شده با دانش تأییدشده و {unverified} تأییدنشده. {verified} از {citations} ارجاع تأیید شد.',
+        '{findings} یافته: {supported} پشتیبانی‌شده (با دانش تأییدشده یا صفحهٔ وب) و {unverified} تأییدنشده. {verified} از {citations} ارجاع تأیید شد.',
     },
     done: {
       started: 'گردش‌کار شروع شد.',
@@ -280,6 +297,7 @@ const messages = {
       configuration: 'No AI connection or model is configured',
       cost_limit: "The project's cost ceiling was reached",
       agent_question: 'An agent asked you a question',
+      deliverables_confirmation: 'The expected deliverables need your confirmation',
     } as Record<string, string>,
     taskHelp: {
       analysis_answers: 'Answer the questions or give them a status in the "Problem" section.',
@@ -292,6 +310,8 @@ const messages = {
       cost_limit: 'Raise the cost ceiling in the settings or close the project, then resume.',
       agent_question:
         'Answer in the "Agent question" section lower on this page; the stage goes on with your answer.',
+      deliverables_confirmation:
+        'Edit and confirm the list in the "Expected deliverables" section of this page; ideation starts when you confirm.',
     } as Record<string, string>,
     openProviders: 'Go to AI providers',
     providerSaid: 'The provider said',
@@ -376,9 +396,10 @@ const messages = {
       summary: 'Summary',
       none: 'Nothing here.',
       supportKnowledge: 'Supported by approved knowledge',
+      supportWeb: 'Rests on a web page (not approved knowledge)',
       supportUnverified: 'Unverified',
       citationsHeading: 'Citations',
-      citationVerified: 'Verified: the quote was found verbatim in the knowledge text',
+      citationVerified: 'Verified: the quote was found verbatim in the cited text',
       citationFailed: 'Not verified: {reason}',
       citationProblems: {
         unknown_ref: 'no such passage was given to the model',
@@ -392,6 +413,19 @@ const messages = {
       knowledgeHeading: 'Approved knowledge given to the model',
       knowledgeNone:
         'No approved knowledge was found for this research; the findings rest on the model’s general knowledge only.',
+      webOff:
+        'No live web search was made for this research; its only source is approved internal knowledge, if any was found. The setting "research.web_enabled" turns it on.',
+      webHeading: 'Web search',
+      webUsed:
+        '{queries} search(es) ran and {pages} page(s) were given to the model. These pages are not approved knowledge.',
+      webNone:
+        'A web search ran but found no relevant page; the research rests on approved knowledge only.',
+      webFailed:
+        'The web search did not run ({code}); the research rests on approved knowledge only. Run it again or check the model and the connection.',
+      webDenied:
+        'The "web search" tool is not allowed for the research role; set the allowance on the Agents page.',
+      webQueries: 'Search queries',
+      webPages: 'Pages found',
       knowledgeDenied:
         'The "knowledge retrieval" tool is not allowed for this role, so this output was written without approved knowledge. Set the tool allowance on the Agents page.',
       verifierDenied:
@@ -402,7 +436,7 @@ const messages = {
       notCited: 'Not cited',
       conflictsHeading: 'Conflicts',
       verificationSummary:
-        '{findings} findings: {supported} supported by approved knowledge and {unverified} unverified. {verified} of {citations} citations were verified.',
+        '{findings} findings: {supported} supported (by approved knowledge or a web page) and {unverified} unverified. {verified} of {citations} citations were verified.',
     },
     done: {
       started: 'The workflow started.',

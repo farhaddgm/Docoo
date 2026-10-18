@@ -23,6 +23,8 @@ import {
 } from './problem-types';
 import { draftOf, draftProblem, QuestionEditor } from './question-editor';
 import { uploadProjectFile } from './upload-file';
+import { SectionTitle } from '../../../info-tip';
+import { PagedRows } from '../../../table-pager';
 
 const POLL_WORKING_MS = 4000;
 const POLL_IDLE_MS = 20000;
@@ -147,6 +149,13 @@ export function ProblemPanel({
       setNotice({ ok: false, text: explain(error) });
       throw error;
     }
+  };
+  const suggest = async (question: Question): Promise<string> => {
+    const { suggestion } = await apiSend<{ suggestion: { text: string } }>(
+      'POST',
+      `${workspaceBase}/analysis-questions/${question.id}/suggest-answer`,
+    );
+    return suggestion.text;
   };
   const forget = (ids: readonly string[]) =>
     setDrafts((current) => {
@@ -366,10 +375,9 @@ export function ProblemPanel({
           noValidate
           onSubmit={saveBatch}
         >
-          <h3 id="batch-heading">
+          <SectionTitle as="h3" id="batch-heading" help={text.batchHelp}>
             {fill(text.batchTitle, { n: formatNumber(locale, openBatch.batchNo) })}
-          </h3>
-          <p className="muted">{text.batchHelp}</p>
+          </SectionTitle>
           {openBatch.understood && (
             <p dir="auto">
               <strong>{text.understood}:</strong> {openBatch.understood}
@@ -406,6 +414,7 @@ export function ProblemPanel({
                 }
                 onStopEditing={() => forget([question.id])}
                 onUpload={upload}
+                onSuggest={() => suggest(question)}
               />
             ))}
           </ol>
@@ -425,51 +434,62 @@ export function ProblemPanel({
       )}
 
       <section className="card stack" aria-labelledby="coverage-heading">
-        <h3 id="coverage-heading">{text.coverageTitle}</h3>
-        <p className="muted">{text.coverageHelp}</p>
+        <SectionTitle as="h3" id="coverage-heading" help={text.coverageHelp}>
+          {text.coverageTitle}
+        </SectionTitle>
         {gaps.length > 0 && progress.asked > 0 && (
           <p className="notice" role="status">
             {fill(text.gapAlert, { list: gaps.join(locale === 'fa' ? '، ' : ', ') })}
           </p>
         )}
-        <div className="table-scroll" tabIndex={0} role="region" aria-label={text.coverageTitle}>
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">{text.dimension}</th>
-                <th scope="col">{text.colAsked}</th>
-                <th scope="col">{text.colAnswered}</th>
-                <th scope="col">{text.colLeft}</th>
-                <th scope="col">{text.colLevel}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analysis.coverage.map((row) => (
-                <tr key={row.category}>
-                  <th scope="row">
-                    {text.categories[row.category] ?? row.category}{' '}
-                    <small className="muted">
-                      ({row.required ? text.required : text.optional})
-                    </small>
-                  </th>
-                  <td>{formatNumber(locale, row.asked)}</td>
-                  <td>{formatNumber(locale, row.answered)}</td>
-                  <td>{formatNumber(locale, row.open + row.later + row.unanswered)}</td>
-                  <td>
-                    <span className={`badge level-${row.level}`}>
-                      {text.levels[row.level] ?? row.level}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PagedRows rows={analysis.coverage}>
+          {(pageRows) => (
+            <div
+              className="table-scroll"
+              tabIndex={0}
+              role="region"
+              aria-label={text.coverageTitle}
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{text.dimension}</th>
+                    <th scope="col">{text.colAsked}</th>
+                    <th scope="col">{text.colAnswered}</th>
+                    <th scope="col">{text.colLeft}</th>
+                    <th scope="col">{text.colLevel}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((row) => (
+                    <tr key={row.category}>
+                      <th scope="row">
+                        {text.categories[row.category] ?? row.category}{' '}
+                        <small className="muted">
+                          ({row.required ? text.required : text.optional})
+                        </small>
+                      </th>
+                      <td>{formatNumber(locale, row.asked)}</td>
+                      <td>{formatNumber(locale, row.answered)}</td>
+                      <td>{formatNumber(locale, row.open + row.later + row.unanswered)}</td>
+                      <td>
+                        <span className={`badge level-${row.level}`}>
+                          {text.levels[row.level] ?? row.level}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PagedRows>
       </section>
 
       <section className="card stack" aria-labelledby="followups-heading">
-        <h3 id="followups-heading">{text.followUpsTitle}</h3>
-        <p className="muted">{text.followUpsHelp}</p>
+        <SectionTitle as="h3" id="followups-heading" help={text.followUpsHelp}>
+          {text.followUpsTitle}
+        </SectionTitle>
         {followUps.length === 0 ? (
           <p>{text.followUpsNone}</p>
         ) : (
@@ -492,6 +512,7 @@ export function ProblemPanel({
                 }
                 onStopEditing={() => forget([question.id])}
                 onUpload={upload}
+                onSuggest={() => suggest(question)}
                 footer={
                   drafts[question.id] ? (
                     <button
@@ -538,8 +559,9 @@ export function ProblemPanel({
 
       {analysis.finish.available && !readOnly && (
         <section className="card stack" aria-labelledby="finish-heading">
-          <h3 id="finish-heading">{text.finishTitle}</h3>
-          <p className="muted">{text.finishHelp}</p>
+          <SectionTitle as="h3" id="finish-heading" help={text.finishHelp}>
+            {text.finishTitle}
+          </SectionTitle>
           {finishing === null ? (
             <div className="toolbar">
               <button

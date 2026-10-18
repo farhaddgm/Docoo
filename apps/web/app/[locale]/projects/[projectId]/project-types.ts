@@ -23,6 +23,8 @@ export interface ProjectDetail {
   /** The business of Contenter the project is linked to (ADR-0021); null when it has none. */
   business: { externalBusinessId: string; name: string } | null;
   approvedProblemVersionId: string | null;
+  clonedFromId?: string | null;
+  originKind?: 'copy' | 'continuation' | 'pivot' | null;
   version: number;
   deletedAt: string | null;
   purgeAfter: string | null;

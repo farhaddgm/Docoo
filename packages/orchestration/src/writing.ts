@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import {
   composeInstructions,
+  DELIVERABLE_STAGE_RULES,
   defaultDefinition,
   type AgentDefinitionContent,
   clampBusinessBudget,
@@ -19,6 +20,7 @@ import {
 } from '@docoo/documents';
 import { normalizeForSearch } from '@docoo/knowledge';
 import type { SourceCitation } from './source-citation.js';
+import type { PromptDeliverable } from './deliverables.js';
 
 import {
   quoteInText,
@@ -93,6 +95,8 @@ export interface WritingMaterial {
   readonly knowledge: readonly KnowledgePassage[];
   /** What the documenter reads of the project's business (ADR-0021); absent when it has none. */
   readonly business?: BusinessPrompt | null | undefined;
+  /** The deliverables the administrator confirmed (ADR-0031); absent when none were. */
+  readonly deliverables?: readonly PromptDeliverable[] | undefined;
 }
 
 const approxWords = (letters: number, language: 'fa' | 'en') =>
@@ -116,6 +120,9 @@ const shared = (material: WritingMaterial) => ({
     ? { approvedKnowledge: knowledgePromptItems(material.knowledge) }
     : {}),
   ...(material.business ? { businessProfile: material.business.data } : {}),
+  ...(material.deliverables && material.deliverables.length > 0
+    ? { confirmedDeliverables: material.deliverables }
+    : {}),
 });
 
 function instructionsFor(
@@ -147,6 +154,7 @@ function instructionsFor(
       ...(tablesAllowed
         ? []
         : ['Tables and charts are not allowed for this document; use paragraphs and lists only.']),
+      ...(material.deliverables && material.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),
       ...(material.business?.rules ?? []),
       ...callRules,
     ],

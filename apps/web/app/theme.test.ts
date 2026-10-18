@@ -7,6 +7,7 @@ import {
   readThemePreference,
   storeThemePreference,
   themeInitScript,
+  themePreferences,
   themeStorageKey,
 } from './theme';
 
@@ -25,8 +26,9 @@ function stubBrowser() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('theme preference', () => {
-  it('accepts only the three known values', () => {
-    expect(['system', 'light', 'dark'].every(isThemePreference)).toBe(true);
+  it('accepts only the known values', () => {
+    expect(themePreferences.every(isThemePreference)).toBe(true);
+    expect(isThemePreference('honey')).toBe(true);
     expect(isThemePreference('sepia')).toBe(false);
     expect(isThemePreference(null)).toBe(false);
   });
@@ -77,5 +79,8 @@ describe('theme preference', () => {
     store.set(themeStorageKey, 'junk');
     runInThisContext(themeInitScript);
     expect(root.dataset['theme']).toBeUndefined();
+    store.set(themeStorageKey, 'forest');
+    runInThisContext(themeInitScript);
+    expect(root.dataset['theme']).toBe('forest');
   });
 });

@@ -4,7 +4,12 @@ import { integrationMessages } from '../app/[locale]/integrations/messages';
 import { businessMessages } from '../app/[locale]/projects/business-messages';
 import { fill } from '../app/[locale]/agents/agent-messages';
 import { wizardMessages } from '../app/[locale]/projects/new/wizard-messages';
-import { apiSession, expectNoSeriousA11yViolations, signInWithKeyboard } from './support';
+import {
+  apiSession,
+  expectNoSeriousA11yViolations,
+  revealRow,
+  signInWithKeyboard,
+} from './support';
 
 const integ = integrationMessages('fa');
 const biz = businessMessages('fa');
@@ -342,8 +347,8 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
 
     // The project list names the business.
     await page.goto('/fa/projects');
-    await expect(page.getByRole('row', { name: new RegExp(`biz-${stamp}`, 'u') })).toContainText(
-      FIRST,
-    );
+    const projectRow = page.getByRole('row', { name: new RegExp(`biz-${stamp}`, 'u') });
+    await revealRow(page, projectRow);
+    await expect(projectRow).toContainText(FIRST);
   });
 });
