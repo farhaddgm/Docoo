@@ -87,7 +87,7 @@ test('provider concurrency edits persist across reload and both languages', asyn
             stack,
           };
         },
-        await input.getAttribute('id'),
+        (await input.getAttribute('id')) ?? '',
       );
       throw new Error(
         JSON.stringify({
