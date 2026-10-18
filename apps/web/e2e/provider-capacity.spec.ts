@@ -50,6 +50,8 @@ test('provider concurrency edits persist across reload and both languages', asyn
     ).toBe(true);
     expect(await savedLimit()).toBe(Number(value));
     await input.fill(value);
+    // Scan with the field mid-screen, as a person sees it, not under the floating Smart button.
+    await input.evaluate((element) => element.scrollIntoView({ block: 'center' }));
     await expectNoSeriousA11yViolations(page);
   }
 });
