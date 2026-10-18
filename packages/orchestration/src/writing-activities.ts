@@ -44,6 +44,7 @@ import type { Pool, PoolClient } from 'pg';
 
 import { loadAgentVersion, resolveAgentProfile } from './agents.js';
 import { businessForRole, loadWritingBusiness } from './business.js';
+import { confirmedDeliverables } from './deliverables.js';
 import { audit, inWorkspace } from './db.js';
 import { canonicalJson, retrieveKnowledge, type RetrievedPassage } from './knowledge-retrieval.js';
 import { compactResearchForPrompt, assignReferences, type KnowledgePassage } from './research.js';
@@ -341,6 +342,7 @@ export function createWritingActivities(
       notes: row.notes,
       knowledge,
       business: business?.prompt,
+      deliverables: (await confirmedDeliverables(client, row.project_id)) ?? undefined,
     };
     return {
       material,

@@ -196,6 +196,7 @@ export class TemporalTestRuntime implements WorkflowEngine {
   fakeScript: FakeScript = () => null;
   readonly fake = new FakeAdapter((request, call) => this.fakeScript(request, call));
   afterWritingBlocked: ((ref: WritingRef) => Promise<void>) | null = null;
+  afterWritingPart: ((ref: WritingRef) => Promise<void>) | null = null;
   afterProjectBlocked: ((ref: RunRef) => Promise<void>) | null = null;
   beforeAnalysisRound:
     | ((
@@ -239,6 +240,11 @@ export class TemporalTestRuntime implements WorkflowEngine {
         await activities.blockRun(ref);
         await this.afterProjectBlocked?.(ref);
       },
+      writingWrite: async (ref: Parameters<typeof activities.writingWrite>[0]) => {
+        const result = await activities.writingWrite(ref);
+        await this.afterWritingPart?.(ref);
+        return result;
+      },
       writingBlock: async (ref: Parameters<typeof activities.writingBlock>[0]) => {
         await activities.writingBlock(ref);
         await this.afterWritingBlocked?.(ref);
@@ -269,8 +275,9 @@ export class TemporalTestRuntime implements WorkflowEngine {
   /** Simulates a worker crash/restart: workflow state must survive (WF-004). */
   async stopWorker(): Promise<void> {
     this.worker?.shutdown();
-    await this.running?.catch(() => undefined);
+    await this.running;
     await this.native?.close();
+    this.native = null;
     this.worker = null;
   }
 
@@ -399,7 +406,7 @@ export interface Harness {
  */
 export async function createHarness(
   name: string,
-  options: { workflow?: boolean; correlation?: boolean } = {},
+  options: { workflow?: boolean; correlation?: boolean; deliverableGate?: boolean } = {},
 ): Promise<Harness> {
   const parsed = new URL(adminUrl!);
   if (!['postgres:', 'postgresql:'].includes(parsed.protocol) || parsed.pathname !== '/docoo_ci') {
@@ -571,6 +578,37 @@ export async function createHarness(
     const setCookie = response.headers['set-cookie'];
     return String(Array.isArray(setCookie) ? setCookie[0] : setCookie).split(';')[0] ?? '';
   };
+
+  // Suites that run the stages are not about the plan of deliverables, so ideation does not wait
+  // for a confirmation there unless the suite asks for the real default (ADR-0031).
+  if (options.workflow && options.deliverableGate !== true) {
+    for (const [email, workspaceId] of [
+      [emails.a, ids.workspaceA],
+      [emails.b, ids.workspaceB],
+    ] as const) {
+      const cookie = await login(email);
+      for (const key of ['workflow.require_deliverable_confirmation', 'research.web_enabled']) {
+        const response = await request(
+          'PUT',
+          `/v1/workspaces/${workspaceId}/settings/assignments`,
+          {
+            cookie,
+            payload: {
+              key,
+              scopeType: 'workspace',
+              scopeId: workspaceId,
+              value: false,
+              reason:
+                'integration suite runs the stages without the confirmation gate and web search',
+            },
+          },
+        );
+        if (response.statusCode !== 200) {
+          throw new Error(`Could not relax ${key}: ${response.statusCode} ${response.body}`);
+        }
+      }
+    }
+  }
 
   return {
     app,

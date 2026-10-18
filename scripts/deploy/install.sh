@@ -332,7 +332,7 @@ tidy_docker() { # tidy_docker light|deep KEEP_VERSION...
   remove_old_images "$@"
 }
 
-ensure_disk_space() { # ensure_disk_space RUNNING_VERSION: 0 when an update fits
+ensure_disk_space() { # ensure_disk_space KEEP_VERSION...: 0 when an update fits
   local free
   free=$(docker_free_gb)
   if [[ ! "$free" =~ ^[0-9]+$ ]]; then
@@ -380,7 +380,9 @@ update() {
   local latest running previous_commit backup file status
   latest=${DOCOO_UPDATE_REF:-$(latest_release)}
   running=$(env_value DOCOO_VERSION)
-  ensure_disk_space "$running" || return "$exit_no_space"
+  # A target may already have verified images staged by an operator. Keep it as well as
+  # the running release even if capacity remains insufficient and this update refuses.
+  ensure_disk_space "$running" "${latest:-local}" || return "$exit_no_space"
   if [ -n "$latest" ] && [ -z "${DOCOO_UPDATE_REF:-}" ]; then
     python3 "$root/scripts/deploy/verify-release.py" "$latest" "$(git -C "$root" rev-list -n 1 "$latest")" || return
   fi

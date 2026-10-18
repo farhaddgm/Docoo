@@ -4,7 +4,12 @@ import { fill } from '../app/[locale]/agents/agent-messages';
 import { catalogMessages } from '../app/[locale]/providers/catalog-messages';
 import { priceMessages } from '../app/[locale]/providers/price-messages';
 import { formatPrice } from '../app/i18n';
-import { createViaApi, expectNoSeriousA11yViolations, signInWithKeyboard } from './support';
+import {
+  createViaApi,
+  expectNoSeriousA11yViolations,
+  revealRow,
+  signInWithKeyboard,
+} from './support';
 
 const text = catalogMessages('fa');
 const prices = priceMessages('fa');
@@ -71,10 +76,12 @@ test.describe('model prices from the public catalog', () => {
     await expect(table).toHaveCount(0);
     const list = page.getByRole('table', { name: prices.caption });
     const saved = list.getByRole('row').filter({ hasText: 'gpt-e2e-catalog' });
+    await revealRow(page, saved);
     await expect(saved.getByText(prices.sourceCatalog, { exact: true })).toBeVisible();
     await expect(saved.getByText(formatPrice('fa', 2.5), { exact: true })).toBeVisible();
     // The free model keeps the price typed by hand.
     const kept = list.getByRole('row').filter({ hasText: 'gpt-e2e-free' });
+    await revealRow(page, kept);
     await expect(kept.getByText(prices.sourceManual, { exact: true })).toBeVisible();
 
     // Asking again: the saved price now equals the catalog's.

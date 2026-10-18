@@ -25,6 +25,7 @@ import {
   type SourceType,
 } from './knowledge-types';
 import { manualMessages } from './manual-messages';
+import { FieldLabel, GroupLabel, SectionTitle } from '../../info-tip';
 
 interface CitationDraft {
   sourceRef: string;
@@ -163,8 +164,9 @@ export function ManualKnowledgePanel({
 
   return (
     <form className="card field-stack" onSubmit={submit} aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{manual.heading}</h2>
-      <p className="muted">{manual.help}</p>
+      <SectionTitle id={`${id}-heading`} help={manual.help}>
+        {manual.heading}
+      </SectionTitle>
       <Notice notice={notice} />
       {createdId && (
         <p className="notice ok" role="status">
@@ -231,10 +233,9 @@ export function ManualKnowledgePanel({
         />
       </div>
 
-      <label htmlFor={`${id}-content`}>{manual.content}</label>
-      <p id={`${id}-content-help`} className="muted">
-        {manual.contentHelp}
-      </p>
+      <FieldLabel htmlFor={`${id}-content`} help={manual.contentHelp} helpId={`${id}-content-help`}>
+        {manual.content}
+      </FieldLabel>
       <textarea
         id={`${id}-content`}
         dir="auto"
@@ -243,10 +244,13 @@ export function ManualKnowledgePanel({
         aria-describedby={`${id}-content-help`}
         onChange={(event) => setContent(event.target.value)}
       />
-      <label htmlFor={`${id}-declaration`}>{manual.declaration}</label>
-      <p id={`${id}-declaration-help`} className="muted">
-        {manual.declarationHelp}
-      </p>
+      <FieldLabel
+        htmlFor={`${id}-declaration`}
+        help={manual.declarationHelp}
+        helpId={`${id}-declaration-help`}
+      >
+        {manual.declaration}
+      </FieldLabel>
       <textarea
         id={`${id}-declaration`}
         dir="auto"
@@ -267,8 +271,9 @@ export function ManualKnowledgePanel({
       />
 
       <fieldset className="field-stack">
-        <legend>{manual.claimsHeading}</legend>
-        <p className="muted">{manual.claimsHelp}</p>
+        <legend>
+          <GroupLabel help={manual.claimsHelp}>{manual.claimsHeading}</GroupLabel>
+        </legend>
         <ul className="plain-list stack">
           {claims.map((claim, index) => {
             const n = String(index + 1);

@@ -10,6 +10,7 @@ import { explainProject } from '../explain';
 import { projectMessages } from '../messages';
 import { ProjectForm, type ProjectValues } from '../project-form';
 import { projectPageMessages } from './messages';
+import { NextProjectCard, OriginNote } from './next-project';
 import type { ProjectDetail } from './project-types';
 
 /** The problem, description and prioritized topics, with editing while the project allows it. */
@@ -101,6 +102,7 @@ export function OverviewPanel({
   return (
     <div className="stack">
       <Notice notice={notice} />
+      <OriginNote locale={locale} project={project} />
       <section className="card" aria-labelledby="problem-title">
         <div className="toolbar spread">
           <h2 id="problem-title">{text.problem}</h2>
@@ -155,6 +157,9 @@ export function OverviewPanel({
           </ol>
         )}
       </section>
+      {project.status === 'completed' && !accessReadOnly && (
+        <NextProjectCard locale={locale} workspaceId={workspaceId} project={project} />
+      )}
     </div>
   );
 }

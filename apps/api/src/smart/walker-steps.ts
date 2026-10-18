@@ -13,6 +13,7 @@ export const WALKER_STEP_KEYS = [
   'approve_knowledge',
   'create_project',
   'activate_project',
+  'confirm_deliverables',
   'complete_stages',
   'choose_solution',
   'evaluate_document',
@@ -37,6 +38,7 @@ export const WALKER_STEPS: readonly StepDefinition[] = [
   { key: 'approve_knowledge', project: false, requires: ['add_sources'] },
   { key: 'create_project', project: false, requires: ['create_topic'] },
   { key: 'activate_project', project: true, requires: ['create_project', 'configure_ai'] },
+  { key: 'confirm_deliverables', project: true, requires: ['activate_project'] },
   { key: 'complete_stages', project: true, requires: ['activate_project'] },
   { key: 'choose_solution', project: true, requires: ['activate_project'] },
   { key: 'evaluate_document', project: true, requires: ['choose_solution'] },
@@ -62,6 +64,8 @@ export interface WalkerFacts {
     readonly approvedDocuments: number;
     readonly passedEvaluations: number;
     readonly brainReports: number;
+    /** Whether the plan of expected deliverables must be (and was) confirmed (ADR-0031). */
+    readonly deliverables: 'confirmed' | 'pending' | 'not_required';
   } | null;
 }
 
@@ -104,6 +108,12 @@ function isDone(key: WalkerStepKey, facts: WalkerFacts): boolean {
       return facts.projects >= 1;
     case 'activate_project':
       return project !== null && ACTIVE_PROJECT_STATUSES.has(project.status);
+    case 'confirm_deliverables':
+      return (
+        project !== null &&
+        project.deliverables !== 'pending' &&
+        ACTIVE_PROJECT_STATUSES.has(project.status)
+      );
     case 'complete_stages':
       return project !== null && project.completedStages >= STAGES.length;
     case 'choose_solution':

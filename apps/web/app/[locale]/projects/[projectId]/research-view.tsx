@@ -23,6 +23,80 @@ function strings(value: unknown): string[] {
     : [];
 }
 
+/** Only http(s) addresses become links; a provider's page address is data, not trusted markup. */
+function safeUrl(value: unknown): string | null {
+  const raw = asText(value);
+  return /^https?:\/\//iu.test(raw) ? raw : null;
+}
+
+/** What the web search did in this attempt: used, found nothing, failed, refused or switched off. */
+function WebBlock({
+  text,
+  web,
+  num,
+}: {
+  text: ReturnType<typeof workflowMessages>['out'];
+  web: Record<string, unknown> | null;
+  num: (value: unknown) => string;
+}) {
+  const status = asText(web?.['status']);
+  const pages = records(web?.['sources']);
+  const queries = strings(web?.['queries']);
+  if (status === 'used') {
+    return (
+      <Block title={text.webHeading}>
+        <p>{fill(text.webUsed, { queries: num(queries.length), pages: num(pages.length) })}</p>
+        {queries.length > 0 && (
+          <>
+            <h5>{text.webQueries}</h5>
+            <ul>
+              {queries.map((query, index) => (
+                <li key={index} dir="auto">
+                  {query}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        <h5>{text.webPages}</h5>
+        <ul>
+          {pages.map((page, index) => {
+            const url = safeUrl(page['url']);
+            return (
+              <li key={index}>
+                <strong>{asText(page['ref'])}</strong>{' '}
+                {url ? (
+                  <a href={url} target="_blank" rel="noopener noreferrer" dir="auto">
+                    {asText(page['title']) || url}
+                  </a>
+                ) : (
+                  <span dir="auto">{asText(page['title'])}</span>
+                )}{' '}
+                <small className="muted">
+                  ({page['cited'] === true ? text.cited : text.notCited})
+                </small>
+              </li>
+            );
+          })}
+        </ul>
+      </Block>
+    );
+  }
+  const message =
+    status === 'none'
+      ? text.webNone
+      : status === 'failed'
+        ? fill(text.webFailed, { code: asText(web?.['code']) || '—' })
+        : status === 'denied'
+          ? text.webDenied
+          : text.webOff;
+  return (
+    <p className="notice" role="note">
+      {message}
+    </p>
+  );
+}
+
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
@@ -50,10 +124,15 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
       : null;
   const offered = knowledge ? records(knowledge['offered']) : [];
   const conflicts = records(data['conflicts']);
+  const web =
+    typeof data['web'] === 'object' && data['web'] !== null
+      ? (data['web'] as Record<string, unknown>)
+      : null;
   const num = (value: unknown) => formatNumber(locale, typeof value === 'number' ? value : 0);
 
   return (
     <div className="output-view">
+      <WebBlock text={text} web={web} num={num} />
       {verification && (
         <p>
           {fill(text.verificationSummary, {
@@ -93,7 +172,11 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
                     </small>
                     {support !== '' && (
                       <span className={`badge tone-${support === 'knowledge' ? 'ok' : 'warn'}`}>
-                        {support === 'knowledge' ? text.supportKnowledge : text.supportUnverified}
+                        {support === 'knowledge'
+                          ? text.supportKnowledge
+                          : support === 'web'
+                            ? text.supportWeb
+                            : text.supportUnverified}
                       </span>
                     )}
                   </p>
@@ -104,6 +187,7 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
                         const problem = asText(cite['problem']);
                         const knowledgeId = asText(cite['knowledgeId']);
                         const title = asText(cite['title']);
+                        const pageUrl = safeUrl(cite['url']);
                         return (
                           <li key={citeIndex}>
                             <blockquote dir="auto">{asText(cite['quote'])}</blockquote>
@@ -117,6 +201,19 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
                                   </Link>
                                   {typeof cite['versionNo'] === 'number' &&
                                     ` (${fill(text.versionShort, { n: num(cite['versionNo']) })})`}
+                                </>
+                              )}
+                              {pageUrl && (
+                                <>
+                                  {' '}
+                                  <a
+                                    href={pageUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    dir="ltr"
+                                  >
+                                    {title || pageUrl}
+                                  </a>
                                 </>
                               )}
                               {' — '}

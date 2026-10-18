@@ -18,6 +18,7 @@ interface Overview {
 }
 interface Evidence {
   ref: string;
+  url?: string | null;
   knowledgeId: string | null;
   versionNo: number | null;
   title: string | null;
@@ -29,7 +30,7 @@ interface ResearchContent {
   findings: {
     claim: string;
     source: string;
-    support: 'knowledge' | 'unverified';
+    support: 'knowledge' | 'web' | 'unverified';
     evidence: Evidence[];
   }[];
   gaps: string[];
@@ -41,6 +42,12 @@ interface ResearchContent {
     excludedRestricted: boolean;
     retrieveTool: string;
     verifierTool: string;
+  };
+  web?: {
+    status: string;
+    code: string | null;
+    queries: string[];
+    sources: { ref: string; url: string; title: string; cited: boolean }[];
   };
   verification: {
     findings: number;
@@ -362,6 +369,8 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       ]);
       expect(CHURN).toContain(content.findings[0]!.evidence[0]!.quote);
       expect(content.findings[1]!.evidence).toEqual([]);
+      // The suite runs with web search off, and the output says so.
+      expect(content.web).toEqual({ status: 'off', code: null, queries: [], sources: [] });
       expect(content.verification).toMatchObject({
         findings: 2,
         supported: 1,
@@ -1115,6 +1124,95 @@ describe.skipIf(!adminUrl || !temporalAddress)(
           expect(projectId).toBeTruthy();
         } finally {
           await activateResearcher(original.id);
+        }
+      }, 120_000);
+    });
+
+    describe('web search through the provider (ADR-0026)', () => {
+      const projectSetting = async (projectId: string, key: string, value: unknown) => {
+        const response = await h.request('PUT', api('/settings/assignments'), {
+          cookie,
+          payload: { key, scopeType: 'project', scopeId: projectId, value, reason: `test ${key}` },
+        });
+        expect(response.statusCode, response.body).toBe(200);
+      };
+      const reachResearchWithWeb = async (prefix: string): Promise<string> => {
+        const projectId = await project(prefix);
+        await projectSetting(projectId, 'research.web_enabled', true);
+        await activateProject(projectId);
+        await analysis.reachDefinition(projectId);
+        const view = await waitFor(projectId, waiting('analysis'), 'analysis gate');
+        await decide(projectId, stageOf(view, 'analysis'), 'approve');
+        await waitFor(projectId, waiting('research'), 'research gate');
+        return projectId;
+      };
+
+      it('gives the researcher numbered pages, verifies a quote from one and says what the search did', async () => {
+        const projectId = await reachResearchWithWeb('web');
+        const [request] = researchRequests();
+        const data = dataOf(request!);
+        expect(data['webSources']).toEqual([
+          expect.objectContaining({ ref: 'W1', url: 'https://example.test/fake-source' }),
+        ]);
+        expect(request!.instructions).toContain('webSources lists pages found by a web search');
+
+        const content = await researchOutput(projectId);
+        expect(content.web).toEqual({
+          status: 'used',
+          code: null,
+          queries: ['fake web query'],
+          sources: [
+            {
+              ref: 'W1',
+              url: 'https://example.test/fake-source',
+              title: 'Fake source',
+              cited: true,
+            },
+          ],
+        });
+        const onPage = content.findings.find((finding) => finding.support === 'web');
+        expect(onPage?.evidence[0]).toMatchObject({
+          ref: 'W1',
+          url: 'https://example.test/fake-source',
+          verified: true,
+          knowledgeId: null,
+        });
+        const searches = await toolCalls(projectId, 'web_search');
+        expect(searches).toHaveLength(1);
+        expect(searches[0]).toMatchObject({ decision: 'allowed', role: 'researcher' });
+        expect(searches[0]!.result).toMatchObject({ queries: 1, sources: 1 });
+        const calls = await h.admin.query(
+          `select 1 from model_invocations where project_id = $1 and purpose = 'stage:research:web'`,
+          [projectId],
+        );
+        expect(calls.rowCount).toBe(1);
+      }, 120_000);
+
+      it('a search that fails leaves the stage on its approved knowledge and the output says so', async () => {
+        temporal.fakeScript = (request) => (request.webSearch ? 'invalid_request' : null);
+        const projectId = await reachResearchWithWeb('webfail');
+        const content = await researchOutput(projectId);
+        expect(content.web).toMatchObject({ status: 'failed', queries: [], sources: [] });
+        expect(content.web?.code).toBeTruthy();
+        expect(content.findings.length).toBeGreaterThan(0);
+        expect(content.findings.every((finding) => finding.support !== 'web')).toBe(true);
+      }, 120_000);
+
+      it('the role must be allowed the web_search tool; a refusal is recorded and the stage goes on', async () => {
+        const original = (await get<{ definition: { id: string } }>('/agent-roles/researcher'))
+          .definition.id;
+        await researcherVersion(
+          defaultDefinition('researcher').tools.filter((tool) => tool !== 'web_search'),
+        );
+        try {
+          const projectId = await reachResearchWithWeb('webdeny');
+          const content = await researchOutput(projectId);
+          expect(content.web).toMatchObject({ status: 'denied', code: 'tool_not_allowed' });
+          const refused = await toolCalls(projectId, 'web_search');
+          expect(refused).toHaveLength(1);
+          expect(refused[0]).toMatchObject({ decision: 'denied', error_code: 'tool_not_allowed' });
+        } finally {
+          await activateResearcher(original);
         }
       }, 120_000);
     });

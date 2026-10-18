@@ -7,6 +7,7 @@ import { formatDateTime, formatNumber, formatPrice, type Locale } from '../../i1
 import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { catalogMessages } from './catalog-messages';
+import { SectionTitle } from '../../info-tip';
 
 type Status = 'new' | 'changed' | 'same' | 'none' | 'unusable';
 
@@ -117,8 +118,9 @@ export function CatalogPrices({
 
   return (
     <section className="stack" aria-labelledby="catalog-prices-title">
-      <h3 id="catalog-prices-title">{text.title}</h3>
-      <p className="muted">{text.help}</p>
+      <SectionTitle as="h3" id="catalog-prices-title" help={text.help}>
+        {text.title}
+      </SectionTitle>
       <div className="toolbar">
         <button
           className="secondary-button"
