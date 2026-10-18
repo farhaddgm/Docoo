@@ -18,6 +18,7 @@ const STEP_KEYS = [
   'approve_knowledge',
   'create_project',
   'activate_project',
+  'confirm_deliverables',
   'complete_stages',
   'choose_solution',
   'evaluate_document',
@@ -81,9 +82,23 @@ describe('persisted Smart state', () => {
     const projectId = '3f2b7c1e-6a0e-4a39-9d52-0a5a1c3b9f10';
     expect(
       parseUiState(
-        JSON.stringify({ enabled: false, minimized: false, side: 'start', tab: 'chat', projectId }),
+        JSON.stringify({
+          enabled: false,
+          minimized: false,
+          maximized: true,
+          side: 'start',
+          tab: 'chat',
+          projectId,
+        }),
       ),
-    ).toEqual({ enabled: false, minimized: false, side: 'start', tab: 'chat', projectId });
+    ).toEqual({
+      enabled: false,
+      minimized: false,
+      maximized: true,
+      side: 'start',
+      tab: 'chat',
+      projectId,
+    });
     expect(
       parseUiState(
         JSON.stringify({ enabled: 'yes', side: 'top', tab: 'nope', projectId: '../../etc' }),
@@ -181,7 +196,7 @@ describe('walker helpers', () => {
     expect(stepHref('en', 'approve_knowledge')).toBe('/en/knowledge');
     // A project step without a selected project has nowhere to go.
     expect(stepHref('en', 'complete_stages')).toBeNull();
-    // Every one of the twelve steps now has a page once a project is selected.
+    // Every one of the thirteen steps now has a page once a project is selected.
     for (const key of [
       'connect_provider',
       'configure_ai',
@@ -190,6 +205,7 @@ describe('walker helpers', () => {
       'approve_knowledge',
       'create_project',
       'activate_project',
+      'confirm_deliverables',
       'complete_stages',
       'choose_solution',
       'evaluate_document',

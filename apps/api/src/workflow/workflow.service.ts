@@ -199,6 +199,30 @@ export class WorkflowService {
     }
   }
 
+  /**
+   * The administrator confirmed the plan of deliverables: tells the ideation stage that waits for
+   * it to go on (ADR-0031). Safe to repeat; with no waiting stage there is nothing to signal.
+   */
+  async resumeAfterDeliverables(context: WorkspaceRequestContext, projectId: string) {
+    const live = await this.liveRun(context, projectId);
+    if (!live) return;
+    const waiting = await this.database.run(
+      context,
+      async (client) =>
+        (
+          await client.query<{ id: string }>(
+            `select id from stage_runs where run_id = $1 and stage = 'ideation' and status = 'waiting_for_human'`,
+            [live.id],
+          )
+        ).rows[0],
+    );
+    if (waiting) {
+      await this.engine.signal(live.temporal_workflow_id, 'agentInput', {
+        stageRunId: waiting.id,
+      });
+    }
+  }
+
   /** Re-sends the signal the project state implies; safe to repeat. */
   async sync(context: WorkspaceRequestContext, projectId: string) {
     const status = await this.database.run(context, async (client) => {
@@ -270,9 +294,15 @@ export class WorkflowService {
         await client.query<{ id: string }>(
           `select sr.id from stage_runs sr
             where sr.run_id = $1 and sr.status = 'waiting_for_human'
-              and exists (select 1 from agent_questions q where q.stage_run_id = sr.id)
-              and not exists (select 1 from agent_questions q
-                               where q.stage_run_id = sr.id and q.status = 'open')`,
+              and ((exists (select 1 from agent_questions q where q.stage_run_id = sr.id)
+                    and not exists (select 1 from agent_questions q
+                                     where q.stage_run_id = sr.id and q.status = 'open'))
+                   or (sr.stage = 'ideation' and exists (
+                         select 1 from deliverable_plans p
+                           join deliverable_confirmations c on c.plan_id = p.id
+                          where p.project_id = sr.project_id
+                            and p.version_no = (select max(version_no) from deliverable_plans
+                                                 where project_id = sr.project_id))))`,
           [live.id],
         )
       ).rows.map((row) => row.id),

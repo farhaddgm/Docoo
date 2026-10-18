@@ -9,12 +9,14 @@ export * from './fake-responders.js';
 export * from './knowledge-retrieval.js';
 export * from './project-materials.js';
 export * from './db.js';
+export * from './deliverables.js';
 export * from './research.js';
 export * from './research-activities.js';
 export * from './runtime.js';
 export * from './self-check.js';
 export * from './stages.js';
 export * from './tool-calls.js';
+export * from './web-research.js';
 export * from './writing.js';
 export * from './writing-activities.js';
 export {

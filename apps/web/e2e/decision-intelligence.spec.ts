@@ -38,7 +38,7 @@ test('project intelligence searches bilingual evidence and previews missing cove
   await expect(search.getByText(/Customer churn decreased/).first()).toBeVisible();
   const research = page
     .locator('section')
-    .filter({ has: page.getByRole('heading', { name: 'پژوهش تطبیقی', exact: true }) });
+    .filter({ has: page.getByRole('heading', { name: 'پژوهش تطبیقی' }) });
   await research
     .locator('textarea[name="questions"]')
     .fill('customer churn\nunobtainable actuarial liability');

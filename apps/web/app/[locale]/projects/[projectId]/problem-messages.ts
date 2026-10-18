@@ -94,6 +94,11 @@ const messages = {
     needAnswer: 'برای «پاسخ می‌دهم» متن یا فایل لازم است.',
     savedAs: 'ثبت‌شده: {mode}',
     editAnswer: 'ویرایش پاسخ',
+    suggest: 'پیشنهاد پاسخ با هوش مصنوعی',
+    suggesting: 'در حال نوشتن پیشنهاد…',
+    suggestFailed: 'پیشنهاد پاسخ ساخته نشد. دوباره تلاش کنید یا خودتان بنویسید.',
+    suggestNote:
+      'این متن پیشنهاد هوش مصنوعی است؛ آن را بخوانید و ویرایش کنید، با ثبت پاسخ تأیید می‌شود.',
     cancelEdit: 'انصراف از ویرایش',
     bulkTitle: 'برای پرسش‌هایی که هنوز وضعیتی ندارند',
     bulk: {
@@ -292,6 +297,11 @@ const messages = {
     needAnswer: '"I answer" needs text or a file.',
     savedAs: 'Saved: {mode}',
     editAnswer: 'Edit answer',
+    suggest: 'Suggest an answer with AI',
+    suggesting: 'Writing a suggestion…',
+    suggestFailed: 'No suggestion could be made. Try again or write the answer yourself.',
+    suggestNote:
+      'This text is an AI suggestion. Read and edit it; submitting the answer confirms it.',
     cancelEdit: 'Cancel editing',
     bulkTitle: 'For questions that have no status yet',
     bulk: {

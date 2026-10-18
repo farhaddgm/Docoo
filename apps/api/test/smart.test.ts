@@ -130,6 +130,7 @@ const project = {
   approvedDocuments: 0,
   passedEvaluations: 0,
   brainReports: 0,
+  deliverables: 'not_required' as const,
 };
 const stateOf = (
   progress: ReturnType<typeof evaluateWalker>,
@@ -198,6 +199,34 @@ describe('walker progress (SMT-004)', () => {
     expect(progress.nextStep).toBe('complete_stages');
   });
 
+  it('holds the project at the deliverables plan until it is confirmed (ADR-0031)', () => {
+    const facts = {
+      providers: { healthy: 1, total: 1 },
+      aiConfigured: true,
+      topics: 1,
+      indexedSources: 1,
+      approvedKnowledge: 1,
+      projects: 1,
+    };
+    const waiting = evaluateWalker({
+      ...facts,
+      project: { ...project, status: 'active', deliverables: 'pending' },
+    });
+    expect(stateOf(waiting, 'confirm_deliverables').status).toBe('ready');
+    expect(waiting.nextStep).toBe('confirm_deliverables');
+    const confirmed = evaluateWalker({
+      ...facts,
+      project: { ...project, status: 'active', deliverables: 'confirmed' },
+    });
+    expect(stateOf(confirmed, 'confirm_deliverables').status).toBe('done');
+    // A draft project has nothing to confirm yet: the step waits for the activation.
+    const draft = evaluateWalker({ ...facts, project: { ...project, deliverables: 'pending' } });
+    expect(stateOf(draft, 'confirm_deliverables')).toMatchObject({
+      status: 'blocked',
+      blockedBy: 'step',
+    });
+  });
+
   it('finishes when every step is satisfied', () => {
     const progress = evaluateWalker({
       providers: { healthy: 1, total: 1 },
@@ -215,6 +244,7 @@ describe('walker progress (SMT-004)', () => {
         approvedDocuments: 1,
         passedEvaluations: 1,
         brainReports: 1,
+        deliverables: 'confirmed',
       },
     });
     expect(progress.doneCount).toBe(progress.total);

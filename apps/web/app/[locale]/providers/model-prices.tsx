@@ -8,6 +8,8 @@ import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { CatalogPrices } from './catalog-prices';
 import { priceMessages } from './price-messages';
+import { SectionTitle } from '../../info-tip';
+import { PagedRows } from '../../table-pager';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
 
@@ -128,8 +130,9 @@ export function ModelPrices({
 
   return (
     <section className="card stack" aria-labelledby="prices-title">
-      <h2 id="prices-title">{text.title}</h2>
-      <p className="muted">{text.help}</p>
+      <SectionTitle id="prices-title" help={text.help}>
+        {text.title}
+      </SectionTitle>
       <CatalogPrices
         locale={locale}
         workspaceId={workspaceId}
@@ -157,39 +160,43 @@ export function ModelPrices({
         ))}
       {view && latest.size === 0 && <p className="muted">{text.none}</p>}
       {latest.size > 0 && (
-        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="prices-title">
-          <table>
-            <caption className="visually-hidden">{text.caption}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{text.provider}</th>
-                <th scope="col">{text.model}</th>
-                <th scope="col">{text.input}</th>
-                <th scope="col">{text.output}</th>
-                <th scope="col">{text.cached}</th>
-                <th scope="col">{text.reasoning}</th>
-                <th scope="col">{text.source}</th>
-                <th scope="col">{text.since}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...latest.values()].map((item) => (
-                <tr key={item.id}>
-                  <td dir="ltr">{item.provider}</td>
-                  <th scope="row" dir="ltr">
-                    {item.model}
-                  </th>
-                  <td>{num(item.inputPerMillion)}</td>
-                  <td>{num(item.outputPerMillion)}</td>
-                  <td>{num(item.cachedInputPerMillion)}</td>
-                  <td>{num(item.reasoningPerMillion)}</td>
-                  <td>{item.source === 'catalog' ? text.sourceCatalog : text.sourceManual}</td>
-                  <td>{formatDateTime(locale, item.effectiveFrom)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PagedRows rows={[...latest.values()]}>
+          {(pageRows) => (
+            <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="prices-title">
+              <table>
+                <caption className="visually-hidden">{text.caption}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{text.provider}</th>
+                    <th scope="col">{text.model}</th>
+                    <th scope="col">{text.input}</th>
+                    <th scope="col">{text.output}</th>
+                    <th scope="col">{text.cached}</th>
+                    <th scope="col">{text.reasoning}</th>
+                    <th scope="col">{text.source}</th>
+                    <th scope="col">{text.since}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((item) => (
+                    <tr key={item.id}>
+                      <td dir="ltr">{item.provider}</td>
+                      <th scope="row" dir="ltr">
+                        {item.model}
+                      </th>
+                      <td>{num(item.inputPerMillion)}</td>
+                      <td>{num(item.outputPerMillion)}</td>
+                      <td>{num(item.cachedInputPerMillion)}</td>
+                      <td>{num(item.reasoningPerMillion)}</td>
+                      <td>{item.source === 'catalog' ? text.sourceCatalog : text.sourceManual}</td>
+                      <td>{formatDateTime(locale, item.effectiveFrom)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PagedRows>
       )}
       <p className="muted">{text.perMillion}</p>
 

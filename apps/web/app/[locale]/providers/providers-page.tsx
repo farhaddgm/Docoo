@@ -9,6 +9,8 @@ import { SignedIn } from '../signed-in';
 import { providerMessages } from './messages';
 import { ModelPrices } from './model-prices';
 import { ModelSelfCheck } from './model-self-check';
+import { FieldLabel, SectionTitle } from '../../info-tip';
+import { PagedRows } from '../../table-pager';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
 
@@ -196,79 +198,85 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
         ) : connections.length === 0 ? (
           <p className="muted">{text.none}</p>
         ) : (
-          <div
-            className="table-scroll"
-            tabIndex={0}
-            role="region"
-            aria-labelledby="connections-title"
-          >
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">{text.name}</th>
-                  <th scope="col">{text.provider}</th>
-                  <th scope="col">{text.status}</th>
-                  <th scope="col">{text.lastChecked}</th>
-                  <th scope="col">{text.keyFingerprint}</th>
-                  <th scope="col">
-                    <span className="visually-hidden">actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {connections.map((item) => (
-                  <tr key={item.id}>
-                    <th scope="row">{item.name}</th>
-                    <td dir="ltr">{item.provider}</td>
-                    <td>
-                      <span className={`badge state-${item.status}`}>
-                        {statuses[item.status] ?? item.status}
-                      </span>
-                      {item.lastError && <small dir="ltr"> {item.lastError}</small>}
-                    </td>
-                    <td>{item.lastCheckedAt ? formatDateTime(locale, item.lastCheckedAt) : '—'}</td>
-                    <td dir="ltr">
-                      <code>{item.secret?.fingerprint ?? '—'}</code>
-                    </td>
-                    <td>
-                      <div className="toolbar">
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          disabled={busy}
-                          onClick={() =>
-                            void run(() =>
-                              apiPost(
-                                `${base}/provider-connections/${item.id}/health-check`,
-                                {},
-                              ).then(() => undefined),
-                            )
-                          }
-                        >
-                          {text.check}
-                        </button>
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          disabled={busy}
-                          onClick={() =>
-                            void run(() =>
-                              apiPost(
-                                `${base}/provider-connections/${item.id}/models/refresh`,
-                                {},
-                              ).then(() => undefined),
-                            )
-                          }
-                        >
-                          {text.refresh}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PagedRows rows={connections}>
+            {(pageRows) => (
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-labelledby="connections-title"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{text.name}</th>
+                      <th scope="col">{text.provider}</th>
+                      <th scope="col">{text.status}</th>
+                      <th scope="col">{text.lastChecked}</th>
+                      <th scope="col">{text.keyFingerprint}</th>
+                      <th scope="col">
+                        <span className="visually-hidden">actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((item) => (
+                      <tr key={item.id}>
+                        <th scope="row">{item.name}</th>
+                        <td dir="ltr">{item.provider}</td>
+                        <td>
+                          <span className={`badge state-${item.status}`}>
+                            {statuses[item.status] ?? item.status}
+                          </span>
+                          {item.lastError && <small dir="ltr"> {item.lastError}</small>}
+                        </td>
+                        <td>
+                          {item.lastCheckedAt ? formatDateTime(locale, item.lastCheckedAt) : '—'}
+                        </td>
+                        <td dir="ltr">
+                          <code>{item.secret?.fingerprint ?? '—'}</code>
+                        </td>
+                        <td>
+                          <div className="toolbar">
+                            <button
+                              className="secondary-button"
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                void run(() =>
+                                  apiPost(
+                                    `${base}/provider-connections/${item.id}/health-check`,
+                                    {},
+                                  ).then(() => undefined),
+                                )
+                              }
+                            >
+                              {text.check}
+                            </button>
+                            <button
+                              className="secondary-button"
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                void run(() =>
+                                  apiPost(
+                                    `${base}/provider-connections/${item.id}/models/refresh`,
+                                    {},
+                                  ).then(() => undefined),
+                                )
+                              }
+                            >
+                              {text.refresh}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
       </section>
 
@@ -299,7 +307,9 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
             onChange={(event) => setName(event.target.value)}
             autoComplete="off"
           />
-          <label htmlFor="provider-key">{text.apiKey}</label>
+          <FieldLabel htmlFor="provider-key" help={text.keyHelp[kind]} helpId="provider-key-help">
+            {text.apiKey}
+          </FieldLabel>
           <input
             id="provider-key"
             type="password"
@@ -311,10 +321,6 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
             required
             minLength={8}
           />
-          <span />
-          <p id="provider-key-help" className="muted" dir="auto">
-            {text.keyHelp[kind]}
-          </p>
         </div>
         <div className="toolbar">
           <button className="primary-button" type="submit" disabled={busy}>
@@ -329,8 +335,9 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
         aria-labelledby="defaults-title"
         aria-busy={busy}
       >
-        <h2 id="defaults-title">{text.defaults}</h2>
-        <p className="muted">{text.defaultsHelp}</p>
+        <SectionTitle id="defaults-title" help={text.defaultsHelp}>
+          {text.defaults}
+        </SectionTitle>
         <p>
           {text.current}:{' '}
           <strong dir="ltr">

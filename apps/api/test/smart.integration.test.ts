@@ -109,7 +109,7 @@ describe.skipIf(!adminUrl)('Smart: errors, chat, walker and ledger (SMT-001..004
   it('walker starts at the first unmet step in an empty workspace', async () => {
     const empty = await progress();
     expect(empty).toMatchObject({ projectId: null, doneCount: 0, nextStep: 'connect_provider' });
-    expect(empty.total).toBe(12);
+    expect(empty.total).toBe(13);
     expect(step(empty, 'configure_ai')).toMatchObject({ status: 'blocked', blockedBy: 'step' });
     expect(step(empty, 'activate_project')).toMatchObject({
       status: 'blocked',
