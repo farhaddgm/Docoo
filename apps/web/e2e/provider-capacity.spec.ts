@@ -5,6 +5,7 @@ import {
   apiSession,
   createViaApi,
   expectNoSeriousA11yViolations,
+  revealRow,
   signInWithKeyboard,
 } from './support';
 
@@ -32,6 +33,7 @@ test('provider concurrency edits persist across reload and both languages', asyn
       .getByRole('row')
       .filter({ has: page.getByRole('rowheader', { name: created.connection.name, exact: true }) });
     const input = row.getByRole('spinbutton');
+    await revealRow(page, row);
     await expect(input).toHaveAccessibleName(`${text.maxConcurrent} — ${created.connection.name}`);
     await expect(input).toHaveValue(locale === 'fa' ? '4' : '2');
     await input.fill(value);
@@ -39,6 +41,7 @@ test('provider concurrency edits persist across reload and both languages', asyn
     await expect(page.getByRole('status').filter({ hasText: text.saved })).toBeVisible();
     await expect.poll(savedLimit).toBe(Number(value));
     await page.reload();
+    await revealRow(page, row);
     await expect(input).toHaveValue(value);
     await input.fill('0');
     await row.getByRole('button', { name: text.saveCapacity, exact: true }).click();
