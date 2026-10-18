@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 import { providerMessages } from '../app/[locale]/providers/messages';
@@ -50,6 +51,25 @@ test('provider concurrency edits persist across reload and both languages', asyn
     ).toBe(true);
     expect(await savedLimit()).toBe(Number(value));
     await input.fill(value);
+    // TEMP-DIAG: print the elements axe says cover the field.
+    const probe = await new AxeBuilder({ page }).withRules(['target-size']).analyze();
+    if (probe.violations.length > 0)
+      throw new Error(
+        JSON.stringify(
+          probe.violations.flatMap((violation) =>
+            violation.nodes.map((node) => ({
+              target: node.target,
+              related: node.any.flatMap((check) =>
+                (check.relatedNodes ?? []).map((related) => ({
+                  target: related.target,
+                  html: String(related.html).slice(0, 240),
+                })),
+              ),
+              data: node.any.map((check): unknown => check.data),
+            })),
+          ),
+        ),
+      );
     await expectNoSeriousA11yViolations(page);
   }
 });
