@@ -9,6 +9,7 @@ import { Badge, statusTone } from './knowledge-common';
 import { knowledgeMessages } from './knowledge-messages';
 import type { KnowledgeVersion, ListedReview } from './knowledge-types';
 import { brainTone } from './review-panel';
+import { SectionTitle } from '../../info-tip';
 
 /** The versions of a knowledge item and every audit it went through (KNO-002). */
 export function HistoryPanel({
@@ -78,8 +79,9 @@ export function HistoryPanel({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.versionsHeading}</h2>
-      <p className="muted">{text.versionsHelp}</p>
+      <SectionTitle id={`${id}-heading`} help={text.versionsHelp}>
+        {text.versionsHeading}
+      </SectionTitle>
       {failed && (
         <p className="notice error" role="alert">
           {text.failed}

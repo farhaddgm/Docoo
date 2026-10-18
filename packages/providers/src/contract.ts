@@ -76,6 +76,12 @@ export interface NormalizedModelRequest {
   readonly tools?: readonly ToolSpec[] | undefined;
   readonly toolChoice?: ToolChoice | undefined;
   readonly responseSchema?: { readonly name: string; readonly schema: JsonSchema } | undefined;
+  /**
+   * Lets the model search the web with the provider's own search tool (OpenAI web search, Google
+   * Search grounding, Anthropic web search). It answers in plain text and returns the sources in
+   * `web`; a request that searches carries neither functions nor a response schema.
+   */
+  readonly webSearch?: { readonly maxUses: number } | undefined;
   readonly maxOutputTokens?: number | undefined;
   readonly temperature?: number | undefined;
   readonly timeoutMs?: number | undefined;
@@ -88,6 +94,20 @@ export interface Usage {
   readonly outputTokens: number;
   readonly reasoningTokens: number | null;
   readonly cachedInputTokens: number | null;
+}
+
+/** A web page the provider's search tool used, with the part of the answer that rests on it. */
+export interface WebSource {
+  readonly url: string;
+  readonly title: string;
+  /** The passage of the model's answer that cites the page; a quote is checked against it. */
+  readonly text: string;
+}
+
+export interface WebSearchResult {
+  /** The queries the provider ran. */
+  readonly queries: readonly string[];
+  readonly sources: readonly WebSource[];
 }
 
 export type FinishReason = 'stop' | 'length' | 'content_filter' | 'tool_call' | 'other';
@@ -105,6 +125,8 @@ export interface NormalizedModelResponse {
   readonly usage: Usage;
   readonly providerRequestId: string | null;
   readonly latencyMs: number;
+  /** Present when the request asked to search the web. */
+  readonly web?: WebSearchResult | undefined;
 }
 
 export type HealthStatus = 'healthy' | 'degraded' | 'unavailable' | 'invalid';

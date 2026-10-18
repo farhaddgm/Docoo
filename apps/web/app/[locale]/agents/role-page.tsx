@@ -11,6 +11,8 @@ import { explainError, Notice, useAction } from '../use-action';
 import { agentMessages, fill } from './agent-messages';
 import type { AgentRole, Definition, RoleDetail, RoleOutput } from './agent-types';
 import { RoleEditor } from './role-editor';
+import { FieldLabel, SectionTitle } from '../../info-tip';
+import { PagedRows } from '../../table-pager';
 
 export function RolePage({ locale, role }: { locale: Locale; role: AgentRole }) {
   const text = agentMessages(locale);
@@ -205,8 +207,9 @@ function Role({
         <Link href={`/${locale}/agents` as Route}>{text.back}</Link>
       </p>
       <section className="card stack" aria-labelledby="role-heading">
-        <h2 id="role-heading">{text.roles[role].name}</h2>
-        <p className="muted">{text.roleSubtitle}</p>
+        <SectionTitle id="role-heading" help={text.roleSubtitle}>
+          {text.roles[role].name}
+        </SectionTitle>
         <p>
           <span className="badge">{stageLabel}</span>{' '}
           <span className="badge state-passed">
@@ -259,10 +262,13 @@ function Role({
       </section>
 
       <section className="card stack" aria-labelledby="history-heading">
-        <h2 id="history-heading">{text.historyHeading}</h2>
-        <p className="muted">{text.historyHelp}</p>
+        <SectionTitle id="history-heading" help={text.historyHelp}>
+          {text.historyHeading}
+        </SectionTitle>
         <div className="field-stack">
-          <label htmlFor={reasonId}>{text.activateReason}</label>
+          <FieldLabel htmlFor={reasonId} help={text.activateReasonHelp} helpId={`${reasonId}-help`}>
+            {text.activateReason}
+          </FieldLabel>
           <input
             id={reasonId}
             dir="auto"
@@ -271,9 +277,6 @@ function Role({
             onChange={(event) => setActivateReason(event.target.value)}
             aria-describedby={`${reasonId}-help`}
           />
-          <small id={`${reasonId}-help`} className="muted">
-            {text.activateReasonHelp}
-          </small>
         </div>
         <Notice notice={notice} />
         <ol className="version-list">
@@ -397,54 +400,63 @@ function Role({
       </section>
 
       <section className="card stack" aria-labelledby="outputs-heading">
-        <h2 id="outputs-heading">{text.outputsHeading}</h2>
-        <p className="muted">{text.outputsHelp}</p>
+        <SectionTitle id="outputs-heading" help={text.outputsHelp}>
+          {text.outputsHeading}
+        </SectionTitle>
         {!outputs ? (
           <p role="status">{text.loading}</p>
         ) : outputs.items.length === 0 ? (
           <p className="muted">{text.outputsNone}</p>
         ) : (
-          <div className="table-scroll">
-            <table>
-              <caption className="visually-hidden">{text.outputsHeading}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">{text.outputColumns.project}</th>
-                  <th scope="col">{text.outputColumns.stage}</th>
-                  <th scope="col">{text.outputColumns.version}</th>
-                  <th scope="col">{text.outputColumns.definition}</th>
-                  <th scope="col">{text.outputColumns.date}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {outputs.items.map((item) => (
-                  <tr key={item.id}>
-                    <td dir="auto">
-                      {item.projectId ? (
-                        <Link href={`/${locale}/projects/${item.projectId}` as Route}>
-                          {item.projectTitle ?? item.projectId}
-                        </Link>
-                      ) : (
-                        fill(text.reportOf, { scope: text.scopes[item.scope ?? 'workspace'] ?? '' })
-                      )}
-                    </td>
-                    <td>{item.stage ? (text.stages[item.stage] ?? item.stage) : '—'}</td>
-                    <td>
-                      {item.versionNo === undefined ? '—' : formatNumber(locale, item.versionNo)}
-                    </td>
-                    <td>
-                      {item.definitionSequence
-                        ? fill(text.versionLabel, {
-                            n: formatNumber(locale, item.definitionSequence),
-                          })
-                        : '—'}
-                    </td>
-                    <td>{formatDateTime(locale, item.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PagedRows rows={outputs.items}>
+            {(pageRows) => (
+              <div className="table-scroll">
+                <table>
+                  <caption className="visually-hidden">{text.outputsHeading}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">{text.outputColumns.project}</th>
+                      <th scope="col">{text.outputColumns.stage}</th>
+                      <th scope="col">{text.outputColumns.version}</th>
+                      <th scope="col">{text.outputColumns.definition}</th>
+                      <th scope="col">{text.outputColumns.date}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((item) => (
+                      <tr key={item.id}>
+                        <td dir="auto">
+                          {item.projectId ? (
+                            <Link href={`/${locale}/projects/${item.projectId}` as Route}>
+                              {item.projectTitle ?? item.projectId}
+                            </Link>
+                          ) : (
+                            fill(text.reportOf, {
+                              scope: text.scopes[item.scope ?? 'workspace'] ?? '',
+                            })
+                          )}
+                        </td>
+                        <td>{item.stage ? (text.stages[item.stage] ?? item.stage) : '—'}</td>
+                        <td>
+                          {item.versionNo === undefined
+                            ? '—'
+                            : formatNumber(locale, item.versionNo)}
+                        </td>
+                        <td>
+                          {item.definitionSequence
+                            ? fill(text.versionLabel, {
+                                n: formatNumber(locale, item.definitionSequence),
+                              })
+                            : '—'}
+                        </td>
+                        <td>{formatDateTime(locale, item.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
         {outputs?.nextCursor && (
           <p>

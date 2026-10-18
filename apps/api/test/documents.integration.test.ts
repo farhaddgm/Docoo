@@ -192,10 +192,28 @@ describe.skipIf(!adminUrl)('solutions, documents and evaluation (SOL-*, DOC-*, E
       const id = docs.json<{ items: { id: string }[] }>().items[0]!.id;
       const draft = await document(id);
       expect(JSON.stringify(draft.currentVersion.content)).toContain(definition.problemStatement);
+      const plan = await h.admin.query<{ id: string }>(
+        `insert into deliverable_plans (workspace_id,project_id,version_no,source,created_by)
+         values ($1,$2,1,'admin',$3) returning id`,
+        [h.ids.workspaceA, projectId, h.ids.userA],
+      );
+      await h.admin.query(
+        `insert into deliverable_items (workspace_id,plan_id,ordinal,kind,title,scope_out)
+         values ($1,$2,1,'strategy_document','What to do about churn','Pricing changes'),
+                ($1,$2,2,'technical_prototype','Mobile app','')`,
+        [h.ids.workspaceA, plan.rows[0]!.id],
+      );
+      await h.admin.query(
+        `insert into deliverable_confirmations (workspace_id,plan_id,confirmed_by) values ($1,$2,$3)`,
+        [h.ids.workspaceA, plan.rows[0]!.id, h.ids.userA],
+      );
       const evaluation = await post(`/documents/${id}/evaluate`);
       expect(evaluation.statusCode, evaluation.body).toBe(201);
       expect(requests.at(-1)).toContain(definition.constraints[0]);
       expect(requests.at(-1)).toContain(versionId);
+      expect(requests.at(-1)).toContain('confirmedDeliverables');
+      expect(requests.at(-1)).toContain('What to do about churn');
+      expect(requests.at(-1)).toContain('"outsideDocoo":true');
 
       // A model response about an older initial problem must not become a saved result.
       const invoke = h.fake.invoke.bind(h.fake);

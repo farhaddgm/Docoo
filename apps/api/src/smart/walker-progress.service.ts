@@ -81,13 +81,14 @@ export class WalkerProgressService {
       indexedSources: workspace.sources,
       approvedKnowledge: workspace.knowledge,
       projects: workspace.projects,
-      project: projectId ? await this.projectFacts(client, projectId) : null,
+      project: projectId ? await this.projectFacts(client, projectId, effective) : null,
     };
   }
 
   private async projectFacts(
     client: PoolClient,
     projectId: string,
+    effective: { readonly values: Readonly<Record<string, unknown>> },
   ): Promise<NonNullable<WalkerFacts['project']>> {
     const row = (
       await client.query<{
@@ -99,6 +100,9 @@ export class WalkerProgressService {
         approved: number;
         passed: number;
         brain: number;
+        quick: boolean;
+        confirmed: boolean;
+        ideated: boolean;
       }>(
         `select p.status::text as status,
            (select count(*)::int from stage_runs s
@@ -114,12 +118,27 @@ export class WalkerProgressService {
               join documents d on d.id = e.document_id
              where d.project_id = p.id and e.status = 'passed') as passed,
            (select count(*)::int from brain_reports
-             where scope = 'workspace' or project_id = p.id) as brain
+             where scope = 'workspace' or project_id = p.id) as brain,
+           (p.analysis_profile = 'quick') as quick,
+           exists (select 1 from deliverable_plans dp
+                     join deliverable_confirmations dc on dc.plan_id = dp.id
+                    where dp.project_id = p.id
+                      and dp.version_no = (select max(version_no) from deliverable_plans where project_id = p.id)) as confirmed,
+           exists (select 1 from stage_runs sr
+                    where sr.project_id = p.id and sr.stage = 'ideation' and sr.latest_output_id is not null) as ideated
          from projects p where p.id = $1 and p.deleted_at is null`,
         [projectId],
       )
     ).rows[0];
     if (!row) throw notFound('SMART_PROJECT_NOT_FOUND', 'The project was not found.');
+    // Nothing to confirm for the quick draft, for a project whose ideation already produced
+    // output, or when the administrator switched the gate off.
+    const required = effective.values['workflow.require_deliverable_confirmation'] !== false;
+    const deliverables: 'confirmed' | 'pending' | 'not_required' = row.confirmed
+      ? 'confirmed'
+      : !required || row.quick || row.ideated
+        ? 'not_required'
+        : 'pending';
     return {
       status: row.status,
       completedStages: row.completed,
@@ -129,6 +148,7 @@ export class WalkerProgressService {
       approvedDocuments: row.approved,
       passedEvaluations: row.passed,
       brainReports: row.brain,
+      deliverables,
     };
   }
 }

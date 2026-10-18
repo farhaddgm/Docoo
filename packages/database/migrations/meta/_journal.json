@@ -309,6 +309,34 @@
       "when": 1791906426776,
       "tag": "0043_quick_draft_audit_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792167156910,
+      "tag": "0044_project_origin_kind",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792253556910,
+      "tag": "0045_stage_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1792339956910,
+      "tag": "0046_deliverable_plans",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792426356910,
+      "tag": "0047_research_web_settings",
+      "breakpoints": true
     }
   ]
 }

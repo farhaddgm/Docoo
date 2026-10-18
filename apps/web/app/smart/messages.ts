@@ -15,6 +15,8 @@ const fa = {
     label: 'پنجرهٔ اسمارت',
     tabs: { walker: 'واکر', chat: 'گفتگو', errors: 'خطاها' },
     minimize: 'کوچک کردن',
+    maximize: 'بزرگ کردن پنجره',
+    restore: 'بازگرداندن اندازهٔ پنجره',
     expand: 'باز کردن اسمارت',
     switchSide: 'جابه‌جایی پنجره به سمت دیگر',
   },
@@ -104,6 +106,16 @@ const fa = {
           'پروژه را فعال کنید.',
         ],
       },
+      confirm_deliverables: {
+        title: 'تأیید خروجی‌های موردانتظار',
+        summary:
+          'پیش از ایده‌پردازی مشخص می‌کنید چه خروجی‌هایی می‌خواهید (سند راهبردی، مستندات محصول). ایده‌پردازی تا تأیید شما منتظر می‌ماند؛ کد خارج از Docoo است.',
+        todo: [
+          'تب جریان‌کار پروژه را باز کنید.',
+          'فهرست خروجی‌ها را با هوش مصنوعی پیشنهاد بگیرید یا خودتان بنویسید.',
+          'فهرست را ویرایش و تأیید کنید.',
+        ],
+      },
       complete_stages: {
         title: 'پیشبرد مرحله‌ها',
         summary: 'هر مرحله ممکن است برای تصمیم شما متوقف شود؛ کارهای منتظر را پاسخ دهید.',
@@ -125,7 +137,7 @@ const fa = {
       evaluate_document: {
         title: 'ارزیابی سند',
         summary:
-          'ارزیاب پوشش نیازمندی، شواهد، ریسک و انطباق طول و قالب را می‌سنجد؛ سند باید قبول شود.',
+          'ارزیاب پوشش نیازمندی، شواهد، ریسک و انطباق طول و قالب را می‌سنجد؛ سند باید قبول شود. این گام جدا از مرحلهٔ «ارزیابی» گردش‌کار است: آن مرحله می‌تواند تمام شده باشد و سند هنوز ارزیابی‌نشده و پیش‌نویس بماند.',
         todo: [
           'سند را برای ارزیابی ارسال کنید.',
           'یافته‌های ارزیابی را بخوانید.',
@@ -286,6 +298,8 @@ const en: SmartMessages = {
     label: 'Smart window',
     tabs: { walker: 'Walker', chat: 'Chat', errors: 'Errors' },
     minimize: 'Minimise',
+    maximize: 'Maximise the window',
+    restore: 'Restore the window size',
     expand: 'Open Smart',
     switchSide: 'Move the window to the other side',
   },
@@ -380,6 +394,16 @@ const en: SmartMessages = {
           'Activate the project.',
         ],
       },
+      confirm_deliverables: {
+        title: 'Confirm the expected deliverables',
+        summary:
+          'Before ideation you say which outputs you expect (a strategy document, product documentation). Ideation waits until you confirm; code is outside Docoo.',
+        todo: [
+          'Open the workflow tab of the project.',
+          'Ask for a proposed list or write it yourself.',
+          'Edit the list and confirm it.',
+        ],
+      },
       complete_stages: {
         title: 'Move the stages forward',
         summary: 'A stage may pause for your decision; answer the waiting tasks.',
@@ -401,7 +425,7 @@ const en: SmartMessages = {
       evaluate_document: {
         title: 'Evaluate the document',
         summary:
-          'The evaluator checks requirement coverage, evidence, risk and length/format compliance; it must pass.',
+          'The evaluator checks requirement coverage, evidence, risk and length/format compliance; it must pass. This step is separate from the workflow stage called "evaluation": that stage can be finished while the document is still unevaluated and a draft.',
         todo: [
           'Submit the document for evaluation.',
           'Read the evaluation findings.',

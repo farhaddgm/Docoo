@@ -4,7 +4,7 @@ import { unzipSync, strFromU8 } from 'fflate';
 import { Worker } from '@temporalio/worker';
 import { ProviderError } from '@docoo/providers';
 import { Client } from 'pg';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { AnalysisDriver } from './support/analysis.js';
 import type { TemporalTestRuntime } from './support/harness.js';
@@ -950,5 +950,115 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       );
       expect(blocked.run?.status).toBe('paused');
     }, 90_000);
+
+    it('ADR-0031: ideation waits for the confirmed plan of deliverables and then works for it', async () => {
+      const projectId = await project('deliverables', async (id) => {
+        await setting('workflow.require_human_approval', false, 'project', id);
+        await setting('workflow.require_deliverable_confirmation', true, 'project', id);
+      });
+      const seen = vi.spyOn(h.fake, 'invoke');
+      try {
+        const gate = await analysisGate(projectId);
+        expect((await decide(projectId, stageOf(gate, 'analysis'), 'approve')).statusCode).toBe(
+          200,
+        );
+        const held = await waitFor(
+          projectId,
+          (view) =>
+            stageOf(view, 'ideation').status === 'waiting_for_human' &&
+            view.humanTasks.some((task) => task.kind === 'deliverables_confirmation'),
+          'the deliverables task',
+        );
+        expect(stageOf(held, 'ideation').pendingGateOutputId ?? null).toBeNull();
+        expect(stageOf(held, 'ideation').latestOutputId ?? null).toBeNull();
+
+        const route = api(`/projects/${projectId}/deliverables`);
+        const read = async () =>
+          (await h.request('GET', route, { cookie })).json<{
+            plan: { versionNo: number; source: string; items: unknown[]; confirmed: unknown };
+            required: boolean;
+            waiting: boolean;
+          }>();
+        const first = await read();
+        expect(first).toMatchObject({ required: true, waiting: true });
+        expect(first.plan).toMatchObject({
+          versionNo: 1,
+          source: 'system',
+          items: [],
+          confirmed: null,
+        });
+
+        const confirm = (versionNo: number) =>
+          h.request('POST', `${route}/confirm`, { cookie, payload: { versionNo } });
+        const save = (items: unknown[], basedOnVersionNo: number) =>
+          h.request('PUT', route, { cookie, payload: { items, basedOnVersionNo } });
+        const code = (response: { json: <T>() => T }) => response.json<{ code: string }>().code;
+
+        // Nothing Docoo can produce, so nothing to confirm: an empty plan, then code only.
+        const empty = await confirm(1);
+        expect(empty.statusCode, empty.body).toBe(422);
+        expect(code(empty)).toBe('DELIVERABLES_NOTHING_TO_PRODUCE');
+        expect(
+          (await save([{ kind: 'technical_prototype', title: 'Mobile app' }], 1)).statusCode,
+        ).toBe(200);
+        expect(code(await confirm(2))).toBe('DELIVERABLES_NOTHING_TO_PRODUCE');
+
+        // An edit based on an old version is refused; the newest version is confirmed, not an older one.
+        const stale = await save([{ kind: 'strategy_document', title: 'Stale' }], 1);
+        expect(stale.statusCode).toBe(409);
+        expect(code(stale)).toBe('DELIVERABLES_VERSION_CONFLICT');
+        const saved = await save(
+          [
+            { kind: 'strategy_document', title: 'What to do about churn', scopeOut: 'Pricing' },
+            { kind: 'technical_prototype', title: 'Mobile app' },
+          ],
+          2,
+        );
+        expect(saved.statusCode, saved.body).toBe(200);
+        expect(saved.json<{ plan: { versionNo: number } }>().plan.versionNo).toBe(3);
+        expect(code(await confirm(2))).toBe('DELIVERABLES_VERSION_CONFLICT');
+        expect(
+          (
+            await h.request(
+              'GET',
+              `/v1/workspaces/${h.ids.workspaceA}/projects/${projectId}/workflow`,
+              { cookie },
+            )
+          ).statusCode,
+        ).toBe(200);
+        expect(stageOf(await overview(projectId), 'ideation').latestOutputId ?? null).toBeNull();
+
+        const ok = await confirm(3);
+        expect(ok.statusCode, ok.body).toBe(200);
+        expect(code(await confirm(3))).toBe('DELIVERABLES_ALREADY_CONFIRMED');
+
+        const done = await waitFor(
+          projectId,
+          (view) => view.run?.status === 'completed',
+          'completion after the confirmation',
+        );
+        expect(done.humanTasks).toEqual([]);
+        // Ideation read the confirmed plan as data and was told code is outside Docoo.
+        const ideation = seen.mock.calls
+          .map((call) => call[0])
+          .find((request) =>
+            (request.messages[0]?.content ?? '').includes('confirmedDeliverables'),
+          );
+        expect(ideation, 'a stage prompt with the confirmed plan').toBeDefined();
+        expect(ideation!.messages[0]!.content).toContain('What to do about churn');
+        expect(ideation!.messages[0]!.content).toContain('"outsideDocoo":true');
+        const actions = await h.admin.query<{ action: string }>(
+          `select action from audit_events where project_id = $1 and action like 'deliverables.%' order by occurred_at, id`,
+          [projectId],
+        );
+        expect(actions.rows.map((row) => row.action)).toEqual([
+          'deliverables.edited',
+          'deliverables.edited',
+          'deliverables.confirmed',
+        ]);
+      } finally {
+        seen.mockRestore();
+      }
+    }, 150_000);
   },
 );

@@ -8,6 +8,7 @@ import { Badge } from './knowledge-common';
 import { knowledgeMessages, type KnowledgeText } from './knowledge-messages';
 import { criteria, rubrics, type BrainDecision, type Review } from './knowledge-types';
 import { parseReason } from './reasons';
+import { InfoTip } from '../../info-tip';
 
 export const brainTone = (decision: BrainDecision) =>
   decision === 'approved' ? 'ok' : decision === 'rejected' ? 'danger' : 'warn';
@@ -111,7 +112,10 @@ export function ReviewPanel({ locale, review }: { locale: Locale; review: Review
               return (
                 <li key={criterion}>
                   <div className="toolbar spread">
-                    <strong>{name}</strong>
+                    <span className="field-label">
+                      <strong>{name}</strong>
+                      <InfoTip text={text.criteriaHelp[criterion]} />
+                    </span>
                     <span>
                       {fill(text.overallValue, { n: formatNumber(locale, score) })}
                       {rubric && (
@@ -136,7 +140,6 @@ export function ReviewPanel({ locale, review }: { locale: Locale; review: Review
                   >
                     {score}
                   </meter>
-                  <small className="muted">{text.criteriaHelp[criterion]}</small>
                 </li>
               );
             })}

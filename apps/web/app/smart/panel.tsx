@@ -49,7 +49,7 @@ export function SmartPanel(props: SmartPanelProps) {
 
   return (
     <aside
-      className={`smart-panel smart-side-${ui.side}`}
+      className={`smart-panel smart-side-${ui.side}${ui.maximized ? ' smart-maximized' : ''}`}
       aria-label={text.panel.label}
       hidden={ui.minimized}
       onKeyDown={onKeyDown}
@@ -65,6 +65,16 @@ export function SmartPanel(props: SmartPanelProps) {
             onClick={() => smartUi.update({ side: ui.side === 'end' ? 'start' : 'end' })}
           >
             ⇄
+          </button>
+          <button
+            type="button"
+            className="smart-icon-button"
+            aria-label={ui.maximized ? text.panel.restore : text.panel.maximize}
+            title={ui.maximized ? text.panel.restore : text.panel.maximize}
+            aria-pressed={ui.maximized}
+            onClick={() => smartUi.update({ maximized: !ui.maximized })}
+          >
+            {ui.maximized ? '❐' : '□'}
           </button>
           <button
             type="button"

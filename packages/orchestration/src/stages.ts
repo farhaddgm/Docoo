@@ -1,4 +1,5 @@
 import {
+  DELIVERABLE_STAGE_RULES,
   STAGE_ROLE,
   composeInstructions,
   type AgentDefinitionContent,
@@ -8,6 +9,8 @@ import {
 import type { JsonSchema } from '@docoo/providers';
 
 import type { AnalysisContext } from './analysis.js';
+import type { PromptDeliverable } from './deliverables.js';
+import type { WebPromptItem } from './research.js';
 import type { KnowledgePromptItem } from './research.js';
 
 /** Fixed stage order (FR-WF-001). */
@@ -196,7 +199,18 @@ export interface StageContext {
   readonly humanAnswers?: readonly HumanAnswer[] | undefined;
   /** Rules of a call that may use tools (`toolRules`). */
   readonly toolRules?: readonly string[] | undefined;
+  /** The deliverables the administrator confirmed (ADR-0031); absent when none were. */
+  readonly deliverables?: readonly PromptDeliverable[] | undefined;
+  /** Web pages the research stage found (ADR-0026); absent when it searched nothing. */
+  readonly web?: readonly WebPromptItem[] | undefined;
 }
+
+/** Rules added when the research stage hands over web pages (ADR-0026). */
+export const WEB_SEARCH_RULES: readonly string[] = [
+  'webSources lists pages found by a web search, numbered W1, W2, …. They are not approved knowledge.',
+  'Cite a page by its ref and quote it verbatim from its text (a short excerpt, at most 300 characters). Never invent a ref, a quote or an address.',
+  'A finding that rests only on web pages names them in its source. When a page disagrees with approved knowledge or another page, report it in conflicts with the refs involved.',
+];
 
 /**
  * Rules the code adds to the researcher's instructions when it hands over approved knowledge.
@@ -261,6 +275,8 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
             'This is an explicitly selected optional quick draft, less complete than full analysis. The complete-analysis minimum of30 is reserved for the full continuation. Preserve unresolved ambiguity and state that this draft does not complete full analysis.',
           ]
         : []),
+      ...(context.web && context.web.length > 0 ? WEB_SEARCH_RULES : []),
+      ...(context.deliverables && context.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),
       ...(context.business?.rules ?? []),
       ...(context.toolRules ?? []),
       ...(context.humanAnswers && context.humanAnswers.length > 0 ? HUMAN_ANSWER_RULES : []),
@@ -287,6 +303,10 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
       ? { approvedKnowledge: context.knowledge }
       : {}),
     ...(context.business ? { businessProfile: context.business.data } : {}),
+    ...(context.web && context.web.length > 0 ? { webSources: context.web } : {}),
+    ...(context.deliverables && context.deliverables.length > 0
+      ? { confirmedDeliverables: context.deliverables }
+      : {}),
     ...(context.humanAnswers && context.humanAnswers.length > 0
       ? { humanAnswers: context.humanAnswers }
       : {}),

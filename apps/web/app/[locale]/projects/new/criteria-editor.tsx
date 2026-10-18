@@ -2,6 +2,7 @@
 
 import { formatNumber, type Locale } from '../../../i18n';
 import { wizardMessages } from './wizard-messages';
+import { SectionTitle } from '../../../info-tip';
 
 export interface Criterion {
   key: string;
@@ -40,8 +41,9 @@ export function CriteriaEditor({
   const issue = criteriaIssue(criteria);
   return (
     <div className="stack">
-      <h3 id={`${idPrefix}-title`}>{text.criteriaTitle}</h3>
-      <p className="muted">{text.criteriaHelp}</p>
+      <SectionTitle as="h3" id={`${idPrefix}-title`} help={text.criteriaHelp}>
+        {text.criteriaTitle}
+      </SectionTitle>
       <div
         className="table-scroll"
         tabIndex={0}

@@ -17,6 +17,7 @@ import {
   type SourceStatus,
   type TopicOption,
 } from './knowledge-types';
+import { FieldLabel, GroupLabel } from '../../info-tip';
 
 /** A status is told by its words; the tone only supports them. */
 export type Tone = 'ok' | 'warn' | 'danger' | 'neutral';
@@ -160,6 +161,7 @@ export function ScopeSelect({
   id,
   label,
   hideLabel = false,
+  help,
   value,
   onChange,
   workspaceId,
@@ -170,6 +172,8 @@ export function ScopeSelect({
   id: string;
   label: string;
   hideLabel?: boolean;
+  /** Explains the choice; shown behind the "i" next to the title. */
+  help?: string | undefined;
   value: ScopeChoice;
   onChange: (next: ScopeChoice) => void;
   workspaceId: string;
@@ -187,13 +191,20 @@ export function ScopeSelect({
   const current = choiceKey(value);
   return (
     <>
-      <label htmlFor={id} className={hideLabel ? 'visually-hidden' : undefined}>
-        {label}
-      </label>
+      {hideLabel ? (
+        <label htmlFor={id} className="visually-hidden">
+          {label}
+        </label>
+      ) : (
+        <FieldLabel htmlFor={id} help={help} {...(help ? { helpId: `${id}-help` } : {})}>
+          {label}
+        </FieldLabel>
+      )}
       <select
         id={id}
         value={current}
         disabled={disabled}
+        {...(help ? { 'aria-describedby': `${id}-help` } : {})}
         onChange={(event) => onChange(parseChoice(event.target.value))}
       >
         <option value={`workspace:${workspaceId}`}>{text.workspaceScope}</option>
@@ -247,8 +258,9 @@ export function ScopeEditor({
     onChange(rows.map((row, at) => (at === index ? { ...row, ...patch } : row)));
   return (
     <fieldset className="field-stack">
-      <legend>{text.scopeHeading}</legend>
-      <p className="muted">{text.scopeHelp}</p>
+      <legend>
+        <GroupLabel help={text.scopeHelp}>{text.scopeHeading}</GroupLabel>
+      </legend>
       {options?.incomplete && <p className="muted">{text.scopeListIncomplete}</p>}
       <ul className="plain-list">
         {rows.map((row, index) => {
