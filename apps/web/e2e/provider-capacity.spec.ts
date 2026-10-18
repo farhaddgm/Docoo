@@ -91,7 +91,11 @@ test('provider concurrency edits persist across reload and both languages', asyn
           ),
         });
       });
-      throw new Error(`${covering}\n${String(error)}`);
+      throw new Error(
+        `${covering}
+${String(error)}`,
+        { cause: error },
+      );
     }
   }
 });
