@@ -10,6 +10,7 @@ import { reportMessagesFor } from '../../report-messages';
 import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
 import { projectMessages } from './messages';
+import { PagedRows } from '../../table-pager';
 
 export interface ProjectSummary {
   id: string;
@@ -143,58 +144,68 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
           </div>
         </div>
         <form
-          className="filter-grid project-filters"
+          className="filter-grid filters-row project-filters"
           aria-label={text.filters}
           onSubmit={(event) => event.preventDefault()}
         >
-          <label htmlFor="project-search">{text.searchLabel}</label>
-          <input
-            id="project-search"
-            type="search"
-            dir="auto"
-            value={filters.q}
-            maxLength={100}
-            onChange={(event) => setFilters({ ...filters, q: event.target.value })}
-          />
-          <label htmlFor="project-topic">{text.topicFilter}</label>
-          <select
-            id="project-topic"
-            value={filters.topicId}
-            onChange={(event) => setFilters({ ...filters, topicId: event.target.value })}
-          >
-            <option value="">{text.anyTopic}</option>
-            {topics.map((topic) => (
-              <option key={topic.id} value={topic.id}>
-                {topic.title}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="project-language">{text.languageFilter}</label>
-          <select
-            id="project-language"
-            value={filters.language}
-            onChange={(event) => setFilters({ ...filters, language: event.target.value })}
-          >
-            <option value="">{text.anyLanguage}</option>
-            <option value="fa">{text.languages.fa}</option>
-            <option value="en">{text.languages.en}</option>
-          </select>
-          <label htmlFor="project-from">{text.fromLabel}</label>
-          <input
-            id="project-from"
-            type="date"
-            value={filters.from}
-            max={filters.to || undefined}
-            onChange={(event) => setFilters({ ...filters, from: event.target.value })}
-          />
-          <label htmlFor="project-to">{text.toLabel}</label>
-          <input
-            id="project-to"
-            type="date"
-            value={filters.to}
-            min={filters.from || undefined}
-            onChange={(event) => setFilters({ ...filters, to: event.target.value })}
-          />
+          <div className="field">
+            <label htmlFor="project-search">{text.searchLabel}</label>
+            <input
+              id="project-search"
+              type="search"
+              dir="auto"
+              value={filters.q}
+              maxLength={100}
+              onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="project-topic">{text.topicFilter}</label>
+            <select
+              id="project-topic"
+              value={filters.topicId}
+              onChange={(event) => setFilters({ ...filters, topicId: event.target.value })}
+            >
+              <option value="">{text.anyTopic}</option>
+              {topics.map((topic) => (
+                <option key={topic.id} value={topic.id}>
+                  {topic.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="project-language">{text.languageFilter}</label>
+            <select
+              id="project-language"
+              value={filters.language}
+              onChange={(event) => setFilters({ ...filters, language: event.target.value })}
+            >
+              <option value="">{text.anyLanguage}</option>
+              <option value="fa">{text.languages.fa}</option>
+              <option value="en">{text.languages.en}</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="project-from">{text.fromLabel}</label>
+            <input
+              id="project-from"
+              type="date"
+              value={filters.from}
+              max={filters.to || undefined}
+              onChange={(event) => setFilters({ ...filters, from: event.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="project-to">{text.toLabel}</label>
+            <input
+              id="project-to"
+              type="date"
+              value={filters.to}
+              min={filters.from || undefined}
+              onChange={(event) => setFilters({ ...filters, to: event.target.value })}
+            />
+          </div>
           <span />
           <label className="checkbox" htmlFor="project-waiting">
             <input
@@ -233,65 +244,69 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
             <p className="muted">{text.emptyHint}</p>
           </>
         ) : (
-          <div
-            className="table-scroll"
-            tabIndex={0}
-            role="region"
-            aria-labelledby="project-list-title"
-          >
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">{text.code}</th>
-                  <th scope="col">{text.projectTitle}</th>
-                  <th scope="col">{text.topics}</th>
-                  <th scope="col">{text.business}</th>
-                  <th scope="col">{text.status}</th>
-                  <th scope="col">{text.stage}</th>
-                  <th scope="col">{text.waiting}</th>
-                  <th scope="col">{text.language}</th>
-                  <th scope="col">{text.owner}</th>
-                  <th scope="col">{text.updated}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((project) => (
-                  <tr key={project.id}>
-                    <th scope="row" dir="ltr">
-                      <Link href={`/${locale}/projects/${project.id}` as Route}>
-                        {project.code}
-                      </Link>
-                    </th>
-                    <td dir="auto">{project.title}</td>
-                    <td dir="auto">
-                      {project.topics.length === 0
-                        ? '—'
-                        : project.topics.map((topic) => topic.title).join('، ')}
-                    </td>
-                    <td dir="auto">{project.business?.name ?? '—'}</td>
-                    <td>
-                      <span className={`badge state-${project.status}`}>
-                        {text.statuses[project.status] ?? project.status}
-                      </span>
-                    </td>
-                    <td>{text.stages[project.currentStage] ?? project.currentStage}</td>
-                    <td>
-                      {project.waiting ? (
-                        <span className="badge state-waiting_for_human">
-                          {text.waitingKinds[project.waiting.kind] ?? text.waitingOther}
-                        </span>
-                      ) : (
-                        text.noneWaiting
-                      )}
-                    </td>
-                    <td>{text.languages[project.outputLanguage]}</td>
-                    <td dir="auto">{project.owner?.displayName ?? '—'}</td>
-                    <td>{formatDateTime(locale, project.updatedAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PagedRows rows={items}>
+            {(pageRows) => (
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-labelledby="project-list-title"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{text.code}</th>
+                      <th scope="col">{text.projectTitle}</th>
+                      <th scope="col">{text.topics}</th>
+                      <th scope="col">{text.business}</th>
+                      <th scope="col">{text.status}</th>
+                      <th scope="col">{text.stage}</th>
+                      <th scope="col">{text.waiting}</th>
+                      <th scope="col">{text.language}</th>
+                      <th scope="col">{text.owner}</th>
+                      <th scope="col">{text.updated}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((project) => (
+                      <tr key={project.id}>
+                        <th scope="row" dir="ltr">
+                          <Link href={`/${locale}/projects/${project.id}` as Route}>
+                            {project.code}
+                          </Link>
+                        </th>
+                        <td dir="auto">{project.title}</td>
+                        <td dir="auto">
+                          {project.topics.length === 0
+                            ? '—'
+                            : project.topics.map((topic) => topic.title).join('، ')}
+                        </td>
+                        <td dir="auto">{project.business?.name ?? '—'}</td>
+                        <td>
+                          <span className={`badge state-${project.status}`}>
+                            {text.statuses[project.status] ?? project.status}
+                          </span>
+                        </td>
+                        <td>{text.stages[project.currentStage] ?? project.currentStage}</td>
+                        <td>
+                          {project.waiting ? (
+                            <span className="badge state-waiting_for_human">
+                              {text.waitingKinds[project.waiting.kind] ?? text.waitingOther}
+                            </span>
+                          ) : (
+                            text.noneWaiting
+                          )}
+                        </td>
+                        <td>{text.languages[project.outputLanguage]}</td>
+                        <td dir="auto">{project.owner?.displayName ?? '—'}</td>
+                        <td>{formatDateTime(locale, project.updatedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
         {nextCursor && (
           <div className="toolbar">

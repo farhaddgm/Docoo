@@ -1,6 +1,7 @@
 import { formatNumber, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { agentMessages, fill } from '../agents/agent-messages';
+import { SectionTitle } from '../../info-tip';
 
 export interface RoleEvaluationView {
   role: string;
@@ -47,12 +48,13 @@ export function Evaluations({
   const roles = agentMessages(locale).roles;
   return (
     <section aria-labelledby="evaluations-title" className="stack">
-      <h3 id="evaluations-title">{text.evaluationsHeading}</h3>
+      <SectionTitle as="h3" id="evaluations-title" help={text.evaluationsHelp}>
+        {text.evaluationsHeading}
+      </SectionTitle>
       {evaluations.length === 0 ? (
         <p className="muted">{text.evaluationsNone}</p>
       ) : (
         <>
-          <p className="muted">{text.evaluationsHelp}</p>
           {summary && (
             <p>
               {fill(text.evaluationsSummary, {

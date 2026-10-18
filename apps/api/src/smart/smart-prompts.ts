@@ -14,11 +14,12 @@ const PRODUCT_GUIDE = `Docoo turns a problem statement into researched, evaluate
 5. approve_knowledge - knowledge candidates must be audited and approved before they reach later stages.
 6. create_project - a project needs a title, a problem statement and topics.
 7. activate_project - move the project from draft to active; this starts its workflow (analysis, research, ideation, documentation, evaluation). Each stage can wait for a human gate decision.
-8. complete_stages - all five stages completed; pending human tasks wait for the administrator.
-9. choose_solution - generate solutions, then select and prioritise them.
-10. evaluate_document - evaluate a document; it must pass.
-11. approve_document - approve the document so it is locked and exportable.
-12. review_brain - generate a Brain report to review deviations and recommendations.`;
+8. confirm_deliverables - before ideation starts, confirm the plan of expected outputs (strategy document, product documentation; code is outside Docoo); ideation waits until it is confirmed.
+9. complete_stages - all five stages completed; pending human tasks wait for the administrator.
+10. choose_solution - generate solutions, then select and prioritise them.
+11. evaluate_document - evaluate a document; it must pass. This is separate from the workflow stage called evaluation.
+12. approve_document - approve the document so it is locked and exportable.
+13. review_brain - generate a Brain report to review deviations and recommendations.`;
 
 /**
  * How to use the "brainReports" part of <context>. The report is looked up by code from the page

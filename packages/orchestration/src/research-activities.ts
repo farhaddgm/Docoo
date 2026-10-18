@@ -7,6 +7,7 @@ import {
   verifyResearch,
   type KnowledgePassage,
   type ResearchContent,
+  type WebRun,
 } from './research.js';
 import type { Settings } from './settings.js';
 import { loadToolCalls, recordToolCall, toolDecision, type ToolCallScope } from './tool-calls.js';
@@ -23,6 +24,8 @@ export interface ResearchRun {
   readonly excludedRestricted: boolean;
   readonly retrieveTool: 'allowed' | 'denied';
   readonly verifierTool: 'allowed' | 'denied';
+  /** The web side of the attempt; set by the activity after its search step (ADR-0026). */
+  readonly web?: WebRun | undefined;
 }
 
 /**

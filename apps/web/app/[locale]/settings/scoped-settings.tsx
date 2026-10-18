@@ -27,6 +27,7 @@ import {
   type Scope,
 } from './settings-model';
 import { explainSettingError } from './settings-errors';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 export function displayValue(
   locale: Locale,
@@ -116,7 +117,7 @@ export function ScopedSettings({
 
   return (
     <div className="stack">
-      <p className="muted">{text.scopeHelp[scopeType]}</p>
+      <p className="notice info">{text.scopeHelp[scopeType]}</p>
       <Notice notice={action.notice} />
       {SETTING_GROUPS.map((group) => {
         const rows = group.keys
@@ -165,10 +166,11 @@ function GroupSection({
 }) {
   const id = useId();
   return (
-    <section className="card stack" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`}>{title}</h2>
-      <p className="muted">{help}</p>
-      <ul className="plain-list stack">{children}</ul>
+    <section className="card stack settings-group" aria-labelledby={`${id}-title`}>
+      <SectionTitle id={`${id}-title`} help={help}>
+        {title}
+      </SectionTitle>
+      <ul className="plain-list settings-grid">{children}</ul>
     </section>
   );
 }
@@ -237,19 +239,23 @@ function SettingRow({
     }, okText);
 
   return (
-    <li className="stack" aria-labelledby={`${id}-name`}>
-      <div>
+    <li className="setting-row" aria-labelledby={`${id}-name`}>
+      <div className="setting-head">
         <strong id={`${id}-name`} dir="auto">
           {description}
-        </strong>{' '}
+        </strong>
         <code dir="ltr">{definition.key}</code>
       </div>
-      <p className="muted">
-        {text.sourceLabel}:{' '}
-        <span className={`badge tone-${kind === 'system' ? 'neutral' : 'ok'}`}>
-          {text.sources[kind]}
-        </span>{' '}
-        {text.defaultValue}: {displayValue(locale, text, definition, definition.defaultValue)}
+      <p className="muted setting-meta">
+        <span>
+          {text.sourceLabel}:{' '}
+          <span className={`badge tone-${kind === 'system' ? 'neutral' : 'ok'}`}>
+            {text.sources[kind]}
+          </span>
+        </span>
+        <span>
+          {text.defaultValue}: {displayValue(locale, text, definition, definition.defaultValue)}
+        </span>
       </p>
       {NOT_ENFORCED.has(definition.key) && <p className="notice">{text.notEnforced}</p>}
       {readOnly ? (
@@ -286,42 +292,47 @@ function SettingRow({
               {problemText(locale, text, parsed.problem)}
             </p>
           )}
-          <div className="filter-grid">
-            <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
-            <input
-              id={`${id}-reason`}
-              dir="auto"
-              value={reason}
-              maxLength={1000}
-              onChange={(event) => setReason(event.target.value)}
-              aria-describedby={`${id}-reason-help`}
-              autoComplete="off"
-            />
-            <p id={`${id}-reason-help`} className="muted">
-              {text.reasonHelp}
-            </p>
-          </div>
-          <div className="toolbar">
-            <button
-              type="button"
-              className="primary-button"
-              disabled={!canSave || action.busy}
-              onClick={() =>
-                parsed.ok && void send(parsed.value, fill(text.saved, { key: definition.key }))
-              }
-            >
-              {action.busy ? text.saving : text.save}
-            </button>
-            {own && (
+          <div className="setting-edit">
+            <div className="filter-grid">
+              <FieldLabel
+                htmlFor={`${id}-reason`}
+                help={text.reasonHelp}
+                helpId={`${id}-reason-help`}
+              >
+                {text.reasonLabel}
+              </FieldLabel>
+              <input
+                id={`${id}-reason`}
+                dir="auto"
+                value={reason}
+                maxLength={1000}
+                onChange={(event) => setReason(event.target.value)}
+                aria-describedby={`${id}-reason-help`}
+                autoComplete="off"
+              />
+            </div>
+            <div className="toolbar">
               <button
                 type="button"
-                className="secondary-button"
-                disabled={reason.trim() === '' || action.busy}
-                onClick={() => void send(null, fill(text.reset, { key: definition.key }))}
+                className="primary-button"
+                disabled={!canSave || action.busy}
+                onClick={() =>
+                  parsed.ok && void send(parsed.value, fill(text.saved, { key: definition.key }))
+                }
               >
-                {scopeType === 'project' ? text.resetProject : text.resetWorkspace}
+                {action.busy ? text.saving : text.save}
               </button>
-            )}
+              {own && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={reason.trim() === '' || action.busy}
+                  onClick={() => void send(null, fill(text.reset, { key: definition.key }))}
+                >
+                  {scopeType === 'project' ? text.resetProject : text.resetWorkspace}
+                </button>
+              )}
+            </div>
           </div>
         </>
       )}
@@ -385,7 +396,9 @@ export function SettingControl({
   if (schema.type === 'string' && schema.enum) {
     return (
       <div className="filter-grid">
-        <label htmlFor={id}>{text.currentValue}</label>
+        <label htmlFor={id} className="visually-hidden">
+          {text.currentValue}
+        </label>
         <select
           id={id}
           value={draft}
@@ -434,7 +447,9 @@ export function SettingControl({
   if (schema.type === 'array') {
     return (
       <div className="filter-grid">
-        <label htmlFor={id}>{text.currentValue}</label>
+        <label htmlFor={id} className="visually-hidden">
+          {text.currentValue}
+        </label>
         <textarea
           id={id}
           dir="ltr"
@@ -450,7 +465,9 @@ export function SettingControl({
   const numeric = schema.type === 'integer' || schema.type === 'number';
   return (
     <div className="filter-grid">
-      <label htmlFor={id}>{text.currentValue}</label>
+      <label htmlFor={id} className="visually-hidden">
+        {text.currentValue}
+      </label>
       <input
         id={id}
         dir={numeric ? 'ltr' : 'auto'}
@@ -615,8 +632,9 @@ export function EditableProjectModelSection({
   const ready = inherited ? assignments.size > 0 : model !== '';
   return (
     <section className="card stack" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`}>{text.groups.ai.title}</h2>
-      <p className="muted">{text.groups.ai.help}</p>
+      <SectionTitle id={`${id}-title`} help={text.groups.ai.help}>
+        {text.groups.ai.title}
+      </SectionTitle>
       <Notice notice={action.notice} />
       {loaded && (
         <ModelPicker

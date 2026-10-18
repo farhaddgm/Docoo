@@ -65,8 +65,9 @@ test('Google-only owner sees account administration and no password-change form'
       : json(route, { google: true });
   });
   await page.goto('/fa');
-  await expect(page.getByRole('link', { name: 'کاربران', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'ورود با جیمیل', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'کاربران و ورود', exact: true })).toBeVisible();
+  // The Gmail list is a section of that one page, not a second navigation entry.
+  await expect(page.getByRole('link', { name: 'ورود با جیمیل', exact: true })).toHaveCount(0);
   await expect(page.getByText('این حساب فقط با جیمیل وارد می‌شود و رمز عبور ندارد.')).toBeVisible();
   await expect(page.getByLabel('گذرواژهٔ فعلی')).toHaveCount(0);
 });
@@ -122,6 +123,11 @@ test('owner creates a Google account without a password and assigns separate top
     return json(route, {}, 404);
   });
   await page.goto('/en/settings/google-access');
+  await expect(page.getByRole('tab', { name: 'Gmail sign-in' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.getByRole('tab', { name: 'Users' })).toHaveAttribute('aria-selected', 'false');
   await expect(page.getByText('member@gmail.com')).toBeVisible();
   await page.getByRole('button', { name: 'Add account', exact: true }).click();
   await page.getByLabel('Email', { exact: true }).fill('new.member@gmail.com');

@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 import { projectMessages } from '../app/[locale]/projects/messages';
-import { createViaApi, expectNoSeriousA11yViolations, signInWithKeyboard } from './support';
+import {
+  createViaApi,
+  expectNoSeriousA11yViolations,
+  revealRow,
+  signInWithKeyboard,
+} from './support';
 
 const text = projectMessages('fa');
 const stamp = Date.now().toString(36);
@@ -33,8 +38,8 @@ test.describe('the project list filters and extra columns (UX §4)', () => {
     await page.goto('/fa/projects');
     const rows = page.getByRole('table').locator('tbody tr');
     const filters = page.getByRole('form', { name: text.filters });
-    await expect(page.getByRole('rowheader', { name: `plf-${stamp}` })).toBeVisible();
-    await expect(page.getByRole('rowheader', { name: `ple-${stamp}` })).toBeVisible();
+    await revealRow(page, page.getByRole('rowheader', { name: `plf-${stamp}` }));
+    await revealRow(page, page.getByRole('rowheader', { name: `ple-${stamp}` }));
     // The owner is the administrator who created them; the language column shows the output language.
     await expect(rows.filter({ hasText: `plf-${stamp}` })).toContainText(text.languages.fa);
     await expect(rows.filter({ hasText: `ple-${stamp}` })).toContainText(text.languages.en);

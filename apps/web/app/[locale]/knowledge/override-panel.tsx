@@ -15,6 +15,7 @@ import {
   type Override,
 } from './knowledge-types';
 import { brainTone } from './review-panel';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 type Decision = 'approve' | 'reject';
 type Validity = 'version' | 'date';
@@ -134,8 +135,9 @@ export function OverridePanel({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.overrideHeading}</h2>
-      <p className="muted">{text.overrideIntro}</p>
+      <SectionTitle id={`${id}-heading`} help={text.overrideIntro}>
+        {text.overrideHeading}
+      </SectionTitle>
       <Notice notice={notice} />
 
       <dl className="facts">
@@ -208,7 +210,13 @@ export function OverridePanel({
             ))}
           </fieldset>
 
-          <label htmlFor={`${id}-reason`}>{text.overrideReason}</label>
+          <FieldLabel
+            htmlFor={`${id}-reason`}
+            help={text.overrideReasonHelp}
+            helpId={`${id}-reason-help`}
+          >
+            {text.overrideReason}
+          </FieldLabel>
           <textarea
             id={`${id}-reason`}
             dir="auto"
@@ -219,11 +227,8 @@ export function OverridePanel({
             aria-invalid={reason.length > 0 && reasonProblem(reason)}
             onChange={(event) => setReason(event.target.value)}
           />
-          <small id={`${id}-reason-help`} className="muted">
-            {text.overrideReasonHelp}{' '}
-            <span>
-              {fill(text.reasonCounter, { n: formatNumber(locale, reason.trim().length) })}
-            </span>
+          <small className="muted">
+            {fill(text.reasonCounter, { n: formatNumber(locale, reason.trim().length) })}
           </small>
 
           <fieldset className="mode-choice">
@@ -243,7 +248,13 @@ export function OverridePanel({
           </fieldset>
           {validity === 'date' && (
             <>
-              <label htmlFor={`${id}-until`}>{text.validityDateLabel}</label>
+              <FieldLabel
+                htmlFor={`${id}-until`}
+                help={text.validityDateHelp}
+                helpId={`${id}-until-help`}
+              >
+                {text.validityDateLabel}
+              </FieldLabel>
               <input
                 id={`${id}-until`}
                 type="datetime-local"
@@ -252,9 +263,6 @@ export function OverridePanel({
                 aria-invalid={dateProblem}
                 onChange={(event) => setUntil(event.target.value)}
               />
-              <small id={`${id}-until-help`} className="muted">
-                {text.validityDateHelp}
-              </small>
             </>
           )}
 

@@ -28,6 +28,7 @@ import {
 } from './agent-types';
 import { diffLines, diffText, hasChanges, type DiffLine } from './diff';
 import { DiffView } from './diff-view';
+import { FieldLabel, GroupLabel, InfoTip } from '../../info-tip';
 
 interface Connection {
   id: string;
@@ -340,8 +341,9 @@ export function RoleEditor({
   return (
     <form className="stack" onSubmit={onSubmit} noValidate aria-busy={busy}>
       <fieldset className="field-stack" disabled={locked}>
-        <legend>{text.sections.principles}</legend>
-        <p className="muted">{text.principlesHelp}</p>
+        <legend>
+          <GroupLabel help={text.principlesHelp}>{text.sections.principles}</GroupLabel>
+        </legend>
         <RuleList
           idPrefix={`${id}-principle`}
           items={draft.principles}
@@ -361,8 +363,9 @@ export function RoleEditor({
       </fieldset>
 
       <fieldset className="field-stack" disabled={locked}>
-        <legend>{text.sections.duties}</legend>
-        <p className="muted">{text.dutiesHelp}</p>
+        <legend>
+          <GroupLabel help={text.dutiesHelp}>{text.sections.duties}</GroupLabel>
+        </legend>
         <RuleList
           idPrefix={`${id}-duty`}
           items={draft.duties}
@@ -382,10 +385,9 @@ export function RoleEditor({
       </fieldset>
 
       <div className="field-stack">
-        <label htmlFor={`${id}-prompt`}>{text.promptLabel}</label>
-        <p id={`${id}-prompt-help`} className="muted">
-          {text.promptHelp}
-        </p>
+        <FieldLabel htmlFor={`${id}-prompt`} help={text.promptHelp} helpId={`${id}-prompt-help`}>
+          {text.promptLabel}
+        </FieldLabel>
         <textarea
           id={`${id}-prompt`}
           rows={6}
@@ -411,29 +413,30 @@ export function RoleEditor({
       </div>
 
       <fieldset className="field-stack" disabled={locked}>
-        <legend>{text.sections.tools}</legend>
-        <p className="muted">{text.toolsHelp}</p>
+        <legend>
+          <GroupLabel help={text.toolsHelp}>{text.sections.tools}</GroupLabel>
+        </legend>
         <div className="tool-grid">
           {reference.toolCeiling.map((tool) => (
-            <label key={tool} className="tool-choice">
+            <div key={tool} className="tool-choice">
               <input
+                id={`${id}-tool-choice-${tool}`}
                 type="checkbox"
                 checked={draft.tools.includes(tool)}
                 onChange={(event) => toggle(tool, event.target.checked)}
                 aria-describedby={`${id}-tool-${tool}`}
-              />{' '}
-              <span>{text.tools[tool].label}</span>
-              <small id={`${id}-tool-${tool}`} className="muted">
-                {text.tools[tool].help}
-              </small>
-            </label>
+              />
+              <label htmlFor={`${id}-tool-choice-${tool}`}>{text.tools[tool].label}</label>
+              <InfoTip id={`${id}-tool-${tool}`} text={text.tools[tool].help} />
+            </div>
           ))}
         </div>
       </fieldset>
 
       <fieldset className="field-stack" disabled={locked}>
-        <legend>{text.modelHeading}</legend>
-        <p className="muted">{text.modelHelp}</p>
+        <legend>
+          <GroupLabel help={text.modelHelp}>{text.modelHeading}</GroupLabel>
+        </legend>
         <div className="mode-choice">
           <label className="mode">
             <input
@@ -554,10 +557,9 @@ export function RoleEditor({
       </section>
 
       <div className="field-stack">
-        <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
-        <p id={`${id}-reason-help`} className="muted">
-          {text.reasonHelp}
-        </p>
+        <FieldLabel htmlFor={`${id}-reason`} help={text.reasonHelp} helpId={`${id}-reason-help`}>
+          {text.reasonLabel}
+        </FieldLabel>
         <input
           id={`${id}-reason`}
           dir="auto"

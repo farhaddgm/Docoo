@@ -8,6 +8,7 @@ import { Badge, joinList, safeHref } from './knowledge-common';
 import { knowledgeMessages, type KnowledgeText } from './knowledge-messages';
 import type { Citation, Claim, Review } from './knowledge-types';
 import { claimReasonKey } from './reasons';
+import { SectionTitle } from '../../info-tip';
 
 /** Where in the original a claim comes from, in words (ING-003, ING-008). */
 export function locationText(
@@ -156,8 +157,9 @@ export function ClaimsPanel({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.claimsHeading}</h2>
-      <p className="muted">{text.claimsHelp}</p>
+      <SectionTitle id={`${id}-heading`} help={text.claimsHelp}>
+        {text.claimsHeading}
+      </SectionTitle>
       {claims.length === 0 && (
         <p className="muted" role="status">
           {text.claimsNone}

@@ -9,9 +9,16 @@ import { createAnalysisActivities, loadDefinitionContext } from './analysis-acti
 import { createWritingActivities, type WritingActivities } from './writing-activities.js';
 import type { AnalysisActivities } from './analysis-activities.js';
 import { businessForRole, loadRunBusiness } from './business.js';
+import { confirmedDeliverables, deliverableGate } from './deliverables.js';
 import { audit, inWorkspace } from './db.js';
 import type { RunRef, StageRef } from './refs.js';
-import { compactResearchForPrompt, knowledgePromptItems } from './research.js';
+import {
+  compactResearchForPrompt,
+  knowledgePromptItems,
+  NO_WEB,
+  webPromptItems,
+  type WebRun,
+} from './research.js';
 import { finishResearch, prepareResearch, type ResearchRun } from './research-activities.js';
 import type { ProviderRuntime } from './runtime.js';
 import { loadSettings } from './settings.js';
@@ -25,7 +32,8 @@ import {
   type Stage,
   type StageContext,
 } from './stages.js';
-import type { ToolCallScope } from './tool-calls.js';
+import { recordToolCall, toolDecision, type ToolCallScope } from './tool-calls.js';
+import { deniedWebRun, failedWebRun, webRunFrom, webSearchPrompt } from './web-research.js';
 
 export type { RunRef, StageRef } from './refs.js';
 
@@ -317,6 +325,25 @@ export function createOrchestrationActivities(
         ).rows;
         const openQuestion = questions.find((item) => item.status === 'open');
         if (openQuestion) return { needsInput: openQuestion.id } as const;
+        // Ideation does not start before the administrator confirmed what outputs are expected
+        // (ADR-0031). The stage waits like it does for an agent's question; confirming signals it.
+        if (stage.stage === 'ideation' && config.requireDeliverableConfirmation) {
+          const held = await deliverableGate(client, {
+            workspaceId: ref.workspaceId,
+            projectId: ref.projectId,
+            stageRunId: ref.stageRunId,
+            runId: ref.runId,
+          });
+          if (held.newlyOpened) {
+            await audit(client, ref.workspaceId, {
+              action: 'workflow.deliverables_awaiting',
+              targetType: 'stage_run',
+              targetId: ref.stageRunId,
+              projectId: ref.projectId,
+            });
+          }
+          if (held.waiting) return { needsInput: 'deliverables' } as const;
+        }
         await client.query(
           `update stage_runs set status = 'running' where id = $1 and status = 'waiting_for_human'`,
           [ref.stageRunId],
@@ -361,6 +388,12 @@ export function createOrchestrationActivities(
           knowledge: research ? knowledgePromptItems(research.passages) : undefined,
           business: business?.prompt,
           humanAnswers: questions.map((item) => ({ question: item.question, answer: item.answer })),
+          deliverables:
+            stage.stage === 'ideation' ||
+            stage.stage === 'documentation' ||
+            stage.stage === 'evaluation'
+              ? ((await confirmedDeliverables(client, ref.projectId)) ?? undefined)
+              : undefined,
         };
         const prompt = stagePrompt(promptInput);
         // Tools the model itself may call (ADR-0023): off unless the setting is on, and only those
@@ -406,12 +439,98 @@ export function createOrchestrationActivities(
           agentDefinitionVersionId: prepared.agentDefinitionVersionId,
           businessSnapshotId: prepared.businessSnapshotId,
         });
+        const affordable = () =>
+          run(ref.workspaceId, async (client) => {
+            const total = (
+              await client.query<{ total: number | null }>(
+                `select sum(i.cost_usd)::real as total from model_invocations i
+                 join stage_runs s on s.id = i.stage_run_id where s.run_id = $1`,
+                [ref.runId],
+              )
+            ).rows[0]?.total;
+            return checkCostLimit(total ?? 0, prepared.config.costLimitUsd).status !== 'exceeded';
+          });
+        // The research stage may also search the web with the provider's own tool (ADR-0026). The
+        // pages it finds reach the structured call as numbered `W` pages, never as knowledge; a
+        // failed or refused search leaves the stage on its approved knowledge, and says so.
+        let promptInput = prepared.promptInput;
+        if (research) {
+          let web: WebRun = NO_WEB;
+          if (prepared.config.researchWebEnabled) {
+            if (toolDecision(prepared.toolScope, 'web_search') === 'denied') {
+              web = deniedWebRun;
+              await run(ref.workspaceId, (client) =>
+                recordToolCall(client, prepared.toolScope, {
+                  tool: 'web_search',
+                  decision: 'denied',
+                  input: { reason: 'tool_not_allowed' },
+                  errorCode: 'tool_not_allowed',
+                }),
+              );
+            } else if (!(await affordable())) {
+              web = failedWebRun('cost_limit_exceeded');
+            } else {
+              const search = webSearchPrompt({
+                language: prepared.promptInput.language,
+                projectTitle: prepared.promptInput.projectTitle,
+                problem: prepared.promptInput.problem,
+                topics: prepared.promptInput.topics,
+                analysis: prepared.promptInput.previous.find((item) => item.stage === 'analysis')
+                  ?.content,
+              });
+              const started = Date.now();
+              try {
+                const found = await runtime.invoke(
+                  { ...invocation('stage:research:web'), promptSha256: promptDigest(search) },
+                  prepared.config.connectionId,
+                  {
+                    model: prepared.config.model,
+                    instructions: search.instructions,
+                    messages: [{ role: 'user', content: search.message }],
+                    webSearch: { maxUses: prepared.config.researchWebMaxSearches },
+                    maxOutputTokens: 3000,
+                    idempotencyKey: `${key}:${ref.retryNo}:web`,
+                  },
+                );
+                web = webRunFrom(found.response.web);
+                await run(ref.workspaceId, (client) =>
+                  recordToolCall(client, prepared.toolScope, {
+                    tool: 'web_search',
+                    decision: 'allowed',
+                    input: { queries: web.queries },
+                    result: { queries: web.queries.length, sources: web.sources.length },
+                    latencyMs: Date.now() - started,
+                  }),
+                );
+              } catch (error) {
+                // The search is an extra: any failure leaves the stage on its approved knowledge.
+                const code = error instanceof ProviderError ? error.code : 'web_search_failed';
+                web = failedWebRun(code);
+                await run(ref.workspaceId, (client) =>
+                  recordToolCall(client, prepared.toolScope, {
+                    tool: 'web_search',
+                    decision: 'allowed',
+                    input: {},
+                    latencyMs: Date.now() - started,
+                    errorCode: code,
+                  }),
+                );
+              }
+            }
+          }
+          research = { ...research, web };
+          if (web.sources.length > 0) {
+            promptInput = { ...promptInput, web: webPromptItems(web) };
+            prompt = stagePrompt(promptInput);
+            promptSha256 = promptDigest(prompt);
+          }
+        }
         if (prepared.tools.length > 0) {
           // The model may look things up before it answers; what it found goes into the final
           // prompt as data, and the structured answer is asked for as usual.
           const maxCalls = prepared.config.agentMaxToolCalls;
           const rules = toolRules(maxCalls);
-          const loopPrompt = stagePrompt({ ...prepared.promptInput, toolRules: rules });
+          const loopPrompt = stagePrompt({ ...promptInput, toolRules: rules });
           const state: ToolLoopState = {
             passages: [...(prepared.research?.passages ?? [])],
             queries: [...(prepared.research?.queries ?? [])],
@@ -447,25 +566,13 @@ export function createOrchestrationActivities(
             state,
             messages: [{ role: 'user', content: loopPrompt.message }],
             maxCalls,
-            affordable: () =>
-              run(ref.workspaceId, async (client) => {
-                const total = (
-                  await client.query<{ total: number | null }>(
-                    `select sum(i.cost_usd)::real as total from model_invocations i
-                     join stage_runs s on s.id = i.stage_run_id where s.run_id = $1`,
-                    [ref.runId],
-                  )
-                ).rows[0]?.total;
-                return (
-                  checkCostLimit(total ?? 0, prepared.config.costLimitUsd).status !== 'exceeded'
-                );
-              }),
+            affordable,
           });
           if (loop.suspendedFor) return { status: 'needs_input', questionId: loop.suspendedFor };
           prompt = stagePrompt({
-            ...prepared.promptInput,
+            ...promptInput,
             knowledge:
-              state.passages.length > 0 || prepared.promptInput.knowledge
+              state.passages.length > 0 || promptInput.knowledge
                 ? knowledgePromptItems(state.passages)
                 : undefined,
             toolResults: loop.transcript,

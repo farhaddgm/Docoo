@@ -1,18 +1,8 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { expectNoSeriousA11yViolations, revealRow } from './support';
 
 const email = process.env['E2E_ADMIN_EMAIL'] ?? 'e2e-admin@example.test';
 const password = process.env['E2E_ADMIN_PASSWORD'] ?? 'e2e-admin-password-1';
-
-async function expectNoSeriousA11yViolations(page: Page) {
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag22aa'])
-    .analyze();
-  const serious = results.violations.filter((violation) =>
-    ['serious', 'critical'].includes(violation.impact ?? ''),
-  );
-  expect(serious.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
-}
 
 async function signInWithKeyboard(page: Page) {
   await page.goto('/fa/auth/login-up');
@@ -187,7 +177,9 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     const nav = page.getByRole('navigation', { name: 'ناوبری اصلی' });
     await nav.getByRole('link', { name: 'ارائه‌دهندگان AI' }).click();
     await expect(page).toHaveURL(/\/fa\/providers$/u);
-    await expect(page.getByRole('rowheader', { name: connection.name })).toBeVisible();
+    await revealRow(page, page.getByRole('rowheader', { name: connection.name }));
+    // The sticky top bar must not sit over a row when the page is checked.
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expect(page.getByLabel('کلید API')).toHaveAttribute('type', 'password');
     await expectNoSeriousA11yViolations(page);
 

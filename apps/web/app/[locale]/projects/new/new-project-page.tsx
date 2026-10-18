@@ -36,7 +36,9 @@ function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: stri
   return (
     <div className="stack">
       <p>
-        <Link href={`/${locale}/projects` as Route}>{text.backToList}</Link>
+        <Link className="back-link" href={`/${locale}/projects` as Route}>
+          {text.backToList}
+        </Link>
       </p>
       <ProjectWizard
         key={workspaceId}

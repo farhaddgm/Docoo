@@ -10,6 +10,7 @@ import { quickDraftMessages } from '../quick-draft-messages';
 import { DefinitionView } from './definition-view';
 import { problemMessages } from './problem-messages';
 import type { Contradiction, Definition, DefinitionVersion } from './problem-types';
+import { FieldLabel, SectionTitle } from '../../../info-tip';
 
 type Run = (action: () => Promise<void>, okText: string) => Promise<boolean>;
 
@@ -97,8 +98,9 @@ export function DefinitionCard({
       <DefinitionView locale={locale} content={definition.content} />
 
       <section className="highlight" aria-labelledby="unresolved-questions-heading">
-        <h4 id="unresolved-questions-heading">{text.unresolvedQuestionsTitle}</h4>
-        <p className="muted">{text.unresolvedQuestionsHelp}</p>
+        <SectionTitle as="h4" id="unresolved-questions-heading" help={text.unresolvedQuestionsHelp}>
+          {text.unresolvedQuestionsTitle}
+        </SectionTitle>
         {definition.unresolvedQuestions.length === 0 ? (
           <p>{text.unresolvedNone}</p>
         ) : (
@@ -178,7 +180,13 @@ export function DefinitionCard({
           </div>
           {rejecting && (
             <form data-write-action className="field-stack" aria-busy={busy} onSubmit={reject}>
-              <label htmlFor="definition-feedback">{text.feedback}</label>
+              <FieldLabel
+                htmlFor="definition-feedback"
+                help={text.feedbackHelp}
+                helpId="definition-feedback-help"
+              >
+                {text.feedback}
+              </FieldLabel>
               <textarea
                 id="definition-feedback"
                 rows={4}
@@ -190,9 +198,6 @@ export function DefinitionCard({
                 aria-describedby="definition-feedback-help"
                 onChange={(event) => setFeedback(event.target.value)}
               />
-              <small id="definition-feedback-help" className="muted">
-                {text.feedbackHelp}
-              </small>
               <div className="toolbar">
                 <button className="primary-button" type="submit" disabled={busy}>
                   {busy ? text.working : text.confirmReject}
