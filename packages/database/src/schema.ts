@@ -1519,6 +1519,13 @@ export const brainReports = pgTable(
     evaluations: jsonb('evaluations')
       .notNull()
       .default(sql`'[]'::jsonb`),
+    /** Ranked findings of the deterministic analysis (ADR-0032); ids, kinds and counts only. */
+    analysisVersion: text('analysis_version'),
+    findings: jsonb('findings')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    /** Optional plain-language summary written by the model from finding kinds and counts. */
+    narrative: text('narrative'),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1526,6 +1533,32 @@ export const brainReports = pgTable(
     index('brain_reports_latest_idx').on(table.workspaceId, table.scope, table.createdAt),
     index('brain_reports_project_idx').on(table.projectId, table.createdAt),
   ],
+);
+
+/** An administrator's decision on one action a Brain report proposed (ADR-0032); append-only. */
+export const brainActionDecisions = pgTable(
+  'brain_action_decisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: tenant(),
+    reportId: uuid('report_id')
+      .notNull()
+      .references(() => brainReports.id, { onDelete: 'cascade' }),
+    findingKey: text('finding_key').notNull(),
+    actionKey: text('action_key').notNull(),
+    actionKind: text('action_kind').notNull(),
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+    targetType: text('target_type').notNull(),
+    targetId: uuid('target_id').notNull(),
+    status: text('status').notNull(),
+    note: text('note').notNull().default(''),
+    action: jsonb('action').notNull(),
+    result: jsonb('result'),
+    decidedBy: uuid('decided_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => [index('brain_action_decisions_report_idx').on(table.reportId, table.createdAt)],
 );
 
 // Phase 7: analyst questions and answers, coverage and contradictions (ANL-*).
