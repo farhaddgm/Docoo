@@ -34,6 +34,7 @@ const createSchema = z
     baseUrl: baseUrlSchema.optional(),
     secret: secretSchema.optional(),
     storeContent: z.boolean().default(false),
+    maxConcurrentInvocations: z.number().int().min(1).max(100).default(4),
   })
   .strict();
 const updateSchema = z
@@ -41,6 +42,7 @@ const updateSchema = z
     name: nameSchema.optional(),
     baseUrl: baseUrlSchema.nullable().optional(),
     storeContent: z.boolean().optional(),
+    maxConcurrentInvocations: z.number().int().min(1).max(100).optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0);

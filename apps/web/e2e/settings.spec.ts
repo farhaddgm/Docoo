@@ -81,9 +81,11 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await count.getByRole('button', { name: settings.history }).click();
     // Earlier runs may have left versions; this run's two are the newest.
     const versions = count.locator('.version-row');
-    await expect(versions.first()).toBeVisible();
+    // The list fills in after its first row shows (Firefox paints it in two steps), so wait for both.
+    await expect(async () => {
+      expect(await versions.count()).toBeGreaterThanOrEqual(2);
+    }).toPass({ timeout: 15_000 });
     const before = await versions.count();
-    expect(before).toBeGreaterThanOrEqual(2);
     await count.getByLabel(settings.reasonLabel).fill('برگشت');
     await versions
       .filter({ hasText: 'برای آزمون' })

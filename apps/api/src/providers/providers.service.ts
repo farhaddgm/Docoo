@@ -55,6 +55,7 @@ interface ConnectionRow extends QueryResultRow {
   last_error: string | null;
   current_secret_version: number;
   store_content: boolean;
+  max_concurrent_invocations: number;
   version: number;
   disabled_at: string | null;
   created_at: string;
@@ -63,7 +64,7 @@ interface ConnectionRow extends QueryResultRow {
 }
 
 const connectionColumns = `c.id, c.provider, c.name, c.base_url, c.status, ${isoColumn('c.last_checked_at', 'last_checked_at')},
-  c.last_latency_ms, c.last_error, c.current_secret_version, c.store_content, c.version,
+  c.last_latency_ms, c.last_error, c.current_secret_version, c.store_content, c.max_concurrent_invocations, c.version,
   ${isoColumn('c.disabled_at', 'disabled_at')}, ${isoColumn('c.created_at', 'created_at')}, ${isoColumn('c.updated_at', 'updated_at')},
   (select fingerprint from provider_secrets s where s.connection_id = c.id and s.secret_version = c.current_secret_version) as fingerprint`;
 
@@ -153,6 +154,7 @@ export class ProvidersService {
       baseUrl?: string | undefined;
       secret?: string | undefined;
       storeContent: boolean;
+      maxConcurrentInvocations?: number | undefined;
     },
   ) {
     if (input.provider !== 'fake' && !input.secret) {
@@ -169,8 +171,8 @@ export class ProvidersService {
       let row: ConnectionRow;
       try {
         const inserted = await client.query<{ id: string }>(
-          `insert into provider_connections (workspace_id, provider, name, base_url, status, store_content, created_by)
-           values ($1, $2, $3, $4, $5, $6, $7) returning id`,
+          `insert into provider_connections (workspace_id, provider, name, base_url, status, store_content, created_by, max_concurrent_invocations)
+           values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,
           [
             context.workspaceId,
             input.provider,
@@ -179,6 +181,7 @@ export class ProvidersService {
             input.provider === 'fake' || input.secret ? 'configured' : 'unconfigured',
             input.storeContent,
             context.actorId,
+            input.maxConcurrentInvocations ?? 4,
           ],
         );
         row = await this.load(client, inserted.rows[0]!.id);
@@ -201,6 +204,7 @@ export class ProvidersService {
           baseUrl: input.baseUrl ?? null,
           secretSet: Boolean(input.secret),
           storeContent: input.storeContent,
+          maxConcurrentInvocations: input.maxConcurrentInvocations ?? 4,
         },
       });
       return this.toConnection(await this.load(client, row.id));
@@ -215,6 +219,7 @@ export class ProvidersService {
       name?: string | undefined;
       baseUrl?: string | null | undefined;
       storeContent?: boolean | undefined;
+      maxConcurrentInvocations?: number | undefined;
     },
   ) {
     return this.database.run(context, async (client) => {
@@ -227,7 +232,7 @@ export class ProvidersService {
       }
       await client.query<Record<string, unknown>>(
         `update provider_connections set name = coalesce($2, name), base_url = case when $3 then $4 else base_url end,
-                store_content = coalesce($5, store_content), version = version + 1
+                store_content = coalesce($5, store_content), max_concurrent_invocations = coalesce($6, max_concurrent_invocations), version = version + 1
           where id = $1`,
         [
           id,
@@ -235,6 +240,7 @@ export class ProvidersService {
           input.baseUrl !== undefined,
           input.baseUrl ?? null,
           input.storeContent ?? null,
+          input.maxConcurrentInvocations ?? null,
         ],
       );
       await writeAudit(client, context, {
@@ -246,11 +252,14 @@ export class ProvidersService {
           name: current.name,
           baseUrl: current.base_url,
           storeContent: current.store_content,
+          maxConcurrentInvocations: current.max_concurrent_invocations,
         },
         after: {
           name: input.name ?? current.name,
           baseUrl: input.baseUrl === undefined ? current.base_url : input.baseUrl,
           storeContent: input.storeContent ?? current.store_content,
+          maxConcurrentInvocations:
+            input.maxConcurrentInvocations ?? current.max_concurrent_invocations,
         },
       });
       return this.toConnection(await this.load(client, id));
@@ -944,6 +953,7 @@ export class ProvidersService {
               configured: row.current_secret_version > 0,
             },
       storeContent: row.store_content,
+      maxConcurrentInvocations: row.max_concurrent_invocations,
       fallback: false,
       version: row.version,
       disabledAt: row.disabled_at,

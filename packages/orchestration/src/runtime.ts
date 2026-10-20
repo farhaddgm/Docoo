@@ -19,6 +19,7 @@ import { correlatedSpan, logCorrelation } from '@docoo/observability';
 
 import { inWorkspace } from './db.js';
 import { fakeResponder, fakeToolResponder } from './fake-responders.js';
+import { acquireProviderCapacity, type ProviderCapacityOptions } from './provider-capacity.js';
 
 export interface InvocationScope {
   readonly workspaceId: string;
@@ -85,6 +86,7 @@ export class ProviderRuntime {
     private readonly pool: Pool,
     private readonly masterKey: MasterKey | null,
     private readonly adapters: AdapterFactory = defaultAdapters,
+    private readonly capacity: ProviderCapacityOptions = {},
   ) {}
 
   async adapterFor(
@@ -175,6 +177,29 @@ export class ProviderRuntime {
   }
 
   private async invokeRecorded(
+    scope: InvocationScope,
+    connectionId: string,
+    request: NormalizedModelRequest,
+  ): Promise<{ response: NormalizedModelResponse; invocationId: string; costUsd: number | null }> {
+    const timeoutMs = request.timeoutMs ?? 300_000;
+    if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_400_000)
+      throw new ProviderError('invalid_request', 'provider_invalid_timeout');
+    const releaseCapacity = await acquireProviderCapacity(
+      this.pool,
+      scope.workspaceId,
+      connectionId,
+      timeoutMs,
+      this.capacity,
+    );
+    try {
+      this.capacity.cancellationSignal?.()?.throwIfAborted();
+      return await this.invokeAdmitted(scope, connectionId, { ...request, timeoutMs });
+    } finally {
+      await releaseCapacity();
+    }
+  }
+
+  private async invokeAdmitted(
     scope: InvocationScope,
     connectionId: string,
     request: NormalizedModelRequest,
