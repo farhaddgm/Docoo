@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { providerMessages } from '../app/[locale]/providers/messages';
 import { priceMessages } from '../app/[locale]/providers/price-messages';
-import { createViaApi, signInWithKeyboard } from './support';
+import { createViaApi, revealRow, signInWithKeyboard } from './support';
 
 const text = providerMessages('fa');
 const prices = priceMessages('fa');
@@ -17,7 +17,7 @@ test.describe('managing provider connections', () => {
     });
     await page.goto('/fa/providers');
     const row = page.getByRole('row').filter({ hasText: name });
-    await expect(row).toBeVisible();
+    await revealRow(page, row);
     await row.getByRole('button', { name: `حذف اتصال «${name}»` }).click();
     await expect(page.getByText(text.removeHelp)).toBeVisible();
     await page.getByRole('button', { name: text.removeConfirm }).click();
@@ -30,7 +30,7 @@ test.describe('managing provider connections', () => {
     const model = page.getByLabel(prices.modelLabel, { exact: true });
     await expect(model).toBeVisible();
     // Choosing another provider never keeps the model of the old one.
-    await page.getByLabel(prices.provider, { exact: true }).selectOption({ index: 0 });
+    await page.locator('#price-provider').selectOption('anthropic');
     await expect(model).toHaveValue('');
   });
 });

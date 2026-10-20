@@ -44,8 +44,8 @@ test.describe('model self-check (AI-006)', () => {
       await expect(table.getByRole('rowheader', { name: label })).toBeVisible();
     }
     await expect(page.getByText(/همهٔ .* مرحله موفق بود/u)).toBeVisible({ timeout: 150_000 });
-    await expect(table.getByText(text.failed)).toHaveCount(0);
-    await expect(table.getByText(text.passed)).toHaveCount(Object.keys(text.steps).length);
+    await expect(table.locator('.badge.state-failed')).toHaveCount(0);
+    await expect(table.locator('.badge.state-passed')).toHaveCount(Object.keys(text.steps).length);
 
     // Every finished row explains in plain words how its test was run.
     await expect(table.locator('.info-tip-button')).toHaveCount(Object.keys(text.steps).length);
@@ -80,7 +80,7 @@ test.describe('model self-check (AI-006)', () => {
 
     await expect(page.getByText(/مرحله از .* ناموفق بود/u)).toBeVisible({ timeout: 120_000 });
     const table = page.getByRole('table', { name: text.caption });
-    await expect(table.getByText(text.failed)).toHaveCount(Object.keys(text.steps).length);
+    await expect(table.locator('.badge.state-failed')).toHaveCount(Object.keys(text.steps).length);
     // The reason the provider gave and what it usually means are both in the table and report.
     await expect(table.getByText(/does not support structured output/u).first()).toBeVisible();
     await expect(table.getByText(text.kinds['invalid_request']!).first()).toBeVisible();
