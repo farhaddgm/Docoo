@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend } from '../../api-client';
 import { formatDateTime, formatNumber, formatPrice, type Locale } from '../../i18n';
@@ -81,13 +81,15 @@ export function ModelPrices({
   }, [load, refreshKey]);
 
   // The model in use is the one to price first.
+  // Only once: later the administrator's own choice of provider and model stays as chosen.
+  const primed = useRef(false);
   useEffect(() => {
-    if (view?.defaultModel && !model) {
-      setModel(view.defaultModel.model);
-      const known = kinds.find((item) => item === view.defaultModel?.provider);
-      if (known) setProvider(known);
-    }
-  }, [view, model, kinds]);
+    if (primed.current || !view?.defaultModel) return;
+    primed.current = true;
+    setModel(view.defaultModel.model);
+    const known = kinds.find((item) => item === view.defaultModel?.provider);
+    if (known) setProvider(known);
+  }, [view, kinds]);
 
   const latest = new Map<string, Price>();
   for (const item of view?.items ?? []) {

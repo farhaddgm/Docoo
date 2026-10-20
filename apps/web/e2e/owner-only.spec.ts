@@ -55,8 +55,10 @@ test('the owner sees the owner pages with an owner badge', async ({ page }) => {
   await expect(nav.getByRole('link', { name: 'ارائه‌دهندگان AI' })).toBeVisible();
   await expect(nav.getByRole('link', { name: 'ایجنت‌ها' })).toBeVisible();
   for (const path of ownerPages) {
-    await page.goto(path);
-    // The badge appears once the session has loaded; a cold Firefox needs longer than 5 s.
-    await expect(page.locator('.owner-badge')).toHaveText('فقط مالک', { timeout: 20_000 });
+    await test.step(path, async () => {
+      await page.goto(path);
+      // The badge appears once the session has loaded; a cold Firefox needs longer than 5 s.
+      await expect(page.locator('.owner-badge')).toHaveText('فقط مالک', { timeout: 20_000 });
+    });
   }
 });
