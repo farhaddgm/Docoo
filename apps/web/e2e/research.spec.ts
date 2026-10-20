@@ -122,7 +122,10 @@ test.describe('knowledge-backed research and role evaluation (RSC-001, EVL-002)'
     // Brain judges the roles with the model: opt in, generate, read the evaluation.
     await page.goto('/fa/brain');
     await expect(page.getByRole('heading', { level: 1, name: brainText.title })).toBeVisible();
-    await page.getByRole('checkbox', { name: brainWords.modelEvaluation }).check();
+    await page.waitForLoadState('networkidle');
+    const modelCheck = page.getByRole('checkbox', { name: brainWords.modelEvaluation });
+    await modelCheck.check();
+    await expect(modelCheck).toBeChecked();
     await page.getByRole('button', { name: brainWords.run, exact: true }).click();
     const evaluations = page.getByRole('region', { name: brainText.evaluationsHeading });
     await expect(
