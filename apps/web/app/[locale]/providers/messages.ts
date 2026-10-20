@@ -19,6 +19,16 @@ const messages = {
     saving: 'در حال ذخیره و بررسی…',
     check: 'بررسی سلامت',
     refresh: 'به‌روزرسانی فهرست مدل‌ها',
+    remove: 'حذف',
+    removeLabel: 'حذف اتصال «{name}»',
+    removeHeading: 'تأیید حذف اتصال',
+    removeHelp:
+      'اتصال برای همیشه غیرفعال می‌شود و از این فهرست کنار می‌رود. تاریخچهٔ مصرف و هزینه‌اش می‌ماند. برای استفادهٔ دوباره باید اتصال تازه بسازید.',
+    removeIsDefault:
+      'این اتصال مدل پیش‌فرض پروژه‌هاست. اول در بخش «مدل پیش‌فرض» اتصال دیگری را انتخاب و ذخیره کنید، بعد حذف کنید.',
+    removeConfirm: 'بله، حذف شود',
+    removeReason: 'حذف از صفحهٔ ارائه‌دهندگان AI',
+    cancel: 'انصراف',
     status: 'وضعیت',
     lastChecked: 'آخرین بررسی',
     keyFingerprint: 'اثر انگشت کلید',
@@ -62,6 +72,16 @@ const messages = {
     saving: 'Saving and checking…',
     check: 'Check health',
     refresh: 'Refresh models',
+    remove: 'Delete',
+    removeLabel: 'Delete connection "{name}"',
+    removeHeading: 'Confirm deleting the connection',
+    removeHelp:
+      'The connection is disabled for good and leaves this list. Its usage and cost history stays. To use it again, create a new connection.',
+    removeIsDefault:
+      'This connection is the default for projects. First choose and save another connection under “Default model”, then delete it.',
+    removeConfirm: 'Yes, delete it',
+    removeReason: 'Deleted from the AI providers page',
+    cancel: 'Cancel',
     status: 'Status',
     lastChecked: 'Last checked',
     keyFingerprint: 'Key fingerprint',

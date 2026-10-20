@@ -844,6 +844,27 @@ a.nav-item:hover {
   color: var(--color-muted);
 }
 
+.page-head .owner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-self: start;
+  min-height: 1.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.page-head .owner-badge svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-primary);
+}
+
 .locale-link {
   display: inline-flex;
   flex: none;
@@ -4154,4 +4175,32 @@ button.link-button {
 .setting-row .link-like {
   justify-self: start;
   font-size: 0.8125rem;
+}
+
+/* A part of a box that has its own small heading (providers page). */
+.subsection {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.subsection h3 {
+  margin: 0;
+}
+
+/* A folded explanation: one line until the administrator opens it. */
+.compact-details {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: var(--space-2) var(--space-3);
+}
+
+.compact-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.compact-details[open] > summary {
+  margin-bottom: var(--space-2);
 }

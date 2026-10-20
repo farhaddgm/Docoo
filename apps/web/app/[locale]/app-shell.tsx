@@ -46,7 +46,17 @@ const memberNavigation: readonly NavigationKey[] = [
   'templates',
 ];
 
-type IconName = NavigationKey | 'users' | 'mail' | 'logout' | 'menu' | 'close' | 'workspace';
+/** Pages only the owner may open: they hold the platform's keys, settings, agents and audit trail. */
+const ownerNavigation: readonly NavigationKey[] = [
+  'providers',
+  'integrations',
+  'settings',
+  'audit',
+  'agents',
+];
+
+type IconName =
+  NavigationKey | 'users' | 'mail' | 'logout' | 'menu' | 'close' | 'workspace' | 'owner';
 
 /** Stroke icon paths (24x24 grid), decorative only: the text label carries the meaning. */
 const icons: Record<IconName, string> = {
@@ -76,6 +86,8 @@ const icons: Record<IconName, string> = {
   menu: 'M4 6h16M4 12h16M4 18h16',
   close: 'M6 6l12 12M18 6L6 18',
   workspace: 'M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6',
+  // A crown: the owner's own mark.
+  owner: 'M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5zM5 21h14',
 };
 
 function Icon({ name, className = 'nav-icon' }: { name: IconName; className?: string }) {
@@ -247,13 +259,20 @@ export function AppShell({
     </div>
   );
 
-  const pageHead = (
+  const pageHeadFor = (ownerPage: boolean) => (
     <div className="page-head">
       <SectionTitle as="h1" id="page-title" focusable help={subtitle}>
         {title}
       </SectionTitle>
+      {ownerPage && (
+        <p className="owner-badge">
+          <Icon name="owner" className="" />
+          {content.ownerOnlyBadge}
+        </p>
+      )}
     </div>
   );
+  const pageHead = pageHeadFor(false);
 
   const skipLink = (
     <a className="skip-link" href="#main-content">
@@ -281,7 +300,19 @@ export function AppShell({
     );
   }
 
-  const visible = (key: NavigationKey) => isAdmin || memberNavigation.includes(key);
+  const isOwner = !identity || identity.user.isOwner === true;
+  const visible = (key: NavigationKey) =>
+    (isAdmin || memberNavigation.includes(key)) && (isOwner || !ownerNavigation.includes(key));
+  // A page of an owner-only section (agents/analyst below agents, but not the users page).
+  const ownerSection = ownerNavigation.some((key) => {
+    const route = implemented[key];
+    return (
+      !pathname.startsWith(`/${locale}/settings/google-access`) &&
+      route !== undefined &&
+      route !== '' &&
+      (pathname === `/${locale}${route}` || pathname.startsWith(`/${locale}${route}/`))
+    );
+  });
   const workspaceName = identity?.workspaces[0]?.name;
   const roleLabel = identity
     ? identity.user.isOwner
@@ -426,9 +457,15 @@ export function AppShell({
             {topbarActions}
           </header>
           <div className="content">
-            {pageHead}
+            {pageHeadFor(ownerSection && isOwner)}
             <main id="main-content" tabIndex={-1}>
-              {children}
+              {ownerSection && !isOwner ? (
+                <p className="notice error" role="alert">
+                  {content.ownerOnlyDenied}
+                </p>
+              ) : (
+                children
+              )}
             </main>
           </div>
         </div>
