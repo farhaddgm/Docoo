@@ -4,6 +4,7 @@ import { agentMessages } from '../app/[locale]/agents/agent-messages';
 import { knowledgeMessages } from '../app/[locale]/knowledge/knowledge-messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
 import { workflowMessages } from '../app/[locale]/projects/[projectId]/workflow-messages';
+import { brainMessages } from '../app/[locale]/brain/brain-messages';
 import { reportMessagesFor } from '../app/report-messages';
 import {
   apiSession,
@@ -18,6 +19,7 @@ const detail = projectPageMessages('fa');
 const flow = workflowMessages('fa');
 const knowledgeText = knowledgeMessages('fa');
 const brainText = reportMessagesFor('fa').brain;
+const brainWords = brainMessages('fa');
 const brainEnglish = reportMessagesFor('en').brain;
 const roles = agentMessages('fa').roles;
 const stamp = Date.now().toString(36);
@@ -120,8 +122,8 @@ test.describe('knowledge-backed research and role evaluation (RSC-001, EVL-002)'
     // Brain judges the roles with the model: opt in, generate, read the evaluation.
     await page.goto('/fa/brain');
     await expect(page.getByRole('heading', { level: 1, name: brainText.title })).toBeVisible();
-    await page.getByRole('checkbox', { name: brainText.modelEvaluationOption }).check();
-    await page.getByRole('button', { name: brainText.generate }).click();
+    await page.getByRole('checkbox', { name: brainWords.modelEvaluation }).check();
+    await page.getByRole('button', { name: brainWords.run, exact: true }).click();
     const evaluations = page.getByRole('region', { name: brainText.evaluationsHeading });
     await expect(
       page.getByRole('heading', { level: 3, name: brainText.evaluationsHeading }),
