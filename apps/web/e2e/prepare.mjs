@@ -58,6 +58,41 @@ try {
       [workspace.rows[0].id, user.rows[0].id, key],
     );
   }
+  // A draft knowledge item that has waited ten days for its audit: the Brain page test finds it
+  // (ADR-0033) and an administrator audits it from there. A fresh one is added once none is left.
+  const waiting = await client.query(
+    `select 1 from knowledge_items i join knowledge_versions v on v.id = i.current_version_id
+      where i.workspace_id = $1 and i.title like 'E2E Brain waiting draft%' and v.status = 'draft' limit 1`,
+    [workspace.rows[0].id],
+  );
+  if (!waiting.rowCount) {
+    const content = 'Seeded note that waits for its audit on the Brain page.';
+    const item = await client.query(
+      `insert into knowledge_items (workspace_id, title, source_type, created_by)
+       values ($1, $2, 'admin_provided', $3) returning id`,
+      [workspace.rows[0].id, `E2E Brain waiting draft ${Date.now().toString(36)}`, user.rows[0].id],
+    );
+    const version = await client.query(
+      `insert into knowledge_versions (workspace_id, item_id, version_no, status, content, content_sha256, language,
+                                       provenance, created_by, created_at)
+       values ($1, $2, 1, 'draft', $3, md5($3), 'en', '{"declaration":"E2E seed"}'::jsonb, $4, now() - interval '10 days')
+       returning id`,
+      [workspace.rows[0].id, item.rows[0].id, content, user.rows[0].id],
+    );
+    await client.query('update knowledge_items set current_version_id = $2 where id = $1', [
+      item.rows[0].id,
+      version.rows[0].id,
+    ]);
+    await client.query(
+      `insert into knowledge_scopes (workspace_id, item_id, scope_type, scope_id) values ($1, $2, 'workspace', $1)`,
+      [workspace.rows[0].id, item.rows[0].id],
+    );
+    await client.query(
+      `insert into claims (workspace_id, knowledge_version_id, ordinal, text, normalized_text, kind, locator)
+       values ($1, $2, 0, $3, lower($3), 'recommendation', '{}'::jsonb)`,
+      [workspace.rows[0].id, version.rows[0].id, content],
+    );
+  }
   await client.query(
     'update sessions set revoked_at = now() where user_id = $1 and revoked_at is null',
     [user.rows[0].id],

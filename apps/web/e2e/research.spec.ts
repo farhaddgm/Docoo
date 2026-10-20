@@ -1,9 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { agentMessages } from '../app/[locale]/agents/agent-messages';
 import { knowledgeMessages } from '../app/[locale]/knowledge/knowledge-messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
 import { workflowMessages } from '../app/[locale]/projects/[projectId]/workflow-messages';
+import { brainMessages } from '../app/[locale]/brain/brain-messages';
 import { reportMessagesFor } from '../app/report-messages';
 import {
   apiSession,
@@ -18,9 +19,23 @@ const detail = projectPageMessages('fa');
 const flow = workflowMessages('fa');
 const knowledgeText = knowledgeMessages('fa');
 const brainText = reportMessagesFor('fa').brain;
+const brainWords = brainMessages('fa');
+const brainWordsEnglish = brainMessages('en');
 const brainEnglish = reportMessagesFor('en').brain;
 const roles = agentMessages('fa').roles;
 const stamp = Date.now().toString(36);
+
+/** The role evaluation sits in the report's folded "role details"; open it once. */
+async function openRoleDetails(page: Page, summaryText: string) {
+  const details = page
+    .locator('details.card')
+    .filter({ has: page.locator('summary', { hasText: summaryText }) });
+  await expect(details).toBeVisible({ timeout: 60_000 });
+  if (!(await details.evaluate((element: HTMLDetailsElement) => element.open))) {
+    await details.locator('summary').click();
+  }
+}
+
 const topic = `zephyr${stamp}`;
 const knowledgeTitle = `Support speed ${stamp}`;
 
@@ -120,9 +135,13 @@ test.describe('knowledge-backed research and role evaluation (RSC-001, EVL-002)'
     // Brain judges the roles with the model: opt in, generate, read the evaluation.
     await page.goto('/fa/brain');
     await expect(page.getByRole('heading', { level: 1, name: brainText.title })).toBeVisible();
-    await page.getByRole('checkbox', { name: brainText.modelEvaluationOption }).check();
-    await page.getByRole('button', { name: brainText.generate }).click();
+    await page.waitForLoadState('networkidle');
+    const modelCheck = page.getByRole('checkbox', { name: brainWords.modelEvaluation });
+    await modelCheck.check();
+    await expect(modelCheck).toBeChecked();
+    await page.getByRole('button', { name: brainWords.run, exact: true }).click();
     const evaluations = page.getByRole('region', { name: brainText.evaluationsHeading });
+    await openRoleDetails(page, brainWords.roleDetails);
     await expect(
       page.getByRole('heading', { level: 3, name: brainText.evaluationsHeading }),
     ).toBeVisible(wait);
@@ -152,6 +171,7 @@ test.describe('knowledge-backed research and role evaluation (RSC-001, EVL-002)'
     // The English page keeps the evaluation.
     await page.getByRole('link', { name: 'Switch to English' }).click();
     await expect(page).toHaveURL(/\/en\/brain/u);
+    await openRoleDetails(page, brainWordsEnglish.roleDetails);
     await expect(
       page.getByRole('heading', { level: 3, name: brainEnglish.evaluationsHeading }),
     ).toBeVisible(wait);

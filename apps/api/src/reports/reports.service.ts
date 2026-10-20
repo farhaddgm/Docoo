@@ -7,6 +7,10 @@ import { notFound } from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { CHARTER_VERSION, evaluateRules, STAGE_ROLE, type RuleInput } from './brain.js';
+import { analyse, ANALYSIS_VERSION } from './brain-analysis.js';
+import { loadAnalysisInput } from './brain-analysis.loader.js';
+import { BrainActionsService } from './brain-actions.service.js';
+import { BrainNarrativeService } from './brain-narrative.service.js';
 import { RoleEvaluationService } from './role-evaluation.service.js';
 
 export interface Range {
@@ -33,6 +37,8 @@ export class ReportsService {
   constructor(
     private readonly database: WorkspaceDatabase,
     private readonly evaluation: RoleEvaluationService,
+    private readonly narrative: BrainNarrativeService,
+    private readonly actions: BrainActionsService,
   ) {}
 
   /** Cards of the back-office dashboard (docs/01-product/05-backoffice-ux.md §3). */
@@ -281,10 +287,20 @@ export class ReportsService {
    */
   async generateBrainReport(
     context: WorkspaceRequestContext,
-    input: Range & { projectId?: string | undefined; modelEvaluation?: boolean | undefined },
+    input: Range & {
+      projectId?: string | undefined;
+      modelEvaluation?: boolean | undefined;
+      /** Analysis window ending at `to`; used when `from` is not given. */
+      periodDays?: number | undefined;
+    },
   ) {
     const to = input.to ?? new Date().toISOString();
-    const from = input.from ?? null;
+    const from =
+      input.from ??
+      (input.periodDays
+        ? new Date(new Date(to).getTime() - input.periodDays * DAY_MS).toISOString()
+        : null);
+    const analysisFrom = from ?? new Date(new Date(to).getTime() - 30 * DAY_MS).toISOString();
     const analysed = await this.database.run(context, async (client) => {
       if (input.projectId) {
         const project = await client.query(
@@ -405,7 +421,15 @@ export class ReportsService {
             deviations,
           )
         : null;
-      return { summary, deviations, recommendations, plan };
+      const ranked = analyse(
+        await loadAnalysisInput(client, {
+          projectId: input.projectId ?? null,
+          from: analysisFrom,
+          to,
+        }),
+      );
+      const narrativePlan = await this.narrative.plan(client, context, input.projectId ?? null);
+      return { summary, deviations, recommendations, plan, ranked, narrativePlan };
     });
     const outcome = analysed.plan
       ? await this.evaluation.evaluate(
@@ -414,16 +438,35 @@ export class ReportsService {
           analysed.plan,
         )
       : null;
-    const { deviations, recommendations } = analysed;
-    const summary = outcome
+    const { deviations, recommendations, ranked: findings } = analysed;
+    const narrative = analysed.narrativePlan
+      ? await this.narrative.write(
+          context,
+          input.projectId ?? null,
+          analysed.narrativePlan,
+          findings,
+        )
+      : null;
+    const base = outcome
       ? { ...analysed.summary, modelEvaluation: outcome.summary }
       : analysed.summary;
+    const summary = {
+      ...base,
+      analysis: {
+        version: ANALYSIS_VERSION,
+        periodFrom: analysisFrom,
+        periodTo: to,
+        findings: findings.length,
+        high: findings.filter((finding) => finding.severity === 'high').length,
+      },
+      ...(narrative ? { narrative: { status: narrative.status, reason: narrative.reason } } : {}),
+    };
     return this.database.run(context, async (client) => {
       const report = (
         await client.query<{ id: string }>(
           `insert into brain_reports (workspace_id, scope, project_id, charter_version, period_from, period_to, summary, deviations,
-                                      recommendations, evaluations, created_by)
-           values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, $11) returning id`,
+                                      recommendations, evaluations, analysis_version, findings, narrative, created_by)
+           values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12::jsonb, $13, $14) returning id`,
           [
             context.workspaceId,
             input.projectId ? 'project' : 'workspace',
@@ -435,6 +478,9 @@ export class ReportsService {
             JSON.stringify(deviations),
             JSON.stringify(recommendations),
             JSON.stringify(outcome?.evaluations ?? []),
+            ANALYSIS_VERSION,
+            JSON.stringify(findings),
+            narrative?.text ?? null,
             context.actorId,
           ],
         )
@@ -447,6 +493,8 @@ export class ReportsService {
         after: {
           scope: input.projectId ? 'project' : 'workspace',
           deviations: deviations.length,
+          findings: findings.length,
+          narrative: narrative?.status ?? 'off',
           charterVersion: CHARTER_VERSION,
           ...(outcome
             ? {
@@ -463,6 +511,15 @@ export class ReportsService {
     });
   }
 
+  decideBrainAction(
+    context: WorkspaceRequestContext,
+    role: string,
+    reportId: string,
+    input: Parameters<BrainActionsService['decide']>[3],
+  ) {
+    return this.actions.decide(context, role, reportId, input);
+  }
+
   async brainReports(
     context: WorkspaceRequestContext,
     input: { projectId?: string | undefined; limit: number },
@@ -473,7 +530,7 @@ export class ReportsService {
         (
           await client.query<Record<string, unknown>>(
             `select id, scope, project_id as "projectId", charter_version as "charterVersion", ${isoColumn('period_from', '"periodFrom"')},
-                  ${isoColumn('period_to', '"periodTo"')}, summary->'totals' as totals, summary->'modelEvaluation' as "modelEvaluation", ${isoColumn('created_at', '"createdAt"')}
+                  ${isoColumn('period_to', '"periodTo"')}, summary->'totals' as totals, summary->'analysis' as analysis, summary->'modelEvaluation' as "modelEvaluation", ${isoColumn('created_at', '"createdAt"')}
              from brain_reports where ($1::uuid is null or project_id = $1)
             order by created_at desc, id desc limit $2`,
             [input.projectId ?? null, input.limit],
@@ -490,13 +547,13 @@ export class ReportsService {
     const row = (
       await client.query<Record<string, unknown>>(
         `select id, scope, project_id as "projectId", charter_version as "charterVersion", ${isoColumn('period_from', '"periodFrom"')},
-                ${isoColumn('period_to', '"periodTo"')}, summary, deviations, recommendations, evaluations, created_by as "createdBy",
-                ${isoColumn('created_at', '"createdAt"')}
+                ${isoColumn('period_to', '"periodTo"')}, summary, deviations, recommendations, evaluations, analysis_version as "analysisVersion",
+                findings, narrative, created_by as "createdBy", ${isoColumn('created_at', '"createdAt"')}
            from brain_reports where id = $1`,
         [reportId],
       )
     ).rows[0];
     if (!row) throw notFound('BRAIN_REPORT_NOT_FOUND', 'The Brain report was not found.');
-    return row;
+    return { ...row, decisions: await this.actions.list(client, reportId) };
   }
 }

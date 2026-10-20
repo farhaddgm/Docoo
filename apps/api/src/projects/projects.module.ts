@@ -20,5 +20,6 @@ import { EvaluationStartDispatcher } from './evaluation-start-dispatcher.js';
     EvaluationLabService,
     EvaluationStartDispatcher,
   ],
+  exports: [ProjectsService],
 })
 export class ProjectsModule {}
