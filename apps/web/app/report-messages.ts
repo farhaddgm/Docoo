@@ -52,8 +52,7 @@ const reportMessages = {
     },
     brain: {
       title: 'گزارش Brain',
-      subtitle:
-        'انحراف نقش‌ها از charter با شواهد؛ Brain فقط پیشنهاد می‌دهد و چیزی را تغییر نمی‌دهد.',
+      subtitle: 'مشکل‌های مهم را پیدا کنید و با یک تأیید حل کنید.',
       generate: 'ساخت گزارش workspace',
       generating: 'در حال ساخت…',
       reports: 'گزارش‌ها',
@@ -77,7 +76,7 @@ const reportMessages = {
         'ارزیابی مدل‌محور نقش‌ها (Brain هر نقش را با مدل در برابر منشورش می‌سنجد؛ هر نقش یک فراخوانی مدل هزینه دارد)',
       evaluationsHeading: 'ارزیابی مدل‌محور نقش‌ها',
       evaluationsHelp:
-        'Brain چند خروجی اخیر هر نقش را در کنار اصول و وظایفی که نقش با آن‌ها اجرا شد می‌خواند. فقط یافته‌ای می‌ماند که بندهای منشور و خروجی‌های گواهش را نام ببرد؛ بقیه کنار گذاشته می‌شود.',
+        'Brain چند خروجی اخیر هر نقش را با اصول و وظایف همان نقش می‌سنجد. فقط نتیجه‌ای می‌ماند که بند منشور و خروجی گواهش را نشان بدهد.',
       evaluationsSummary:
         'با نسخهٔ {sequence} ایجنت Brain: {completed} انجام شد، {skipped} انجام نشد، {failed} ناموفق.',
       evaluationsNone: 'این گزارش ارزیابی مدل‌محور ندارد.',
@@ -197,8 +196,7 @@ const reportMessages = {
     },
     brain: {
       title: 'Brain report',
-      subtitle:
-        'Role deviations from the charter with evidence; Brain only recommends and changes nothing.',
+      subtitle: 'Find the important problems and fix them with one approval.',
       generate: 'Generate workspace report',
       generating: 'Generating…',
       reports: 'Reports',
@@ -222,7 +220,7 @@ const reportMessages = {
         'Model-based role evaluation (Brain judges each role against its charter with the model; each role costs one model call)',
       evaluationsHeading: 'Model-based role evaluation',
       evaluationsHelp:
-        'Brain reads a few recent outputs of each role next to the principles and duties the role ran with. Only a finding that names the charter clauses and the outputs that prove it is kept; the rest is discarded.',
+        'Brain checks a few recent outputs of each role against the principles and duties of that role. Only a result that shows its charter clause and the output behind it is kept.',
       evaluationsSummary:
         'With version {sequence} of the Brain agent: {completed} done, {skipped} not done, {failed} failed.',
       evaluationsNone: 'This report has no model-based evaluation.',
