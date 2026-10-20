@@ -231,6 +231,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/brain-reports': 'knowledge.audit',
   'GET workspaces/:workspaceId/brain-reports': 'knowledge.read',
   'GET workspaces/:workspaceId/brain-reports/:reportId': 'knowledge.read',
+  'POST workspaces/:workspaceId/brain-reports/:reportId/actions': 'knowledge.audit',
   'GET workspaces/:workspaceId/smart/summary': 'smart.read',
   'GET workspaces/:workspaceId/smart/walker/progress': 'smart.read',
   'POST workspaces/:workspaceId/smart/errors': 'workspace.read',

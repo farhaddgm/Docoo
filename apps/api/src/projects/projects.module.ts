@@ -12,5 +12,6 @@ import { ProjectsService } from './projects.service.js';
   imports: [ConfigModule, BusinessModule, WorkflowModule],
   controllers: [ProjectsController, DecisionIntelligenceController],
   providers: [ProjectsService, DecisionIntelligenceService],
+  exports: [ProjectsService],
 })
 export class ProjectsModule {}

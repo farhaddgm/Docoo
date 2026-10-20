@@ -29,9 +29,22 @@ const usageQuery = z
   .strict()
   .refine(ordered);
 const brainBody = z
-  .object({ ...range, projectId: z.uuid().optional(), modelEvaluation: z.boolean().default(false) })
+  .object({
+    ...range,
+    projectId: z.uuid().optional(),
+    modelEvaluation: z.boolean().default(false),
+    periodDays: z.union([z.literal(7), z.literal(30), z.literal(90)]).optional(),
+  })
   .strict()
   .refine(ordered);
+const actionBody = z
+  .object({
+    findingKey: z.string().min(1).max(120),
+    actionKey: z.string().min(1).max(120),
+    decision: z.enum(['approve', 'dismiss']),
+    note: z.string().trim().max(1000).optional(),
+  })
+  .strict();
 const brainListQuery = z
   .object({
     projectId: z.uuid().optional(),
@@ -113,5 +126,28 @@ export class ReportsController {
   async get(@Req() request: FastifyRequest, @Param('reportId') raw: string) {
     if (!isUuid(raw)) throw invalid();
     return { report: await this.reports.brainReport(workspaceContext(request), raw.toLowerCase()) };
+  }
+
+  @Post('brain-reports/:reportId/actions')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Approve or dismiss one action a Brain report proposed (nothing runs without this)',
+  })
+  @RequireWorkspacePermission('knowledge.audit')
+  async decide(
+    @Req() request: FastifyRequest,
+    @Param('reportId') raw: string,
+    @Body() body: unknown,
+  ) {
+    if (!isUuid(raw)) throw invalid();
+    const authorization = request.workspaceAuthorization;
+    return {
+      decision: await this.reports.decideBrainAction(
+        workspaceContext(request),
+        authorization?.workspace.role ?? '',
+        raw.toLowerCase(),
+        parse(actionBody, body),
+      ),
+    };
   }
 }

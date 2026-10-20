@@ -10,5 +10,6 @@ import { KNOWLEDGE_AUDITOR, KnowledgeService } from './knowledge.service.js';
   imports: [ConfigModule, SourcesModule],
   controllers: [KnowledgeController],
   providers: [KnowledgeService, { provide: KNOWLEDGE_AUDITOR, useValue: new RuleBasedAuditor() }],
+  exports: [KnowledgeService],
 })
 export class KnowledgeModule {}

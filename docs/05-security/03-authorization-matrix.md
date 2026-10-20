@@ -209,6 +209,7 @@ notion_sync: true
 | `POST /brain-reports`                                                | `knowledge.audit`           |
 | `GET /brain-reports`                                                 | `knowledge.read`            |
 | `GET /brain-reports/{id}`                                            | `knowledge.read`            |
+| `POST /brain-reports/{id}/actions`                                   | `knowledge.audit`           |
 | `GET /smart/summary`                                                 | `smart.read`                |
 | `GET /smart/walker/progress`                                         | `smart.read`                |
 | `POST /smart/errors`                                                 | `workspace.read`            |

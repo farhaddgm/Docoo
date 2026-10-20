@@ -137,10 +137,9 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     await expectNoSeriousA11yViolations(page);
 
     await page.getByRole('link', { name: 'Brain report' }).click();
-    await page.getByRole('button', { name: 'Generate workspace report' }).click();
-    await expect(
-      page.getByText('This report did not change any project, setting or output.'),
-    ).toBeVisible();
+    await page.getByRole('button', { name: 'Check now' }).click();
+    await expect(page.getByText('Making a report changes nothing.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Most important points' })).toBeVisible();
     await expect(page.locator('#report-title')).toBeFocused();
     await expectNoSeriousA11yViolations(page);
 

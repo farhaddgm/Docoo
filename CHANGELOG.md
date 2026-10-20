@@ -2,6 +2,12 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.34.0] — 2026-10-20
+
+### Added
+
+- **A smarter, plainer Brain report** ([ADR-0033](docs/adr/0033-brain-analysis-and-approved-actions.md)). Choose all projects or one project and a period of 7, 30 or 90 days, then **Check now**. Brain lists the most important points, ranked, each with the evidence behind it: weak, unaudited, stale or contradictory knowledge, falling quality per stage, risky decisions, unusual cost and repeated failures. Each point offers actions: opening the related page needs no approval; auditing a knowledge item, asking for a revision of a stage output and pausing a project run only after you confirm, with the same permission as the matching screen, once each, and the audit log records them. An optional plain-language summary (`brain.narrative_enabled`, off by default) sees only the kind, severity and count of the points, never project or knowledge content. The page text is shorter and simpler, with details behind the "i" button. Migration 0049; `POST /brain-reports/{id}/actions` (`knowledge.audit`).
+
 ## [0.33.0] — 2026-10-19
 
 ### Added
