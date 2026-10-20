@@ -233,11 +233,63 @@ export function knowledgePromptItems(passages: readonly KnowledgePassage[]): Kno
   }));
 }
 
+/** A web page the provider's search used, numbered `W1`, `W2`, … like the knowledge `K` refs. */
+export interface WebPassage {
+  readonly ref: string;
+  readonly url: string;
+  readonly title: string;
+  /** The part of the provider's notes that rests on the page; quotes are checked against it. */
+  readonly text: string;
+}
+
+/** How the web side of one research attempt went. */
+export interface WebRun {
+  /** `used`: searched · `none`: searched, found nothing · `failed`: the provider call failed ·
+   * `denied`: the role may not search · `off`: the setting is off. */
+  readonly status: 'used' | 'none' | 'failed' | 'denied' | 'off';
+  readonly code: string | null;
+  readonly queries: readonly string[];
+  readonly sources: readonly WebPassage[];
+}
+
+export const NO_WEB: WebRun = { status: 'off', code: null, queries: [], sources: [] };
+
+/** What the model sees of a web page. */
+export interface WebPromptItem {
+  readonly ref: string;
+  readonly title: string;
+  readonly url: string;
+  readonly text: string;
+}
+
+export const webPromptItems = (web: WebRun | undefined): WebPromptItem[] =>
+  (web?.sources ?? []).map((source) => ({
+    ref: source.ref,
+    title: source.title,
+    url: source.url,
+    text: source.text,
+  }));
+
+/** The web side of a stored research output: what was asked and which pages were cited. */
+export interface ResearchWebInfo {
+  readonly status: WebRun['status'];
+  readonly code: string | null;
+  readonly queries: readonly string[];
+  readonly sources: readonly {
+    readonly ref: string;
+    readonly url: string;
+    readonly title: string;
+    readonly cited: boolean;
+  }[];
+}
+
 export type CitationProblem =
   'unknown_ref' | 'quote_missing' | 'quote_too_short' | 'quote_not_found' | 'verifier_not_allowed';
 
 export interface ResearchEvidence {
   readonly ref: string;
+  /** The page a `W` citation points at. */
+  readonly url?: string | null;
   readonly knowledgeId: string | null;
   readonly versionId: string | null;
   readonly versionNo: number | null;
@@ -251,7 +303,7 @@ export interface ResearchFinding {
   readonly claim: string;
   readonly source: string;
   /** `knowledge` only when at least one citation was found verbatim in an approved passage. */
-  readonly support: 'knowledge' | 'unverified';
+  readonly support: 'knowledge' | 'web' | 'unverified';
   readonly evidence: readonly ResearchEvidence[];
 }
 
@@ -296,6 +348,8 @@ export interface ResearchContent {
   readonly gaps: readonly string[];
   readonly conflicts: readonly { readonly description: string; readonly refs: readonly string[] }[];
   readonly knowledge: ResearchKnowledgeInfo;
+  /** Absent in outputs written before web search existed. */
+  readonly web?: ResearchWebInfo;
   readonly verification: ResearchVerification;
 }
 
@@ -361,13 +415,18 @@ export function verifyResearch(input: {
   readonly excludedRestricted: boolean;
   readonly retrieveTool: 'allowed' | 'denied';
   readonly verifierTool: 'allowed' | 'denied';
+  /** The web pages the model was given, if the attempt searched. */
+  readonly web?: WebRun | undefined;
 }): { content: ResearchContent; cited: readonly KnowledgePassage[] } {
   const raw =
     input.output !== null && typeof input.output === 'object'
       ? (input.output as Record<string, unknown>)
       : {};
   const byRef = new Map(input.passages.map((passage) => [passage.ref, passage]));
+  const web = input.web ?? NO_WEB;
+  const webByRef = new Map(web.sources.map((source) => [source.ref, source]));
   const citedRefs = new Set<string>();
+  const citedWeb = new Set<string>();
   const verifierAllowed = input.verifierTool === 'allowed';
 
   const findings: ResearchFinding[] = [];
@@ -391,23 +450,27 @@ export function verifyResearch(input: {
       if (seen.has(key)) continue;
       seen.add(key);
       const passage = byRef.get(ref);
+      const page = passage ? undefined : webByRef.get(ref);
+      const checked = passage?.text ?? page?.text;
       let problem: CitationProblem | null = null;
-      if (!passage) problem = 'unknown_ref';
+      if (checked === undefined) problem = 'unknown_ref';
       else if (quote === '') problem = 'quote_missing';
       else if (!verifierAllowed) problem = 'verifier_not_allowed';
       else {
-        const found = quoteInText(quote, passage.text);
+        const found = quoteInText(quote, checked);
         if (found === 'too_short') problem = 'quote_too_short';
         else if (found === 'not_found') problem = 'quote_not_found';
       }
       const verified = problem === null;
       if (verified && passage) citedRefs.add(passage.ref);
+      if (verified && page) citedWeb.add(page.ref);
       evidence.push({
         ref,
+        ...(page ? { url: page.url } : {}),
         knowledgeId: passage?.knowledgeId ?? null,
         versionId: passage?.versionId ?? null,
         versionNo: passage?.versionNo ?? null,
-        title: passage?.title ?? null,
+        title: passage?.title ?? page?.title ?? null,
         quote,
         verified,
         problem,
@@ -416,7 +479,12 @@ export function verifyResearch(input: {
     findings.push({
       claim,
       source: clip(asText(entry['source']), RESEARCH_LIMITS.maxTextLength),
-      support: evidence.some((cite) => cite.verified) ? 'knowledge' : 'unverified',
+      // Approved knowledge counts first; a web page alone makes the finding `web`, never `knowledge`.
+      support: evidence.some((cite) => cite.verified && !cite.ref.startsWith('W'))
+        ? 'knowledge'
+        : evidence.some((cite) => cite.verified)
+          ? 'web'
+          : 'unverified',
       evidence,
     });
   }
@@ -429,7 +497,7 @@ export function verifyResearch(input: {
     const description = clip(asText(entry['description']), RESEARCH_LIMITS.maxTextLength);
     if (description === '') continue;
     const refs = [...new Set(asTextList(entry['refs']).map((ref) => ref.toUpperCase()))].filter(
-      (ref) => byRef.has(ref),
+      (ref) => byRef.has(ref) || webByRef.has(ref),
     );
     conflicts.push({ description, refs });
   }
@@ -439,7 +507,7 @@ export function verifyResearch(input: {
     (sum, finding) => sum + finding.evidence.filter((cite) => cite.verified).length,
     0,
   );
-  const supported = findings.filter((finding) => finding.support === 'knowledge').length;
+  const supported = findings.filter((finding) => finding.support !== 'unverified').length;
   const cited = input.passages.filter((passage) => citedRefs.has(passage.ref));
 
   return {
@@ -467,6 +535,17 @@ export function verifyResearch(input: {
         verifierTool: input.verifierTool,
         conflictWarnings: conflictRefs(input.passages),
       },
+      web: {
+        status: web.status,
+        code: web.code,
+        queries: web.queries,
+        sources: web.sources.map((source) => ({
+          ref: source.ref,
+          url: source.url,
+          title: source.title,
+          cited: citedWeb.has(source.ref),
+        })),
+      },
       verification: {
         findings: findings.length,
         supported,
@@ -493,23 +572,28 @@ export function compactResearchForPrompt(content: unknown): unknown {
       const entry =
         item !== null && typeof item === 'object' ? (item as Record<string, unknown>) : {};
       const evidence = Array.isArray(entry['evidence']) ? entry['evidence'] : [];
-      const sources = evidence
-        .filter(
-          (cite): cite is Record<string, unknown> =>
-            cite !== null &&
-            typeof cite === 'object' &&
-            (cite as Record<string, unknown>)['verified'] === true,
-        )
+      const verifiedCites = evidence.filter(
+        (cite): cite is Record<string, unknown> =>
+          cite !== null &&
+          typeof cite === 'object' &&
+          (cite as Record<string, unknown>)['verified'] === true,
+      );
+      const sources = verifiedCites
+        .filter((cite) => typeof cite['url'] !== 'string')
         .map(
           (cite) =>
             `${asText(cite['title'])} (v${typeof cite['versionNo'] === 'number' ? cite['versionNo'] : '?'})`,
         );
+      const pages = verifiedCites
+        .filter((cite) => typeof cite['url'] === 'string')
+        .map((cite) => `${asText(cite['title'])} (${asText(cite['url'])})`);
       return {
         claim: entry['claim'],
         source: entry['source'],
         // Older outputs carry no support field; they were never checked against knowledge.
         support: entry['support'] ?? 'unverified',
         ...(sources.length > 0 ? { approvedKnowledge: [...new Set(sources)] } : {}),
+        ...(pages.length > 0 ? { webPages: [...new Set(pages)] } : {}),
       };
     }),
     gaps: raw['gaps'],

@@ -74,7 +74,12 @@ async function main(): Promise<void> {
     workflowsPath: fileURLToPath(import.meta.resolve('@docoo/orchestration/workflows')),
     activities: correlatedActivities(
       {
-        ...createOrchestrationActivities(pool, new ProviderRuntime(pool, masterKey)),
+        ...createOrchestrationActivities(
+          pool,
+          new ProviderRuntime(pool, masterKey, undefined, {
+            cancellationSignal: () => Context.current().cancellationSignal,
+          }),
+        ),
         ...createDecisionResearchActivities(pool),
         ...createPairedEvaluationActivities(pool, new ProviderRuntime(pool, masterKey), {
           enabled: process.env['EVALUATION_LAB_ENABLED'] === 'true',

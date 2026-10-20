@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
-import { ApiError, apiGet, apiPost } from '../../api-client';
+import { ApiError, apiGet, apiPost, apiSend } from '../../api-client';
 import { formatDateTime, type Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
 import { providerMessages } from './messages';
 import { ModelPrices } from './model-prices';
 import { ModelSelfCheck } from './model-self-check';
-import { FieldLabel, SectionTitle } from '../../info-tip';
+import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
+import { PagedRows } from '../../table-pager';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
 
@@ -21,6 +22,8 @@ interface Connection {
   lastCheckedAt: string | null;
   lastError: string | null;
   secret: { fingerprint: string; configured: boolean } | null;
+  maxConcurrentInvocations: number;
+  version: number;
 }
 
 interface Model {
@@ -62,6 +65,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
   const [kind, setKind] = useState<Kind>('openai');
   const [name, setName] = useState('');
   const [secret, setSecret] = useState('');
+  const [maxConcurrent, setMaxConcurrent] = useState('4');
   const [choice, setChoice] = useState<{ connectionId: string; model: string }>({
     connectionId: '',
     model: '',
@@ -141,6 +145,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
           provider: kind,
           name: name.trim() || kinds.find((item) => item.kind === kind)!.label,
           secret,
+          maxConcurrentInvocations: Number(maxConcurrent),
         })
       ).json()) as { connection: Connection };
       setSecret('');
@@ -197,79 +202,127 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
         ) : connections.length === 0 ? (
           <p className="muted">{text.none}</p>
         ) : (
-          <div
-            className="table-scroll"
-            tabIndex={0}
-            role="region"
-            aria-labelledby="connections-title"
-          >
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">{text.name}</th>
-                  <th scope="col">{text.provider}</th>
-                  <th scope="col">{text.status}</th>
-                  <th scope="col">{text.lastChecked}</th>
-                  <th scope="col">{text.keyFingerprint}</th>
-                  <th scope="col">
-                    <span className="visually-hidden">actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {connections.map((item) => (
-                  <tr key={item.id}>
-                    <th scope="row">{item.name}</th>
-                    <td dir="ltr">{item.provider}</td>
-                    <td>
-                      <span className={`badge state-${item.status}`}>
-                        {statuses[item.status] ?? item.status}
-                      </span>
-                      {item.lastError && <small dir="ltr"> {item.lastError}</small>}
-                    </td>
-                    <td>{item.lastCheckedAt ? formatDateTime(locale, item.lastCheckedAt) : '—'}</td>
-                    <td dir="ltr">
-                      <code>{item.secret?.fingerprint ?? '—'}</code>
-                    </td>
-                    <td>
-                      <div className="toolbar">
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          disabled={busy}
-                          onClick={() =>
-                            void run(() =>
-                              apiPost(
-                                `${base}/provider-connections/${item.id}/health-check`,
-                                {},
-                              ).then(() => undefined),
-                            )
-                          }
-                        >
-                          {text.check}
-                        </button>
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          disabled={busy}
-                          onClick={() =>
-                            void run(() =>
-                              apiPost(
-                                `${base}/provider-connections/${item.id}/models/refresh`,
-                                {},
-                              ).then(() => undefined),
-                            )
-                          }
-                        >
-                          {text.refresh}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PagedRows rows={connections}>
+            {(pageRows) => (
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-labelledby="connections-title"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{text.name}</th>
+                      <th scope="col">{text.provider}</th>
+                      <th scope="col">{text.status}</th>
+                      <th scope="col">{text.lastChecked}</th>
+                      <th scope="col">{text.keyFingerprint}</th>
+                      <th scope="col">
+                        {text.maxConcurrent}{' '}
+                        <InfoTip text={text.capacityHelp} id="provider-capacity-help" />
+                      </th>
+                      <th scope="col">
+                        <span className="visually-hidden">actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((item) => (
+                      <tr key={item.id}>
+                        <th scope="row">{item.name}</th>
+                        <td dir="ltr">{item.provider}</td>
+                        <td>
+                          <span className={`badge state-${item.status}`}>
+                            {statuses[item.status] ?? item.status}
+                          </span>
+                          {item.lastError && <small dir="ltr"> {item.lastError}</small>}
+                        </td>
+                        <td>
+                          {item.lastCheckedAt ? formatDateTime(locale, item.lastCheckedAt) : '—'}
+                        </td>
+                        <td dir="ltr">
+                          <code>{item.secret?.fingerprint ?? '—'}</code>
+                        </td>
+                        <td>
+                          <form
+                            key={item.version}
+                            className="toolbar"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              const value = Number(
+                                new FormData(event.currentTarget).get('maxConcurrentInvocations'),
+                              );
+                              void run(async () => {
+                                await apiSend(
+                                  'PATCH',
+                                  `${base}/provider-connections/${item.id}`,
+                                  { maxConcurrentInvocations: value },
+                                  { version: item.version },
+                                );
+                              });
+                            }}
+                          >
+                            <input
+                              id={`provider-capacity-${item.id}`}
+                              aria-label={`${text.maxConcurrent} — ${item.name}`}
+                              name="maxConcurrentInvocations"
+                              aria-describedby="provider-capacity-help"
+                              type="number"
+                              dir="ltr"
+                              min={1}
+                              max={100}
+                              step={1}
+                              required
+                              defaultValue={item.maxConcurrentInvocations}
+                              disabled={busy}
+                            />
+                            <button className="secondary-button" type="submit" disabled={busy}>
+                              {text.saveCapacity}
+                            </button>
+                          </form>
+                        </td>
+                        <td>
+                          <div className="toolbar">
+                            <button
+                              className="secondary-button"
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                void run(() =>
+                                  apiPost(
+                                    `${base}/provider-connections/${item.id}/health-check`,
+                                    {},
+                                  ).then(() => undefined),
+                                )
+                              }
+                            >
+                              {text.check}
+                            </button>
+                            <button
+                              className="secondary-button"
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                void run(() =>
+                                  apiPost(
+                                    `${base}/provider-connections/${item.id}/models/refresh`,
+                                    {},
+                                  ).then(() => undefined),
+                                )
+                              }
+                            >
+                              {text.refresh}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PagedRows>
         )}
       </section>
 
@@ -313,6 +366,25 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
             aria-describedby="provider-key-help"
             required
             minLength={8}
+          />
+          <FieldLabel
+            htmlFor="provider-max-concurrent"
+            help={text.capacityHelp}
+            helpId="provider-max-concurrent-help"
+          >
+            {text.maxConcurrent}
+          </FieldLabel>
+          <input
+            id="provider-max-concurrent"
+            aria-describedby="provider-max-concurrent-help"
+            type="number"
+            dir="ltr"
+            min={1}
+            max={100}
+            step={1}
+            required
+            value={maxConcurrent}
+            onChange={(event) => setMaxConcurrent(event.target.value)}
           />
         </div>
         <div className="toolbar">

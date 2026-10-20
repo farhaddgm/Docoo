@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -225,6 +226,8 @@ export const projects = pgTable(
     pauseReason: text('pause_reason'),
     configSnapshotId: uuid('config_snapshot_id'),
     clonedFromId: uuid('cloned_from_id'),
+    /** How a project built on another began: 'copy', 'continuation' or 'pivot'; null when it did not. */
+    originKind: text('origin_kind'),
     /** The analysis stage output the administrator approved as the problem definition (FR-ANL-005). */
     approvedProblemVersionId: uuid('approved_problem_version_id'),
     analysisProfile: text('analysis_profile').notNull().default('full'),
@@ -815,6 +818,7 @@ export const providerConnections = pgTable(
     lastError: text('last_error'),
     currentSecretVersion: integer('current_secret_version').notNull().default(0),
     storeContent: boolean('store_content').notNull().default(false),
+    maxConcurrentInvocations: integer('max_concurrent_invocations').notNull().default(4),
     version: integer('version').notNull().default(1),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     disabledAt: timestamp('disabled_at', { withTimezone: true }),
@@ -822,6 +826,41 @@ export const providerConnections = pgTable(
   },
   (table) => [
     uniqueIndex('provider_connections_name_uq').on(table.workspaceId, sql`lower(${table.name})`),
+    uniqueIndex('provider_connections_scope_id_uq').on(table.workspaceId, table.id),
+    check(
+      'provider_connections_concurrency_range',
+      sql`${table.maxConcurrentInvocations} between 1 and 100`,
+    ),
+  ],
+);
+
+/** Shared leases bound provider HTTP concurrency across API and horizontally scaled workers. */
+export const providerInvocationLeases = pgTable(
+  'provider_invocation_leases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    connectionId: uuid('connection_id').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.workspaceId, table.connectionId],
+      foreignColumns: [providerConnections.workspaceId, providerConnections.id],
+      name: 'provider_capacity_connection_scope_fk',
+    }).onDelete('cascade'),
+    index('provider_invocation_leases_active_idx').on(
+      table.workspaceId,
+      table.connectionId,
+      table.expiresAt,
+    ),
+    check(
+      'provider_invocation_leases_positive_lifetime',
+      sql`${table.expiresAt} > ${table.createdAt}`,
+    ),
   ],
 );
 
@@ -1040,6 +1079,80 @@ export const stageReviews = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('stage_reviews_stage_idx').on(table.stageRunId, table.createdAt)],
+);
+
+/** The administrator's conversation with the agent of a stage (ADR-0031); append-only. */
+export const stageMessages = pgTable(
+  'stage_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    stageRunId: uuid('stage_run_id').notNull(),
+    outputId: uuid('output_id'),
+    role: text('role').notNull(),
+    kind: text('kind').notNull(),
+    content: text('content').notNull(),
+    status: text('status').notNull().default('done'),
+    replyTo: uuid('reply_to'),
+    invocationId: uuid('invocation_id'),
+    authorId: uuid('author_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('stage_messages_stage_idx').on(table.stageRunId, table.createdAt)],
+);
+
+/** The plan of expected deliverables of a project, one version per edit (ADR-0031); append-only. */
+export const deliverablePlans = pgTable(
+  'deliverable_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    versionNo: integer('version_no').notNull(),
+    source: text('source').notNull(),
+    invocationId: uuid('invocation_id'),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('deliverable_plans_version_uq').on(table.projectId, table.versionNo)],
+);
+
+export const deliverableItems = pgTable(
+  'deliverable_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    planId: uuid('plan_id').notNull(),
+    ordinal: integer('ordinal').notNull(),
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    purpose: text('purpose').notNull().default(''),
+    scopeIn: text('scope_in').notNull().default(''),
+    scopeOut: text('scope_out').notNull().default(''),
+  },
+  (table) => [uniqueIndex('deliverable_items_ordinal_uq').on(table.planId, table.ordinal)],
+);
+
+export const deliverableConfirmations = pgTable(
+  'deliverable_confirmations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    planId: uuid('plan_id').notNull(),
+    confirmedBy: uuid('confirmed_by').notNull(),
+    note: text('note').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('deliverable_confirmations_plan_uq').on(table.planId)],
 );
 
 export const gateDecisions = pgTable(

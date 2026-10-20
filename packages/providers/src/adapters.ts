@@ -10,6 +10,8 @@ import {
   type ProviderHealth,
   type ProviderKind,
   type ToolCall,
+  type WebSearchResult,
+  type WebSource,
 } from './contract.js';
 import { parseStructured, requestJson, type FetchLike } from './http.js';
 
@@ -82,6 +84,55 @@ function assertToolsOrSchema(request: NormalizedModelRequest): void {
   if (request.tools && request.tools.length > 0 && request.responseSchema) {
     throw new ProviderError('invalid_request', 'tools_with_response_schema');
   }
+}
+
+/** A web search answers in plain text; it cannot be mixed with functions or a response schema. */
+/** A provider field that should be text; anything else counts as empty. */
+function textOf(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function assertWebSearchAlone(request: NormalizedModelRequest): void {
+  if (request.webSearch && (hasTools(request) || request.responseSchema)) {
+    throw new ProviderError('invalid_request', 'web_search_with_tools_or_schema');
+  }
+}
+
+const SOURCE_TEXT_LIMIT = 1200;
+const MAX_WEB_SOURCES = 30;
+
+/** Collects the passages that cite each URL into one source per URL, in first-seen order. */
+class SourceCollector {
+  private readonly byUrl = new Map<string, { title: string; parts: string[] }>();
+
+  add(url: unknown, title: unknown, text: string): void {
+    if (typeof url !== 'string' || !/^https?:\/\//iu.test(url)) return;
+    const entry = this.byUrl.get(url) ?? {
+      title: typeof title === 'string' && title.trim() !== '' ? title.trim() : url,
+      parts: [],
+    };
+    const part = text.trim();
+    if (part !== '' && !entry.parts.includes(part)) entry.parts.push(part);
+    this.byUrl.set(url, entry);
+  }
+
+  sources(): WebSource[] {
+    return [...this.byUrl.entries()]
+      .map(([url, entry]) => ({
+        url,
+        title: entry.title.slice(0, 300),
+        text: entry.parts.join(' … ').slice(0, SOURCE_TEXT_LIMIT),
+      }))
+      .filter((source) => source.text !== '')
+      .slice(0, MAX_WEB_SOURCES);
+  }
+}
+
+/** The paragraph of `text` that holds the character at `index` (what a citation rests on). */
+function paragraphAt(text: string, index: number): string {
+  const start = text.lastIndexOf('\n', Math.max(0, index - 1)) + 1;
+  const end = text.indexOf('\n', index);
+  return text.slice(start, end === -1 ? text.length : end);
 }
 
 function hasTools(request: NormalizedModelRequest): boolean {
@@ -230,14 +281,43 @@ export class OpenAiAdapter extends HttpAdapter {
     return items;
   }
 
+  /** Queries and cited pages of a Responses answer that used the web search tool. */
+  private webResult(output: unknown[]): WebSearchResult {
+    const queries: string[] = [];
+    const collector = new SourceCollector();
+    for (const raw of output) {
+      const item = asObject(raw);
+      if (item['type'] === 'web_search_call') {
+        const query = asObject(item['action'])['query'];
+        if (typeof query === 'string' && query !== '' && !queries.includes(query))
+          queries.push(query);
+      }
+      if (item['type'] !== 'message') continue;
+      for (const part of asArray(item['content']).map((value) => asObject(value))) {
+        const text = typeof part['text'] === 'string' ? part['text'] : '';
+        for (const note of asArray(part['annotations']).map((value) => asObject(value))) {
+          if (note['type'] !== 'url_citation') continue;
+          const at = num(note['start_index']) ?? 0;
+          collector.add(note['url'], note['title'], paragraphAt(text, at));
+        }
+      }
+    }
+    return { queries, sources: collector.sources() };
+  }
+
   async invoke(request: NormalizedModelRequest): Promise<NormalizedModelResponse> {
     assertToolsOrSchema(request);
+    assertWebSearchAlone(request);
     const body: Json = {
       model: request.model,
       input: this.inputItems(request.messages),
       store: false,
       max_output_tokens: request.maxOutputTokens ?? DEFAULT_MAX_OUTPUT,
     };
+    if (request.webSearch) {
+      body['tools'] = [{ type: 'web_search' }];
+      body['max_tool_calls'] = request.webSearch.maxUses;
+    }
     if (hasTools(request)) {
       body['tools'] = request.tools!.map((tool) => ({
         type: 'function',
@@ -319,6 +399,7 @@ export class OpenAiAdapter extends HttpAdapter {
       providerRequestId:
         typeof response['id'] === 'string' ? response['id'] : result.headers.get('x-request-id'),
       latencyMs: result.latencyMs,
+      ...(request.webSearch ? { web: this.webResult(asArray(response['output'])) } : {}),
     };
   }
 }
@@ -402,8 +483,29 @@ export class GeminiAdapter extends HttpAdapter {
     return contents;
   }
 
+  /** Queries and pages of a Google Search grounded answer, with the passages that rest on each. */
+  private webResult(candidate: Json): WebSearchResult {
+    const grounding = asObject(candidate['groundingMetadata']);
+    const chunks = asArray(grounding['groundingChunks']).map((value) =>
+      asObject(asObject(value)['web']),
+    );
+    const collector = new SourceCollector();
+    for (const support of asArray(grounding['groundingSupports']).map((value) => asObject(value))) {
+      const text = textOf(asObject(support['segment'])['text']);
+      for (const index of asArray(support['groundingChunkIndices'])) {
+        const chunk = typeof index === 'number' ? chunks[index] : undefined;
+        if (chunk) collector.add(chunk['uri'], chunk['title'], text);
+      }
+    }
+    const queries = asArray(grounding['webSearchQueries']).filter(
+      (value): value is string => typeof value === 'string' && value !== '',
+    );
+    return { queries, sources: collector.sources() };
+  }
+
   async invoke(request: NormalizedModelRequest): Promise<NormalizedModelResponse> {
     assertToolsOrSchema(request);
+    assertWebSearchAlone(request);
     const generationConfig: Json = {
       maxOutputTokens: request.maxOutputTokens ?? DEFAULT_MAX_OUTPUT,
     };
@@ -429,6 +531,7 @@ export class GeminiAdapter extends HttpAdapter {
       const mode = { auto: 'AUTO', none: 'NONE', required: 'ANY' }[request.toolChoice ?? 'auto'];
       body['toolConfig'] = { functionCallingConfig: { mode } };
     }
+    if (request.webSearch) body['tools'] = [{ google_search: {} }];
     if (request.instructions)
       body['systemInstruction'] = { parts: [{ text: request.instructions }] };
     const model = encodeURIComponent(request.model.replace(/^models\//u, ''));
@@ -494,6 +597,7 @@ export class GeminiAdapter extends HttpAdapter {
       },
       providerRequestId: typeof response['responseId'] === 'string' ? response['responseId'] : null,
       latencyMs: result.latencyMs,
+      ...(request.webSearch ? { web: this.webResult(candidate) } : {}),
     };
   }
 }
@@ -576,13 +680,39 @@ export class AnthropicAdapter extends HttpAdapter {
     return wire;
   }
 
+  /** Queries and pages of a Messages answer that used the web search tool, with the cited text. */
+  private webResult(blocks: Json[]): WebSearchResult {
+    const queries: string[] = [];
+    const collector = new SourceCollector();
+    for (const block of blocks) {
+      if (block['type'] === 'server_tool_use' && block['name'] === 'web_search') {
+        const query = asObject(block['input'])['query'];
+        if (typeof query === 'string' && query !== '' && !queries.includes(query))
+          queries.push(query);
+      }
+      if (block['type'] !== 'text') continue;
+      for (const note of asArray(block['citations']).map((value) => asObject(value))) {
+        if (note['type'] === 'web_search_result_location') {
+          collector.add(note['url'], note['title'], textOf(note['cited_text']));
+        }
+      }
+    }
+    return { queries, sources: collector.sources() };
+  }
+
   async invoke(request: NormalizedModelRequest): Promise<NormalizedModelResponse> {
     assertToolsOrSchema(request);
+    assertWebSearchAlone(request);
     const body: Json = {
       model: request.model,
       max_tokens: request.maxOutputTokens ?? DEFAULT_MAX_OUTPUT,
       messages: this.wireMessages(request.messages),
     };
+    if (request.webSearch) {
+      body['tools'] = [
+        { type: 'web_search_20250305', name: 'web_search', max_uses: request.webSearch.maxUses },
+      ];
+    }
     if (hasTools(request)) {
       body['tools'] = request.tools!.map((tool) => ({
         name: tool.name,
@@ -664,6 +794,7 @@ export class AnthropicAdapter extends HttpAdapter {
       providerRequestId:
         typeof response['id'] === 'string' ? response['id'] : result.headers.get('request-id'),
       latencyMs: result.latencyMs,
+      ...(request.webSearch ? { web: this.webResult(blocks) } : {}),
     };
   }
 }

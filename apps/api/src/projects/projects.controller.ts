@@ -123,7 +123,14 @@ const updateSchema = z
 const commandSchema = z
   .object({ expectedVersion: z.number().int().min(1), reason: reasonSchema.optional() })
   .strict();
-const cloneSchema = z.object({ code: codeSchema, title: titleSchema.optional() }).strict();
+const cloneSchema = z
+  .object({
+    code: codeSchema,
+    title: titleSchema.optional(),
+    kind: z.enum(['copy', 'continuation', 'pivot']).optional(),
+    pivotProblem: problemSchema.optional(),
+  })
+  .strict();
 
 function invalidRequest() {
   return badRequest('PROJECT_INVALID_REQUEST', 'Provide a valid project request.');
@@ -318,7 +325,10 @@ export class ProjectsController {
   }
 
   @Post(':projectId/clone')
-  @ApiOperation({ summary: 'Clone settings and topics into a new draft (no history or audit)' })
+  @ApiOperation({
+    summary:
+      'Clone settings and topics into a new draft, as a copy or, from a completed project, a continuation or a pivot (no history or audit)',
+  })
   @RequireWorkspacePermission('project.create')
   async clone(
     @Req() request: FastifyRequest,

@@ -7,7 +7,7 @@ import { formatDateTime, formatNumber, type Locale } from '../../i18n';
 import { Notice, explainError, useAction } from '../use-action';
 import { WorkspacePage } from '../workspace-page';
 import { integrationMessages } from './messages';
-import { FieldLabel } from '../../info-tip';
+import { FieldLabel, SectionTitle } from '../../info-tip';
 
 interface Connection {
   apiUrl: string;
@@ -114,8 +114,9 @@ function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: st
   return (
     <div className="stack">
       <section className="card stack" aria-labelledby={`${id}-title`}>
-        <h2 id={`${id}-title`}>{text.contenter}</h2>
-        <p dir="auto">{text.intro}</p>
+        <SectionTitle id={`${id}-title`} help={text.intro}>
+          {text.contenter}
+        </SectionTitle>
         <h3>{text.stepsTitle}</h3>
         <ol>
           {text.steps.map((step) => (
@@ -124,10 +125,9 @@ function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: st
             </li>
           ))}
         </ol>
-        <h3>{text.privacyTitle}</h3>
-        <p className="muted" dir="auto">
-          {text.privacy}
-        </p>
+        <SectionTitle as="h3" help={text.privacy}>
+          {text.privacyTitle}
+        </SectionTitle>
       </section>
 
       <section className="card stack" aria-labelledby={`${id}-status`}>

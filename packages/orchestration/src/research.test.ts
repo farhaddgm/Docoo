@@ -12,8 +12,11 @@ import {
   quoteInText,
   RESEARCH_LIMITS,
   verifyResearch,
+  webPromptItems,
   type KnowledgePassage,
+  type WebRun,
 } from './research.js';
+import { webRunFrom, WEB_SOURCE_LIMIT } from './web-research.js';
 import { KNOWLEDGE_RULES, NO_KNOWLEDGE_RULES, STAGE_SCHEMAS, stagePrompt } from './stages.js';
 
 function passage(overrides: Partial<RetrievedPassage> & { chunkId: string }): RetrievedPassage {
@@ -412,5 +415,163 @@ describe('fake researcher', () => {
         responseSchema: { name: 'other', schema: {} },
       }),
     ).toBeNull();
+  });
+});
+
+describe('web pages in the research (ADR-0026)', () => {
+  const web: WebRun = {
+    status: 'used',
+    code: null,
+    queries: ['churn month four'],
+    sources: [
+      {
+        ref: 'W1',
+        url: 'https://example.org/a',
+        title: 'A study',
+        text: 'Subscription churn rises sharply after the fourth month when onboarding is weak.',
+      },
+    ],
+  };
+  const base = () => ({
+    passages: passages(),
+    queries: ['q'],
+    snapshots: [{ id: 's1', query: 'q', results: 2 }],
+    excludedRestricted: true,
+    retrieveTool: 'allowed' as const,
+    verifierTool: 'allowed' as const,
+    web,
+  });
+
+  it('numbers the pages, keeps a few and says whether the search found anything', () => {
+    const many = Array.from({ length: 30 }, (_, index) => ({
+      url: `https://example.org/${index}`,
+      title: `Page ${index}`,
+      text: 'text',
+    }));
+    const run = webRunFrom({ queries: ['q'], sources: many });
+    expect(run.status).toBe('used');
+    expect(run.sources).toHaveLength(WEB_SOURCE_LIMIT);
+    expect(run.sources[0]!.ref).toBe('W1');
+    expect(webRunFrom({ queries: ['q'], sources: [] })).toMatchObject({
+      status: 'none',
+      sources: [],
+    });
+    expect(webRunFrom(undefined).status).toBe('none');
+    expect(webPromptItems(run)[0]).toEqual({
+      ref: 'W1',
+      title: 'Page 0',
+      url: 'https://example.org/0',
+      text: 'text',
+    });
+  });
+
+  it('checks a quote from a page against that page and marks the finding as resting on the web', () => {
+    const { content } = verifyResearch({
+      ...base(),
+      output: {
+        findings: [
+          {
+            claim: 'Churn rises after month four',
+            source: 'web',
+            evidence: [{ ref: 'w1', quote: 'churn rises sharply after the fourth month' }],
+          },
+          {
+            claim: 'A page that says something else',
+            source: 'web',
+            evidence: [
+              { ref: 'W1', quote: 'prices doubled in the third quarter of the year' },
+              { ref: 'W7', quote: 'a page that was never offered' },
+            ],
+          },
+          {
+            claim: 'Both kinds of support',
+            source: 'mixed',
+            evidence: [
+              { ref: 'W1', quote: 'churn rises sharply after the fourth month' },
+              { ref: 'K1', quote: 'contact support twice in a month' },
+            ],
+          },
+        ],
+        gaps: [],
+        conflicts: [{ description: 'K1 and W1 differ', refs: ['K1', 'W1', 'W9'] }],
+      },
+    });
+    expect(content.findings.map((finding) => finding.support)).toEqual([
+      'web',
+      'unverified',
+      'knowledge',
+    ]);
+    expect(content.findings[0]!.evidence[0]).toMatchObject({
+      ref: 'W1',
+      url: 'https://example.org/a',
+      title: 'A study',
+      knowledgeId: null,
+      verified: true,
+    });
+    expect(content.findings[1]!.evidence.map((cite) => cite.problem)).toEqual([
+      'quote_not_found',
+      'unknown_ref',
+    ]);
+    expect(content.conflicts[0]!.refs).toEqual(['K1', 'W1']);
+    expect(content.web).toEqual({
+      status: 'used',
+      code: null,
+      queries: ['churn month four'],
+      sources: [{ ref: 'W1', url: 'https://example.org/a', title: 'A study', cited: true }],
+    });
+    expect(content.verification).toMatchObject({ findings: 3, supported: 2, unverified: 1 });
+  });
+
+  it('records that no search was made when the attempt had none', () => {
+    const input = base();
+    const { content } = verifyResearch({
+      ...input,
+      web: undefined,
+      output: { findings: [], gaps: [], conflicts: [] },
+    });
+    expect(content.web).toEqual({ status: 'off', code: null, queries: [], sources: [] });
+  });
+
+  it('hands later stages the pages a finding rests on, not their text', () => {
+    const { content } = verifyResearch({
+      ...base(),
+      output: {
+        findings: [
+          {
+            claim: 'Churn rises after month four',
+            source: 'web',
+            evidence: [{ ref: 'W1', quote: 'churn rises sharply after the fourth month' }],
+          },
+        ],
+        gaps: [],
+        conflicts: [],
+      },
+    });
+    const compact = compactResearchForPrompt(content) as { findings: Record<string, unknown>[] };
+    expect(compact.findings[0]).toMatchObject({
+      support: 'web',
+      webPages: ['A study (https://example.org/a)'],
+    });
+    expect(compact.findings[0]!['approvedKnowledge']).toBeUndefined();
+  });
+
+  it('puts the pages and their rules in the research prompt only when there are pages', () => {
+    const definition = defaultDefinition('researcher');
+    const context = {
+      stage: 'research' as const,
+      definition,
+      language: 'en' as const,
+      projectTitle: 'P',
+      problem: 'Reduce churn',
+      topics: [],
+      previous: [],
+      feedback: [],
+    };
+    const plain = stagePrompt(context);
+    expect(plain.message).not.toContain('webSources');
+    const withWeb = stagePrompt({ ...context, web: webPromptItems(web) });
+    expect(withWeb.message).toContain('"webSources"');
+    expect(withWeb.message).toContain('https://example.org/a');
+    expect(withWeb.instructions).toContain('webSources lists pages found by a web search');
   });
 });

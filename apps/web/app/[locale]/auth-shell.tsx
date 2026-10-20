@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
-import { errorMessage, messagesFor, problemCode, type Locale } from '../i18n';
+import { errorMessage, localizedPath, messagesFor, problemCode, type Locale } from '../i18n';
 import { AppShell } from './app-shell';
 import type { AccountRole } from '@docoo/contracts';
 import { DashboardCards } from './dashboard-cards';
@@ -49,6 +49,28 @@ function GoogleMark() {
         d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"
       />
     </svg>
+  );
+}
+
+/** Two-tone wordmark in the style of the Bee Researcher sign-in card. */
+function Wordmark() {
+  return (
+    <p className="wordmark" aria-hidden="true">
+      <span className="wordmark-mark">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          focusable="false"
+        >
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4" />
+        </svg>
+      </span>
+      <span className="wordmark-name">Docoo</span>
+    </p>
   );
 }
 
@@ -191,127 +213,156 @@ export function AuthShell({
   useEffect(() => {
     if (loginPage && view.kind === 'authenticated') location.replace(`/${locale}`);
   }, [loginPage, locale, view.kind]);
-  const authenticated = view.kind === 'authenticated';
+
+  if (view.kind !== 'authenticated') {
+    return (
+      <div className="login-shell">
+        <a className="skip-link" href="#main-content">
+          {content.skipToContent}
+        </a>
+        <main id="main-content" className="login-card" tabIndex={-1}>
+          <h1 id="page-title" className="visually-hidden" tabIndex={-1}>
+            {content.loginTitle}
+          </h1>
+          <Wordmark />
+          {view.kind === 'loading' && (
+            <p role="status" className="loading-line">
+              {content.checkingSession}
+            </p>
+          )}
+          {view.kind === 'unavailable' && (
+            <div className="login-stack" aria-live="polite">
+              <p className="notice error">{content.unavailable}</p>
+              <button className="primary-button" type="button" onClick={() => location.reload()}>
+                {content.retry}
+              </button>
+            </div>
+          )}
+          {view.kind === 'guest' && (
+            <div className="login-stack">
+              {view.notice && (
+                <p className="notice ok" role="status">
+                  {view.notice}
+                </p>
+              )}
+              {googleError && (
+                <p className="notice error" role="alert">
+                  {googleError}
+                </p>
+              )}
+              {googleEnabled && (
+                <a
+                  className="secondary-button link-button google-sign-in"
+                  href={`/api/auth/google?redirectTo=${encodeURIComponent('/' + locale)}`}
+                >
+                  <GoogleMark />
+                  {locale === 'fa' ? 'ورود با گوگل' : 'Sign in with Google'}
+                </a>
+              )}
+              {withPassword && (
+                <>
+                  {googleEnabled && (
+                    <p className="auth-divider" aria-hidden="true">
+                      <span>{locale === 'fa' ? 'یا' : 'or'}</span>
+                    </p>
+                  )}
+                  <form
+                    className="login-form"
+                    onSubmit={(event) => void signIn(event)}
+                    aria-busy={busy}
+                  >
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      dir="ltr"
+                      autoComplete="username"
+                      placeholder={content.email}
+                      aria-label={content.email}
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      aria-invalid={error ? true : undefined}
+                      aria-describedby={error ? 'login-error' : undefined}
+                      required
+                    />
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      dir="ltr"
+                      autoComplete="current-password"
+                      placeholder={content.password}
+                      aria-label={content.password}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      aria-invalid={error ? true : undefined}
+                      aria-describedby={error ? 'login-error' : undefined}
+                      required
+                    />
+                    {error && (
+                      <p
+                        id="login-error"
+                        className="notice error"
+                        role="alert"
+                        tabIndex={-1}
+                        ref={errorRef}
+                      >
+                        {error}
+                      </p>
+                    )}
+                    <button className="primary-button login-submit" type="submit" disabled={busy}>
+                      {busy ? content.signingIn : content.secureSignIn}
+                    </button>
+                  </form>
+                  <p className="form-footer">
+                    <Link href={`/${locale}/forgot-password`}>{content.forgotPassword}</Link>
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+          <label className="login-language">
+            <span className="visually-hidden">{content.languageLabel}</span>
+            <select
+              value={locale}
+              aria-label={content.languageLabel}
+              onChange={(event) => {
+                const next = event.target.value === 'fa' ? 'fa' : 'en';
+                if (next !== locale)
+                  location.assign(`${localizedPath(location.pathname, next)}${location.search}`);
+              }}
+            >
+              <option value="fa">فارسی</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <AppShell
       locale={locale}
-      title={authenticated ? content.dashboardTitle : content.loginTitle}
-      subtitle={authenticated ? content.dashboardSubtitle : content.loginSubtitle}
-      identity={view.kind === 'authenticated' ? view.identity : undefined}
-      showNavigation={authenticated}
-      workspaceId={view.kind === 'authenticated' ? view.identity.workspaces[0]?.id : undefined}
+      title={content.dashboardTitle}
+      subtitle={content.dashboardSubtitle}
+      identity={view.identity}
+      showNavigation
+      workspaceId={view.identity.workspaces[0]?.id}
       onSignOut={() => void signOut()}
       signOutBusy={busy}
     >
-      {view.kind === 'loading' && (
-        <p role="status" className="loading-line">
-          {content.checkingSession}
-        </p>
-      )}
-      {view.kind === 'unavailable' && (
-        <section className="auth-card" aria-live="polite">
-          <p className="notice error">{content.unavailable}</p>
-          <button className="primary-button" type="button" onClick={() => location.reload()}>
-            {content.retry}
-          </button>
-        </section>
-      )}
-      {view.kind === 'guest' && (
-        <section className="auth-card">
-          {view.notice && (
-            <p className="notice ok" role="status">
-              {view.notice}
-            </p>
-          )}
-          <p className="auth-lead">
-            {locale === 'fa'
-              ? 'با جیمیل مجاز وارد شوید.'
-              : 'Sign in with an approved Gmail account.'}
+      <div className="stack">
+        {error && (
+          <p className="notice error" role="alert" tabIndex={-1} ref={errorRef}>
+            {error}
           </p>
-          {googleError && (
-            <p className="notice error" role="alert">
-              {googleError}
-            </p>
-          )}
-          <a
-            className="secondary-button link-button google-sign-in"
-            aria-disabled={!googleEnabled}
-            href={
-              googleEnabled
-                ? `/api/auth/google?redirectTo=${encodeURIComponent('/' + locale)}`
-                : undefined
-            }
-          >
-            <GoogleMark />
-            {locale === 'fa' ? 'ورود با گوگل' : 'Sign in with Google'}
-          </a>
-          {withPassword && (
-            <>
-              <p className="auth-divider" aria-hidden="true">
-                <span>{locale === 'fa' ? 'یا' : 'or'}</span>
-              </p>
-              <form className="auth-form" onSubmit={(event) => void signIn(event)} aria-busy={busy}>
-                <label htmlFor="email">{content.email}</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  dir="ltr"
-                  autoComplete="username"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  aria-invalid={error ? true : undefined}
-                  aria-describedby={error ? 'login-error' : undefined}
-                  required
-                />
-                <label htmlFor="password">{content.password}</label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  dir="ltr"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  aria-invalid={error ? true : undefined}
-                  aria-describedby={error ? 'login-error' : undefined}
-                  required
-                />
-                {error && (
-                  <p
-                    id="login-error"
-                    className="notice error"
-                    role="alert"
-                    tabIndex={-1}
-                    ref={errorRef}
-                  >
-                    {error}
-                  </p>
-                )}
-                <button className="primary-button" type="submit" disabled={busy}>
-                  {busy ? content.signingIn : content.signIn}
-                </button>
-              </form>
-              <p className="form-footer">
-                <Link href={`/${locale}/forgot-password`}>{content.forgotPassword}</Link>
-              </p>
-            </>
-          )}
-        </section>
-      )}
-      {view.kind === 'authenticated' && (
-        <div className="stack">
-          {error && (
-            <p className="notice error" role="alert" tabIndex={-1} ref={errorRef}>
-              {error}
-            </p>
-          )}
-          {view.identity.workspaces[0] && (
-            <DashboardCards locale={locale} workspaceId={view.identity.workspaces[0].id} />
-          )}
-          <AccountSecurity locale={locale} user={view.identity.user} />
-        </div>
-      )}
+        )}
+        {view.identity.workspaces[0] && (
+          <DashboardCards locale={locale} workspaceId={view.identity.workspaces[0].id} />
+        )}
+        <AccountSecurity locale={locale} user={view.identity.user} />
+      </div>
     </AppShell>
   );
 }

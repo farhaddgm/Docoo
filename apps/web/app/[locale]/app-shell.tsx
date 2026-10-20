@@ -13,10 +13,12 @@ import {
   type Locale,
   type NavigationKey,
 } from '../i18n';
+import { SectionTitle } from '../info-tip';
 import { SmartRoot, SmartToggle } from '../smart/smart-root';
 import { NotificationBell } from './notification-bell';
 import type { SessionIdentity } from './signed-in';
-import { ThemeToggle } from '../theme-toggle';
+import { sidebarStorageKey } from '../theme';
+import { ThemePicker } from '../theme-toggle';
 
 /** Pages that exist; the others stay visible but disabled until their slice ships. */
 const implemented: Partial<Record<NavigationKey, string>> = {
@@ -158,12 +160,31 @@ export function AppShell({
   const [menu, setMenu] = useState({ open: false, path: pathname });
   const menuOpen = menu.open && menu.path === pathname;
   const [leaving, setLeaving] = useState(false);
+  // The desktop sidebar folds to an icon rail; the inline script in <head> has already applied it.
+  const [collapsed, setCollapsed] = useState(false);
   const isAdmin = !identity || identity.user.role === 'super_admin';
 
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = direction(locale);
   }, [locale]);
+
+  useEffect(() => {
+    setCollapsed(document.documentElement.dataset['sidebar'] === 'collapsed');
+  }, []);
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    if (next) document.documentElement.dataset['sidebar'] = 'collapsed';
+    else delete document.documentElement.dataset['sidebar'];
+    try {
+      if (next) localStorage.setItem(sidebarStorageKey, 'collapsed');
+      else localStorage.removeItem(sidebarStorageKey);
+    } catch {
+      // Blocked storage: the sidebar just stays as chosen until the page is closed.
+    }
+  }
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -198,7 +219,7 @@ export function AppShell({
       {showNavigation && workspaceId && isAdmin && (
         <SmartToggle locale={locale} workspaceId={workspaceId} />
       )}
-      <ThemeToggle locale={locale} />
+      <ThemePicker locale={locale} />
       <a
         className="locale-link"
         href={localizedPath(pathname, alternate)}
@@ -212,15 +233,25 @@ export function AppShell({
       >
         {content.switchLanguage}
       </a>
+      {identity && showNavigation && (
+        <button
+          type="button"
+          className="signout-button"
+          disabled={onSignOut ? signOutBusy : leaving}
+          onClick={onSignOut ? () => onSignOut() : () => void signOutHere()}
+        >
+          <Icon name="logout" className="" />
+          <span>{onSignOut && signOutBusy ? content.signingOut : content.signOut}</span>
+        </button>
+      )}
     </div>
   );
 
   const pageHead = (
     <div className="page-head">
-      <h1 id="page-title" tabIndex={-1}>
+      <SectionTitle as="h1" id="page-title" focusable help={subtitle}>
         {title}
-      </h1>
-      {subtitle && <p>{subtitle}</p>}
+      </SectionTitle>
     </div>
   );
 
@@ -280,7 +311,11 @@ export function AppShell({
                       if (route === undefined) {
                         return (
                           <li key={key}>
-                            <span className="nav-item" aria-disabled="true">
+                            <span
+                              className="nav-item"
+                              aria-disabled="true"
+                              title={content.nav[key]}
+                            >
                               <Icon name={key} />
                               <span className="nav-label">
                                 {content.nav[key]} <small>{content.comingSoon}</small>
@@ -302,6 +337,7 @@ export function AppShell({
                             className="nav-item"
                             href={href}
                             aria-current={current ? 'page' : undefined}
+                            title={content.nav[key]}
                           >
                             <Icon name={key} />
                             <span className="nav-label">{content.nav[key]}</span>
@@ -313,47 +349,33 @@ export function AppShell({
                 </div>
               );
             })}
-            {(identity?.user.role === 'super_admin' || identity?.user.isOwner) && (
+            {identity?.user.role === 'super_admin' && (
               <div className="nav-group">
                 <p className="nav-group-label">{content.navGroups.admin}</p>
                 <ul className="nav-list">
-                  {identity.user.role === 'super_admin' && (
-                    <li>
-                      <Link
-                        className="nav-item"
-                        href={`/${locale}/admin/users` as Route}
-                        aria-current={
-                          pathname.startsWith(`/${locale}/admin/users`) ? 'page' : undefined
-                        }
-                      >
-                        <Icon name="users" />
-                        <span className="nav-label">{content.adminNav.users}</span>
-                      </Link>
-                    </li>
-                  )}
-                  {identity.user.isOwner && (
-                    <li>
-                      <Link
-                        className="nav-item"
-                        href={`/${locale}/settings/google-access` as Route}
-                        aria-current={
-                          pathname.startsWith(`/${locale}/settings/google-access`)
-                            ? 'page'
-                            : undefined
-                        }
-                      >
-                        <Icon name="mail" />
-                        <span className="nav-label">{content.adminNav.googleAccess}</span>
-                      </Link>
-                    </li>
-                  )}
+                  <li>
+                    <Link
+                      className="nav-item"
+                      title={content.adminNav.users}
+                      href={`/${locale}/admin/users` as Route}
+                      aria-current={
+                        pathname.startsWith(`/${locale}/admin/users`) ||
+                        pathname.startsWith(`/${locale}/settings/google-access`)
+                          ? 'page'
+                          : undefined
+                      }
+                    >
+                      <Icon name="users" />
+                      <span className="nav-label">{content.adminNav.users}</span>
+                    </Link>
+                  </li>
                 </ul>
               </div>
             )}
           </nav>
           {identity && (
             <div className="sidebar-foot">
-              <div className="user-chip">
+              <div className="user-chip" title={identity.user.displayName}>
                 <span className="avatar" aria-hidden="true">
                   {initials(identity.user.displayName)}
                 </span>
@@ -362,15 +384,6 @@ export function AppShell({
                   <span className="user-chip-meta">{roleLabel}</span>
                 </span>
               </div>
-              <button
-                type="button"
-                className="sidebar-signout"
-                disabled={onSignOut ? signOutBusy : leaving}
-                onClick={onSignOut ? () => onSignOut() : () => void signOutHere()}
-              >
-                <Icon name="logout" className="" />
-                {onSignOut && signOutBusy ? content.signingOut : content.signOut}
-              </button>
             </div>
           )}
         </aside>
@@ -383,13 +396,24 @@ export function AppShell({
           <header className="topbar">
             <button
               type="button"
-              className="menu-button"
+              className="menu-button menu-drawer"
               aria-controls="app-sidebar"
               aria-expanded={menuOpen}
               aria-label={menuOpen ? content.closeMenu : content.menu}
               onClick={() => setMenu({ open: !menuOpen, path: pathname })}
             >
               <Icon name={menuOpen ? 'close' : 'menu'} className="" />
+            </button>
+            <button
+              type="button"
+              className="menu-button menu-collapse"
+              aria-controls="app-sidebar"
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? content.expandSidebar : content.collapseSidebar}
+              title={collapsed ? content.expandSidebar : content.collapseSidebar}
+              onClick={toggleCollapsed}
+            >
+              <Icon name="menu" className="" />
             </button>
             {workspaceName && (
               <div className="topbar-context">

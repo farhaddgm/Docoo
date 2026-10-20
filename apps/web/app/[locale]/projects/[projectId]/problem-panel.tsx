@@ -24,6 +24,7 @@ import {
 import { draftOf, draftProblem, QuestionEditor } from './question-editor';
 import { uploadProjectFile } from './upload-file';
 import { SectionTitle } from '../../../info-tip';
+import { PagedRows } from '../../../table-pager';
 
 const POLL_WORKING_MS = 4000;
 const POLL_IDLE_MS = 20000;
@@ -148,6 +149,13 @@ export function ProblemPanel({
       setNotice({ ok: false, text: explain(error) });
       throw error;
     }
+  };
+  const suggest = async (question: Question): Promise<string> => {
+    const { suggestion } = await apiSend<{ suggestion: { text: string } }>(
+      'POST',
+      `${workspaceBase}/analysis-questions/${question.id}/suggest-answer`,
+    );
+    return suggestion.text;
   };
   const forget = (ids: readonly string[]) =>
     setDrafts((current) => {
@@ -406,6 +414,7 @@ export function ProblemPanel({
                 }
                 onStopEditing={() => forget([question.id])}
                 onUpload={upload}
+                onSuggest={() => suggest(question)}
               />
             ))}
           </ol>
@@ -433,39 +442,48 @@ export function ProblemPanel({
             {fill(text.gapAlert, { list: gaps.join(locale === 'fa' ? '، ' : ', ') })}
           </p>
         )}
-        <div className="table-scroll" tabIndex={0} role="region" aria-label={text.coverageTitle}>
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">{text.dimension}</th>
-                <th scope="col">{text.colAsked}</th>
-                <th scope="col">{text.colAnswered}</th>
-                <th scope="col">{text.colLeft}</th>
-                <th scope="col">{text.colLevel}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analysis.coverage.map((row) => (
-                <tr key={row.category}>
-                  <th scope="row">
-                    {text.categories[row.category] ?? row.category}{' '}
-                    <small className="muted">
-                      ({row.required ? text.required : text.optional})
-                    </small>
-                  </th>
-                  <td>{formatNumber(locale, row.asked)}</td>
-                  <td>{formatNumber(locale, row.answered)}</td>
-                  <td>{formatNumber(locale, row.open + row.later + row.unanswered)}</td>
-                  <td>
-                    <span className={`badge level-${row.level}`}>
-                      {text.levels[row.level] ?? row.level}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PagedRows rows={analysis.coverage}>
+          {(pageRows) => (
+            <div
+              className="table-scroll"
+              tabIndex={0}
+              role="region"
+              aria-label={text.coverageTitle}
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{text.dimension}</th>
+                    <th scope="col">{text.colAsked}</th>
+                    <th scope="col">{text.colAnswered}</th>
+                    <th scope="col">{text.colLeft}</th>
+                    <th scope="col">{text.colLevel}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((row) => (
+                    <tr key={row.category}>
+                      <th scope="row">
+                        {text.categories[row.category] ?? row.category}{' '}
+                        <small className="muted">
+                          ({row.required ? text.required : text.optional})
+                        </small>
+                      </th>
+                      <td>{formatNumber(locale, row.asked)}</td>
+                      <td>{formatNumber(locale, row.answered)}</td>
+                      <td>{formatNumber(locale, row.open + row.later + row.unanswered)}</td>
+                      <td>
+                        <span className={`badge level-${row.level}`}>
+                          {text.levels[row.level] ?? row.level}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PagedRows>
       </section>
 
       <section className="card stack" aria-labelledby="followups-heading">
@@ -494,6 +512,7 @@ export function ProblemPanel({
                 }
                 onStopEditing={() => forget([question.id])}
                 onUpload={upload}
+                onSuggest={() => suggest(question)}
                 footer={
                   drafts[question.id] ? (
                     <button
