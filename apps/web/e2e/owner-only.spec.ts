@@ -42,6 +42,7 @@ test('an administrator who is not the owner does not see the owner pages', async
     await page.goto(path);
     await expect(page.locator('p[role=alert]')).toHaveText(
       'این صفحه فقط برای مالک سامانه در دسترس است.',
+      { timeout: 20_000 },
     );
     await expect(page.locator('.owner-badge')).toHaveCount(0);
   }
@@ -55,6 +56,7 @@ test('the owner sees the owner pages with an owner badge', async ({ page }) => {
   await expect(nav.getByRole('link', { name: 'ایجنت‌ها' })).toBeVisible();
   for (const path of ownerPages) {
     await page.goto(path);
-    await expect(page.locator('.owner-badge')).toHaveText('فقط مالک');
+    // The badge appears once the session has loaded; a cold Firefox needs longer than 5 s.
+    await expect(page.locator('.owner-badge')).toHaveText('فقط مالک', { timeout: 20_000 });
   }
 });
