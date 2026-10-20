@@ -16,6 +16,7 @@
     "test:coverage": "vitest run --coverage --exclude 'test/**/*.integration.test.ts'"
   },
   "dependencies": {
+    "@docoo/application": "workspace:*",
     "@docoo/config": "workspace:*",
     "@docoo/contracts": "workspace:*",
     "@docoo/database": "workspace:*",

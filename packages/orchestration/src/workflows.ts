@@ -15,6 +15,10 @@ import type {
   createDecisionResearchActivities,
 } from './decision-research-activities.js';
 import type { WritingActivities, WritingRef } from './writing-activities.js';
+import type {
+  PairedEvaluationActivities,
+  PairedEvaluationRef,
+} from './paired-evaluation-activities.js';
 
 export interface GateSignal {
   readonly stageRunId: string;
@@ -40,6 +44,42 @@ export interface AgentInputSignal {
 /** Answer attachments are polled every 15 s for up to 10 minutes before the round goes on without. */
 const ATTACHMENT_POLL_SECONDS = 15;
 const ATTACHMENT_POLL_LIMIT = 40;
+
+/** Metadata-only history. Retry reuses a DB receipt/result or fences an unknown call. */
+export async function pairedEvaluationWorkflow(
+  ref: PairedEvaluationRef,
+): Promise<{ status: string }> {
+  const execution = proxyActivities<PairedEvaluationActivities>({
+    startToCloseTimeout: '6 minutes',
+    retry: { maximumAttempts: 3, initialInterval: '1 second', maximumInterval: '10 seconds' },
+  });
+  let cancelled = false;
+  setHandler(cancelSignal, () => {
+    cancelled = true;
+  });
+  const plan = await execution.evaluationPlan(ref);
+  if (plan.status !== 'running') return { status: plan.status };
+  for (let ordinal = 0; ordinal < plan.total; ordinal++) {
+    if (cancelled) {
+      await execution.evaluationFinish({ ...ref, status: 'cancelled' });
+      return { status: 'cancelled' };
+    }
+    let result;
+    try {
+      result = await execution.evaluationCase({ ...ref, ordinal });
+    } catch {
+      await execution.evaluationFinish({ ...ref, status: 'interrupted' });
+      return { status: 'interrupted' };
+    }
+    if (result.status !== 'completed') {
+      await execution.evaluationFinish({ ...ref, status: result.status });
+      return { status: result.status };
+    }
+  }
+  const status = cancelled ? 'cancelled' : 'completed';
+  await execution.evaluationFinish({ ...ref, status });
+  return { status };
+}
 
 export const pauseSignal = defineSignal('pause');
 export const resumeSignal = defineSignal('resume');
