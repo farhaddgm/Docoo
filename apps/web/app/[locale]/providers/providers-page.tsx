@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
-import { ApiError, apiGet, apiPost } from '../../api-client';
+import { ApiError, apiGet, apiPost, apiSend } from '../../api-client';
 import { formatDateTime, type Locale } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { reportMessagesFor } from '../../report-messages';
@@ -10,7 +10,7 @@ import { SignedIn } from '../signed-in';
 import { providerMessages } from './messages';
 import { ModelPrices } from './model-prices';
 import { ModelSelfCheck } from './model-self-check';
-import { FieldLabel, SectionTitle } from '../../info-tip';
+import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
@@ -23,6 +23,8 @@ interface Connection {
   lastCheckedAt: string | null;
   lastError: string | null;
   secret: { fingerprint: string; configured: boolean } | null;
+  maxConcurrentInvocations: number;
+  version: number;
 }
 
 interface Model {
@@ -64,6 +66,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
   const [kind, setKind] = useState<Kind>('openai');
   const [name, setName] = useState('');
   const [secret, setSecret] = useState('');
+  const [maxConcurrent, setMaxConcurrent] = useState('4');
   const [choice, setChoice] = useState<{ connectionId: string; model: string }>({
     connectionId: '',
     model: '',
@@ -144,6 +147,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
           provider: kind,
           name: name.trim() || kinds.find((item) => item.kind === kind)!.label,
           secret,
+          maxConcurrentInvocations: Number(maxConcurrent),
         })
       ).json()) as { connection: Connection };
       setSecret('');
@@ -230,6 +234,10 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
                       <th scope="col">{text.lastChecked}</th>
                       <th scope="col">{text.keyFingerprint}</th>
                       <th scope="col">
+                        {text.maxConcurrent}{' '}
+                        <InfoTip text={text.capacityHelp} id="provider-capacity-help" />
+                      </th>
+                      <th scope="col">
                         <span className="visually-hidden">actions</span>
                       </th>
                     </tr>
@@ -250,6 +258,44 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
                         </td>
                         <td dir="ltr">
                           <code>{item.secret?.fingerprint ?? '—'}</code>
+                        </td>
+                        <td>
+                          <form
+                            key={item.version}
+                            className="toolbar"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              const value = Number(
+                                new FormData(event.currentTarget).get('maxConcurrentInvocations'),
+                              );
+                              void run(async () => {
+                                await apiSend(
+                                  'PATCH',
+                                  `${base}/provider-connections/${item.id}`,
+                                  { maxConcurrentInvocations: value },
+                                  { version: item.version },
+                                );
+                              });
+                            }}
+                          >
+                            <input
+                              id={`provider-capacity-${item.id}`}
+                              aria-label={`${text.maxConcurrent} — ${item.name}`}
+                              name="maxConcurrentInvocations"
+                              aria-describedby="provider-capacity-help"
+                              type="number"
+                              dir="ltr"
+                              min={1}
+                              max={100}
+                              step={1}
+                              required
+                              defaultValue={item.maxConcurrentInvocations}
+                              disabled={busy}
+                            />
+                            <button className="secondary-button" type="submit" disabled={busy}>
+                              {text.saveCapacity}
+                            </button>
+                          </form>
                         </td>
                         <td>
                           <div className="toolbar">
@@ -371,6 +417,25 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
               aria-describedby="provider-key-help"
               required
               minLength={8}
+            />
+            <FieldLabel
+              htmlFor="provider-max-concurrent"
+              help={text.capacityHelp}
+              helpId="provider-max-concurrent-help"
+            >
+              {text.maxConcurrent}
+            </FieldLabel>
+            <input
+              id="provider-max-concurrent"
+              aria-describedby="provider-max-concurrent-help"
+              type="number"
+              dir="ltr"
+              min={1}
+              max={100}
+              step={1}
+              required
+              value={maxConcurrent}
+              onChange={(event) => setMaxConcurrent(event.target.value)}
             />
           </div>
           <div className="toolbar">

@@ -32,6 +32,10 @@ const messages = {
     status: 'وضعیت',
     lastChecked: 'آخرین بررسی',
     keyFingerprint: 'اثر انگشت کلید',
+    maxConcurrent: 'سقف درخواست‌های هم‌زمان',
+    saveCapacity: 'ذخیرهٔ سقف',
+    capacityHelp:
+      'برای هر اتصال، ۱ تا ۱۰۰ درخواست مدل می‌تواند هم‌زمان اجرا شود؛ این سقف در همهٔ workerها مشترک است. کاهش سقف، درخواست‌های در حال اجرا را قطع نمی‌کند.',
     defaults: 'مدل پیش‌فرض پروژه‌ها',
     defaultsHelp:
       'همهٔ مراحل پروژه از این اتصال و مدل استفاده می‌کنند، مگر برای پروژه‌ای جداگانه تغییر دهید.',
@@ -46,6 +50,7 @@ const messages = {
     errors: {
       PROVIDER_SECRET_REQUIRED: 'کلید API لازم است.',
       PROVIDER_INVALID_REQUEST: 'اطلاعات واردشده معتبر نیست.',
+      PROVIDER_VERSION_CONFLICT: 'این اتصال تغییر کرده است. صفحه را تازه کنید و دوباره ذخیره کنید.',
       PROVIDER_SECRET_STORE_UNAVAILABLE: 'کلید رمزنگاری سرور تنظیم نشده است (SECRET_MASTER_KEY).',
     } as Record<string, string>,
   },
@@ -80,6 +85,10 @@ const messages = {
     status: 'Status',
     lastChecked: 'Last checked',
     keyFingerprint: 'Key fingerprint',
+    maxConcurrent: 'Concurrent request limit',
+    saveCapacity: 'Save limit',
+    capacityHelp:
+      'Allow 1–100 concurrent model requests per connection, shared by all workers. Lowering the limit lets requests already running finish.',
     defaults: 'Default model for projects',
     defaultsHelp:
       'Every project stage uses this connection and model unless a project overrides it.',
@@ -94,6 +103,7 @@ const messages = {
     errors: {
       PROVIDER_SECRET_REQUIRED: 'An API key is required.',
       PROVIDER_INVALID_REQUEST: 'The details are not valid.',
+      PROVIDER_VERSION_CONFLICT: 'This connection changed. Reload the page before saving again.',
       PROVIDER_SECRET_STORE_UNAVAILABLE:
         'The server encryption key is not set (SECRET_MASTER_KEY).',
     } as Record<string, string>,
