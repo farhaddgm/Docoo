@@ -24,7 +24,7 @@ async function signInAs(page: Page, isOwner: boolean) {
     const path = new URL(route.request().url()).pathname;
     if (path === '/api/auth/session')
       return json(route, { user: { ...admin, isOwner }, workspaces: [workspace] });
-    return json(route, { items: [], rows: [] });
+    return json(route, { items: [], rows: [], connection: null });
   });
 }
 
