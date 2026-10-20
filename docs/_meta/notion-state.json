@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "f709c47ed20f9c054bfd3c7c9e90210529a34227"
+    "source_commit": "7cc0f37b0505c08b67ad5cdff600d477c464f52e"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-20T17:33:51.217Z",
+    "synced_at": "2026-10-20T18:10:17.500Z",
     "created": 0,
-    "updated": 1,
-    "unchanged": 73,
+    "updated": 4,
+    "unchanged": 70,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -218,16 +218,16 @@
     "DOCOO-DATA-DICTIONARY": {
       "path": "docs/02-domain/03-data-dictionary.md",
       "section": "02 Domain",
-      "version": "1.4.0",
+      "version": "1.5.1",
       "status": "approved-baseline",
       "owner": "Data Architecture",
-      "checksum_sha256": "111565b1d5cf5912c425f5a0ff6975190926fd1947b21efd38c8112e3edaf783",
+      "checksum_sha256": "641581648bccae3743c83ae23fc7d0072fd0413965e9cd6188ed6bdc8ab512e8",
       "notion_page_id": "3e55a24a-6668-8185-bb93-c418b4b94e1b",
       "notion_page_url": "https://app.notion.com/p/3e55a24a66688185bb93c418b4b94e1b?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a2-baef-c7ba2ea19630",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a2baefc7ba2ea19630",
-      "synced_commit": "92ab8a17360bdf0a661053ff30b9304832334cda",
-      "synced_at": "2026-10-07T05:47:49.814Z"
+      "synced_commit": "7cc0f37b0505c08b67ad5cdff600d477c464f52e",
+      "synced_at": "2026-10-20T18:10:17.500Z"
     },
     "DOCOO-AGENT-SYSTEM": {
       "path": "docs/03-ai/01-agent-system.md",
@@ -288,16 +288,16 @@
     "DOCOO-AI-EVALUATION": {
       "path": "docs/03-ai/05-evaluation-and-quality.md",
       "section": "03 AI & Knowledge",
-      "version": "1.0.0",
+      "version": "1.0.4",
       "status": "proposed",
       "owner": "AI Quality",
-      "checksum_sha256": "117f00002e975a8f39a666eb3e1e8cd477e719fe3364afc1bc2a46afd1b22597",
+      "checksum_sha256": "17f887f7294f495d9fa555f934940e0798f173a927a097b89db29dd73871de25",
       "notion_page_id": "3e55a24a-6668-8157-aa62-c391af987b9f",
       "notion_page_url": "https://app.notion.com/p/3e55a24a66688157aa62c391af987b9f?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81ee-aef4-e6d931089def",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881eeaef4e6d931089def",
-      "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
-      "synced_at": "2026-10-01T16:08:48.251Z"
+      "synced_commit": "7cc0f37b0505c08b67ad5cdff600d477c464f52e",
+      "synced_at": "2026-10-20T18:10:17.500Z"
     },
     "DOCOO-SYSTEM-ARCHITECTURE": {
       "path": "docs/04-architecture/01-system-architecture.md",
@@ -330,16 +330,16 @@
     "DOCOO-API-CONTRACTS": {
       "path": "docs/04-architecture/03-api-contracts.md",
       "section": "04 Architecture",
-      "version": "1.10.0",
+      "version": "1.12.0",
       "status": "proposed",
       "owner": "API Architecture",
-      "checksum_sha256": "aa6bca94d6e97b281a729567fb57d0d07005a6464b2a576fda1d60f8dafde1a9",
+      "checksum_sha256": "edaeffc319b0110d789440750c81b21b16c289221ebaa93e5e675a9e65155133",
       "notion_page_id": "3e55a24a-6668-812d-9f69-cd7fceb4fea8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812d9f69cd7fceb4fea8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a8-8910-fed8b8b362d3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a88910fed8b8b362d3",
-      "synced_commit": "8a77815e7d09bff8036cf939284353f5db93dc21",
-      "synced_at": "2026-10-16T22:51:05.805Z"
+      "synced_commit": "7cc0f37b0505c08b67ad5cdff600d477c464f52e",
+      "synced_at": "2026-10-20T18:10:17.500Z"
     },
     "DOCOO-WORKFLOWS-JOBS": {
       "path": "docs/04-architecture/04-workflows-and-jobs.md",
@@ -582,16 +582,16 @@
     "DOCOO-IMPLEMENTATION-BACKLOG": {
       "path": "docs/06-delivery/06-implementation-backlog.md",
       "section": "06 Delivery & Operations",
-      "version": "1.2.0",
+      "version": "1.2.3",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "242dfe76945ed4a6b24235162820e80f48cfd718edf1ea675b459127b1da1151",
+      "checksum_sha256": "f0de14f3948e1ff3d35c5a45047a2d12b84338d748f1fae9469d8e9a061746d5",
       "notion_page_id": "3e55a24a-6668-81d0-8651-ea854009b9ff",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881d08651ea854009b9ff",
       "index_row_page_id": "3e55a24a-6668-81a2-918d-e7aca2669701",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a2918de7aca2669701",
-      "synced_commit": "f82ed14d0252c632e1e72c333e29d20ab9d85c37",
-      "synced_at": "2026-10-09T17:02:46.624Z"
+      "synced_commit": "7cc0f37b0505c08b67ad5cdff600d477c464f52e",
+      "synced_at": "2026-10-20T18:10:17.500Z"
     },
     "DOCOO-OWNER-ACTION-GUIDE": {
       "path": "docs/06-delivery/07-owner-action-guide.md",
