@@ -72,23 +72,23 @@ const SHOWN_EVIDENCE = 5;
 const PERIODS = ['7', '30', '90'] as const;
 
 /** Where a link action or a piece of evidence leads; null when it has no page. */
-function pageFor(locale: Locale, type: string, id: string | null): string | null {
+function pageFor(locale: Locale, type: string, id: string | null): Route | null {
   const base = `/${locale}`;
   switch (type) {
     case 'open_knowledge':
     case 'knowledge':
-      return id ? `${base}/knowledge/${id}` : null;
+      return id ? (`${base}/knowledge/${id}` as Route) : null;
     case 'open_conflicts':
-      return `${base}/knowledge?tab=conflicts`;
+      return `${base}/knowledge?tab=conflicts` as Route;
     case 'open_project':
     case 'project':
-      return id ? `${base}/projects/${id}` : null;
+      return id ? (`${base}/projects/${id}` as Route) : null;
     case 'open_costs':
-      return `${base}/costs`;
+      return `${base}/costs` as Route;
     case 'open_providers':
-      return `${base}/providers`;
+      return `${base}/providers` as Route;
     case 'open_agent':
-      return id ? `${base}/agents/${id}` : null;
+      return id ? (`${base}/agents/${id}` as Route) : null;
     default:
       return null;
   }
@@ -523,7 +523,7 @@ function FindingEvidence({ locale, finding }: { locale: Locale; finding: Finding
           const label = `${words.evidenceTypes[item.type] ?? item.type} ${item.id.slice(0, 8)}`;
           return (
             <li key={`${item.type}-${item.id}`}>
-              {href ? <Link href={href as Route}>{label}</Link> : <span>{label}</span>}
+              {href ? <Link href={href}>{label}</Link> : <span>{label}</span>}
             </li>
           );
         })}
@@ -565,7 +565,7 @@ function ActionControl({
   const label = words.actions[action.kind] ?? action.kind;
   if (!EXECUTABLE.has(action.kind)) {
     const href = pageFor(locale, action.kind, action.target?.id ?? null);
-    return href ? <Link href={href as Route}>{label}</Link> : <span>{label}</span>;
+    return href ? <Link href={href}>{label}</Link> : <span>{label}</span>;
   }
   const decided = report.decisions.find(
     (item) =>
