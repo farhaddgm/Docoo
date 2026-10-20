@@ -11,6 +11,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 ### Changed
 
 - Dependency and base-image updates (GitHub Actions pins, pgvector 0.8.7, tsx, NestJS 12.1.2, fast-xml-parser) reach servers with this release.
+
 ## [0.33.0] — 2026-10-19
 
 ### Added
