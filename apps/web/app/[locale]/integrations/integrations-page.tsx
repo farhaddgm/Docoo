@@ -114,24 +114,20 @@ function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: st
   return (
     <div className="stack">
       <section className="card stack" aria-labelledby={`${id}-title`}>
-        <SectionTitle id={`${id}-title`} help={text.intro}>
+        <SectionTitle id={`${id}-title`} help={`${text.intro} ${text.privacy}`}>
           {text.contenter}
         </SectionTitle>
-        <h3>{text.stepsTitle}</h3>
-        <ol>
-          {text.steps.map((step) => (
-            <li key={step} dir="auto">
-              {step}
-            </li>
-          ))}
-        </ol>
-        <SectionTitle as="h3" help={text.privacy}>
-          {text.privacyTitle}
-        </SectionTitle>
-      </section>
-
-      <section className="card stack" aria-labelledby={`${id}-status`}>
-        <h2 id={`${id}-status`}>{text.status}</h2>
+        <details className="compact-details">
+          <summary>{text.stepsTitle}</summary>
+          <ol>
+            {text.steps.map((step) => (
+              <li key={step} dir="auto">
+                {step}
+              </li>
+            ))}
+          </ol>
+        </details>
+        <h3 id={`${id}-status`}>{text.status}</h3>
         {connection === null ? (
           <p className="muted">{text.notConfigured}</p>
         ) : (
@@ -220,64 +216,64 @@ function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: st
             </div>
           </div>
         )}
-      </section>
 
-      <form className="card filter-form" onSubmit={save} aria-busy={busy}>
-        <h2>{configured ? text.save : text.contenter}</h2>
-        <div className="filter-grid">
-          <FieldLabel htmlFor={`${id}-api`} help={text.apiUrlHelp} helpId={`${id}-api-help`}>
-            {text.apiUrl}
-          </FieldLabel>
-          <input
-            id={`${id}-api`}
-            type="url"
-            dir="ltr"
-            value={apiUrl}
-            onChange={(event) => setApiUrl(event.target.value)}
-            maxLength={500}
-            required
-            autoComplete="off"
-            aria-describedby={`${id}-api-help`}
-          />
-          <FieldLabel htmlFor={`${id}-web`} help={text.webUrlHelp} helpId={`${id}-web-help`}>
-            {text.webUrl}
-          </FieldLabel>
-          <input
-            id={`${id}-web`}
-            type="url"
-            dir="ltr"
-            value={webUrl}
-            onChange={(event) => setWebUrl(event.target.value)}
-            maxLength={500}
-            autoComplete="off"
-            aria-describedby={`${id}-web-help`}
-          />
-          <FieldLabel
-            htmlFor={`${id}-token`}
-            help={configured ? `${text.tokenHelp} ${text.tokenKeep}` : text.tokenHelp}
-            helpId={`${id}-token-help`}
-          >
-            {text.token}
-          </FieldLabel>
-          <input
-            id={`${id}-token`}
-            type="password"
-            dir="ltr"
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-            minLength={32}
-            maxLength={512}
-            required={!configured}
-            autoComplete="off"
-            aria-describedby={`${id}-token-help`}
-          />
-        </div>
-        <div className="toolbar">
-          <button className="primary-button" type="submit" disabled={busy}>
-            {busy ? text.saving : text.save}
-          </button>
-        </div>
-      </form>
+        <form className="filter-form subsection" onSubmit={save} aria-busy={busy}>
+          <h3>{configured ? text.save : text.contenter}</h3>
+          <div className="filter-grid">
+            <FieldLabel htmlFor={`${id}-api`} help={text.apiUrlHelp} helpId={`${id}-api-help`}>
+              {text.apiUrl}
+            </FieldLabel>
+            <input
+              id={`${id}-api`}
+              type="url"
+              dir="ltr"
+              value={apiUrl}
+              onChange={(event) => setApiUrl(event.target.value)}
+              maxLength={500}
+              required
+              autoComplete="off"
+              aria-describedby={`${id}-api-help`}
+            />
+            <FieldLabel htmlFor={`${id}-web`} help={text.webUrlHelp} helpId={`${id}-web-help`}>
+              {text.webUrl}
+            </FieldLabel>
+            <input
+              id={`${id}-web`}
+              type="url"
+              dir="ltr"
+              value={webUrl}
+              onChange={(event) => setWebUrl(event.target.value)}
+              maxLength={500}
+              autoComplete="off"
+              aria-describedby={`${id}-web-help`}
+            />
+            <FieldLabel
+              htmlFor={`${id}-token`}
+              help={configured ? `${text.tokenHelp} ${text.tokenKeep}` : text.tokenHelp}
+              helpId={`${id}-token-help`}
+            >
+              {text.token}
+            </FieldLabel>
+            <input
+              id={`${id}-token`}
+              type="password"
+              dir="ltr"
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+              minLength={32}
+              maxLength={512}
+              required={!configured}
+              autoComplete="off"
+              aria-describedby={`${id}-token-help`}
+            />
+          </div>
+          <div className="toolbar">
+            <button className="primary-button" type="submit" disabled={busy}>
+              {busy ? text.saving : text.save}
+            </button>
+          </div>
+        </form>
+      </section>
     </div>
   );
 }

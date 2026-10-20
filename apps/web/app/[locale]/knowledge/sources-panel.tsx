@@ -89,6 +89,7 @@ export function SourcesPanel({
   const [adding, setAdding] = useState(false);
   const [creating, setCreating] = useState<string | null>(null);
   const [versioning, setVersioning] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [created, setCreated] = useState<{ id: string } | null>(null);
   const [announce, setAnnounce] = useState('');
   const request = useRef(0);
@@ -187,6 +188,18 @@ export function SourcesPanel({
     } finally {
       setMore(false);
     }
+  }
+
+  async function remove(row: SourceRow, withKnowledge: boolean, reason: string) {
+    await run(async () => {
+      await apiSend('DELETE', `${base}/sources/${row.id}`, {
+        withKnowledge,
+        ...(reason.trim() ? { reason: reason.trim() } : {}),
+      });
+      setDeleting(null);
+      await reload();
+      onChanged?.();
+    }, text.sourceDeleted);
   }
 
   async function retry(row: SourceRow) {
@@ -378,6 +391,17 @@ export function SourcesPanel({
                       {text.retry}
                     </button>
                   )}
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      className="secondary-button danger"
+                      aria-expanded={deleting === row.id}
+                      aria-label={fill(text.deleteSourceLabel, { title: row.title })}
+                      onClick={() => setDeleting(deleting === row.id ? null : row.id)}
+                    >
+                      {text.deleteSource}
+                    </button>
+                  )}
                   {canVersion && (
                     <button
                       type="button"
@@ -390,6 +414,16 @@ export function SourcesPanel({
                     </button>
                   )}
                 </p>
+
+                {deleting === row.id && (
+                  <DeleteSourceForm
+                    locale={locale}
+                    source={row}
+                    busy={busy}
+                    onCancel={() => setDeleting(null)}
+                    onDelete={(withKnowledge, reason) => void remove(row, withKnowledge, reason)}
+                  />
+                )}
 
                 {creating === row.id && (
                   <CreateKnowledgeForm
@@ -862,6 +896,74 @@ function NewSourceVersionForm({
       <p className="toolbar">
         <button type="submit" className="primary-button" disabled={busy || !file}>
           {text.newSourceVersionSubmit}
+        </button>
+        <button type="button" className="secondary-button" disabled={busy} onClick={onCancel}>
+          {text.cancel}
+        </button>
+      </p>
+    </form>
+  );
+}
+
+/** Confirms the deletion of a source; knowledge built from it goes only if the owner ticks it. */
+function DeleteSourceForm({
+  locale,
+  source,
+  busy,
+  onCancel,
+  onDelete,
+}: {
+  locale: Locale;
+  source: SourceRow;
+  busy: boolean;
+  onCancel: () => void;
+  onDelete: (withKnowledge: boolean, reason: string) => void;
+}) {
+  const text = knowledgeMessages(locale);
+  const id = useId();
+  const [withKnowledge, setWithKnowledge] = useState(false);
+  const [reason, setReason] = useState('');
+  const count = source.knowledge.length;
+  const blocked = count > 0 && !withKnowledge;
+  return (
+    <form
+      className="card stack"
+      aria-labelledby={`${id}-heading`}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!blocked) onDelete(withKnowledge, reason);
+      }}
+    >
+      <h4 id={`${id}-heading`} dir="auto">
+        {fill(text.deleteSourceHeading, { title: source.title })}
+      </h4>
+      <p className="muted">{text.deleteSourceHelp}</p>
+      {count > 0 && (
+        <label className="mode">
+          <input
+            type="checkbox"
+            checked={withKnowledge}
+            onChange={(event) => setWithKnowledge(event.target.checked)}
+          />
+          <span>{fill(text.deleteSourceWithKnowledge, { count: String(count) })}</span>
+        </label>
+      )}
+      {blocked && (
+        <p className="notice" role="status">
+          {text.deleteSourceBlocked}
+        </p>
+      )}
+      <label>
+        <span>{text.deleteReason}</span>
+        <input
+          value={reason}
+          maxLength={1000}
+          onChange={(event) => setReason(event.target.value)}
+        />
+      </label>
+      <p className="toolbar">
+        <button type="submit" className="secondary-button danger" disabled={busy || blocked}>
+          {text.deleteSourceConfirm}
         </button>
         <button type="button" className="secondary-button" disabled={busy} onClick={onCancel}>
           {text.cancel}

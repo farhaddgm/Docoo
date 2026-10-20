@@ -2,6 +2,24 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.33.0] — 2026-10-19
+
+### Added
+
+- **Owner-only pages.** AI providers, Connections, System settings, Audit Log and the agent pages (and their menu entries) are now shown to the owner only, with an **Owner only** badge (a crown icon) at the top of each. Other administrators no longer see the menu entries and get a short notice if they open such an address. This hides the pages; the API still decides by permission.
+- **Delete a connection** on the AI providers page. A connection is disabled for good and leaves the list (its usage and cost history stays); the connection that is the project default cannot be deleted until another one is chosen.
+- **Delete a source** on the Knowledge page. A source that knowledge was built from is deleted only together with that knowledge, after an explicit tick; both are audited. `DELETE /sources/{id}` (`knowledge.delete`).
+- **"i" on every finished step of the full model test.** Hover or focus it to read, in plain words, how that test was run.
+
+### Fixed
+
+- The manual price form on the AI providers page now offers the models of the chosen provider (all connections of that provider together) as a list instead of a text box that hid every option once a model was filled in.
+
+### Changed
+
+- The AI providers page is tidier: connections and **Add connection** share one box; the default model and the full model test share another.
+- The Connections page is a single box with the connection steps folded away.
+
 ## [0.32.0] — 2026-10-18
 
 ### Added

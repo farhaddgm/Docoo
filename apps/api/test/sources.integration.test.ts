@@ -710,6 +710,69 @@ describe.skipIf(!adminUrl)('sources: upload, quarantine, extraction and lineage 
     expect(noSource.json<{ code: string }>().code).toBe('KNOWLEDGE_NO_SOURCE');
   });
 
+  it('deletes a source, and the knowledge built from it only when asked', async () => {
+    const workspace = `/v1/workspaces/${h.ids.workspaceA}`;
+    const topic = await h.request('POST', `${workspace}/topics`, {
+      cookie,
+      payload: { code: 'del-topic', title: 'Delete topic', description: 'Topic for deletion' },
+    });
+    const topicId = topic.json<{ topic: { id: string } }>().topic.id;
+    const added = await h.request('POST', sources('/text'), {
+      cookie,
+      payload: {
+        title: 'Note to delete',
+        text: 'Churn is measured monthly.',
+        scope: { type: 'topic', id: topicId },
+      },
+    });
+    expect(added.statusCode, added.body).toBe(202);
+    const { source, version } = added.json<{ source: { id: string }; version: Version }>();
+    const built = await h.request('POST', `${workspace}/knowledge/from-source`, {
+      cookie,
+      payload: {
+        sourceId: source.id,
+        versionId: version.id,
+        title: 'Built to delete',
+        scopes: [{ type: 'topic', id: topicId }],
+        declaration: 'Written by the analytics team',
+      },
+    });
+    expect(built.statusCode, built.body).toBe(201);
+    const knowledgeId = built.json<{ knowledge: { id: string } }>().knowledge.id;
+
+    const refused = await h.request('DELETE', sources(`/${source.id}`), { cookie, payload: {} });
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json<{ code: string }>().code).toBe('SOURCE_HAS_KNOWLEDGE');
+    expect((await h.request('GET', sources(`/${source.id}`), { cookie })).statusCode).toBe(200);
+
+    const deleted = await h.request('DELETE', sources(`/${source.id}`), {
+      cookie,
+      payload: { withKnowledge: true, reason: 'Obsolete' },
+    });
+    expect(deleted.statusCode, deleted.body).toBe(200);
+    expect(deleted.json<{ deletedKnowledge: number }>().deletedKnowledge).toBe(1);
+    expect((await h.request('GET', sources(`/${source.id}`), { cookie })).statusCode).toBe(404);
+    expect(
+      (await h.request('GET', `${workspace}/knowledge/${knowledgeId}`, { cookie })).statusCode,
+    ).toBe(404);
+    expect(
+      (await h.request('DELETE', sources(`/${source.id}`), { cookie, payload: {} })).statusCode,
+    ).toBe(404);
+
+    const plain = await h.request('POST', sources('/text'), {
+      cookie,
+      payload: {
+        title: 'Note without knowledge',
+        text: 'Nothing was built from this.',
+        scope: { type: 'topic', id: topicId },
+      },
+    });
+    const plainId = plain.json<{ source: { id: string } }>().source.id;
+    const removed = await h.request('DELETE', sources(`/${plainId}`), { cookie, payload: {} });
+    expect(removed.statusCode, removed.body).toBe(200);
+    expect(removed.json<{ deletedKnowledge: number }>().deletedKnowledge).toBe(0);
+  });
+
   it('keeps sources inside their workspace', async () => {
     const { created } = await ingest(strToU8('Tenant A only.'), 'a.txt', 'text/plain');
     const cookieB = await h.login(h.emails.b);
