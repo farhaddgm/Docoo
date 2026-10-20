@@ -170,8 +170,9 @@ test.describe('the documenter writes and the structured editor changes a documen
     await writer.getByRole('button', { name: editor.writeStart }).click();
     const done = writer.locator('.badge').filter({ hasText: editor.writingStatuses['succeeded']! });
     await expect(done.first()).toBeVisible({ timeout: 90_000 });
-    // The detailed template adds the score table and chart the code builds itself.
-    await expect(page.locator('.document-view')).toContainText('امتیازدهی');
+    // The detailed template adds the score table and chart the code builds itself. Wait for that
+    // content itself: an earlier "succeeded" badge can already be on screen while this writing runs.
+    await expect(page.locator('.document-view')).toContainText('امتیازدهی', { timeout: 90_000 });
     await expectNoSeriousA11yViolations(page);
   });
 
