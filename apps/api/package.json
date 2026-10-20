@@ -31,7 +31,7 @@
     "@fastify/rate-limit": "11.2.0",
     "@fastify/static": "10.1.4",
     "@nestjs/common": "12.0.3",
-    "@nestjs/core": "12.0.3",
+    "@nestjs/core": "12.1.2",
     "@nestjs/platform-fastify": "12.0.3",
     "@nestjs/swagger": "12.0.1",
     "@node-rs/argon2": "2.2.1",
@@ -49,12 +49,12 @@
   "devDependencies": {
     "@opentelemetry/api": "1.9.1",
     "@opentelemetry/sdk-node": "0.222.0",
-    "@nestjs/testing": "12.0.3",
+    "@nestjs/testing": "12.1.2",
     "@temporalio/activity": "1.24.0",
     "@temporalio/worker": "1.24.0",
     "@types/nodemailer": "8.0.2",
     "@types/pg": "8.15.6",
     "fflate": "0.7.5",
-    "tsx": "4.23.13"
+    "tsx": "4.23.15"
   }
 }
