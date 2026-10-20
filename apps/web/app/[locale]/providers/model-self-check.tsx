@@ -6,7 +6,7 @@ import { apiGet, apiSend } from '../../api-client';
 import { formatNumber, type Locale } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { selfCheckMessages } from './self-check-messages';
-import { SectionTitle } from '../../info-tip';
+import { InfoTip, SectionTitle } from '../../info-tip';
 
 interface Result {
   step: string;
@@ -37,9 +37,12 @@ export function ModelSelfCheck({
   connections,
   modelIds,
   current,
+  embedded = false,
 }: {
   locale: Locale;
   workspaceId: string;
+  /** Drawn inside another box instead of as a box of its own. */
+  embedded?: boolean;
   connections: readonly { id: string; name: string; provider: string }[];
   modelIds: Readonly<Record<string, readonly string[]>>;
   current: { connectionId: string; model: string };
@@ -196,10 +199,20 @@ export function ModelSelfCheck({
   }
 
   return (
-    <section className="card stack" aria-labelledby="selfcheck-title">
-      <SectionTitle id="selfcheck-title" help={text.help}>
-        {text.title}
-      </SectionTitle>
+    <section
+      className={embedded ? 'stack subsection' : 'card stack'}
+      aria-labelledby="selfcheck-title"
+    >
+      {embedded ? (
+        <h3 id="selfcheck-title">
+          {text.title}
+          <InfoTip text={text.help} />
+        </h3>
+      ) : (
+        <SectionTitle id="selfcheck-title" help={text.help}>
+          {text.title}
+        </SectionTitle>
+      )}
       <div className="filter-grid">
         <label htmlFor="selfcheck-connection">{text.connection}</label>
         <select
@@ -297,7 +310,22 @@ export function ModelSelfCheck({
                         <small className="muted"> ({text.estimated})</small>
                       )}
                     </td>
-                    <td dir="auto">{result ? noteOf(result) : ''}</td>
+                    <td dir="auto">
+                      {result ? noteOf(result) : ''}
+                      {result && (
+                        <InfoTip
+                          text={fill(text.howBody, {
+                            step: text.steps[step] ?? step,
+                            model: tested?.model ?? '',
+                            what: text.stepHow[step] ?? '',
+                            result:
+                              result.status === 'passed'
+                                ? fill(text.howPassed, { time: seconds(result.latencyMs) })
+                                : text.howFailed,
+                          })}
+                        />
+                      )}
+                    </td>
                   </tr>
                 );
               })}

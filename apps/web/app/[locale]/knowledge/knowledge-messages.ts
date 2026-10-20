@@ -225,6 +225,16 @@ const fa = {
   retry: 'تلاش دوباره',
   retryLabel: 'تلاش دوباره برای «{title}»',
   retried: 'پردازش دوباره آغاز شد.',
+  sourceDeleted: 'منبع حذف شد.',
+  deleteSource: 'حذف منبع',
+  deleteSourceLabel: 'حذف منبع «{title}»',
+  deleteSourceHeading: 'حذف منبع «{title}»',
+  deleteSourceHelp:
+    'منبع از فهرست و از ساخت دانش تازه کنار می‌رود. این کار در گزارش ممیزی ثبت می‌شود.',
+  deleteSourceWithKnowledge: 'دانشِ ساخته‌شده از این منبع ({count} مورد) هم حذف شود',
+  deleteSourceBlocked:
+    'از این منبع دانش ساخته شده است. برای حذف منبع، حذف همان دانش‌ها را هم تأیید کنید.',
+  deleteSourceConfirm: 'حذف منبع',
   newSourceVersion: 'نسخهٔ جدید فایل',
   newSourceVersionLabel: 'بارگذاری نسخهٔ جدید برای «{title}»',
   newSourceVersionHelp:
@@ -592,6 +602,7 @@ const fa = {
     SOURCE_UPLOAD_INCOMPLETE: 'فایل هنوز کامل ارسال نشده است.',
     SOURCE_UPLOAD_SIZE_MISMATCH: 'حجم فایل ارسال‌شده با حجم اعلام‌شده نمی‌خواند.',
     SOURCE_NOT_RETRYABLE: 'فقط منبع قرنطینه‌شده یا ناموفق قابل تلاش دوباره است.',
+    SOURCE_HAS_KNOWLEDGE: 'از این منبع دانش ساخته شده است؛ حذف همان دانش‌ها را هم تأیید کنید.',
     SOURCE_VERSION_CONFLICT: 'این منبع در همین فاصله تغییر کرده است؛ صفحه را تازه کنید.',
     SOURCE_URL_REJECTED: 'این نشانی با سیاست خواندن نشانی‌ها نمی‌خواند.',
     KNOWLEDGE_UPLOAD_FAILED: 'ارسال فایل به فضای ذخیره ناموفق بود؛ دوباره تلاش کنید.',
@@ -816,6 +827,16 @@ const en: Table = {
   retry: 'Retry',
   retryLabel: 'Retry "{title}"',
   retried: 'Processing started again.',
+  sourceDeleted: 'The source was deleted.',
+  deleteSource: 'Delete source',
+  deleteSourceLabel: 'Delete source "{title}"',
+  deleteSourceHeading: 'Delete source "{title}"',
+  deleteSourceHelp:
+    'The source leaves the list and can no longer be used to build knowledge. The audit log records it.',
+  deleteSourceWithKnowledge: 'Also delete the knowledge built from this source ({count})',
+  deleteSourceBlocked:
+    'Knowledge was built from this source. To delete the source, confirm deleting that knowledge too.',
+  deleteSourceConfirm: 'Delete source',
   newSourceVersion: 'New file version',
   newSourceVersionLabel: 'Upload a new version of "{title}"',
   newSourceVersionHelp:
@@ -1179,6 +1200,7 @@ const en: Table = {
     SOURCE_UPLOAD_INCOMPLETE: 'The file has not been fully uploaded yet.',
     SOURCE_UPLOAD_SIZE_MISMATCH: 'The uploaded size does not match the declared size.',
     SOURCE_NOT_RETRYABLE: 'Only a quarantined or failed source can be retried.',
+    SOURCE_HAS_KNOWLEDGE: 'Knowledge was built from this source; confirm deleting it too.',
     SOURCE_VERSION_CONFLICT: 'This source changed in the meantime; reload the page.',
     SOURCE_URL_REJECTED: 'This address does not match the URL reading policy.',
     KNOWLEDGE_UPLOAD_FAILED: 'Sending the file to storage failed; try again.',

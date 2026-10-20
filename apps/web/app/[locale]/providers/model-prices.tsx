@@ -31,6 +31,8 @@ interface PriceView {
   defaultModel: { provider: string; model: string; priced: boolean } | null;
 }
 
+const OTHER = '__other__';
+
 /** A price in USD per million tokens, or undefined when the text is empty or not a valid price. */
 function parsePrice(text: string): number | undefined {
   if (text.trim() === '') return undefined;
@@ -126,7 +128,9 @@ export function ModelPrices({
   }
 
   const num = (value: number | null) => (value === null ? '—' : formatPrice(locale, value));
-  const suggestions = modelIds[provider] ?? [];
+  const suggestions = [...new Set(modelIds[provider] ?? [])].sort();
+  const custom = model !== '' && !suggestions.includes(model);
+  const [typing, setTyping] = useState(false);
 
   return (
     <section className="card stack" aria-labelledby="prices-title">
@@ -207,7 +211,12 @@ export function ModelPrices({
           <select
             id="price-provider"
             value={provider}
-            onChange={(event) => setProvider(event.target.value as Kind)}
+            onChange={(event) => {
+              setProvider(event.target.value as Kind);
+              // A model of the old provider is not an option of the new one.
+              setModel('');
+              setTyping(false);
+            }}
           >
             {(kinds.length > 0 ? kinds : (['openai', 'gemini', 'anthropic'] as const)).map(
               (item) => (
@@ -218,20 +227,37 @@ export function ModelPrices({
             )}
           </select>
           <label htmlFor="price-model">{text.modelLabel}</label>
-          <input
-            id="price-model"
-            dir="ltr"
-            list="price-model-options"
-            value={model}
-            maxLength={200}
-            autoComplete="off"
-            onChange={(event) => setModel(event.target.value)}
-          />
-          <datalist id="price-model-options">
-            {suggestions.map((item) => (
-              <option key={item} value={item} />
-            ))}
-          </datalist>
+          {suggestions.length > 0 && !typing && !custom ? (
+            <select
+              id="price-model"
+              dir="ltr"
+              value={model}
+              onChange={(event) => {
+                if (event.target.value === OTHER) {
+                  setTyping(true);
+                  setModel('');
+                } else setModel(event.target.value);
+              }}
+            >
+              <option value="">{text.chooseModel}</option>
+              {suggestions.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+              <option value={OTHER}>{text.otherModel}</option>
+            </select>
+          ) : (
+            <input
+              id="price-model"
+              dir="ltr"
+              value={model}
+              maxLength={200}
+              autoComplete="off"
+              placeholder={text.modelPlaceholder}
+              onChange={(event) => setModel(event.target.value)}
+            />
+          )}
           <label htmlFor="price-input">{text.inputLabel}</label>
           <input
             id="price-input"
