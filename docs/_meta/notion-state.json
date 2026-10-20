@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "986335dd24b78a5cf07849d70f3b55ffa5214687"
+    "source_commit": "903ce0df0abdccb4e5643cdabd3c1977fc6d4e73"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-17T17:05:56.155Z",
+    "synced_at": "2026-10-20T16:15:13.009Z",
     "created": 0,
-    "updated": 1,
-    "unchanged": 73,
+    "updated": 3,
+    "unchanged": 71,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -459,13 +459,13 @@
       "version": "1.1.0",
       "status": "approved-baseline",
       "owner": "Product Quality",
-      "checksum_sha256": "23dc86fe7fbd3442a0599bbf604cb531849b1f036dbceeddaff46d152960b71f",
+      "checksum_sha256": "41a2d16b3886d8b3bd5de02e8d8cf237e24667dc262b34ad451e14121ad41801",
       "notion_page_id": "3e55a24a-6668-810d-8763-edaf9a51e130",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668810d8763edaf9a51e130?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a6-9c20-fc6d024c9eba",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a69c20fc6d024c9eba",
-      "synced_commit": "f7b660c245f4af5a6c7791a41a99f402ff26b7c5",
-      "synced_at": "2026-10-16T00:50:41.446Z"
+      "synced_commit": "903ce0df0abdccb4e5643cdabd3c1977fc6d4e73",
+      "synced_at": "2026-10-20T16:15:13.009Z"
     },
     "DOCOO-NOTION-GITHUB": {
       "path": "docs/07-integrations/01-notion-and-github.md",
@@ -613,13 +613,13 @@
       "version": "1.11.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "2c0baa78065e39e2f480ee56e5385fc3a2ea6328f9c3ec6a41d0daab822eebb3",
+      "checksum_sha256": "25fec0f3707a05a49134a690222997f5a39c9207a618a875f4e9dcb18ee58d83",
       "notion_page_id": "3e55a24a-6668-815d-b2f0-d451feffe55e",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668815db2f0d451feffe55e",
       "index_row_page_id": "3e55a24a-6668-81d3-9a8e-d3b801cb1eb3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881d39a8ed3b801cb1eb3",
-      "synced_commit": "f7b660c245f4af5a6c7791a41a99f402ff26b7c5",
-      "synced_at": "2026-10-16T00:50:41.446Z"
+      "synced_commit": "903ce0df0abdccb4e5643cdabd3c1977fc6d4e73",
+      "synced_at": "2026-10-20T16:15:13.009Z"
     },
     "DOCOO-ADR-0006": {
       "path": "docs/adr/0006-application-platform-and-toolchain.md",
@@ -1019,13 +1019,13 @@
       "version": "1.1.0",
       "status": "proposed",
       "owner": "Product & Engineering",
-      "checksum_sha256": "6741fb168ce7aca17eb4dd631eb4f71fc11dbe0f8130efbda5e115478481ffb1",
+      "checksum_sha256": "77d2299fe6a774b95dcc82eb63019ac481a4d6a3a9ef051699e8a37770b79e33",
       "notion_page_id": "3f45a24a-6668-810d-9072-f13313d20d89",
       "notion_page_url": "https://app.notion.com/p/3f45a24a6668810d9072f13313d20d89",
       "index_row_page_id": "3f45a24a-6668-81d1-8009-f2950eae69ed",
       "index_row_page_url": "https://app.notion.com/p/3f45a24a666881d18009f2950eae69ed",
-      "synced_commit": "f7b660c245f4af5a6c7791a41a99f402ff26b7c5",
-      "synced_at": "2026-10-16T00:50:41.446Z"
+      "synced_commit": "903ce0df0abdccb4e5643cdabd3c1977fc6d4e73",
+      "synced_at": "2026-10-20T16:15:13.009Z"
     },
     "DOCOO-SEARCH-API-SPIKE": {
       "path": "docs/06-delivery/16-search-api-spike.md",
