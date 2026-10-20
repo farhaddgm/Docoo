@@ -421,9 +421,8 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
               </ol>
             )}
             <details className="card">
-              <summary>
-                {words.roleDetails} <InfoTip text={words.roleDetailsHelp} />
-              </summary>
+              <summary>{words.roleDetails}</summary>
+              <p className="muted">{words.roleDetailsHelp}</p>
               <p className="muted">
                 {text.charter}: <span dir="ltr">{selected.charterVersion}</span>
               </p>

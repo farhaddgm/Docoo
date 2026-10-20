@@ -627,24 +627,31 @@
     },
     "FR-BRN-003": {
       "status": "tested",
-      "evidence": ["apps/api/test/reports.integration.test.ts"],
-      "note": "Project-scope and workspace-aggregate Brain reports are generated and listed."
+      "evidence": [
+        "apps/api/test/reports.integration.test.ts",
+        "apps/api/test/brain-analysis.integration.test.ts",
+        "apps/web/e2e/brain-analysis.spec.ts"
+      ],
+      "note": "Project-scope and workspace-aggregate Brain reports are generated and listed; the administrator chooses scope and period (ADR-0032)."
     },
     "FR-BRN-004": {
       "status": "tested",
       "evidence": [
         "apps/api/test/reports.integration.test.ts",
-        "apps/api/test/research.integration.test.ts"
+        "apps/api/test/research.integration.test.ts",
+        "apps/api/test/brain-analysis.integration.test.ts"
       ],
-      "note": "State fingerprint before/after proves Brain reports and evaluations change nothing and only audit report_generated."
+      "note": "State fingerprint before/after proves Brain reports and evaluations change nothing and only audit report_generated; proposed actions run only after an administrator approves them, once, with audit."
     },
     "FR-BRN-005": {
       "status": "tested",
       "evidence": [
         "apps/api/test/reports.integration.test.ts",
-        "apps/api/test/research.integration.test.ts"
+        "apps/api/test/research.integration.test.ts",
+        "apps/api/test/brain-analysis.test.ts",
+        "apps/api/test/brain-analysis.integration.test.ts"
       ],
-      "note": "Recommendations have action, rule and non-empty evidence; model findings need charter clause and real sample."
+      "note": "Recommendations have action, rule and non-empty evidence; model findings need charter clause and real sample; ranked findings carry evidence ids and concrete actions."
     },
     "FR-AI-001": {
       "status": "tested",
