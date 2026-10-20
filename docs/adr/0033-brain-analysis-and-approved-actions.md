@@ -45,7 +45,7 @@
 
 ### ۴. داده
 
-- ستون‌های تازهٔ `brain_reports` (مهاجرت 0049): `analysis_version`، `findings jsonb`، `narrative text` (اختیاری).
+- ستون‌های تازهٔ `brain_reports` (مهاجرت 0054): `analysis_version`، `findings jsonb`، `narrative text` (اختیاری).
 - جدول `brain_action_decisions` (append-only با RLS): گزارش، کلید یافته و اقدام، نوع، هدف، تصمیم‌گیرنده، وضعیت `running | done | failed | dismissed`، یادداشت اختیاری ادمین، نتیجه. تنها به‌روزرسانی مجاز تکمیل `running → done|failed` است (trigger). نمایهٔ یکتای جزئی `(report, finding, action) where status <> 'failed'` یعنی هر اقدام یک بار تأیید یا رد می‌شود و دوبار-کلیک دوبار اجرا نمی‌شود؛ اقدام ناموفق قابل تلاش دوباره است.
 - API: `POST /brain-reports/{id}/actions` با `{ findingKey, actionKey, decision: 'approve' | 'dismiss', note? }` (`knowledge.audit` + مجوز خود اقدام). `GET /brain-reports/{id}` تصمیم‌ها را هم برمی‌گرداند.
 - ممیزی: `brain.action_approved`، `brain.action_failed`، `brain.action_dismissed` (شناسه‌ها و نوع، بدون متن). خود اقدام‌ها هم ممیزی همیشگی خود (`knowledge.audit`، رد خروجی، توقف پروژه) را می‌نویسند.

@@ -4,6 +4,14 @@ const emptyStringToUndefined = (value: unknown): unknown => (value === '' ? unde
 
 export const environmentSchema = z
   .object({
+    EVALUATION_LAB_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+    EVALUATION_LAB_LIVE_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
     KNOWLEDGE_EMBEDDING_ENABLED: z
       .enum(['true', 'false'])
       .default('false')

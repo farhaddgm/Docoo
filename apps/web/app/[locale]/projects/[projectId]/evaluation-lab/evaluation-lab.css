@@ -1,0 +1,80 @@
+.evaluation-lab {
+  display: grid;
+  gap: var(--space-6);
+}
+.evaluation-lab > .card {
+  min-width: 0;
+}
+.evaluation-lab-start {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 44rem;
+}
+.evaluation-lab-start fieldset {
+  margin-block: var(--space-2);
+}
+.evaluation-lab .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block: var(--space-4);
+}
+.evaluation-lab-history {
+  list-style: none;
+  padding: 0;
+}
+.evaluation-lab-history > li,
+.evaluation-lab-case {
+  padding-block: var(--space-4);
+  border-block-end: 1px solid var(--color-border);
+}
+.evaluation-lab-outputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+.evaluation-lab-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.evaluation-lab fieldset {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.evaluation-lab input,
+.evaluation-lab select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  font: inherit;
+}
+.evaluation-lab-table {
+  overflow-x: auto;
+}
+.evaluation-lab table {
+  width: 100%;
+  min-width: 64rem;
+  border-collapse: collapse;
+}
+.evaluation-lab th,
+.evaluation-lab td {
+  padding: var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+  text-align: start;
+  vertical-align: top;
+}
+@media (max-width: 700px) {
+  .evaluation-lab-outputs {
+    grid-template-columns: 1fr;
+  }
+}

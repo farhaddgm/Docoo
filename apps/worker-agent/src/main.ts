@@ -12,6 +12,7 @@ import {
   AGENT_TASK_QUEUE,
   createOrchestrationActivities,
   createDecisionResearchActivities,
+  createPairedEvaluationActivities,
   ProviderRuntime,
 } from '@docoo/orchestration';
 import { masterKeyFromEnv } from '@docoo/providers';
@@ -80,6 +81,16 @@ async function main(): Promise<void> {
           }),
         ),
         ...createDecisionResearchActivities(pool),
+        ...createPairedEvaluationActivities(pool, new ProviderRuntime(pool, masterKey), {
+          enabled: process.env['EVALUATION_LAB_ENABLED'] === 'true',
+          liveProviderUseApproved: process.env['EVALUATION_LAB_LIVE_ENABLED'] === 'true',
+          environment:
+            process.env['NODE_ENV'] === 'production'
+              ? 'production'
+              : process.env['NODE_ENV'] === 'test'
+                ? 'test'
+                : 'development',
+        }),
       },
       () => {
         const info = Context.current().info;

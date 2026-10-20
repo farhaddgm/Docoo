@@ -2,9 +2,9 @@
 doc_id: DOCOO-DATA-DICTIONARY
 title: فرهنگ داده هسته Docoo
 status: approved-baseline
-version: 1.4.0
+version: 1.5.1
 owner: Data Architecture
-last_updated: 2026-10-06
+last_updated: 2026-10-16
 notion_sync: true
 ---
 
@@ -278,3 +278,17 @@ ledger تغییرناپذیر (append-only، RLS) تماس‌های ابزار �
 `event_id`, `workspace_id`, `actor_type/id`, `action`, `target_type/id/version`, `occurred_at`, `correlation_id`, `ip_hash`, `reason`, `before_digest`, `after_digest`, `metadata_redacted`.
 
 Audit event append-only است؛ اصلاح event با compensating event انجام می‌شود.
+
+## paired evaluation experiments — ADV-013
+
+مهاجرت‌های افزایشی 0044 تا 0046، با RLS اجباری و scope ترکیبی workspace/project:
+
+- `project_evaluation_experiments`: شناسهٔ ASCII آزمایش، manifest و hash، initiating actor، وضعیت و زمان؛ manifest immutable و فقط گذار running به completed/failed/cancelled/interrupted مجاز است. migration 0047 وضعیت interrupted را برای اجرای نیازمند بررسی اضافه می‌کند؛ این وضعیت موفقیت یا مجوز retry نیست.
+- `project_evaluation_case_results`: ordinal یکتا در هر آزمایش، پاسخ hash‌شده و زمان؛ ترتیب case/arm و تاریخچه append-only است.
+- `project_evaluation_experiment_reviews`: reviewer، hash دقیق خروجی‌ها، برچسب انسانی و مقایسهٔ ذخیره‌شده؛ تکرار hash همان review را برمی‌گرداند و default تغییر نمی‌کند.
+- `project_evaluation_review_commands`: کلید فرمان scoped، actor و request hash به review وصل‌اند؛ کلید یکسان با بدنهٔ متفاوت تعارض است.
+- `project_evaluation_invocation_journal`: ordinal، intent_json/hash، `pending|returned|unknown`، receipt_json/hash و شناسهٔ یکتای invocation واقعی. intent پیش از تماس commit می‌شود؛ pending/unknown اجازهٔ retry نیست. receipt به ledger همان project و purpose `evaluation:paired`، مدل/provider مشاهده‌شده و hash درخواست متصل است. فقط pending به returned/unknown تغییر می‌کند؛ intent و رسید پایانی immutable و حذف ممنوع است. رسید خطای امن یا پاسخ معتبر با هزینهٔ واقعی null دارد؛ تخمین ledger جدا می‌ماند.
+
+تابع محدود `app.evaluation_model_snapshot` descriptor و قیمت غیرمحرمانهٔ یک مدل انتخابی را فقط به initiating actor با EDIT پروژه و نقش editor/super_admin می‌دهد؛ نه credential و نه catalog سازمان دیگر. [رفتار، تست و محدودیت worker](../03-ai/05-evaluation-and-quality.md#۱۱-snapshot-تولیدی-و-fencing-فراخوانی--adv-013).
+
+`app.interrupt_evaluation_experiment` در 0052، فقط status/finished_at آزمایش running خود actor یا مدیر همان workspace را terminal می‌کند و audit فاقد محتوا دارد. پس از revoke نیز actor فقط می‌تواند کار خودش را متوقف کند؛ خواندن project، receipt یا نتیجه باز نمی‌شود. journal returned از latency اندازه‌گیری‌شدهٔ `model_invocations` برای بازسازی نتیجه استفاده می‌کند؛ worker حدس صفر برای latency یا هزینه نمی‌سازد.
