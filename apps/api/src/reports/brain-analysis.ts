@@ -97,7 +97,10 @@ export interface AnalysisInput {
       itemId: string;
       reason: 'expired' | 'expiring' | 'source_changed';
     })[];
-    readonly conflicts: readonly (Dated & { severity: 'low' | 'medium' | 'high'; itemId: string })[];
+    readonly conflicts: readonly (Dated & {
+      severity: 'low' | 'medium' | 'high';
+      itemId: string;
+    })[];
   };
   readonly stages: readonly {
     readonly stage: string;
@@ -171,10 +174,7 @@ export function scoreFinding(
   rows: readonly Dated[],
   now: number,
 ): number {
-  return Math.min(
-    100,
-    SEVERITY_WEIGHT[severity] + Math.min(count, 10) * 3 + recency(rows, now),
-  );
+  return Math.min(100, SEVERITY_WEIGHT[severity] + Math.min(count, 10) * 3 + recency(rows, now));
 }
 
 const rate = (part: number, whole: number) => (whole > 0 ? part / whole : 0);
@@ -243,14 +243,12 @@ export function analyse(input: AnalysisInput): Finding[] {
       params: { oldestDays: waiting },
       rows: oldest.map((row) => ({ ...row, id: row.itemId, type: 'knowledge' })),
       actions: [
-        ...oldest.slice(0, 3).map(
-          (row): FindingAction => ({
-            key: `audit_knowledge:${row.itemId}`,
-            kind: 'audit_knowledge',
-            target: { type: 'knowledge', id: row.itemId },
-            params: {},
-          }),
-        ),
+        ...oldest.slice(0, 3).map((row): FindingAction => ({
+          key: `audit_knowledge:${row.itemId}`,
+          kind: 'audit_knowledge',
+          target: { type: 'knowledge', id: row.itemId },
+          params: {},
+        })),
         ...openKnowledge([oldest[0]!.itemId]),
       ],
     });
@@ -262,7 +260,8 @@ export function analyse(input: AnalysisInput): Finding[] {
     push({
       key: 'knowledge_stale',
       kind: 'knowledge_stale',
-      severity: expired >= 3 ? 'high' : expired > 0 || count('source_changed') > 0 ? 'medium' : 'low',
+      severity:
+        expired >= 3 ? 'high' : expired > 0 || count('source_changed') > 0 ? 'medium' : 'low',
       count: knowledge.stale.length,
       params: { expired, expiring: count('expiring'), sourceChanged: count('source_changed') },
       rows: knowledge.stale.map((row) => ({ ...row, id: row.itemId, type: 'knowledge' })),
@@ -296,9 +295,13 @@ export function analyse(input: AnalysisInput): Finding[] {
     const recentIncomplete = rate(stage.recent.incomplete, stage.recent.attempts);
     const previousIncomplete = rate(stage.previous.incomplete, stage.previous.attempts);
     const rejectionDelta =
-      stage.recent.reviewed >= THRESHOLDS.driftMinReviewed ? recentRejection - previousRejection : 0;
+      stage.recent.reviewed >= THRESHOLDS.driftMinReviewed
+        ? recentRejection - previousRejection
+        : 0;
     const incompleteDelta =
-      stage.recent.attempts >= THRESHOLDS.driftMinAttempts ? recentIncomplete - previousIncomplete : 0;
+      stage.recent.attempts >= THRESHOLDS.driftMinAttempts
+        ? recentIncomplete - previousIncomplete
+        : 0;
     const delta = Math.max(rejectionDelta, incompleteDelta);
     if (delta < THRESHOLDS.driftPoints - 1e-9) continue;
     const byRejection = rejectionDelta >= incompleteDelta;
@@ -319,20 +322,18 @@ export function analyse(input: AnalysisInput): Finding[] {
       rows,
       actions: [
         open('open_agent', `open_agent:${stage.role}`, { type: 'role', id: stage.role }),
-        ...stage.waiting.slice(0, 3).map(
-          (target): FindingAction => ({
-            key: `request_revision:${target.outputId}`,
-            kind: 'request_revision',
-            target: { type: 'stage_output', id: target.outputId },
-            params: {
-              projectId: target.projectId,
-              stageRunId: target.stageRunId,
-              outputId: target.outputId,
-              stage: stage.stage,
-              recentPercent: percent(byRejection ? recentRejection : recentIncomplete),
-            },
-          }),
-        ),
+        ...stage.waiting.slice(0, 3).map((target): FindingAction => ({
+          key: `request_revision:${target.outputId}`,
+          kind: 'request_revision',
+          target: { type: 'stage_output', id: target.outputId },
+          params: {
+            projectId: target.projectId,
+            stageRunId: target.stageRunId,
+            outputId: target.outputId,
+            stage: stage.stage,
+            recentPercent: percent(byRejection ? recentRejection : recentIncomplete),
+          },
+        })),
       ],
     });
   }
