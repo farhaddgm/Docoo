@@ -1,4 +1,3 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 import { providerMessages } from '../app/[locale]/providers/messages';
@@ -51,59 +50,20 @@ test('provider concurrency edits persist across reload and both languages', asyn
     ).toBe(true);
     expect(await savedLimit()).toBe(Number(value));
     await input.fill(value);
-    // Scan with the field mid-screen, as a person sees it: scrolling only until it shows can leave
-    // it under the sticky top bar, which the touch-target rule counts as covering it.
-    await input.evaluate((element) => element.scrollIntoView({ block: 'center' }));
-    // TEMP-DIAG: where is everything when the touch-target rule fires?
-    const probe = await new AxeBuilder({ page }).withRules(['target-size']).analyze();
-    if (probe.violations.length > 0) {
-      const geometry = await page.evaluate(
-        (id) => {
-          const box = (element: Element | null) => {
-            if (!element) return null;
-            const r = element.getBoundingClientRect();
-            return [
-              Math.round(r.left),
-              Math.round(r.top),
-              Math.round(r.width),
-              Math.round(r.height),
-            ];
-          };
-          const field = document.getElementById(id);
-          const r = field?.getBoundingClientRect();
-          const stack = r
-            ? document
-                .elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2)
-                .slice(0, 6)
-                .map((e) => `${e.tagName}.${String(e.className).slice(0, 40)}`)
-            : [];
-          return {
-            scrollY: window.scrollY,
-            viewport: [window.innerWidth, window.innerHeight],
-            field: box(field),
-            save: box(field?.nextElementSibling ?? null),
-            toggle: box(document.querySelector('.smart-toggle')),
-            topbar: box(document.querySelector('.topbar')),
-            stack,
-          };
-        },
-        (await input.getAttribute('id')) ?? '',
-      );
-      throw new Error(
-        JSON.stringify({
-          geometry,
-          checks: probe.violations.flatMap((v) =>
-            v.nodes.flatMap((n) =>
-              n.any.map((c) => ({
-                id: c.id,
-                data: c.data as unknown,
-                related: (c.relatedNodes ?? []).map((x) => String(x.target)),
-              })),
-            ),
-          ),
-        }),
-      );
-    }
+    // Scan with the field mid-screen and at rest, as a person sees it. The page has sticky bars, and
+    // while the browser is still scrolling (Firefox does it asynchronously) the touch-target rule
+    // counts them as covering the field.
+    await input.evaluate(async (element) => {
+      element.scrollIntoView({ block: 'center' });
+      let last = Number.NaN;
+      let still = 0;
+      while (still < 5) {
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+        const top = element.getBoundingClientRect().top;
+        still = Math.abs(top - last) < 0.5 ? still + 1 : 0;
+        last = top;
+      }
+    });
     await expectNoSeriousA11yViolations(page);
   }
 });
