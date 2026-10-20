@@ -296,6 +296,56 @@ export class SourcesService {
     });
   }
 
+  /**
+   * Deletes a source (soft delete, like knowledge). A source that knowledge was built from is only
+   * deleted together with that knowledge, and only when the caller says so: otherwise the call is
+   * refused with the list of what would be lost.
+   */
+  async delete(
+    context: WorkspaceRequestContext,
+    sourceId: string,
+    input: { readonly withKnowledge: boolean; readonly reason?: string | undefined },
+  ): Promise<{ deletedKnowledge: number }> {
+    return this.database.run(context, async (client) => {
+      const source = await this.loadSource(client, sourceId, true);
+      const derived = (await this.derivedKnowledge(client, [source.id])).get(source.id) ?? [];
+      if (derived.length > 0 && !input.withKnowledge) {
+        throw conflict(
+          'SOURCE_HAS_KNOWLEDGE',
+          'Knowledge was built from this source. Delete it together with the source, or keep both.',
+        );
+      }
+      if (derived.length > 0) {
+        await client.query(
+          `update knowledge_items set deleted_at = now(), version = version + 1
+            where id = any($1::uuid[]) and deleted_at is null`,
+          [derived.map((item) => item.id)],
+        );
+        for (const item of derived) {
+          await writeAudit(client, context, {
+            action: 'knowledge.delete',
+            targetType: 'knowledge',
+            targetId: item.id,
+            reason: input.reason ?? null,
+            severity: 'warning',
+          });
+        }
+      }
+      await client.query(
+        'update source_assets set deleted_at = now(), version = version + 1 where id = $1',
+        [source.id],
+      );
+      await writeAudit(client, context, {
+        action: 'source.delete',
+        targetType: 'source',
+        targetId: source.id,
+        reason: input.reason ?? null,
+        severity: 'warning',
+      });
+      return { deletedKnowledge: derived.length };
+    });
+  }
+
   async segments(
     context: WorkspaceRequestContext,
     sourceId: string,

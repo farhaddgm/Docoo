@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { ApiError, apiGet, apiPost, apiSend } from '../../api-client';
 import { formatDateTime, type Locale } from '../../i18n';
+import { fill } from '../agents/agent-messages';
 import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
 import { providerMessages } from './messages';
@@ -73,6 +74,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [priceVersion, setPriceVersion] = useState(0);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   const explain = useCallback(
     (error: unknown) =>
@@ -158,6 +160,19 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
     });
   }
 
+  /** Removing a connection disables it for good; its calls and costs stay in the history. */
+  function remove(item: Connection) {
+    void run(async () => {
+      await apiPost(`${base}/provider-connections/${item.id}/disable`, {
+        reason: text.removeReason,
+      });
+      setRemoving(null);
+      setChoice((value) =>
+        value.connectionId === item.id ? { connectionId: '', model: '' } : value,
+      );
+    });
+  }
+
   function saveDefaults(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void run(async () => {
@@ -195,7 +210,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
           {notice.text}
         </p>
       )}
-      <section className="card" aria-labelledby="connections-title">
+      <section className="card stack" aria-labelledby="connections-title">
         <h2 id="connections-title">{text.connections}</h2>
         {connections === null ? (
           <p role="status">…</p>
@@ -314,7 +329,44 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
                             >
                               {text.refresh}
                             </button>
+                            <button
+                              className="secondary-button danger"
+                              type="button"
+                              disabled={busy}
+                              aria-expanded={removing === item.id}
+                              aria-label={fill(text.removeLabel, { name: item.name })}
+                              onClick={() => setRemoving(removing === item.id ? null : item.id)}
+                            >
+                              {text.remove}
+                            </button>
                           </div>
+                          {removing === item.id && (
+                            <div className="stack" role="group" aria-label={text.removeHeading}>
+                              <p className="muted">
+                                {item.id === current.connectionId
+                                  ? text.removeIsDefault
+                                  : text.removeHelp}
+                              </p>
+                              <div className="toolbar">
+                                <button
+                                  className="secondary-button danger"
+                                  type="button"
+                                  disabled={busy || item.id === current.connectionId}
+                                  onClick={() => remove(item)}
+                                >
+                                  {text.removeConfirm}
+                                </button>
+                                <button
+                                  className="secondary-button"
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => setRemoving(null)}
+                                >
+                                  {text.cancel}
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -324,153 +376,156 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
             )}
           </PagedRows>
         )}
+
+        <form
+          className="filter-form subsection"
+          onSubmit={add}
+          aria-labelledby="add-title"
+          aria-busy={busy}
+        >
+          <h3 id="add-title">{text.add}</h3>
+          <div className="filter-grid">
+            <label htmlFor="provider-kind">{text.provider}</label>
+            <select
+              id="provider-kind"
+              value={kind}
+              onChange={(event) => setKind(event.target.value as Kind)}
+            >
+              {kinds.map((item) => (
+                <option key={item.kind} value={item.kind}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <label htmlFor="provider-name">{text.name}</label>
+            <input
+              id="provider-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              autoComplete="off"
+            />
+            <FieldLabel htmlFor="provider-key" help={text.keyHelp[kind]} helpId="provider-key-help">
+              {text.apiKey}
+            </FieldLabel>
+            <input
+              id="provider-key"
+              type="password"
+              dir="ltr"
+              value={secret}
+              onChange={(event) => setSecret(event.target.value)}
+              autoComplete="off"
+              aria-describedby="provider-key-help"
+              required
+              minLength={8}
+            />
+            <FieldLabel
+              htmlFor="provider-max-concurrent"
+              help={text.capacityHelp}
+              helpId="provider-max-concurrent-help"
+            >
+              {text.maxConcurrent}
+            </FieldLabel>
+            <input
+              id="provider-max-concurrent"
+              aria-describedby="provider-max-concurrent-help"
+              type="number"
+              dir="ltr"
+              min={1}
+              max={100}
+              step={1}
+              required
+              value={maxConcurrent}
+              onChange={(event) => setMaxConcurrent(event.target.value)}
+            />
+          </div>
+          <div className="toolbar">
+            <button className="primary-button" type="submit" disabled={busy}>
+              {busy ? text.saving : text.save}
+            </button>
+          </div>
+        </form>
       </section>
 
-      <form
-        className="card filter-form"
-        onSubmit={add}
-        aria-labelledby="add-title"
-        aria-busy={busy}
-      >
-        <h2 id="add-title">{text.add}</h2>
-        <div className="filter-grid">
-          <label htmlFor="provider-kind">{text.provider}</label>
-          <select
-            id="provider-kind"
-            value={kind}
-            onChange={(event) => setKind(event.target.value as Kind)}
-          >
-            {kinds.map((item) => (
-              <option key={item.kind} value={item.kind}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="provider-name">{text.name}</label>
-          <input
-            id="provider-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            autoComplete="off"
-          />
-          <FieldLabel htmlFor="provider-key" help={text.keyHelp[kind]} helpId="provider-key-help">
-            {text.apiKey}
-          </FieldLabel>
-          <input
-            id="provider-key"
-            type="password"
-            dir="ltr"
-            value={secret}
-            onChange={(event) => setSecret(event.target.value)}
-            autoComplete="off"
-            aria-describedby="provider-key-help"
-            required
-            minLength={8}
-          />
-          <FieldLabel
-            htmlFor="provider-max-concurrent"
-            help={text.capacityHelp}
-            helpId="provider-max-concurrent-help"
-          >
-            {text.maxConcurrent}
-          </FieldLabel>
-          <input
-            id="provider-max-concurrent"
-            aria-describedby="provider-max-concurrent-help"
-            type="number"
-            dir="ltr"
-            min={1}
-            max={100}
-            step={1}
-            required
-            value={maxConcurrent}
-            onChange={(event) => setMaxConcurrent(event.target.value)}
-          />
-        </div>
-        <div className="toolbar">
-          <button className="primary-button" type="submit" disabled={busy}>
-            {busy ? text.saving : text.save}
-          </button>
-        </div>
-      </form>
+      <section className="card stack" aria-labelledby="defaults-title">
+        <form
+          className="filter-form"
+          onSubmit={saveDefaults}
+          aria-labelledby="defaults-title"
+          aria-busy={busy}
+        >
+          <SectionTitle id="defaults-title" help={text.defaultsHelp}>
+            {text.defaults}
+          </SectionTitle>
+          <p>
+            {text.current}:{' '}
+            <strong dir="ltr">
+              {current.connectionId
+                ? `${nameOf(current.connectionId)} · ${current.model || '—'}`
+                : text.notSet}
+            </strong>
+          </p>
+          <div className="filter-grid">
+            <label htmlFor="default-connection">{text.connection}</label>
+            <select
+              id="default-connection"
+              value={choice.connectionId}
+              onChange={(event) => setChoice({ connectionId: event.target.value, model: '' })}
+              required
+            >
+              <option value="">—</option>
+              {(connections ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <label htmlFor="default-model">{text.model}</label>
+            <select
+              id="default-model"
+              value={choice.model}
+              onChange={(event) => setChoice((value) => ({ ...value, model: event.target.value }))}
+              required
+              dir="ltr"
+            >
+              <option value="">{usable.length ? '—' : text.chooseModel}</option>
+              {usable.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.displayName || model.id}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="toolbar">
+            <button
+              className="primary-button"
+              type="submit"
+              disabled={busy || !choice.connectionId || !choice.model}
+            >
+              {text.saveDefaults}
+            </button>
+          </div>
+        </form>
 
-      <form
-        className="card filter-form"
-        onSubmit={saveDefaults}
-        aria-labelledby="defaults-title"
-        aria-busy={busy}
-      >
-        <SectionTitle id="defaults-title" help={text.defaultsHelp}>
-          {text.defaults}
-        </SectionTitle>
-        <p>
-          {text.current}:{' '}
-          <strong dir="ltr">
-            {current.connectionId
-              ? `${nameOf(current.connectionId)} · ${current.model || '—'}`
-              : text.notSet}
-          </strong>
-        </p>
-        <div className="filter-grid">
-          <label htmlFor="default-connection">{text.connection}</label>
-          <select
-            id="default-connection"
-            value={choice.connectionId}
-            onChange={(event) => setChoice({ connectionId: event.target.value, model: '' })}
-            required
-          >
-            <option value="">—</option>
-            {(connections ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="default-model">{text.model}</label>
-          <select
-            id="default-model"
-            value={choice.model}
-            onChange={(event) => setChoice((value) => ({ ...value, model: event.target.value }))}
-            required
-            dir="ltr"
-          >
-            <option value="">{usable.length ? '—' : text.chooseModel}</option>
-            {usable.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.displayName || model.id}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="toolbar">
-          <button
-            className="primary-button"
-            type="submit"
-            disabled={busy || !choice.connectionId || !choice.model}
-          >
-            {text.saveDefaults}
-          </button>
-        </div>
-      </form>
-
-      <ModelSelfCheck
-        locale={locale}
-        workspaceId={workspaceId}
-        connections={(connections ?? []).map((item) => ({
-          id: item.id,
-          name: item.name,
-          provider: item.provider,
-        }))}
-        modelIds={Object.fromEntries(
-          (connections ?? []).map((item) => [
-            item.id,
-            (models[item.id] ?? [])
-              .filter((model) => model.capabilities.structuredOutput)
-              .map((model) => model.id),
-          ]),
-        )}
-        current={current}
-      />
+        <ModelSelfCheck
+          embedded
+          locale={locale}
+          workspaceId={workspaceId}
+          connections={(connections ?? []).map((item) => ({
+            id: item.id,
+            name: item.name,
+            provider: item.provider,
+          }))}
+          modelIds={Object.fromEntries(
+            (connections ?? []).map((item) => [
+              item.id,
+              (models[item.id] ?? [])
+                .filter((model) => model.capabilities.structuredOutput)
+                .map((model) => model.id),
+            ]),
+          )}
+          current={current}
+        />
+      </section>
 
       <ModelPrices
         locale={locale}
@@ -478,12 +533,14 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
         kinds={[...new Set((connections ?? []).map((item) => item.provider))].filter(
           (item): item is Kind => item !== 'fake',
         )}
-        modelIds={Object.fromEntries(
-          (connections ?? []).map((item) => [
-            item.provider,
-            (models[item.id] ?? []).map((model) => model.id),
-          ]),
-        )}
+        modelIds={(connections ?? []).reduce<Record<string, string[]>>((all, item) => {
+          // Several connections of one provider offer their models together.
+          all[item.provider] = [
+            ...(all[item.provider] ?? []),
+            ...(models[item.id] ?? []).map((model) => model.id),
+          ];
+          return all;
+        }, {})}
         refreshKey={priceVersion + current.model.length}
         onChanged={() => setPriceVersion((value) => value + 1)}
       />

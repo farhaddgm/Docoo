@@ -2,11 +2,12 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool, type PoolConfig } from 'pg';
 
 import * as schema from './schema.js';
+import * as evaluationSchema from './evaluation-schema.js';
 
 export function createDatabase(config: PoolConfig) {
   const pool = new Pool(config);
   return {
-    db: drizzle(pool, { schema }),
+    db: drizzle(pool, { schema: { ...schema, ...evaluationSchema } }),
     pool,
   };
 }

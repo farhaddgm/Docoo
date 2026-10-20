@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
@@ -44,6 +55,12 @@ const urlSchema = z
     scope: scopeSchema,
     url: z.string().trim().min(8).max(2048),
     language: z.enum(['fa', 'en']).default('fa'),
+  })
+  .strict();
+const deleteSchema = z
+  .object({
+    withKnowledge: z.boolean().default(false),
+    reason: z.string().trim().min(1).max(1000).optional(),
   })
   .strict();
 const listSchema = z
@@ -146,6 +163,20 @@ export class SourcesController {
     const source = await this.sources.get(workspaceContext(request), id(raw));
     setVersionHeader(reply, source.version);
     return { source };
+  }
+
+  @Delete(':sourceId')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Delete a source; knowledge built from it is deleted too only when asked',
+  })
+  @RequireWorkspacePermission('knowledge.delete')
+  async delete(
+    @Req() request: FastifyRequest,
+    @Param('sourceId') raw: string,
+    @Body() body: unknown,
+  ) {
+    return this.sources.delete(workspaceContext(request), id(raw), parse(deleteSchema, body ?? {}));
   }
 
   @Post(':sourceId/versions')
