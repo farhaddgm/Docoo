@@ -81,6 +81,7 @@ notion_sync: true
 | `POST /sources/text`                                                 | `knowledge.create`          |
 | `POST /sources/url`                                                  | `knowledge.create`          |
 | `GET /sources/{id}`                                                  | `knowledge.read`            |
+| `DELETE /sources/{id}`                                               | `knowledge.delete`          |
 | `POST /sources/{id}/versions`                                        | `knowledge.update`          |
 | `POST /sources/{id}/versions/{versionId}/finalize`                   | `knowledge.create`          |
 | `POST /sources/{id}/versions/{versionId}/retry`                      | `knowledge.update`          |

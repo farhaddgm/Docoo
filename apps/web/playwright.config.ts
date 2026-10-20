@@ -56,6 +56,8 @@ export default defineConfig({
     {
       command: 'node --import ../api/dist/instrumentation.js ../api/dist/main.js',
       url: `${apiUrl}/v1/health/live`,
+      // The seeded administrator is the owner, so the owner-only pages can be opened.
+      env: { OWNER_EMAIL: process.env['E2E_ADMIN_EMAIL'] ?? 'e2e-admin@example.test' },
       reuseExistingServer: !process.env['CI'],
       timeout: 60_000,
     },
