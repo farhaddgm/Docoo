@@ -29,6 +29,8 @@ test.describe('managing provider connections', () => {
     await page.goto('/fa/providers');
     const model = page.getByLabel(prices.modelLabel, { exact: true });
     await expect(model).toBeVisible();
+    // The saved default model arrives after the page loads; let it settle before choosing.
+    await page.waitForLoadState('networkidle');
     // Choosing another provider never keeps the model of the old one.
     await page.locator('#price-provider').selectOption('anthropic');
     await expect(model).toHaveValue('');
