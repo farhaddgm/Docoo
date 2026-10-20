@@ -2,6 +2,13 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.32.0] — 2026-10-18
+
+### Added
+
+- Share model-call capacity across API and agent worker replicas using short PostgreSQL admission leases. Each provider connection has an audited, versioned concurrency limit of1–100 (default4), editable in Persian and English. Waiting calls release database clients, respect cancellation and fail with a bounded retryable capacity error before dispatch.
+- Exercise25 actual Temporal agent workflows across two OS worker processes with1000projects in deterministic CI. Record API-handler and first-question latency, actual shared peak capacity, distinct usage rows and lease cleanup. Real-provider load and two historical native Safari versions remain separate acceptance gaps.
+
 ## [0.31.0] — 2026-10-16
 
 ### Added

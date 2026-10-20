@@ -1,5 +1,5 @@
 {
-  "waiverBudget": 16,
+  "waiverBudget": 15,
   "requirements": {
     "FR-AUTH-001": {
       "status": "tested",
@@ -889,12 +889,17 @@
     "NFR-PERF-003": {
       "status": "waived",
       "evidence": [],
-      "note": "The k6 load test covers 25 concurrent administrators on 1,000 projects but 25 concurrent agent runs are never exercised, and real-provider capacity is owner-dependent."
+      "note": "Deterministic acceptance now covers25actual Temporal agent workflows on1000projects across two workers with numerical server-handler/first-batch SLOs. Configured real-provider25workflow load and deployed browser-page timing remain pending in issue149; fake provider latency is not a real-provider capacity claim."
     },
     "NFR-PERF-004": {
-      "status": "waived",
-      "evidence": [],
-      "note": "Workers are separate processes with a configurable ingestion concurrency, but no horizontal-scale test exists and there is no per-provider concurrency setting."
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/agent-capacity-load.integration.test.ts",
+        "apps/api/test/provider-capacity.integration.test.ts",
+        "apps/web/e2e/provider-capacity.spec.ts",
+        "docs/06-delivery/17-agent-concurrency-load.md"
+      ],
+      "note": "Two OS worker processes with independent restricted PostgreSQL pools run25actual Temporal workflows and share one connection limit; observed peak2at configured2, both workers handle calls,25distinct successful usage rows and no leftover leases. Tests cover expiry/cancellation/cleanup/RLS and audited versioned1–100limits through FA/EN UI."
     },
     "NFR-PERF-005": {
       "status": "tested",
@@ -1051,7 +1056,7 @@
     "NFR-UX-001": {
       "status": "waived",
       "evidence": [],
-      "note": "Playwright runs only on Chromium in CI, so the two latest Chrome, Firefox and Safari versions are not verified."
+      "note": "CI now runs complete Chromium, Firefox and WebKit suites in parallel jobs. Two historical stable native Chrome/Firefox/Safari versions are not certified; WebKit alone is not native Safari."
     },
     "NFR-UX-002": {
       "status": "tested",
