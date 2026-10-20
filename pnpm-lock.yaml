@@ -205,6 +205,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@docoo/application':
+        specifier: workspace:*
+        version: link:../../packages/application
       '@docoo/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -448,6 +451,9 @@ importers:
 
   packages/application:
     dependencies:
+      '@docoo/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@docoo/domain':
         specifier: workspace:*
         version: link:../domain
@@ -469,6 +475,12 @@ importers:
       '@aws-sdk/client-s3':
         specifier: 3.1140.0
         version: 3.1140.0
+      '@docoo/application':
+        specifier: workspace:*
+        version: link:../application
+      '@docoo/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       drizzle-orm:
         specifier: 0.45.4
         version: 0.45.4(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(pg@8.23.0)
@@ -569,9 +581,15 @@ importers:
 
   packages/orchestration:
     dependencies:
+      '@docoo/application':
+        specifier: workspace:*
+        version: link:../application
       '@docoo/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@docoo/database':
+        specifier: workspace:*
+        version: link:../database
       '@docoo/documents':
         specifier: workspace:*
         version: link:../documents
@@ -593,6 +611,9 @@ importers:
       pg:
         specifier: 8.23.0
         version: 8.23.0
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/pg':
         specifier: 8.15.6

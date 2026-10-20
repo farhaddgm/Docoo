@@ -10,6 +10,8 @@ describe('environment configuration', () => {
 
     expect(config.API_PORT).toBe(4000);
     expect(config.NODE_ENV).toBe('development');
+    expect(config.EVALUATION_LAB_ENABLED).toBe(false);
+    expect(config.EVALUATION_LAB_LIVE_ENABLED).toBe(false);
     expect(config.PASSWORD_ARGON2_MEMORY_KIB).toBe(19_456);
     expect(config.PASSWORD_ARGON2_ITERATIONS).toBe(2);
     expect(config.PASSWORD_ARGON2_PARALLELISM).toBe(1);

@@ -2,6 +2,16 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.34.0] — 2026-10-20
+
+### Added
+
+- **Paired quality lab and blinded human reviews** (partial ADV-013, off by default). A frozen 30-case bilingual synthetic corpus, a paired baseline/candidate comparison for the five stage roles, blinded human reviews, idempotent starts through a durable Temporal start outbox, and an invocation journal so an unknown provider outcome is never replayed. Migrations 0049–0053. Both `EVALUATION_LAB_ENABLED` and `EVALUATION_LAB_LIVE_ENABLED` default to false, so no provider call is made until the owner switches them on; a run sends at most 60 model requests and may incur charges. Still to do before ADV-013 is complete: operator reconciliation of unknown outcomes, a hard budget, and real quality evidence.
+
+### Changed
+
+- Dependency and base-image updates (GitHub Actions pins, pgvector 0.8.7, tsx, NestJS 12.1.2, fast-xml-parser) reach servers with this release.
+
 ## [0.33.0] — 2026-10-19
 
 ### Added

@@ -257,6 +257,11 @@ function ProjectView({
         )}
       </section>
 
+      <p>
+        <a href={`/${locale}/projects/${projectId}/evaluation-lab?workspaceId=${workspaceId}`}>
+          {locale === 'fa' ? 'مقایسهٔ کیفیت ایجنت‌ها' : 'Compare agent quality'}
+        </a>
+      </p>
       <nav className="section-nav" aria-label={text.sections}>
         <ul>
           {tabs.map((item) => (
