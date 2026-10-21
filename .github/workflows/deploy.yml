@@ -1,0 +1,80 @@
+name: Deploy
+
+# Updates the production server to the latest GitHub Release right after it is published,
+# instead of waiting for the nightly update. It runs the same command an owner would run by
+# hand (`install.sh update`), which rolls back on its own if the new release is unhealthy,
+# and then the read-only acceptance check.
+#
+# One-time setup (repository Settings -> Environments -> production):
+#   secrets   DEPLOY_HOST          server address
+#             DEPLOY_USER          SSH user that may run `sudo install.sh` without a password
+#             DEPLOY_SSH_KEY       private key of a key used only for deploys
+#             DEPLOY_KNOWN_HOSTS   output of `ssh-keyscan -t ed25519 <server>` (pins the host key)
+#   variable  DEPLOY_PORT          optional, default 22
+# Add required reviewers to the environment if every deploy should wait for an approval.
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # A release run that failed or was skipped never deploys.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    steps:
+      - name: Check the deploy secrets exist
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          missing=0
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret ${name} is not set on the production environment."
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - name: Set up SSH with a pinned host key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Update the server to the latest release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            'sudo /opt/docoo/scripts/deploy/install.sh update'
+      - name: Run the acceptance check on the server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            'cd /opt/docoo && sudo ./scripts/deploy/acceptance.sh' | tee "$GITHUB_STEP_SUMMARY"
+      - name: Remove the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
