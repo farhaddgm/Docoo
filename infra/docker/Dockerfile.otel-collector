@@ -1,4 +1,4 @@
-FROM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS builder
+FROM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS builder
 RUN apk add --no-cache git
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOPROXY="https://proxy.golang.org|direct" GOMAXPROCS=2
 WORKDIR /source
@@ -13,5 +13,5 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifi
 COPY --from=builder /out/docoo-otel-collector /docoo-otel-collector
 USER 1000:1000
 ARG SOURCE_REVISION
-LABEL org.opencontainers.image.revision="$SOURCE_REVISION" org.docoo.upstream-version="0.162.0" org.docoo.go-version="1.27.2"
+LABEL org.opencontainers.image.revision="$SOURCE_REVISION" org.docoo.upstream-version="0.162.0" org.docoo.go-version="1.27.3"
 ENTRYPOINT ["/docoo-otel-collector"]
