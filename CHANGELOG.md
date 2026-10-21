@@ -2,6 +2,12 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.36.0] — 2026-10-21
+
+### Added
+
+- **Share a project's knowledge with other projects on the same topic** ([ADR-0034](docs/adr/0034-topic-knowledge-sharing.md)). For each topic of a project you choose whether the knowledge that belongs to that project stays **private** (the default, as before), is shared in **full**, or only the **items you tick**. Other projects on that topic can then use the shared items; projects on other topics never can, and the usual checks (approved, valid, role, confidentiality, minimum audit score) still apply. The choice is on the topic list when you create or edit a project; a project can have several topics, each with its own choice. Migration 0055; `PATCH /projects/{id}` accepts `topics[].knowledgeSharing` and `sharedKnowledgeIds`.
+
 ## [0.35.0] — 2026-10-20
 
 ### Added

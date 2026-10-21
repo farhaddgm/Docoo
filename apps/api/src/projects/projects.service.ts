@@ -37,12 +37,18 @@ export type OutputLanguage = 'fa' | 'en';
 export const PROJECT_RECOVERY_DAYS = 30;
 export const PROJECT_MAX_TOPICS = 20;
 
+/** Whether other projects on a topic may use this project's own knowledge (ADR-0034). */
+export const KNOWLEDGE_SHARING_MODES = ['none', 'selected', 'all'] as const;
+export type KnowledgeSharing = (typeof KNOWLEDGE_SHARING_MODES)[number];
+export const PROJECT_MAX_SHARED_KNOWLEDGE = 500;
+
 export interface ProjectTopicLink {
   readonly topicId: string;
   readonly code: string;
   readonly title: string;
   readonly priority: number;
   readonly conflictInstruction: string | null;
+  readonly knowledgeSharing: KnowledgeSharing;
   readonly topicStatus: 'active' | 'archived' | 'deleted';
 }
 
@@ -63,6 +69,8 @@ export interface Project {
   /** Lifecycle commands the project accepts now; the backoffice offers exactly these. */
   readonly availableCommands: readonly ProjectCommand[];
   readonly topics: readonly ProjectTopicLink[];
+  /** Own knowledge items shared on topic links set to `selected`. */
+  readonly sharedKnowledgeIds: readonly string[];
   /** The business of Contenter the project belongs to (ADR-0021); null when it has none. */
   readonly business: ProjectBusiness | null;
   readonly configSnapshotId: string | null;
@@ -86,6 +94,7 @@ export interface ProjectBusiness {
 export interface TopicLinkInput {
   readonly topicId: string;
   readonly conflictInstruction?: string | undefined;
+  readonly knowledgeSharing?: KnowledgeSharing | undefined;
 }
 
 export interface CreateProjectInput {
@@ -111,6 +120,8 @@ export interface UpdateProjectInput {
   readonly initialProblem?: string | undefined;
   readonly outputLanguage?: OutputLanguage | undefined;
   readonly topics?: readonly TopicLinkInput[] | undefined;
+  /** Replaces the list of own knowledge items shared on `selected` topic links. */
+  readonly sharedKnowledgeIds?: readonly string[] | undefined;
   readonly reason?: string | undefined;
 }
 
@@ -190,6 +201,13 @@ interface ProjectRow extends QueryResultRow {
   updated_at: string;
 }
 
+/** The sharing mode per topic, for the audit record (no content). */
+function sharingByTopic(
+  links: readonly { topicId: string; knowledgeSharing?: KnowledgeSharing | undefined }[],
+): Record<string, KnowledgeSharing> {
+  return Object.fromEntries(links.map((link) => [link.topicId, link.knowledgeSharing ?? 'none']));
+}
+
 interface LinkRow extends QueryResultRow {
   project_id: string;
   topic_id: string;
@@ -197,6 +215,7 @@ interface LinkRow extends QueryResultRow {
   title: string;
   priority: number;
   conflict_instruction: string | null;
+  knowledge_sharing: KnowledgeSharing;
   archived: boolean;
   deleted: boolean;
 }
@@ -290,6 +309,7 @@ export class ProjectsService {
       const rows = result.rows.slice(0, input.limit);
       const ids = rows.map((row) => row.id);
       const links = await this.loadLinks(client, context, ids);
+      const shared = await this.loadShared(client, ids);
       const businesses = await this.loadBusinesses(client, ids);
       const owners = await client.query<{ id: string; owner_id: string; display_name: string }>(
         `select p.id, u.id as owner_id, u.display_name
@@ -315,7 +335,12 @@ export class ProjectsService {
           const owner = ownerOf.get(row.id);
           const task = waitingOf.get(row.id);
           return {
-            ...this.toProject(row, links.get(row.id) ?? [], businesses.get(row.id) ?? null),
+            ...this.toProject(
+              row,
+              links.get(row.id) ?? [],
+              businesses.get(row.id) ?? null,
+              shared.get(row.id) ?? [],
+            ),
             owner: owner ? { id: owner.owner_id, displayName: owner.display_name } : null,
             waiting: task ? { kind: task.kind, stage: task.stage } : null,
           };
@@ -485,16 +510,27 @@ export class ProjectsService {
       }
       if (!updated) throw this.notFound();
       if (input.topics) await this.replaceLinks(client, context, projectId, input.topics);
+      const previousShared = (await this.loadShared(client, [projectId])).get(projectId) ?? [];
+      if (input.sharedKnowledgeIds) {
+        await this.replaceShared(client, context, projectId, input.sharedKnowledgeIds);
+      }
       await writeAudit(client, context, {
         action: 'project.update',
         targetType: 'project',
         targetId: projectId,
         projectId,
         reason: input.reason ?? null,
-        before: { ...this.snapshot(current), topics: previousLinks.map((link) => link.topicId) },
+        before: {
+          ...this.snapshot(current),
+          topics: previousLinks.map((link) => link.topicId),
+          knowledgeSharing: sharingByTopic(previousLinks),
+          sharedKnowledgeIds: previousShared,
+        },
         after: {
           ...this.snapshot(updated),
           topics: (input.topics ?? previousLinks).map((link) => link.topicId),
+          knowledgeSharing: sharingByTopic(input.topics ?? previousLinks),
+          sharedKnowledgeIds: input.sharedKnowledgeIds ?? previousShared,
         },
       });
       return this.read(client, context, projectId);
@@ -875,16 +911,17 @@ export class ProjectsService {
     ]);
     if (topics.length === 0) return;
     await client.query(
-      `insert into project_topics (workspace_id, project_id, topic_id, priority, conflict_instruction)
-       select $1, $2, link.topic_id, link.priority, link.conflict_instruction
-         from unnest($3::uuid[], $4::integer[], $5::text[])
-           as link(topic_id, priority, conflict_instruction)`,
+      `insert into project_topics (workspace_id, project_id, topic_id, priority, conflict_instruction, knowledge_sharing)
+       select $1, $2, link.topic_id, link.priority, link.conflict_instruction, link.knowledge_sharing
+         from unnest($3::uuid[], $4::integer[], $5::text[], $6::text[])
+           as link(topic_id, priority, conflict_instruction, knowledge_sharing)`,
       [
         context.workspaceId,
         projectId,
         topics.map((topic) => topic.topicId),
         topics.map((_, index) => index + 1),
         topics.map((topic) => topic.conflictInstruction ?? null),
+        topics.map((topic) => topic.knowledgeSharing ?? 'none'),
       ],
     );
   }
@@ -897,7 +934,8 @@ export class ProjectsService {
     const row = await this.load(client, context, projectId);
     const links = (await this.loadLinks(client, context, [projectId])).get(projectId) ?? [];
     const business = (await this.loadBusinesses(client, [projectId])).get(projectId) ?? null;
-    return this.toProject(row, links, business);
+    const shared = (await this.loadShared(client, [projectId])).get(projectId) ?? [];
+    return this.toProject(row, links, business, shared);
   }
 
   private async load(
@@ -916,6 +954,68 @@ export class ProjectsService {
     return row;
   }
 
+  private async loadShared(
+    client: PoolClient,
+    projectIds: readonly string[],
+  ): Promise<Map<string, string[]>> {
+    const shared = new Map<string, string[]>();
+    if (projectIds.length === 0) return shared;
+    const result = await client.query<QueryResultRow & { project_id: string; item_id: string }>(
+      `select project_id, item_id from project_shared_knowledge
+        where project_id = any($1::uuid[]) order by project_id, created_at, item_id`,
+      [projectIds],
+    );
+    for (const row of result.rows) {
+      const list = shared.get(row.project_id) ?? [];
+      list.push(row.item_id);
+      shared.set(row.project_id, list);
+    }
+    return shared;
+  }
+
+  /** Replaces the shared list; only the project's own (project-scope) live knowledge qualifies. */
+  private async replaceShared(
+    client: PoolClient,
+    context: WorkspaceRequestContext,
+    projectId: string,
+    itemIds: readonly string[],
+  ): Promise<void> {
+    if (new Set(itemIds).size !== itemIds.length) {
+      throw badRequest('PROJECT_SHARED_KNOWLEDGE_INVALID', 'List each knowledge item only once.');
+    }
+    if (itemIds.length > PROJECT_MAX_SHARED_KNOWLEDGE) {
+      throw badRequest(
+        'PROJECT_SHARED_KNOWLEDGE_INVALID',
+        `Share at most ${PROJECT_MAX_SHARED_KNOWLEDGE} knowledge items.`,
+      );
+    }
+    if (itemIds.length > 0) {
+      const own = await client.query<QueryResultRow & { id: string }>(
+        `select i.id from knowledge_items i
+          where i.workspace_id = $1 and i.deleted_at is null and i.id = any($3::uuid[])
+            and exists (select 1 from knowledge_scopes s
+                         where s.item_id = i.id and s.scope_type = 'project' and s.scope_id = $2)`,
+        [context.workspaceId, projectId, itemIds],
+      );
+      const found = new Set(own.rows.map((row) => row.id));
+      const unusable = itemIds.filter((id) => !found.has(id));
+      if (unusable.length > 0) {
+        throw conflict(
+          'PROJECT_SHARED_KNOWLEDGE_INVALID',
+          'Only the knowledge of this project can be shared.',
+          { itemIds: unusable },
+        );
+      }
+    }
+    await client.query('delete from project_shared_knowledge where project_id = $1', [projectId]);
+    if (itemIds.length === 0) return;
+    await client.query(
+      `insert into project_shared_knowledge (workspace_id, project_id, item_id)
+       select $1, $2, unnest($3::uuid[])`,
+      [context.workspaceId, projectId, itemIds],
+    );
+  }
+
   private async loadLinks(
     client: PoolClient,
     context: WorkspaceRequestContext,
@@ -925,7 +1025,7 @@ export class ProjectsService {
     if (projectIds.length === 0) return links;
     const result = await client.query<LinkRow>(
       `select pt.project_id, pt.topic_id, t.code, t.title, pt.priority, pt.conflict_instruction,
-              t.archived_at is not null as archived, t.deleted_at is not null as deleted
+              pt.knowledge_sharing, t.archived_at is not null as archived, t.deleted_at is not null as deleted
          from project_topics pt
          join topics t on t.id = pt.topic_id and t.workspace_id = pt.workspace_id
         where pt.workspace_id = $1 and pt.project_id = any($2::uuid[])
@@ -940,6 +1040,7 @@ export class ProjectsService {
         title: row.title,
         priority: row.priority,
         conflictInstruction: row.conflict_instruction,
+        knowledgeSharing: row.knowledge_sharing,
         topicStatus: row.deleted ? 'deleted' : row.archived ? 'archived' : 'active',
       });
       links.set(row.project_id, list);
@@ -1001,6 +1102,7 @@ export class ProjectsService {
     row: ProjectRow,
     topics: readonly ProjectTopicLink[],
     business: ProjectBusiness | null,
+    sharedKnowledgeIds: readonly string[],
   ): Project {
     return {
       analysisProfile: row.analysis_profile,
@@ -1020,6 +1122,7 @@ export class ProjectsService {
         (command) => !(command === 'restore' && row.purge_expired),
       ),
       topics,
+      sharedKnowledgeIds,
       business,
       configSnapshotId: row.config_snapshot_id,
       approvedProblemVersionId: row.approved_problem_version_id,

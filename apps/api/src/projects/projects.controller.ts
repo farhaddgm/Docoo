@@ -24,7 +24,12 @@ import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { ConfigService } from '../config/config.service.js';
 import { WorkflowService } from '../workflow/workflow.service.js';
-import { PROJECT_MAX_TOPICS, ProjectsService } from './projects.service.js';
+import {
+  KNOWLEDGE_SHARING_MODES,
+  PROJECT_MAX_SHARED_KNOWLEDGE,
+  PROJECT_MAX_TOPICS,
+  ProjectsService,
+} from './projects.service.js';
 
 const codeSchema = z
   .string()
@@ -41,6 +46,7 @@ const topicsSchema = z
       .object({
         topicId: z.uuid().transform((value) => value.toLowerCase()),
         conflictInstruction: z.string().trim().min(1).max(2000).optional(),
+        knowledgeSharing: z.enum(KNOWLEDGE_SHARING_MODES).optional(),
       })
       .strict(),
   )
@@ -115,6 +121,10 @@ const updateSchema = z
     initialProblem: problemSchema.optional(),
     outputLanguage: languageSchema.optional(),
     topics: topicsSchema.optional(),
+    sharedKnowledgeIds: z
+      .array(z.uuid().transform((value) => value.toLowerCase()))
+      .max(PROJECT_MAX_SHARED_KNOWLEDGE)
+      .optional(),
     reason: reasonSchema.optional(),
   })
   .strict()
