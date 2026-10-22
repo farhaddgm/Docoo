@@ -186,7 +186,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
 
     await page.getByRole('link', { name: 'Switch to English' }).click();
     await expect(
-      page.getByRole('heading', { level: 1, name: templatesMessages('en').title }),
+      page.getByRole('heading', { level: 1, name: settingsMessages('en').title }),
     ).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
