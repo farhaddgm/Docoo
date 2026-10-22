@@ -67,6 +67,8 @@ jobs:
             -o ServerAliveInterval=30 "${DEPLOY_USER}@${DEPLOY_HOST}" \
             'sudo /opt/docoo/scripts/deploy/install.sh update'
       - name: Run the acceptance check on the server
+        # `shell: bash` adds pipefail, so a failing acceptance check is not hidden by `tee`.
+        shell: bash
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
