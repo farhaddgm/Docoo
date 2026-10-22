@@ -165,7 +165,10 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     ).toBeVisible();
     await group.getByRole('radio', { name: new RegExp(templates.names['detailed']!, 'u') }).check();
     await expect(page.getByRole('button', { name: templates.saveTemplate })).toBeDisabled();
-    await page.getByLabel(templates.reasonLabel).last().fill('اسناد تفصیلی');
+    await page
+      .getByRole('region', { name: templates.templatesTitle })
+      .getByLabel(templates.reasonLabel)
+      .fill('اسناد تفصیلی');
     await page.getByRole('button', { name: templates.saveTemplate }).click();
     await expect(
       page.getByRole('status').filter({ hasText: templates.savedTemplate }),

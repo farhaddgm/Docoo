@@ -145,6 +145,7 @@ function List({ locale, workspaceId }: { locale: Locale; workspaceId: string }) 
                     {text.kinds[item.kind] ?? item.kind}
                     {item.readAt === null && <span className="sr-only"> ({text.unread})</span>}
                   </p>
+                  {item.readAt !== null && <span className="notification-read">{text.read}</span>}
                   <p className="notification-meta">
                     {formatDateTime(locale, item.createdAt)}
                     {item.project && (

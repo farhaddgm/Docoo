@@ -60,7 +60,10 @@ for (const staleStatus of [200, 503]) {
     try {
       await page.goto('/fa/notifications');
       await requested;
-      await page.getByLabel(text.filter).selectOption('all');
+      await page
+        .getByRole('group', { name: text.filter })
+        .getByRole('button', { name: text.all, exact: true })
+        .click();
       const row = page
         .getByRole('list', { name: text.title })
         .locator('li')
@@ -79,7 +82,11 @@ for (const staleStatus of [200, 503]) {
           ),
       );
       await expect(row.getByText(text.read, { exact: true })).toBeVisible();
-      await expect(page.getByLabel(text.filter)).toHaveValue('all');
+      await expect(
+        page
+          .getByRole('group', { name: text.filter })
+          .getByRole('button', { name: text.all, exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
       await expect(page.getByRole('alert').filter({ hasText: text.loadFailed })).toHaveCount(0);
     } finally {
       release();
