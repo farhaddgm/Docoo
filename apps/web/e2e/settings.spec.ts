@@ -166,7 +166,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await group.getByRole('radio', { name: new RegExp(templates.names['detailed']!, 'u') }).check();
     await expect(page.getByRole('button', { name: templates.saveTemplate })).toBeDisabled();
     await page
-      .getByRole('region', { name: templates.templatesTitle })
+      .locator('section', { has: group })
       .getByLabel(templates.reasonLabel)
       .fill('اسناد تفصیلی');
     await page.getByRole('button', { name: templates.saveTemplate }).click();
