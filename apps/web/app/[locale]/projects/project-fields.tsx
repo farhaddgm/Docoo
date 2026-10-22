@@ -10,9 +10,13 @@ import type { Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { projectMessages } from './messages';
 
+export type KnowledgeSharing = 'none' | 'selected' | 'all';
+export const KNOWLEDGE_SHARING: readonly KnowledgeSharing[] = ['none', 'selected', 'all'];
+
 export interface TopicChoice {
   topicId: string;
   conflictInstruction: string;
+  knowledgeSharing: KnowledgeSharing;
 }
 
 export interface ProjectValues {
@@ -23,6 +27,8 @@ export interface ProjectValues {
   outputLanguage: 'fa' | 'en';
   analysisProfile?: 'full' | 'quick';
   topics: TopicChoice[];
+  /** Own knowledge items shared on topics set to `selected` (edit mode only). */
+  sharedKnowledgeIds: string[];
 }
 
 /** Topics a project already links to, so an archived one can still be shown and removed. */
@@ -47,6 +53,7 @@ export const emptyProject = (locale: Locale): ProjectValues => ({
   outputLanguage: locale,
   analysisProfile: 'full',
   topics: [],
+  sharedKnowledgeIds: [],
 });
 
 const MAX_TOPICS = 20;
@@ -194,7 +201,10 @@ export function TopicsSection({
 
   function add() {
     if (!toAdd || selectedIds.has(toAdd) || values.topics.length >= MAX_TOPICS) return;
-    setTopics([...values.topics, { topicId: toAdd, conflictInstruction: '' }]);
+    setTopics([
+      ...values.topics,
+      { topicId: toAdd, conflictInstruction: '', knowledgeSharing: 'none' },
+    ]);
     setToAdd('');
   }
 
@@ -277,6 +287,38 @@ export function TopicsSection({
                       autoComplete="off"
                     />
                   </div>
+                  <div className="field-stack" style={{ flexBasis: '100%' }}>
+                    <FieldLabel
+                      htmlFor={`sharing-${choice.topicId}`}
+                      help={text.sharingHelp}
+                      helpId={`sharing-help-${choice.topicId}`}
+                    >
+                      {text.sharing}
+                    </FieldLabel>
+                    <select
+                      id={`sharing-${choice.topicId}`}
+                      value={choice.knowledgeSharing}
+                      aria-describedby={`sharing-help-${choice.topicId}`}
+                      onChange={(event) =>
+                        setTopics(
+                          values.topics.map((item) =>
+                            item.topicId === choice.topicId
+                              ? {
+                                  ...item,
+                                  knowledgeSharing: event.target.value as KnowledgeSharing,
+                                }
+                              : item,
+                          ),
+                        )
+                      }
+                    >
+                      {KNOWLEDGE_SHARING.map((mode) => (
+                        <option key={mode} value={mode}>
+                          {text.sharingModes[mode]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </li>
               );
             })}
@@ -310,5 +352,82 @@ export function TopicsSection({
         )}
       </section>
     </>
+  );
+}
+
+interface OwnKnowledge {
+  id: string;
+  title: string;
+}
+
+/**
+ * The project's own knowledge, with a checkbox per item: the items other projects on topics set
+ * to "selected" may use. Shown only once at least one topic is on `selected`.
+ */
+export function SharedKnowledgeSection({
+  locale,
+  workspaceId,
+  projectId,
+  values,
+  onChange,
+}: {
+  locale: Locale;
+  workspaceId: string;
+  projectId: string | null;
+  values: ProjectValues;
+  onChange: (next: ProjectValues) => void;
+}) {
+  const text = projectMessages(locale);
+  const common = reportMessagesFor(locale);
+  const [items, setItems] = useState<OwnKnowledge[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const selectedMode = values.topics.some((topic) => topic.knowledgeSharing === 'selected');
+
+  useEffect(() => {
+    if (!projectId || !selectedMode) return;
+    apiGet<{ items: OwnKnowledge[] }>(
+      `/workspaces/${workspaceId}/knowledge?scopeType=project&scopeId=${projectId}&limit=100`,
+    )
+      .then((page) => setItems(page.items))
+      .catch(() => setLoadFailed(true));
+  }, [workspaceId, projectId, selectedMode]);
+
+  if (!selectedMode) return null;
+  const chosen = new Set(values.sharedKnowledgeIds);
+  function toggle(id: string) {
+    const next = new Set(chosen);
+    if (!next.delete(id)) next.add(id);
+    onChange({ ...values, sharedKnowledgeIds: [...next] });
+  }
+  return (
+    <section className="card" aria-labelledby="project-shared-knowledge-title">
+      <SectionTitle id="project-shared-knowledge-title" help={text.sharedKnowledgeHelp}>
+        {text.sharedKnowledge}
+      </SectionTitle>
+      {!projectId ? (
+        <p className="muted">{text.sharedKnowledgeSaveFirst}</p>
+      ) : loadFailed ? (
+        <p className="notice error" role="alert">
+          {common.loadFailed}
+        </p>
+      ) : items === null ? null : items.length === 0 ? (
+        <p className="muted">{text.sharedKnowledgeEmpty}</p>
+      ) : (
+        <ul className="plain-list">
+          {items.map((item) => (
+            <li key={item.id}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={chosen.has(item.id)}
+                  onChange={() => toggle(item.id)}
+                />{' '}
+                <span dir="auto">{item.title}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

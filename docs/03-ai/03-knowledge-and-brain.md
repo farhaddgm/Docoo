@@ -93,6 +93,8 @@ Conflict record شامل claim A/B، نوع تعارض، severity، scope، تح
 
 پیش از vector/keyword search، فیلتر workspace و deny اعمال می‌شود. سپس project، topic و role scope بررسی می‌شود. نتیجهٔ semantic search هرگز مجوز ایجاد نمی‌کند.
 
+دانش دامنهٔ `project` به‌طور پیش‌فرض فقط برای همان پروژه است؛ ادمین می‌تواند برای هر حوزهٔ پروژه، اشتراک آن را با پروژه‌های هم‌حوزه روی «همه» یا «فقط موارد انتخاب‌شده» بگذارد و فیلترهای تأیید، نقش و محرمانگی همچنان اعمال می‌شوند ([ADR-0034](../adr/0034-topic-knowledge-sharing.md)).
+
 تنظیمات تحقیق از system → workspace → topic priority order → project → agent → run resolve می‌شوند. در چند حوزه، ادمین priority را تعیین می‌کند؛ تعارض حل‌نشده warning دارد.
 
 ## ۹. retrieval snapshot

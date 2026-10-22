@@ -4,7 +4,13 @@ import { useState, type FormEvent } from 'react';
 
 import type { Locale } from '../../i18n';
 import { projectMessages } from './messages';
-import { BasicsFields, TopicsSection, type KnownTopic, type ProjectValues } from './project-fields';
+import {
+  BasicsFields,
+  SharedKnowledgeSection,
+  TopicsSection,
+  type KnownTopic,
+  type ProjectValues,
+} from './project-fields';
 
 export {
   emptyProject,
@@ -20,6 +26,7 @@ export {
 export function ProjectForm({
   locale,
   workspaceId,
+  projectId = null,
   mode,
   initial,
   known = [],
@@ -31,6 +38,8 @@ export function ProjectForm({
 }: {
   locale: Locale;
   workspaceId: string;
+  /** The project being edited; its own knowledge can be shared once it exists. */
+  projectId?: string | null;
   mode: 'create' | 'edit';
   initial: ProjectValues;
   known?: KnownTopic[];
@@ -57,6 +66,7 @@ export function ProjectForm({
       topics: values.topics.map((topic) => ({
         topicId: topic.topicId,
         conflictInstruction: topic.conflictInstruction.trim(),
+        knowledgeSharing: topic.knowledgeSharing,
       })),
     };
     if (mode === 'create') {
@@ -73,6 +83,11 @@ export function ProjectForm({
       changes.outputLanguage = clean.outputLanguage;
     if (JSON.stringify(clean.topics) !== JSON.stringify(initial.topics))
       changes.topics = clean.topics;
+    if (
+      JSON.stringify([...clean.sharedKnowledgeIds].sort()) !==
+      JSON.stringify([...initial.sharedKnowledgeIds].sort())
+    )
+      changes.sharedKnowledgeIds = clean.sharedKnowledgeIds;
     onSave?.(changes, reason.trim());
   }
 
@@ -90,6 +105,13 @@ export function ProjectForm({
         values={values}
         onChange={setValues}
         known={known}
+      />
+      <SharedKnowledgeSection
+        locale={locale}
+        workspaceId={workspaceId}
+        projectId={mode === 'edit' ? projectId : null}
+        values={values}
+        onChange={setValues}
       />
 
       {mode === 'edit' && (

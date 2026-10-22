@@ -145,7 +145,15 @@ export function ProjectWizard({
     const draft = readDraft(workspaceId);
     if (draft) {
       setStep(Math.min(Math.max(draft.step, 0), STEP_COUNT - 1));
-      setValues(draft.values);
+      // Drafts saved before topic knowledge sharing existed have no such fields.
+      setValues({
+        ...draft.values,
+        topics: draft.values.topics.map((topic) => ({
+          ...topic,
+          knowledgeSharing: topic.knowledgeSharing ?? 'none',
+        })),
+        sharedKnowledgeIds: draft.values.sharedKnowledgeIds ?? [],
+      });
       setTouched(draft.touched ?? {});
       setConnectionId(draft.connectionId ?? '');
       setModel(draft.model ?? '');
@@ -308,6 +316,7 @@ export function ProjectWizard({
             ...(topic.conflictInstruction.trim()
               ? { conflictInstruction: topic.conflictInstruction.trim() }
               : {}),
+            knowledgeSharing: topic.knowledgeSharing,
           })),
           settings: choices.overrides,
           ...(business ? { businessId: business.id } : {}),

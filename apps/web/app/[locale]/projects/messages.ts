@@ -91,6 +91,19 @@ const messages = {
     removeTopic: 'حذف از پروژه',
     priority: 'اولویت',
     conflictInstruction: 'دستور رفع تعارض (اختیاری)',
+    sharing: 'دانش این پروژه برای پروژه‌های دیگر این حوزه',
+    sharingHelp:
+      'مشخص کنید پروژه‌های دیگرِ همین حوزه می‌توانند از دانش تأییدشدهٔ خودِ این پروژه استفاده کنند یا نه. پیش‌فرض: خصوصی.',
+    sharingModes: {
+      none: 'خصوصی (فقط همین پروژه)',
+      selected: 'فقط موارد انتخاب‌شده',
+      all: 'همهٔ دانش این پروژه',
+    },
+    sharedKnowledge: 'دانشِ به‌اشتراک‌گذاشته‌شده',
+    sharedKnowledgeHelp:
+      'فقط دانش‌های همین پروژه فهرست می‌شوند. موارد تیک‌خورده برای پروژه‌های دیگرِ حوزه‌هایی که روی «فقط موارد انتخاب‌شده» هستند قابل استفاده‌اند.',
+    sharedKnowledgeEmpty: 'این پروژه هنوز دانش اختصاصی ندارد.',
+    sharedKnowledgeSaveFirst: 'پس از ساخت پروژه و افزودن دانش، موارد را اینجا انتخاب کنید.',
     createSubmit: 'ایجاد پروژه',
     creating: 'در حال ایجاد…',
     saveChanges: 'ذخیرهٔ تغییرات',
@@ -210,6 +223,19 @@ const messages = {
     removeTopic: 'Remove from project',
     priority: 'Priority',
     conflictInstruction: 'Conflict instruction (optional)',
+    sharing: "This project's knowledge for other projects on this topic",
+    sharingHelp:
+      'Choose whether other projects on this topic may use the approved knowledge that belongs to this project. Default: private.',
+    sharingModes: {
+      none: 'Private (this project only)',
+      selected: 'Selected items only',
+      all: "All of this project's knowledge",
+    },
+    sharedKnowledge: 'Shared knowledge',
+    sharedKnowledgeHelp:
+      'Only knowledge of this project is listed. Ticked items can be used by other projects on topics set to "Selected items only".',
+    sharedKnowledgeEmpty: 'This project has no knowledge of its own yet.',
+    sharedKnowledgeSaveFirst: 'After the project exists and has knowledge, choose items here.',
     createSubmit: 'Create project',
     creating: 'Creating…',
     saveChanges: 'Save changes',

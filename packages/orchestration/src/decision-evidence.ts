@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import type { IntelligenceClaim } from '@docoo/domain';
 import { expandKnowledgeQuery, normalizeKnowledgeText } from '@docoo/domain';
+import { sharedProjectKnowledgeSql } from './shared-knowledge.js';
 
 export const evidenceDigest = (value: string) => createHash('sha256').update(value).digest('hex');
 export interface ApprovedEvidenceRow {
@@ -59,9 +60,10 @@ export async function approvedDecisionEvidence(
       and case when o.id is not null and (o.expires_at is null or o.expires_at>now()) then o.decision='approve' else r.decision='approved' end
       and v.language::text=any($3::text[]) and ($4::uuid[] is null or c.id=any($4::uuid[]))
       and exists(select 1 from projects p where p.id=$2 and p.workspace_id=$1 and p.deleted_at is null)
-      and exists(select 1 from knowledge_scopes s where s.item_id=i.id and s.workspace_id=$1 and s.role is null
+      and (exists(select 1 from knowledge_scopes s where s.item_id=i.id and s.workspace_id=$1 and s.role is null
         and (s.scope_type='workspace' and s.scope_id=$1 or s.scope_type='project' and s.scope_id=$2
           or s.scope_type='topic' and s.scope_id in(select topic_id from project_topics where project_id=$2)))
+           or ${sharedProjectKnowledgeSql('i', '$2::uuid', 's.role is null')})
     order by candidate_score desc,c.created_at desc,c.id limit $6`,
     [
       input.workspaceId,

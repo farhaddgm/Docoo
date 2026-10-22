@@ -43,7 +43,9 @@ export function OverviewPanel({
       topics: project.topics.map((topic) => ({
         topicId: topic.topicId,
         conflictInstruction: topic.conflictInstruction ?? '',
+        knowledgeSharing: topic.knowledgeSharing,
       })),
+      sharedKnowledgeIds: project.sharedKnowledgeIds,
     };
     return (
       <div className="stack">
@@ -52,6 +54,7 @@ export function OverviewPanel({
         <ProjectForm
           locale={locale}
           workspaceId={workspaceId}
+          projectId={project.id}
           mode="edit"
           initial={initial}
           known={project.topics.map((topic) => ({
@@ -78,6 +81,7 @@ export function OverviewPanel({
                       ...(topic.conflictInstruction
                         ? { conflictInstruction: topic.conflictInstruction }
                         : {}),
+                      knowledgeSharing: topic.knowledgeSharing,
                     })),
                   }
                 : {}),
@@ -143,6 +147,14 @@ export function OverviewPanel({
                 </small>
                 {topic.topicStatus !== 'active' && (
                   <span className="badge state-paused">{text.archivedTopic}</span>
+                )}
+                {topic.knowledgeSharing !== 'none' && (
+                  <>
+                    <br />
+                    <span className="muted">
+                      {formText.sharing}: {formText.sharingModes[topic.knowledgeSharing]}
+                    </span>
+                  </>
                 )}
                 {topic.conflictInstruction && (
                   <>

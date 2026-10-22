@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { embed, EMBEDDING_MODEL, normalizeForSearch, vectorLiteral } from '@docoo/knowledge';
 import type { PoolClient } from 'pg';
+import { sharedProjectKnowledgeSql } from './shared-knowledge.js';
 import { declaredSourceCitation, type SourceCitation } from './source-citation.js';
 
 /** Reciprocal rank fusion constant. */
@@ -176,13 +177,15 @@ export async function retrieveKnowledge(
              (select r.decision = 'approved' and r.overall >= $6::real from audit_reviews r
                where r.knowledge_version_id = v.id order by r.created_at desc, r.id desc limit 1),
              false)
-       and exists (
+       and (exists (
              select 1 from knowledge_scopes s
               where s.item_id = i.id
                 and (s.role is null or s.role = $2)
                 and (s.scope_type = 'workspace'
                      or (s.scope_type = 'topic' and s.scope_id = any($3::uuid[]))
-                     or (s.scope_type = 'project' and s.scope_id = $4)))`;
+                     or (s.scope_type = 'project' and s.scope_id = $4)))
+           or ${sharedProjectKnowledgeSql('i', '$4::uuid', '(s.role is null or s.role = $2)')}
+       )`;
   const params = [
     input.workspaceId,
     input.role ?? null,

@@ -18,8 +18,11 @@ export interface ProjectDetail {
     title: string;
     priority: number;
     conflictInstruction: string | null;
+    knowledgeSharing: 'none' | 'selected' | 'all';
     topicStatus: string;
   }[];
+  /** Own knowledge items shared on topics set to `selected` (ADR-0034). */
+  sharedKnowledgeIds: string[];
   /** The business of Contenter the project is linked to (ADR-0021); null when it has none. */
   business: { externalBusinessId: string; name: string } | null;
   approvedProblemVersionId: string | null;
