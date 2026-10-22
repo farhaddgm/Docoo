@@ -23,3 +23,5 @@ overrides:
   # Security patch releases required by the dependency/image release gates.
   source-map-js: 1.2.2
   sharp: 0.35.5
+  # vitest's bundled vite 8.3.0–8.3.2 carries launch-editor advisories (dependency-audit gate).
+  vite: '>=8.3.3 <9'
