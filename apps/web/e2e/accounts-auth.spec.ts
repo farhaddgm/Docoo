@@ -64,8 +64,7 @@ test('Google-only owner sees account administration and no password-change form'
       ? json(route, { user: owner, workspaces: [workspace] })
       : json(route, { google: true });
   });
-  await page.goto('/fa');
-  await expect(page.getByRole('link', { name: 'کاربران و ورود', exact: true })).toBeVisible();
+  await page.goto('/fa/account');
   // The Gmail list is a section of that one page, not a second navigation entry.
   await expect(page.getByRole('link', { name: 'ورود با جیمیل', exact: true })).toHaveCount(0);
   await expect(page.getByText('این حساب فقط با جیمیل وارد می‌شود و رمز عبور ندارد.')).toBeVisible();

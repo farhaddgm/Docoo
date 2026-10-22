@@ -71,7 +71,10 @@ test.describe('notifications (NTF-001)', () => {
         .filter({ hasText: `nt-${stamp}` })
         .filter({ hasText: text.kinds['gate_review']! }),
     ).toHaveCount(0);
-    await page.getByLabel(text.filter).selectOption('all');
+    await page
+      .getByRole('group', { name: text.filter })
+      .getByRole('button', { name: text.all, exact: true })
+      .click();
     await expect(
       list
         .locator('li')
@@ -83,7 +86,10 @@ test.describe('notifications (NTF-001)', () => {
     // Everything can be marked read at once, and the bell goes back to its plain label.
     await page.getByRole('button', { name: text.markAllRead }).click();
     await expect(page.getByRole('status').filter({ hasText: text.allDone })).toBeVisible();
-    await page.getByLabel(text.filter).selectOption('unread');
+    await page
+      .getByRole('group', { name: text.filter })
+      .getByRole('button', { name: text.unread, exact: true })
+      .click();
     await expect(page.getByText(text.empty)).toBeVisible();
     await expect(page.getByRole('link', { name: text.bell, exact: true })).toBeVisible();
 

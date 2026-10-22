@@ -15,7 +15,6 @@ import {
   type Definition,
 } from '../settings/settings-model';
 import { Notice, useAction, explainError } from '../use-action';
-import { WorkspacePage } from '../workspace-page';
 import { templatesMessages } from './templates-messages';
 import { FieldLabel, SectionTitle } from '../../info-tip';
 
@@ -44,17 +43,16 @@ const KEYS = {
   template: 'document.default_template',
 } as const;
 
-/** Templates and document levels (UX §2, ADR-0018): the length ranges and the draft layout. */
-export function TemplatesPage({ locale }: { locale: Locale }) {
-  const text = templatesMessages(locale);
-  return (
-    <WorkspacePage locale={locale} title={text.title} subtitle={text.subtitle}>
-      {(workspaceId) => <Templates locale={locale} workspaceId={workspaceId} />}
-    </WorkspacePage>
-  );
-}
-
-function Templates({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
+/** The length ranges and the draft layout; shown at the top of the system settings page. */
+export function Templates({
+  locale,
+  workspaceId,
+  showSettingsLink = true,
+}: {
+  locale: Locale;
+  workspaceId: string;
+  showSettingsLink?: boolean;
+}) {
   const text = templatesMessages(locale);
   const base = `/workspaces/${workspaceId}`;
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -120,9 +118,11 @@ function Templates({ locale, workspaceId }: { locale: Locale; workspaceId: strin
         current={current}
         onChanged={load}
       />
-      <p className="muted">
-        {text.moreSettings} <Link href={`/${locale}/settings` as Route}>{text.openSettings}</Link>
-      </p>
+      {showSettingsLink && (
+        <p className="muted">
+          {text.moreSettings} <Link href={`/${locale}/settings` as Route}>{text.openSettings}</Link>
+        </p>
+      )}
     </div>
   );
 }

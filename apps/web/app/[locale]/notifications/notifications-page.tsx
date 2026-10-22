@@ -103,26 +103,26 @@ function List({ locale, workspaceId }: { locale: Locale; workspaceId: string }) 
   return (
     <div className="stack">
       <Notice notice={notice} />
-      <section className="card stack" aria-labelledby="notifications-heading">
-        <div className="toolbar spread">
-          <h2 id="notifications-heading">{text.title}</h2>
-          <div className="toolbar">
-            <label htmlFor="notification-filter">{text.filter}</label>
-            <select
-              id="notification-filter"
-              value={status}
-              onChange={(event) => {
-                selectedStatus.current = event.target.value as 'unread' | 'all';
-                setStatus(selectedStatus.current);
-              }}
-            >
-              <option value="unread">{text.unread}</option>
-              <option value="all">{text.all}</option>
-            </select>
-            <button className="secondary-button" type="button" disabled={busy} onClick={markAll}>
-              {text.markAllRead}
-            </button>
+      <section className="card stack" aria-label={text.title}>
+        <div className="notification-toolbar">
+          <div className="segmented" role="group" aria-label={text.filter}>
+            {(['unread', 'all'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={status === value}
+                onClick={() => {
+                  selectedStatus.current = value;
+                  setStatus(value);
+                }}
+              >
+                {text[value]}
+              </button>
+            ))}
           </div>
+          <button className="secondary-button" type="button" disabled={busy} onClick={markAll}>
+            {text.markAllRead}
+          </button>
         </div>
         {failed && (
           <p className="notice error" role="alert">
@@ -133,31 +133,36 @@ function List({ locale, workspaceId }: { locale: Locale; workspaceId: string }) 
           <p className="muted">{status === 'unread' ? text.empty : text.emptyAll}</p>
         )}
         {items && items.length > 0 && (
-          <ul className="plain-list" aria-label={text.title}>
+          <ul className="notification-list" aria-label={text.title}>
             {items.map((item) => (
-              <li key={item.id}>
-                <strong>{text.kinds[item.kind] ?? item.kind}</strong>{' '}
-                {item.readAt === null ? (
-                  <span className="badge">{text.unread}</span>
-                ) : (
-                  <small className="muted">{text.read}</small>
-                )}
-                <br />
-                <small className="muted">
-                  {formatDateTime(locale, item.createdAt)}
-                  {item.project && (
-                    <>
-                      {' · '}
-                      {text.project}: <span dir="ltr">{item.project.code}</span>
-                    </>
-                  )}
-                  {item.stillWaiting !== null && (
-                    <> · {item.stillWaiting ? text.stillWaiting : text.handled}</>
-                  )}
-                </small>
-                <div className="toolbar">
+              <li
+                key={item.id}
+                className={item.readAt === null ? 'notification-item unread' : 'notification-item'}
+              >
+                <span className="notification-dot" aria-hidden="true" />
+                <div className="notification-body">
+                  <p className="notification-title">
+                    {text.kinds[item.kind] ?? item.kind}
+                    {item.readAt === null && <span className="sr-only"> ({text.unread})</span>}
+                  </p>
+                  {item.readAt !== null && <span className="notification-read">{text.read}</span>}
+                  <p className="notification-meta">
+                    {formatDateTime(locale, item.createdAt)}
+                    {item.project && (
+                      <>
+                        {' · '}
+                        <span dir="ltr">{item.project.code}</span>
+                      </>
+                    )}
+                    {item.stillWaiting !== null && (
+                      <> · {item.stillWaiting ? text.stillWaiting : text.handled}</>
+                    )}
+                  </p>
+                </div>
+                <div className="notification-actions">
                   {item.projectId && (
                     <Link
+                      className="secondary-button link-button"
                       href={
                         `/${locale}/projects/${item.projectId}?tab=${notificationTab(item.kind)}` as Route
                       }

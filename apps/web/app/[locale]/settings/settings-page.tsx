@@ -1,6 +1,7 @@
 'use client';
 
 import type { Locale } from '../../i18n';
+import { Templates } from '../templates/templates-page';
 import { WorkspacePage } from '../workspace-page';
 import { ScopedSettings } from './scoped-settings';
 import { settingsMessages } from './settings-messages';
@@ -11,12 +12,15 @@ export function SettingsPage({ locale }: { locale: Locale }) {
   return (
     <WorkspacePage locale={locale} title={text.title} subtitle={text.subtitle}>
       {(workspaceId) => (
-        <ScopedSettings
-          locale={locale}
-          workspaceId={workspaceId}
-          scopeType="workspace"
-          scopeId={workspaceId}
-        />
+        <div className="stack">
+          <Templates locale={locale} workspaceId={workspaceId} showSettingsLink={false} />
+          <ScopedSettings
+            locale={locale}
+            workspaceId={workspaceId}
+            scopeType="workspace"
+            scopeId={workspaceId}
+          />
+        </div>
       )}
     </WorkspacePage>
   );

@@ -46,8 +46,8 @@ export const navigation = [
   'projects',
   'topics',
   'knowledge',
+  'businesses',
   'agents',
-  'templates',
   'brain',
   'providers',
   'integrations',
@@ -61,7 +61,7 @@ export type NavigationKey = (typeof navigation)[number];
 
 /** The sidebar sections, in the order they appear; every navigation key belongs to exactly one. */
 export const navigationGroups = [
-  { key: 'work', items: ['dashboard', 'projects', 'topics', 'knowledge', 'templates'] },
+  { key: 'work', items: ['dashboard', 'projects', 'topics', 'knowledge', 'businesses'] },
   { key: 'intelligence', items: ['agents', 'brain', 'smart'] },
   { key: 'setup', items: ['providers', 'integrations', 'settings'] },
   { key: 'monitor', items: ['costs', 'audit'] },
@@ -91,6 +91,7 @@ const messages = {
       admin: 'مدیریت',
     },
     adminNav: { users: 'کاربران و ورود' },
+    accountMenu: { open: 'منوی حساب کاربری', settings: 'تنظیمات' },
     roles: { owner: 'مالک', super_admin: 'مدیر', editor: 'ویرایشگر', viewer: 'مشاهده‌گر' },
     workspaceLabel: 'فضای کار',
     theme: {
@@ -112,7 +113,7 @@ const messages = {
       topics: 'حوزه‌های موضوعی',
       knowledge: 'دانش و ممیزی',
       agents: 'ایجنت‌ها',
-      templates: 'قالب‌ها و سطوح سند',
+      businesses: 'کسب‌وکار',
       brain: 'گزارش Brain',
       providers: 'ارائه‌دهندگان AI',
       integrations: 'اتصال‌ها',
@@ -190,6 +191,7 @@ const messages = {
       admin: 'Administration',
     },
     adminNav: { users: 'Users & sign-in' },
+    accountMenu: { open: 'Account menu', settings: 'Settings' },
     roles: { owner: 'Owner', super_admin: 'Administrator', editor: 'Editor', viewer: 'Viewer' },
     workspaceLabel: 'Workspace',
     theme: {
@@ -211,7 +213,7 @@ const messages = {
       topics: 'Topics',
       knowledge: 'Knowledge & audit',
       agents: 'Agents',
-      templates: 'Templates & levels',
+      businesses: 'Businesses',
       brain: 'Brain report',
       providers: 'AI providers',
       integrations: 'Integrations',

@@ -12,6 +12,7 @@ import {
 
 import { FieldLabel } from '../info-tip';
 import { AppShell } from './app-shell';
+import { cachedSession } from './session-cache';
 import type { SessionIdentity } from './signed-in';
 
 type Locale = 'fa' | 'en';
@@ -189,9 +190,14 @@ export function AccountsScreen({
   const [tab, setTab] = useState<'users' | 'google'>(initialTab);
   const googleOnly = tab === 'google';
   const base = googleOnly ? '/owner/google-access' : '/admin/users';
-  const [identity, setIdentity] = useState<Identity | null>(null);
+  const [identity, setIdentity] = useState<Identity | null>(() => cachedSession());
   const [data, setData] = useState<Page | null>(null);
-  const [denied, setDenied] = useState(false);
+  const [denied, setDenied] = useState(() => {
+    const known = cachedSession();
+    return known
+      ? known.user.role !== 'super_admin' || (initialTab === 'google' && !known.user.isOwner)
+      : false;
+  });
   const [guest, setGuest] = useState(false);
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
@@ -323,6 +329,21 @@ export function AccountsScreen({
                   }}
                 >
                   {t[key]}
+                  {key === 'google' && (
+                    <svg
+                      className="tab-crown"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      role="img"
+                      aria-label={t.owner}
+                    >
+                      <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5zM5 21h14" />
+                    </svg>
+                  )}
                 </button>
               ))}
             </div>

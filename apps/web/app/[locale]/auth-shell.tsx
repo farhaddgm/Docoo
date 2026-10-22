@@ -7,7 +7,7 @@ import { errorMessage, localizedPath, messagesFor, problemCode, type Locale } fr
 import { AppShell } from './app-shell';
 import type { AccountRole } from '@docoo/contracts';
 import { DashboardCards } from './dashboard-cards';
-import { AccountSecurity } from './account-security';
+import { cachedSession, rememberSession } from './session-cache';
 
 interface SessionIdentity {
   user: {
@@ -84,7 +84,10 @@ export function AuthShell({
   loginPage?: boolean;
 }) {
   const content = messagesFor(locale);
-  const [view, setView] = useState<View>({ kind: 'loading' });
+  const [view, setView] = useState<View>(() => {
+    const known = cachedSession();
+    return known ? { kind: 'authenticated', identity: known } : { kind: 'loading' };
+  });
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleError, setGoogleError] = useState('');
   const [email, setEmail] = useState('');
@@ -105,9 +108,12 @@ export function AuthShell({
           signal: controller.signal,
         });
         if (response.status === 401) {
+          rememberSession(null);
           setView({ kind: 'guest' });
         } else if (response.ok) {
-          setView({ kind: 'authenticated', identity: (await response.json()) as SessionIdentity });
+          const identity = (await response.json()) as SessionIdentity;
+          rememberSession(identity);
+          setView({ kind: 'authenticated', identity });
         } else {
           setView({ kind: 'unavailable' });
         }
@@ -175,6 +181,7 @@ export function AuthShell({
       });
       if (response.ok) {
         const identity = (await response.json()) as SessionIdentity;
+        rememberSession(identity);
         setPassword('');
         setView({ kind: 'authenticated', identity });
       } else {
@@ -200,6 +207,7 @@ export function AuthShell({
         credentials: 'same-origin',
       });
       if (!response.ok) throw new Error('Logout failed');
+      rememberSession(null);
       setEmail('');
       setPassword('');
       setView({ kind: 'guest', notice: content.signedOut });
@@ -361,7 +369,6 @@ export function AuthShell({
         {view.identity.workspaces[0] && (
           <DashboardCards locale={locale} workspaceId={view.identity.workspaces[0].id} />
         )}
-        <AccountSecurity locale={locale} user={view.identity.user} />
       </div>
     </AppShell>
   );

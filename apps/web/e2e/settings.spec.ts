@@ -120,9 +120,8 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
   }) => {
     test.setTimeout(120_000);
     await signInWithKeyboard(page);
-    await mainNavigation(page).getByRole('link', { name: 'قالب‌ها و سطوح سند' }).click();
-    await expect(page).toHaveURL(/\/fa\/templates$/u);
-    await expect(page.getByRole('heading', { level: 1, name: templates.title })).toBeVisible();
+    await mainNavigation(page).getByRole('link', { name: 'تنظیمات سامانه' }).click();
+    await expect(page).toHaveURL(/\/fa\/settings$/u);
     await expect(
       page.getByRole('heading', { level: 2, name: templates.levelsTitle }),
     ).toBeVisible();
@@ -166,7 +165,10 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     ).toBeVisible();
     await group.getByRole('radio', { name: new RegExp(templates.names['detailed']!, 'u') }).check();
     await expect(page.getByRole('button', { name: templates.saveTemplate })).toBeDisabled();
-    await page.getByLabel(templates.reasonLabel).last().fill('اسناد تفصیلی');
+    await page
+      .locator('section', { has: group })
+      .getByLabel(templates.reasonLabel)
+      .fill('اسناد تفصیلی');
     await page.getByRole('button', { name: templates.saveTemplate }).click();
     await expect(
       page.getByRole('status').filter({ hasText: templates.savedTemplate }),
@@ -176,7 +178,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
 
     // Put the default back so later tests start from the same place.
     await group.getByRole('radio', { name: new RegExp(templates.names['standard']!, 'u') }).check();
-    await page.getByLabel(templates.reasonLabel).last().fill('بازگشت');
+    await page.locator('section', { has: group }).getByLabel(templates.reasonLabel).fill('بازگشت');
     await page.getByRole('button', { name: templates.saveTemplate }).click();
     await expect(
       page.getByRole('status').filter({ hasText: templates.savedTemplate }),
@@ -184,7 +186,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
 
     await page.getByRole('link', { name: 'Switch to English' }).click();
     await expect(
-      page.getByRole('heading', { level: 1, name: templatesMessages('en').title }),
+      page.getByRole('heading', { level: 1, name: settingsMessages('en').title }),
     ).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
