@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "3609f9a5c275bcccebba3ad89b71d660df27dc27"
+    "source_commit": "5ded662687d841aedf209dc855aa6f175998fd69"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-20T21:07:12.183Z",
+    "synced_at": "2026-10-22T08:07:59.774Z",
     "created": 0,
-    "updated": 2,
-    "unchanged": 72,
+    "updated": 3,
+    "unchanged": 71,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -193,13 +193,13 @@
       "version": "1.0.1",
       "status": "approved-baseline",
       "owner": "Domain Architecture",
-      "checksum_sha256": "7cea0096c0c3559951c074a85ca6849358266f5f8f2b3dc398f6710659348172",
+      "checksum_sha256": "c5379136884c0e1738585c191a199eb588b1a775454323d0cbdaea81e41d25cd",
       "notion_page_id": "3e55a24a-6668-814e-baa9-eaff2d96aec8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668814ebaa9eaff2d96aec8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-8182-af17-c07beeceb709",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a66688182af17c07beeceb709",
-      "synced_commit": "b3f67c97fd013cb6a8dbd5f97dca2dea02a3c946",
-      "synced_at": "2026-10-01T16:08:48.251Z"
+      "synced_commit": "5ded662687d841aedf209dc855aa6f175998fd69",
+      "synced_at": "2026-10-22T08:07:59.774Z"
     },
     "DOCOO-STATE-MACHINES": {
       "path": "docs/02-domain/02-state-machines.md",
@@ -263,13 +263,13 @@
       "version": "1.1.0",
       "status": "approved-baseline",
       "owner": "AI Governance",
-      "checksum_sha256": "41c127acbb3c44611bd09a4753c4a0a69d573e0cfac8d1db3fd2d6e2a7882494",
+      "checksum_sha256": "53c7386c1a3b61c775a30e45e625a1fe832ec625c05a3f4f075805d4b19453ac",
       "notion_page_id": "3e55a24a-6668-81c3-b969-ce705bf7ebc2",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881c3b969ce705bf7ebc2?pvs=204",
       "index_row_page_id": "3e55a24a-6668-813b-9df5-e2e65f4e14fc",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a6668813b9df5e2e65f4e14fc",
-      "synced_commit": "3609f9a5c275bcccebba3ad89b71d660df27dc27",
-      "synced_at": "2026-10-20T21:07:12.183Z"
+      "synced_commit": "5ded662687d841aedf209dc855aa6f175998fd69",
+      "synced_at": "2026-10-22T08:07:59.774Z"
     },
     "DOCOO-AI-PROVIDERS": {
       "path": "docs/03-ai/04-provider-orchestration.md",
@@ -333,13 +333,13 @@
       "version": "1.12.0",
       "status": "proposed",
       "owner": "API Architecture",
-      "checksum_sha256": "edaeffc319b0110d789440750c81b21b16c289221ebaa93e5e675a9e65155133",
+      "checksum_sha256": "ec25ec55c6b91511340bc36086d4acd4e9324cac8138817ec76eebae896c0c49",
       "notion_page_id": "3e55a24a-6668-812d-9f69-cd7fceb4fea8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812d9f69cd7fceb4fea8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a8-8910-fed8b8b362d3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a88910fed8b8b362d3",
-      "synced_commit": "7cc0f37b0505c08b67ad5cdff600d477c464f52e",
-      "synced_at": "2026-10-20T18:10:17.500Z"
+      "synced_commit": "5ded662687d841aedf209dc855aa6f175998fd69",
+      "synced_at": "2026-10-22T08:07:59.774Z"
     },
     "DOCOO-WORKFLOWS-JOBS": {
       "path": "docs/04-architecture/04-workflows-and-jobs.md",
