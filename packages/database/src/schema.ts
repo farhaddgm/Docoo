@@ -258,6 +258,8 @@ export const projectTopics = pgTable(
       .references(() => topics.id, { onDelete: 'restrict' }),
     priority: integer('priority').notNull(),
     conflictInstruction: text('conflict_instruction'),
+    /** Whether other projects on this topic may use this project's knowledge (ADR-0034). */
+    knowledgeSharing: text('knowledge_sharing').notNull().default('none'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -527,6 +529,28 @@ export const knowledgeScopes = pgTable(
       sql`coalesce(${table.role}, '')`,
     ),
     index('knowledge_scopes_lookup_idx').on(table.workspaceId, table.scopeType, table.scopeId),
+  ],
+);
+
+/** Project-scope knowledge a project shares on topic links set to `selected` (ADR-0034). */
+export const projectSharedKnowledge = pgTable(
+  'project_shared_knowledge',
+  {
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => knowledgeItems.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.projectId, table.itemId] }),
+    index('project_shared_knowledge_item_idx').on(table.itemId),
+    index('project_shared_knowledge_workspace_idx').on(table.workspaceId),
   ],
 );
 

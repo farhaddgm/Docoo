@@ -79,6 +79,7 @@ AuditEvent، BrainReport، MetricSnapshot و ExportRecord.
 **Invariantها:**
 
 - active شدن نیازمند حداقل یک حوزه، مسئله و config معتبر است.
+- هر پیوند پروژه–حوزه `knowledgeSharing` دارد (`none` پیش‌فرض، `selected`، `all`): ادمین تعیین می‌کند دانش خودِ پروژه برای پروژه‌های دیگر همان حوزه قابل استفاده باشد یا نه، و در `selected` کدام موردها ([ADR-0034](../adr/0034-topic-knowledge-sharing.md)).
 - completed شدن نیازمند حداقل یک راه‌حل منتخب با سند نهایی approved است.
 - project deleted قابل‌اجرا نیست.
 - هر stage run فقط به یک project و یک workflow version تعلق دارد.
