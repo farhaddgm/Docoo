@@ -3,7 +3,7 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import {
   direction,
@@ -172,6 +172,8 @@ export function AppShell({
   const [menu, setMenu] = useState({ open: false, path: pathname });
   const menuOpen = menu.open && menu.path === pathname;
   const [leaving, setLeaving] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
   // The desktop sidebar folds to an icon rail; the inline script in <head> has already applied it.
   const [collapsed, setCollapsed] = useState(false);
   const isAdmin = !identity || identity.user.role === 'super_admin';
@@ -207,6 +209,22 @@ export function AppShell({
     return () => document.removeEventListener('keydown', close);
   }, [menuOpen, pathname]);
 
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAccountOpen(false);
+    };
+    const onPointer = (event: PointerEvent) => {
+      if (!accountMenuRef.current?.contains(event.target as Node)) setAccountOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
+    };
+  }, [accountOpen]);
+
   async function signOutHere() {
     if (leaving) return;
     setLeaving(true);
@@ -231,7 +249,7 @@ export function AppShell({
       {showNavigation && workspaceId && isAdmin && (
         <SmartToggle locale={locale} workspaceId={workspaceId} />
       )}
-      <ThemePicker locale={locale} />
+      {!showNavigation && <ThemePicker locale={locale} />}
       <a
         className="locale-link"
         href={localizedPath(pathname, alternate)}
@@ -308,6 +326,7 @@ export function AppShell({
     const route = implemented[key];
     return (
       !pathname.startsWith(`/${locale}/settings/google-access`) &&
+      !pathname.startsWith(`/${locale}/account`) &&
       route !== undefined &&
       route !== '' &&
       (pathname === `/${locale}${route}` || pathname.startsWith(`/${locale}${route}/`))
@@ -380,33 +399,19 @@ export function AppShell({
                 </div>
               );
             })}
-            {identity?.user.role === 'super_admin' && (
-              <div className="nav-group">
-                <p className="nav-group-label">{content.navGroups.admin}</p>
-                <ul className="nav-list">
-                  <li>
-                    <Link
-                      className="nav-item"
-                      title={content.adminNav.users}
-                      href={`/${locale}/admin/users` as Route}
-                      aria-current={
-                        pathname.startsWith(`/${locale}/admin/users`) ||
-                        pathname.startsWith(`/${locale}/settings/google-access`)
-                          ? 'page'
-                          : undefined
-                      }
-                    >
-                      <Icon name="users" />
-                      <span className="nav-label">{content.adminNav.users}</span>
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            )}
           </nav>
           {identity && (
-            <div className="sidebar-foot">
-              <div className="user-chip" title={identity.user.displayName}>
+            <div className="sidebar-foot" ref={accountMenuRef}>
+              <button
+                type="button"
+                className="user-chip user-chip-button"
+                title={identity.user.displayName}
+                aria-haspopup="menu"
+                aria-expanded={accountOpen}
+                aria-controls="account-menu"
+                aria-label={`${content.accountMenu.open}: ${identity.user.displayName}`}
+                onClick={() => setAccountOpen((value) => !value)}
+              >
                 <span className="avatar" aria-hidden="true">
                   {initials(identity.user.displayName)}
                 </span>
@@ -414,6 +419,17 @@ export function AppShell({
                   <span className="user-chip-name">{identity.user.displayName}</span>
                   <span className="user-chip-meta">{roleLabel}</span>
                 </span>
+              </button>
+              <div id="account-menu" className="account-menu" hidden={!accountOpen}>
+                <Link
+                  className="account-menu-item"
+                  href={`/${locale}/account` as Route}
+                  onClick={() => setAccountOpen(false)}
+                >
+                  <Icon name="settings" />
+                  <span>{content.accountMenu.settings}</span>
+                </Link>
+                <ThemePicker locale={locale} inline />
               </div>
             </div>
           )}

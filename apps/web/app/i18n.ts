@@ -91,6 +91,7 @@ const messages = {
       admin: 'مدیریت',
     },
     adminNav: { users: 'کاربران و ورود' },
+    accountMenu: { open: 'منوی حساب کاربری', settings: 'تنظیمات' },
     roles: { owner: 'مالک', super_admin: 'مدیر', editor: 'ویرایشگر', viewer: 'مشاهده‌گر' },
     workspaceLabel: 'فضای کار',
     theme: {
@@ -190,6 +191,7 @@ const messages = {
       admin: 'Administration',
     },
     adminNav: { users: 'Users & sign-in' },
+    accountMenu: { open: 'Account menu', settings: 'Settings' },
     roles: { owner: 'Owner', super_admin: 'Administrator', editor: 'Editor', viewer: 'Viewer' },
     workspaceLabel: 'Workspace',
     theme: {

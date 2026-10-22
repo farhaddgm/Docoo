@@ -17,7 +17,14 @@ import {
  * Bee Researcher (follow the system, light, dark and six palettes). The choice is kept in this
  * browser and applies at once.
  */
-export function ThemePicker({ locale }: { readonly locale: Locale }) {
+export function ThemePicker({
+  locale,
+  inline = false,
+}: {
+  readonly locale: Locale;
+  /** Renders just the list of themes (for use inside another menu) instead of a button + popover. */
+  readonly inline?: boolean;
+}) {
   const content = messagesFor(locale);
   const [preference, setPreference] = useState<ThemePreference>('system');
   const [open, setOpen] = useState(false);
@@ -51,6 +58,32 @@ export function ThemePicker({ locale }: { readonly locale: Locale }) {
     setPreference(next);
     storeThemePreference(next);
     applyThemePreference(next);
+  }
+
+  if (inline) {
+    return (
+      <div className="theme-picker-inline">
+        <p className="theme-picker-title">{content.theme.label}</p>
+        <div role="group" aria-label={content.theme.label} className="theme-picker-list">
+          {themePreferences.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className="theme-choice"
+              aria-pressed={preference === item}
+              onClick={() => choose(item)}
+            >
+              <span
+                className="theme-swatch"
+                style={{ background: themeSwatches[item] }}
+                aria-hidden="true"
+              />
+              <span>{content.theme[item]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
