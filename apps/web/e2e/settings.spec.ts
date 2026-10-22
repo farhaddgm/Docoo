@@ -120,9 +120,8 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
   }) => {
     test.setTimeout(120_000);
     await signInWithKeyboard(page);
-    await mainNavigation(page).getByRole('link', { name: 'قالب‌ها و سطوح سند' }).click();
-    await expect(page).toHaveURL(/\/fa\/templates$/u);
-    await expect(page.getByRole('heading', { level: 1, name: templates.title })).toBeVisible();
+    await mainNavigation(page).getByRole('link', { name: 'تنظیمات سامانه' }).click();
+    await expect(page).toHaveURL(/\/fa\/settings$/u);
     await expect(
       page.getByRole('heading', { level: 2, name: templates.levelsTitle }),
     ).toBeVisible();

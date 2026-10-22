@@ -7,6 +7,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { messagesFor, type Locale } from '../i18n';
 import { reportMessagesFor } from '../report-messages';
 import { AppShell } from './app-shell';
+import { cachedSession, rememberSession } from './session-cache';
 
 export interface SessionIdentity {
   user: {
@@ -46,7 +47,10 @@ export function SignedIn({
 }) {
   const shell = messagesFor(locale);
   const content = reportMessagesFor(locale);
-  const [state, setState] = useState<State>({ kind: 'loading' });
+  const [state, setState] = useState<State>(() => {
+    const known = cachedSession();
+    return known ? { kind: 'ready', identity: known } : { kind: 'loading' };
+  });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -56,10 +60,14 @@ export function SignedIn({
       signal: controller.signal,
     })
       .then(async (response) => {
-        if (response.status === 401) setState({ kind: 'guest' });
-        else if (response.ok)
-          setState({ kind: 'ready', identity: (await response.json()) as SessionIdentity });
-        else setState({ kind: 'unavailable' });
+        if (response.status === 401) {
+          rememberSession(null);
+          setState({ kind: 'guest' });
+        } else if (response.ok) {
+          const identity = (await response.json()) as SessionIdentity;
+          rememberSession(identity);
+          setState({ kind: 'ready', identity });
+        } else setState({ kind: 'unavailable' });
       })
       .catch(() => {
         if (!controller.signal.aborted) setState({ kind: 'unavailable' });

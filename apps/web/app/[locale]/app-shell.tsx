@@ -13,6 +13,7 @@ import {
   type Locale,
   type NavigationKey,
 } from '../i18n';
+import { apiGet } from '../api-client';
 import { SectionTitle } from '../info-tip';
 import { SmartRoot, SmartToggle } from '../smart/smart-root';
 import { NotificationBell } from './notification-bell';
@@ -26,6 +27,7 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   projects: '/projects',
   topics: '/topics',
   knowledge: '/knowledge',
+  businesses: '/businesses',
   agents: '/agents',
   brain: '/brain',
   providers: '/providers',
@@ -33,7 +35,6 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   costs: '/costs',
   audit: '/audit',
   smart: '/smart/errors',
-  templates: '/templates',
   settings: '/settings',
 };
 
@@ -43,7 +44,7 @@ const memberNavigation: readonly NavigationKey[] = [
   'projects',
   'topics',
   'knowledge',
-  'templates',
+  'businesses',
 ];
 
 /** Pages only the owner may open: they hold the platform's keys, settings, agents and audit trail. */
@@ -66,7 +67,7 @@ const icons: Record<IconName, string> = {
   knowledge: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 0 2 2h13',
   agents:
     'M12 3v3M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM9 13v1M15 13v1',
-  templates: 'M4 4h16v6H4zM4 14h7v6H4zM15 14h5v6h-5z',
+  businesses: 'M3 21h18M6 21V8h7v13M13 21V4h5v17M9 12h1M9 16h1M15 9h1M15 13h1',
   brain:
     'M12 3a4 4 0 0 0-4 4v1a3 3 0 0 0-2 5 3 3 0 0 0 2 5 4 4 0 0 0 8 0 3 3 0 0 0 2-5 3 3 0 0 0-2-5V7a4 4 0 0 0-4-4zM12 3v18',
   providers: 'M12 2l9 5v10l-9 5-9-5V7zM12 12l9-5M12 12v10M12 12L3 7',
@@ -129,6 +130,33 @@ function Brand() {
   );
 }
 
+const projectNames = new Map<string, string>();
+
+/** The project the page is about (`/projects/<id>/…`), so the top bar can say what is being worked on. */
+function useCurrentProject(pathname: string, workspaceId: string | undefined): string | null {
+  const id = /^\/[a-z]{2}\/projects\/([^/]+)/u.exec(pathname)?.[1];
+  const projectId = id && id !== 'new' ? id : undefined;
+  const [loaded, setLoaded] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    if (!projectId || !workspaceId || projectNames.has(projectId)) return;
+    const controller = new AbortController();
+    apiGet<{ project: { code: string; title: string } }>(
+      `/workspaces/${workspaceId}/projects/${projectId}`,
+      controller.signal,
+    )
+      .then(({ project }) => {
+        projectNames.set(projectId, project.title);
+        setLoaded({ id: projectId, name: project.title });
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [projectId, workspaceId]);
+
+  if (!projectId) return null;
+  return projectNames.get(projectId) ?? (loaded?.id === projectId ? loaded.name : null);
+}
+
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/u).filter(Boolean);
   const letters = parts.length > 1 ? [parts[0], parts[1]] : [...(parts[0] ?? '?')].slice(0, 2);
@@ -177,6 +205,7 @@ export function AppShell({
   // The desktop sidebar folds to an icon rail; the inline script in <head> has already applied it.
   const [collapsed, setCollapsed] = useState(false);
   const isAdmin = !identity || identity.user.role === 'super_admin';
+  const projectName = useCurrentProject(pathname, workspaceId);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -283,10 +312,9 @@ export function AppShell({
         {title}
       </SectionTitle>
       {ownerPage && (
-        <p className="owner-badge">
+        <span className="owner-crown" role="img" aria-label={content.ownerOnlyBadge}>
           <Icon name="owner" className="" />
-          {content.ownerOnlyBadge}
-        </p>
+        </span>
       )}
     </div>
   );
@@ -332,7 +360,6 @@ export function AppShell({
       (pathname === `/${locale}${route}` || pathname.startsWith(`/${locale}${route}/`))
     );
   });
-  const workspaceName = identity?.workspaces[0]?.name;
   const roleLabel = identity
     ? identity.user.isOwner
       ? content.roles.owner
@@ -462,11 +489,11 @@ export function AppShell({
             >
               <Icon name="menu" className="" />
             </button>
-            {workspaceName && (
+            {projectName && (
               <div className="topbar-context">
-                <span className="workspace-chip" title={content.workspaceLabel}>
-                  <Icon name="workspace" className="" />
-                  {workspaceName}
+                <span className="workspace-chip" title={projectName}>
+                  <Icon name="projects" className="" />
+                  {projectName}
                 </span>
               </div>
             )}
