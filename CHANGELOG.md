@@ -2,6 +2,21 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.37.0] — 2026-10-22
+
+### Added
+
+- **Account menu.** The user button at the bottom of the sidebar opens a menu with **Settings** (your account: password, and **Users & sign-in** for administrators) and the colour theme. The theme button no longer sits in the top bar once you are signed in.
+- **Businesses page.** A new **Businesses** entry under Workspace shows the business profiles defined in Contenter as cards, with search and paging.
+- **Current project in the top bar.** On a project page the top bar names the project you are working on, instead of the workspace.
+
+### Changed
+
+- The sidebar stays in place while a page loads instead of disappearing and coming back.
+- **Templates & document levels** moved to the top of **System settings** (`/templates` redirects there); **Users & sign-in** moved into account settings; the account/security box left the dashboard.
+- Owner-only pages show a crown in their top corner instead of the "Owner only" text.
+- A tidier **Notifications** page: an Unread / All switch and one compact row per notification.
+
 ## [0.36.0] — 2026-10-21
 
 ### Added
