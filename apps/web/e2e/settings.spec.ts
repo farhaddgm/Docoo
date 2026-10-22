@@ -178,7 +178,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
 
     // Put the default back so later tests start from the same place.
     await group.getByRole('radio', { name: new RegExp(templates.names['standard']!, 'u') }).check();
-    await page.getByLabel(templates.reasonLabel).last().fill('بازگشت');
+    await page.locator('section', { has: group }).getByLabel(templates.reasonLabel).fill('بازگشت');
     await page.getByRole('button', { name: templates.saveTemplate }).click();
     await expect(
       page.getByRole('status').filter({ hasText: templates.savedTemplate }),
