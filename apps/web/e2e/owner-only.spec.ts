@@ -59,7 +59,9 @@ test('the owner sees the owner pages with an owner badge', async ({ page }) => {
       // A cold Firefox sometimes loses the first load of a page; load it again until it shows.
       await expect(async () => {
         await page.goto(path);
-        await expect(page.locator('.owner-badge')).toHaveText('فقط مالک', { timeout: 6_000 });
+        await expect(page.getByRole('img', { name: 'فقط مالک', exact: true })).toBeVisible({
+          timeout: 6_000,
+        });
       }).toPass({ timeout: 45_000 });
     });
   }
