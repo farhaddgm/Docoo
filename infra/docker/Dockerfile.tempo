@@ -1,5 +1,5 @@
 # Tempo 2.10.8 retains the single-server architecture; patched Go/dependencies, built in CI.
-FROM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS builder
+FROM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS builder
 RUN apk add --no-cache git
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOPROXY="https://proxy.golang.org|direct" GOMAXPROCS=2
 ADD --checksum=sha256:c354a7495843161a41ad75d96dd4e8f17aabc9a5f439060cf974a57b4ef2ff85 https://codeload.github.com/grafana/tempo/tar.gz/f0f3ed59197bfe9f54f3b0f8015ccca112f9e544 /tmp/source.tgz
@@ -14,5 +14,5 @@ COPY --from=builder /out/tempo /tempo
 COPY --from=builder --chown=1000:1000 /out/tempo-data /var/tempo
 USER 1000:1000
 ARG SOURCE_REVISION
-LABEL org.opencontainers.image.revision="$SOURCE_REVISION" org.docoo.upstream-revision="f0f3ed59197bfe9f54f3b0f8015ccca112f9e544" org.docoo.upstream-version="2.10.8" org.docoo.go-version="1.27.2"
+LABEL org.opencontainers.image.revision="$SOURCE_REVISION" org.docoo.upstream-revision="f0f3ed59197bfe9f54f3b0f8015ccca112f9e544" org.docoo.upstream-version="2.10.8" org.docoo.go-version="1.27.3"
 ENTRYPOINT ["/tempo"]
