@@ -4,6 +4,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 import {
   direction,
@@ -201,7 +202,13 @@ export function AppShell({
   const menuOpen = menu.open && menu.path === pathname;
   const [leaving, setLeaving] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const accountButtonRef = useRef<HTMLButtonElement>(null);
+  const accountPopupRef = useRef<HTMLDivElement>(null);
+  // The popup is drawn outside the sidebar (which clips and scrolls) and placed beside the button.
+  const [accountPlace, setAccountPlace] = useState<{
+    bottom: number;
+    inline: number;
+  } | null>(null);
   // The desktop sidebar folds to an icon rail; the inline script in <head> has already applied it.
   const [collapsed, setCollapsed] = useState(false);
   const isAdmin = !identity || identity.user.role === 'super_admin';
@@ -240,17 +247,35 @@ export function AppShell({
 
   useEffect(() => {
     if (!accountOpen) return;
+    const place = () => {
+      const button = accountButtonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const rtl = document.documentElement.dir === 'rtl';
+      setAccountPlace({
+        bottom: window.innerHeight - rect.top + 8,
+        inline: rtl ? window.innerWidth - rect.right : rect.left,
+      });
+    };
+    place();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setAccountOpen(false);
+      if (event.key !== 'Escape') return;
+      setAccountOpen(false);
+      accountButtonRef.current?.focus();
     };
     const onPointer = (event: PointerEvent) => {
-      if (!accountMenuRef.current?.contains(event.target as Node)) setAccountOpen(false);
+      const target = event.target as Node;
+      if (accountButtonRef.current?.contains(target) || accountPopupRef.current?.contains(target))
+        return;
+      setAccountOpen(false);
     };
     document.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', onPointer);
+    window.addEventListener('resize', place);
     return () => {
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onPointer);
+      window.removeEventListener('resize', place);
     };
   }, [accountOpen]);
 
@@ -292,17 +317,6 @@ export function AppShell({
       >
         {content.switchLanguage}
       </a>
-      {identity && showNavigation && (
-        <button
-          type="button"
-          className="signout-button"
-          disabled={onSignOut ? signOutBusy : leaving}
-          onClick={onSignOut ? () => onSignOut() : () => void signOutHere()}
-        >
-          <Icon name="logout" className="" />
-          <span>{onSignOut && signOutBusy ? content.signingOut : content.signOut}</span>
-        </button>
-      )}
     </div>
   );
 
@@ -428,8 +442,9 @@ export function AppShell({
             })}
           </nav>
           {identity && (
-            <div className="sidebar-foot" ref={accountMenuRef}>
+            <div className="sidebar-foot">
               <button
+                ref={accountButtonRef}
                 type="button"
                 className="user-chip user-chip-button"
                 title={identity.user.displayName}
@@ -447,17 +462,39 @@ export function AppShell({
                   <span className="user-chip-meta">{roleLabel}</span>
                 </span>
               </button>
-              <div id="account-menu" className="account-menu" hidden={!accountOpen}>
-                <Link
-                  className="account-menu-item"
-                  href={`/${locale}/account` as Route}
-                  onClick={() => setAccountOpen(false)}
-                >
-                  <Icon name="settings" />
-                  <span>{content.accountMenu.settings}</span>
-                </Link>
-                <ThemePicker locale={locale} inline />
-              </div>
+              {accountOpen &&
+                accountPlace &&
+                createPortal(
+                  <div
+                    id="account-menu"
+                    ref={accountPopupRef}
+                    className="account-menu"
+                    role="menu"
+                    dir={direction(locale)}
+                    style={{ bottom: accountPlace.bottom, insetInlineStart: accountPlace.inline }}
+                  >
+                    <Link
+                      className="account-menu-item"
+                      role="menuitem"
+                      href={`/${locale}/account` as Route}
+                      onClick={() => setAccountOpen(false)}
+                    >
+                      <Icon name="settings" />
+                      <span>{content.accountMenu.settings}</span>
+                    </Link>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="account-menu-item account-menu-danger"
+                      disabled={onSignOut ? signOutBusy : leaving}
+                      onClick={onSignOut ? () => onSignOut() : () => void signOutHere()}
+                    >
+                      <Icon name="logout" />
+                      <span>{onSignOut && signOutBusy ? content.signingOut : content.signOut}</span>
+                    </button>
+                  </div>,
+                  document.body,
+                )}
             </div>
           )}
         </aside>
