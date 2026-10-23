@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend, query } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { DocumentContent, type DocContent } from './document-content';
@@ -170,7 +170,7 @@ export function DocumentsPanel({
                   {pageRows.map((item) => (
                     <tr key={item.id}>
                       <td>{formatNumber(locale, item.priority)}</td>
-                      <th scope="row" dir="auto">
+                      <th scope="row" dir={textDir(locale)}>
                         {item.title}
                         {item.analysisProfile === 'quick' && (
                           <span className="badge state-paused">
@@ -343,7 +343,7 @@ function DocumentView({
       )}
 
       <section className="card" aria-labelledby="document-heading">
-        <h2 id="document-heading" dir="auto">
+        <h2 id="document-heading" dir={textDir(locale)}>
           {doc.title}
         </h2>
         {doc.analysisProfile === 'quick' && (
@@ -594,7 +594,7 @@ function DocumentView({
             </p>
             {evaluation.exception && (
               <p className="muted">
-                {text.exceptionBy}: <span dir="auto">{evaluation.exception.reason}</span>
+                {text.exceptionBy}: <span dir={textDir(locale)}>{evaluation.exception.reason}</span>
               </p>
             )}
             {evaluation.scores.length > 0 && (
@@ -615,11 +615,11 @@ function DocumentView({
                   <tbody>
                     {evaluation.scores.map((row) => (
                       <tr key={row.criterion}>
-                        <th scope="row" dir="auto">
+                        <th scope="row" dir={textDir(locale)}>
                           {labelOf(row.criterion)}
                         </th>
                         <td>{formatNumber(locale, row.score)}</td>
-                        <td dir="auto">{row.evidence}</td>
+                        <td dir={textDir(locale)}>{row.evidence}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -634,8 +634,8 @@ function DocumentView({
                 {evaluation.findings.map((finding) => (
                   <li key={finding.id}>
                     <span className={`badge severity-${finding.severity}`}>{finding.severity}</span>{' '}
-                    <strong dir="auto">{labelOf(finding.criterion)}</strong> —{' '}
-                    <span dir="auto">{finding.evidence}</span>{' '}
+                    <strong dir={textDir(locale)}>{labelOf(finding.criterion)}</strong> —{' '}
+                    <span dir={textDir(locale)}>{finding.evidence}</span>{' '}
                     <small className="muted">
                       ({text.location}: {finding.location}
                       {finding.targetStage ? `, ${text.targetStage}: ${finding.targetStage}` : ''})
@@ -772,7 +772,7 @@ function DocumentView({
                       <td>{text.origins[version.origin] ?? version.origin}</td>
                       <td>{formatNumber(locale, version.charCount)}</td>
                       <td>{version.withinBounds ? text.yes : text.no}</td>
-                      <td dir="auto">{version.reason ?? '—'}</td>
+                      <td dir={textDir(locale)}>{version.reason ?? '—'}</td>
                       <td>{formatDateTime(locale, version.createdAt)}</td>
                       <td>
                         {version.id !== current?.id &&

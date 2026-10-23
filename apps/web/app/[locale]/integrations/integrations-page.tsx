@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend } from '../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { Notice, explainError, useAction } from '../use-action';
 import { WorkspacePage } from '../workspace-page';
 import { integrationMessages } from './messages';
@@ -121,7 +121,7 @@ function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: st
           <summary>{text.stepsTitle}</summary>
           <ol>
             {text.steps.map((step) => (
-              <li key={step} dir="auto">
+              <li key={step} dir={textDir(locale)}>
                 {step}
               </li>
             ))}

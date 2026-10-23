@@ -2,7 +2,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { workflowMessages } from './workflow-messages';
 
@@ -31,10 +31,12 @@ function safeUrl(value: unknown): string | null {
 
 /** What the web search did in this attempt: used, found nothing, failed, refused or switched off. */
 function WebBlock({
+  locale,
   text,
   web,
   num,
 }: {
+  locale: Locale;
   text: ReturnType<typeof workflowMessages>['out'];
   web: Record<string, unknown> | null;
   num: (value: unknown) => string;
@@ -51,7 +53,7 @@ function WebBlock({
             <h5>{text.webQueries}</h5>
             <ul>
               {queries.map((query, index) => (
-                <li key={index} dir="auto">
+                <li key={index} dir={textDir(locale)}>
                   {query}
                 </li>
               ))}
@@ -66,11 +68,11 @@ function WebBlock({
               <li key={index}>
                 <strong>{asText(page['ref'])}</strong>{' '}
                 {url ? (
-                  <a href={url} target="_blank" rel="noopener noreferrer" dir="auto">
+                  <a href={url} target="_blank" rel="noopener noreferrer" dir={textDir(locale)}>
                     {asText(page['title']) || url}
                   </a>
                 ) : (
-                  <span dir="auto">{asText(page['title'])}</span>
+                  <span dir={textDir(locale)}>{asText(page['title'])}</span>
                 )}{' '}
                 <small className="muted">
                   ({page['cited'] === true ? text.cited : text.notCited})
@@ -132,7 +134,7 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
 
   return (
     <div className="output-view">
-      <WebBlock text={text} web={web} num={num} />
+      <WebBlock locale={locale} text={text} web={web} num={num} />
       {verification && (
         <p>
           {fill(text.verificationSummary, {
@@ -165,7 +167,7 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
               const evidence = records(finding['evidence']);
               return (
                 <li key={index} className="stack">
-                  <p dir="auto">
+                  <p dir={textDir(locale)}>
                     {asText(finding['claim'])}{' '}
                     <small className="muted">
                       ({text.source}: {asText(finding['source'])})
@@ -190,7 +192,7 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
                         const pageUrl = safeUrl(cite['url']);
                         return (
                           <li key={citeIndex}>
-                            <blockquote dir="auto">{asText(cite['quote'])}</blockquote>
+                            <blockquote dir={textDir(locale)}>{asText(cite['quote'])}</blockquote>
                             <small>
                               <strong>{asText(cite['ref'])}</strong>
                               {knowledgeId && (
@@ -239,7 +241,7 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
         <Block title={text.conflictsHeading}>
           <ul>
             {conflicts.map((conflict, index) => (
-              <li key={index} dir="auto">
+              <li key={index} dir={textDir(locale)}>
                 {asText(conflict['description'])}
                 {strings(conflict['refs']).length > 0 && (
                   <small className="muted"> ({strings(conflict['refs']).join(', ')})</small>
@@ -256,7 +258,7 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
         ) : (
           <ul>
             {strings(data['gaps']).map((gap, index) => (
-              <li key={index} dir="auto">
+              <li key={index} dir={textDir(locale)}>
                 {gap}
               </li>
             ))}

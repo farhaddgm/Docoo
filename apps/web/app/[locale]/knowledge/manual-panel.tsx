@@ -26,6 +26,7 @@ import {
 } from './knowledge-types';
 import { manualMessages } from './manual-messages';
 import { FieldLabel, GroupLabel, SectionTitle } from '../../info-tip';
+import { textDir } from '../../i18n';
 
 interface CitationDraft {
   sourceRef: string;
@@ -178,7 +179,7 @@ export function ManualKnowledgePanel({
       <label htmlFor={`${id}-title`}>{manual.title}</label>
       <input
         id={`${id}-title`}
-        dir="auto"
+        dir={textDir(locale)}
         value={title}
         maxLength={300}
         onChange={(event) => setTitle(event.target.value)}
@@ -238,7 +239,7 @@ export function ManualKnowledgePanel({
       </FieldLabel>
       <textarea
         id={`${id}-content`}
-        dir="auto"
+        dir={textDir(locale)}
         rows={8}
         value={content}
         aria-describedby={`${id}-content-help`}
@@ -253,7 +254,7 @@ export function ManualKnowledgePanel({
       </FieldLabel>
       <textarea
         id={`${id}-declaration`}
-        dir="auto"
+        dir={textDir(locale)}
         rows={2}
         maxLength={2000}
         value={declaration}
@@ -285,7 +286,7 @@ export function ManualKnowledgePanel({
                 </label>
                 <textarea
                   id={`${id}-claim-${index}-text`}
-                  dir="auto"
+                  dir={textDir(locale)}
                   rows={2}
                   maxLength={2000}
                   value={claim.text}
@@ -321,7 +322,7 @@ export function ManualKnowledgePanel({
                         <input
                           id={`${id}-claim-${index}-cit-${at}-${name}`}
                           type={type}
-                          dir={type === 'text' ? 'auto' : undefined}
+                          dir={type === 'text' ? textDir(locale) : undefined}
                           maxLength={type === 'text' ? 2048 : undefined}
                           value={citation[name]}
                           onChange={(event) =>

@@ -2,7 +2,7 @@
 
 import { useId } from 'react';
 
-import { formatDate, formatNumber, type Locale } from '../../i18n';
+import { formatDate, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge, joinList, safeHref } from './knowledge-common';
 import { knowledgeMessages, type KnowledgeText } from './knowledge-messages';
@@ -72,7 +72,7 @@ function CitationView({
         <Badge tone={citation.complete ? 'ok' : 'warn'}>
           {citation.complete ? text.citationComplete : text.citationIncomplete}
         </Badge>{' '}
-        <strong dir="auto">{citation.title ?? citation.sourceRef ?? '—'}</strong>
+        <strong dir={textDir(locale)}>{citation.title ?? citation.sourceRef ?? '—'}</strong>
       </p>
       {!citation.complete && missing.length > 0 && (
         <p className="muted">{fill(text.citationMissing, { fields: joinList(locale, missing) })}</p>
@@ -95,13 +95,13 @@ function CitationView({
         {citation.publisher && (
           <div>
             <dt>{text.citationPublisher}</dt>
-            <dd dir="auto">{citation.publisher}</dd>
+            <dd dir={textDir(locale)}>{citation.publisher}</dd>
           </div>
         )}
         {citation.author && (
           <div>
             <dt>{text.citationAuthor}</dt>
-            <dd dir="auto">{citation.author}</dd>
+            <dd dir={textDir(locale)}>{citation.author}</dd>
           </div>
         )}
         {citation.publishedAt && (
@@ -119,7 +119,7 @@ function CitationView({
         {citation.locator && (
           <div>
             <dt>{text.citationLocator}</dt>
-            <dd dir="auto">{citation.locator}</dd>
+            <dd dir={textDir(locale)}>{citation.locator}</dd>
           </div>
         )}
         {citation.quoteDigest && (
@@ -173,7 +173,7 @@ export function ClaimsPanel({
           const conflicts = conflictCounts.get(claim.id) ?? 0;
           return (
             <li key={claim.id} className="question">
-              <p className="question-text" dir="auto">
+              <p className="question-text" dir={textDir(locale)}>
                 {claim.text}
               </p>
               <p>
@@ -192,7 +192,7 @@ export function ClaimsPanel({
                 )}
               </p>
               {result && (
-                <p className="muted" dir="auto">
+                <p className="muted" dir={textDir(locale)}>
                   {reasonKey ? text.claimReasons[reasonKey] : result.reason}
                 </p>
               )}

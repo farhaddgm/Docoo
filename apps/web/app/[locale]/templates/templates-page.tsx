@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useState } from 'react';
 
 import { apiGet, apiSend, query } from '../../api-client';
-import { formatNumber, type Locale } from '../../i18n';
+import { formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import {
   boundsProblem,
@@ -296,7 +296,7 @@ function LevelsSection({
         </FieldLabel>
         <input
           id={`${id}-reason`}
-          dir="auto"
+          dir={textDir(locale)}
           value={reason}
           maxLength={1000}
           onChange={(event) => setReason(event.target.value)}
@@ -377,7 +377,7 @@ function TemplatesSection({
             <p className="muted">{text.purposes[template.key]}</p>
             <p>
               {text.sections}:{' '}
-              <span dir="auto">
+              <span dir={textDir(locale)}>
                 {template.sections.map((section) => section.label[locale]).join(' ← ')}
               </span>
             </p>
@@ -391,7 +391,7 @@ function TemplatesSection({
         <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
         <input
           id={`${id}-reason`}
-          dir="auto"
+          dir={textDir(locale)}
           value={reason}
           maxLength={1000}
           onChange={(event) => setReason(event.target.value)}

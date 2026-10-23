@@ -1,7 +1,16 @@
 import type { AgentMessages } from './agent-messages';
 import type { DiffLine } from './diff';
+import { textDir, type Locale } from '../../i18n';
 
-export function DiffView({ lines, text }: { lines: readonly DiffLine[]; text: AgentMessages }) {
+export function DiffView({
+  locale,
+  lines,
+  text,
+}: {
+  locale: Locale;
+  lines: readonly DiffLine[];
+  text: AgentMessages;
+}) {
   const marker = { same: ' ', added: '+', removed: '−' } as const;
   const label = { same: text.unchanged, added: text.added, removed: text.removed } as const;
   return (
@@ -12,7 +21,7 @@ export function DiffView({ lines, text }: { lines: readonly DiffLine[]; text: Ag
             {marker[line.kind]}
           </span>
           <span className="visually-hidden">{label[line.kind]}: </span>
-          <span dir="auto">{line.text}</span>
+          <span dir={textDir(locale)}>{line.text}</span>
         </li>
       ))}
     </ul>

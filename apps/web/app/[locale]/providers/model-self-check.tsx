@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { apiGet, apiSend } from '../../api-client';
-import { formatNumber, type Locale } from '../../i18n';
+import { formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { selfCheckMessages } from './self-check-messages';
 import { InfoTip, SectionTitle } from '../../info-tip';
@@ -310,7 +310,7 @@ export function ModelSelfCheck({
                         <small className="muted"> ({text.estimated})</small>
                       )}
                     </td>
-                    <td dir="auto">
+                    <td dir={textDir(locale)}>
                       {result ? noteOf(result) : ''}
                       {result && (
                         <InfoTip

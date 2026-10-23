@@ -2,7 +2,7 @@
 
 import { useId } from 'react';
 
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge } from './knowledge-common';
 import { knowledgeMessages, type KnowledgeText } from './knowledge-messages';
@@ -72,7 +72,7 @@ export function ReviewPanel({ locale, review }: { locale: Locale; review: Review
         <>
           <p>
             <Badge tone={brainTone(review.decision)}>{text.brainDecisions[review.decision]}</Badge>{' '}
-            <span className="muted" dir="auto">
+            <span className="muted" dir={textDir(locale)}>
               {fill(text.reviewMeta, {
                 auditor: review.auditor,
                 rubric: review.rubricVersion,
@@ -161,7 +161,7 @@ export function ReviewPanel({ locale, review }: { locale: Locale; review: Review
             <h3>{text.reasonsHeading}</h3>
             <ul className="output-list">
               {review.reasons.map((reason, index) => (
-                <li key={`${index}-${reason}`} dir="auto">
+                <li key={`${index}-${reason}`} dir={textDir(locale)}>
                   {reasonText(text, locale, reason)}
                 </li>
               ))}

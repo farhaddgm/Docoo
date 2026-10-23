@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
-import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, messagesFor, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { DeliverablesPanel } from './deliverables-panel';
@@ -390,7 +390,7 @@ export function WorkflowPanel({
                     <br />
                     <span>
                       {text.providerSaid}:{' '}
-                      <span dir="auto" lang="en">
+                      <span dir={textDir(locale)} lang="en">
                         {[refusal.errorCode, refusal.errorDetail].filter(Boolean).join(' · ')}
                       </span>{' '}
                       <small className="muted" dir="ltr">
@@ -450,7 +450,7 @@ export function WorkflowPanel({
               .filter((question) => question.status !== 'open')
               .map((question) => (
                 <li key={question.id}>
-                  <strong dir="auto">{question.question}</strong>
+                  <strong dir={textDir(locale)}>{question.question}</strong>
                   <small className="muted">
                     {' '}
                     · {text.roles[question.role] ?? question.role} ·{' '}
@@ -459,7 +459,7 @@ export function WorkflowPanel({
                   {question.answer && (
                     <>
                       <br />
-                      <span dir="auto">{question.answer}</span>
+                      <span dir={textDir(locale)}>{question.answer}</span>
                     </>
                   )}
                 </li>
@@ -530,11 +530,11 @@ function AgentQuestionForm({
       </h2>
       <p>{text.questionHelp}</p>
       <p>
-        <strong dir="auto">{question.question}</strong>
+        <strong dir={textDir(locale)}>{question.question}</strong>
       </p>
       {question.reason && (
         <p className="muted">
-          {text.questionWhy}: <span dir="auto">{question.reason}</span>
+          {text.questionWhy}: <span dir={textDir(locale)}>{question.reason}</span>
         </p>
       )}
       <div className="filter-grid">
@@ -774,7 +774,7 @@ function ReviewPanel({
                 </FieldLabel>
                 <textarea
                   id={`review-comment-${stage.stage}`}
-                  dir="auto"
+                  dir={textDir(locale)}
                   rows={3}
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
@@ -831,7 +831,7 @@ function ReviewPanel({
                 <li key={review.id}>
                   <strong>{text.reviewActions[review.action] ?? review.action}</strong>
                   <small className="muted"> · {formatDateTime(locale, review.createdAt)}</small>
-                  {review.comment && <span dir="auto"> — {review.comment}</span>}
+                  {review.comment && <span dir={textDir(locale)}> — {review.comment}</span>}
                 </li>
               ))}
             </ul>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend, query } from '../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { Badge } from './knowledge-common';
@@ -83,13 +83,13 @@ export function ConflictCard({
         <Badge tone="neutral">{text.severities[conflict.severity] ?? conflict.severity}</Badge>{' '}
         <span className="muted">{formatDateTime(locale, conflict.createdAt)}</span>
       </p>
-      <p dir="auto">{analysisText(text, locale, conflict.analysis)}</p>
+      <p dir={textDir(locale)}>{analysisText(text, locale, conflict.analysis)}</p>
       <div className="conflict-sides">
         {sides.map(({ label, side }) => (
           <blockquote key={side.id} className="conflict-side">
             <strong>{label}</strong>
-            <p dir="auto">{side.text}</p>
-            <small className="muted" dir="auto">
+            <p dir={textDir(locale)}>{side.text}</p>
+            <small className="muted" dir={textDir(locale)}>
               <Link href={`/${locale}/knowledge/${side.knowledgeId}` as Route}>
                 {fill(text.fromDocument, { title: side.title })}
               </Link>
@@ -98,7 +98,7 @@ export function ConflictCard({
         ))}
       </div>
       {conflict.status === 'resolved' ? (
-        <p className="notice ok" role="status" dir="auto">
+        <p className="notice ok" role="status" dir={textDir(locale)}>
           {fill(text.resolvedOn, {
             date: conflict.resolvedAt ? formatDateTime(locale, conflict.resolvedAt) : '—',
             resolution: conflict.resolution ?? '',
@@ -112,7 +112,7 @@ export function ConflictCard({
           </FieldLabel>
           <textarea
             id={`${id}-resolution`}
-            dir="auto"
+            dir={textDir(locale)}
             rows={3}
             value={resolution}
             maxLength={2000}

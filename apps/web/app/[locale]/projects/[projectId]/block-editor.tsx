@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 import type { DocBlock, DocRun } from './document-content';
 import {
   addColumn,
@@ -216,7 +216,7 @@ function BlockFields({
             <input
               id={id('text')}
               className="inline-input"
-              dir="auto"
+              dir={textDir(locale)}
               value={block.text}
               disabled={disabled}
               onChange={(event) => onChange({ ...block, text: event.target.value })}
@@ -252,7 +252,7 @@ function BlockFields({
                 <textarea
                   id={id(`run-${index}`)}
                   className="inline-input"
-                  dir="auto"
+                  dir={textDir(locale)}
                   rows={4}
                   value={run.text}
                   disabled={disabled}
@@ -340,7 +340,7 @@ function BlockFields({
                           })
                         }
                       />{' '}
-                      <span dir="auto">
+                      <span dir={textDir(locale)}>
                         {reference.id}: {reference.text}
                       </span>
                     </label>
@@ -378,7 +378,7 @@ function BlockFields({
             <textarea
               id={id('items')}
               className="inline-input"
-              dir="auto"
+              dir={textDir(locale)}
               rows={Math.max(3, block.items.length + 1)}
               value={itemsToText(block.items)}
               disabled={disabled}
@@ -396,7 +396,7 @@ function BlockFields({
               <input
                 id={id('caption')}
                 className="inline-input"
-                dir="auto"
+                dir={textDir(locale)}
                 value={block.caption}
                 disabled={disabled}
                 onChange={(event) => onChange({ ...block, caption: event.target.value })}
@@ -406,7 +406,7 @@ function BlockFields({
               <input
                 id={id('notes')}
                 className="inline-input"
-                dir="auto"
+                dir={textDir(locale)}
                 value={block.notes ?? ''}
                 disabled={disabled}
                 onChange={(event) => {
@@ -428,7 +428,7 @@ function BlockFields({
                       <input
                         id={id(`col-${columnIndex}`)}
                         className="inline-input"
-                        dir="auto"
+                        dir={textDir(locale)}
                         value={column}
                         disabled={disabled}
                         onChange={(event) =>
@@ -475,7 +475,7 @@ function BlockFields({
                         <input
                           id={id(`cell-${rowIndex}-${columnIndex}`)}
                           className="inline-input"
-                          dir="auto"
+                          dir={textDir(locale)}
                           value={cell}
                           disabled={disabled}
                           onChange={(event) =>
@@ -556,7 +556,7 @@ function BlockFields({
             <textarea
               id={id('text')}
               className="inline-input"
-              dir="auto"
+              dir={textDir(locale)}
               rows={3}
               value={block.text}
               disabled={disabled}
@@ -591,7 +591,7 @@ function BlockFields({
               <input
                 id={id('title')}
                 className="inline-input"
-                dir="auto"
+                dir={textDir(locale)}
                 value={block.title}
                 disabled={disabled}
                 onChange={(event) => onChange({ ...block, title: event.target.value })}
@@ -601,7 +601,7 @@ function BlockFields({
               <input
                 id={id('unit')}
                 className="inline-input"
-                dir="auto"
+                dir={textDir(locale)}
                 value={block.unit}
                 disabled={disabled}
                 onChange={(event) => onChange({ ...block, unit: event.target.value })}
@@ -611,7 +611,7 @@ function BlockFields({
               <input
                 id={id('source')}
                 className="inline-input"
-                dir="auto"
+                dir={textDir(locale)}
                 value={block.source}
                 disabled={disabled}
                 onChange={(event) => onChange({ ...block, source: event.target.value })}
@@ -622,7 +622,7 @@ function BlockFields({
             <input
               id={id('alt')}
               className="inline-input"
-              dir="auto"
+              dir={textDir(locale)}
               value={block.alt}
               disabled={disabled}
               onChange={(event) => onChange({ ...block, alt: event.target.value })}
@@ -637,7 +637,7 @@ function BlockFields({
                 <input
                   id={id(`label-${pointIndex}`)}
                   className="inline-input"
-                  dir="auto"
+                  dir={textDir(locale)}
                   value={label}
                   disabled={disabled}
                   onChange={(event) =>
@@ -715,7 +715,7 @@ function BlockFields({
             <input
               id={id('caption')}
               className="inline-input"
-              dir="auto"
+              dir={textDir(locale)}
               value={block.caption}
               disabled={disabled}
               onChange={(event) => onChange({ ...block, caption: event.target.value })}
@@ -725,7 +725,7 @@ function BlockFields({
             <input
               id={id('alt')}
               className="inline-input"
-              dir="auto"
+              dir={textDir(locale)}
               value={block.alt}
               disabled={disabled}
               onChange={(event) => onChange({ ...block, alt: event.target.value })}
@@ -744,7 +744,7 @@ function BlockFields({
             <input
               id={id('title')}
               className="inline-input"
-              dir="auto"
+              dir={textDir(locale)}
               value={block.title}
               disabled={disabled}
               onChange={(event) => onChange({ ...block, title: event.target.value })}
@@ -775,7 +775,7 @@ function BlockFields({
                 <input
                   id={id(`ref-text-${entryIndex}`)}
                   className="inline-input"
-                  dir="auto"
+                  dir={textDir(locale)}
                   value={entry.text}
                   disabled={disabled}
                   onChange={(event) =>

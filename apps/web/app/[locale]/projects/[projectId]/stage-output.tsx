@@ -4,6 +4,7 @@ import type { Locale } from '../../../i18n';
 import { DefinitionView } from './definition-view';
 import { ResearchView } from './research-view';
 import { workflowMessages } from './workflow-messages';
+import { textDir } from '../../../i18n';
 
 const asText = (value: unknown): string => (typeof value === 'string' ? value : '');
 
@@ -57,7 +58,7 @@ export function StageOutput({
             ) : (
               <ol>
                 {objectList(data['ideas']).map((idea, index) => (
-                  <li key={index} dir="auto">
+                  <li key={index} dir={textDir(locale)}>
                     <strong>{asText(idea['title'])}</strong> — {asText(idea['description'])}
                   </li>
                 ))}
@@ -75,7 +76,7 @@ export function StageOutput({
             ) : (
               <ol>
                 {objectList(data['outline']).map((item, index) => (
-                  <li key={index} dir="auto">
+                  <li key={index} dir={textDir(locale)}>
                     <strong>{asText(item['heading'])}</strong> — {asText(item['summary'])}
                   </li>
                 ))}
@@ -103,11 +104,11 @@ export function StageOutput({
                   <tbody>
                     {objectList(data['scores']).map((row, index) => (
                       <tr key={index}>
-                        <th scope="row" dir="auto">
+                        <th scope="row" dir={textDir(locale)}>
                           {asText(row['criterion'])}
                         </th>
                         <td>{typeof row['score'] === 'number' ? row['score'] : ''}</td>
-                        <td dir="auto">{asText(row['evidence'])}</td>
+                        <td dir={textDir(locale)}>{asText(row['evidence'])}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -116,7 +117,7 @@ export function StageOutput({
             )}
           </Block>
           <Block title={text.summary}>
-            <p dir="auto">{asText(data['summary'])}</p>
+            <p dir={textDir(locale)}>{asText(data['summary'])}</p>
           </Block>
         </div>
       );

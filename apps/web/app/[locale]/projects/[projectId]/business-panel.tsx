@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useState } from 'react';
 
 import { apiGet, apiSend } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { AiView, VersionsView } from './business-ai';
@@ -243,22 +243,22 @@ export function BusinessPanel({
           </span>
           <div className="biz-hero-title">
             <p className="eyebrow">{panel.title}</p>
-            <h2 id={`${id}-head`} dir="auto">
+            <h2 id={`${id}-head`} dir={textDir(locale)}>
               {view.link.name}
             </h2>
             {info.tagline && (
-              <p className="biz-tagline" dir="auto">
+              <p className="biz-tagline" dir={textDir(locale)}>
                 {info.tagline}
               </p>
             )}
             <ul className="chips biz-hero-chips" aria-label={panel.title}>
               {info.industry && (
-                <li className="badge tone-neutral" dir="auto">
+                <li className="badge tone-neutral" dir={textDir(locale)}>
                   {info.industry}
                 </li>
               )}
               {info.location && (
-                <li className="badge tone-neutral" dir="auto">
+                <li className="badge tone-neutral" dir={textDir(locale)}>
                   {info.location}
                 </li>
               )}
@@ -275,7 +275,7 @@ export function BusinessPanel({
             </ul>
             {info.website && (
               <p className="biz-site">
-                <Address value={info.website} />
+                <Address locale={locale} value={info.website} />
               </p>
             )}
           </div>
@@ -290,7 +290,7 @@ export function BusinessPanel({
             </div>
           )}
         </div>
-        <p className="muted biz-note" dir="auto">
+        <p className="muted biz-note" dir={textDir(locale)}>
           {panel.readOnlyNote}
         </p>
         <dl className="biz-meta">

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiGet, query } from '../../../api-client';
-import { formatDateTime, type Locale } from '../../../i18n';
+import { formatDateTime, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { projectPageMessages } from './messages';
 import { PagedRows } from '../../../table-pager';
@@ -91,7 +91,7 @@ export function TimelinePanel({
                           </span>
                         )}
                       </th>
-                      <td dir="auto">{entry.reason ?? '—'}</td>
+                      <td dir={textDir(locale)}>{entry.reason ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>

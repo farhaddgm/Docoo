@@ -2,7 +2,7 @@
 
 import { useId, useState, type ReactNode } from 'react';
 
-import { formatDate, formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDate, formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { businessMessages, joinList, sectionTitle } from '../business-messages';
 import type { BusinessContent } from '../business-types';
@@ -36,14 +36,14 @@ export function safeHref(value: string): string | null {
   return /^https?:\/\/\S+$/iu.test(value) ? value : null;
 }
 
-export function Address({ value }: { readonly value: string }) {
+export function Address({ locale, value }: { readonly locale: Locale; readonly value: string }) {
   const href = safeHref(value);
   return href ? (
     <a href={href} target="_blank" rel="noopener noreferrer" dir="ltr">
       {value}
     </a>
   ) : (
-    <span dir="auto">{value}</span>
+    <span dir={textDir(locale)}>{value}</span>
   );
 }
 
@@ -165,7 +165,7 @@ export function ProfileView({
               <ul>
                 {sections.map((section) => (
                   <li key={section.key}>
-                    <a href={`#biz-s-${section.key}`} dir="auto">
+                    <a href={`#biz-s-${section.key}`} dir={textDir(locale)}>
                       {sectionTitle(locale, section.key)}
                     </a>
                   </li>
@@ -223,7 +223,7 @@ export function ProfileView({
                   data-testid={`business-section-${section.key}`}
                 >
                   <header className="biz-section-head">
-                    <h4 dir="auto">{sectionTitle(locale, section.key)}</h4>
+                    <h4 dir={textDir(locale)}>{sectionTitle(locale, section.key)}</h4>
                     <span className={`badge tone-${draft ? 'warn' : 'ok'}`}>
                       {draft
                         ? profile.aiDraft
@@ -237,7 +237,7 @@ export function ProfileView({
                     more={profile.showMore}
                     less={profile.showLess}
                   >
-                    <RichText text={section.content} />
+                    <RichText locale={locale} text={section.content} />
                   </Collapsible>
                   {section.updatedAt && (
                     <p className="muted biz-section-foot">
@@ -272,7 +272,7 @@ export function ProfileView({
           ) : (
             <ul className="chips topic-chips">
               {content.topics.map((topic) => (
-                <li key={topic.id} className="badge tone-neutral" dir="auto">
+                <li key={topic.id} className="badge tone-neutral" dir={textDir(locale)}>
                   {topic.title}
                 </li>
               ))}
@@ -347,10 +347,10 @@ export function KnowledgeView({
                       const stale = expired(fact.validUntil);
                       return (
                         <tr key={`${fact.label}-${index}`}>
-                          <th scope="row" dir="auto">
+                          <th scope="row" dir={textDir(locale)}>
                             {fact.label}
                           </th>
-                          <td dir="auto">{fact.value}</td>
+                          <td dir={textDir(locale)}>{fact.value}</td>
                           <td>{k.categories[fact.category] ?? fact.category}</td>
                           <td>
                             <span className="chips">
@@ -366,7 +366,13 @@ export function KnowledgeView({
                           <td>
                             <When locale={locale} value={fact.validUntil} dateOnly />
                           </td>
-                          <td>{fact.sourceUrl ? <Address value={fact.sourceUrl} /> : '—'}</td>
+                          <td>
+                            {fact.sourceUrl ? (
+                              <Address locale={locale} value={fact.sourceUrl} />
+                            ) : (
+                              '—'
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -400,7 +406,7 @@ export function KnowledgeView({
                   <tbody>
                     {pageRows.map((term, index) => (
                       <tr key={`${term.term}-${index}`}>
-                        <th scope="row" dir="auto">
+                        <th scope="row" dir={textDir(locale)}>
                           {term.term}
                         </th>
                         <td>
@@ -411,7 +417,7 @@ export function KnowledgeView({
                             <span className="badge tone-neutral">{k.inactive}</span>
                           )}
                         </td>
-                        <td dir="auto">
+                        <td dir={textDir(locale)}>
                           {term.alternatives.length === 0 ? (
                             '—'
                           ) : (
@@ -427,7 +433,7 @@ export function KnowledgeView({
                             </span>
                           )}
                         </td>
-                        <td dir="auto">{term.note || '—'}</td>
+                        <td dir={textDir(locale)}>{term.note || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -448,9 +454,9 @@ export function KnowledgeView({
           <ul className="plain-list stack" data-testid="business-notes">
             {content.notes.map((note, index) => (
               <li key={`${note.createdAt}-${index}`} className="output-view">
-                <RichText text={note.text} />
+                <RichText locale={locale} text={note.text} />
                 {note.summary && (
-                  <p className="muted" dir="auto">
+                  <p className="muted" dir={textDir(locale)}>
                     {note.summary}
                   </p>
                 )}
@@ -514,18 +520,20 @@ export function SourcesView({
                   <tbody>
                     {pageRows.map((reference, index) => (
                       <tr key={`${reference.url}-${index}`}>
-                        <th scope="row" dir="auto">
+                        <th scope="row" dir={textDir(locale)}>
                           {reference.title || s.referenceKinds[reference.kind] || reference.kind}
                           {reference.excerpt && (
                             <details>
                               <summary>{s.excerpt}</summary>
-                              <div className="pre-text" dir="auto">
+                              <div className="pre-text" dir={textDir(locale)}>
                                 {reference.excerpt}
                               </div>
                             </details>
                           )}
                         </th>
-                        <td>{reference.url ? <Address value={reference.url} /> : '—'}</td>
+                        <td>
+                          {reference.url ? <Address locale={locale} value={reference.url} /> : '—'}
+                        </td>
                         <td>
                           <span className="chips">
                             <span className="badge tone-neutral">
@@ -560,7 +568,7 @@ export function SourcesView({
           <ul className="plain-list stack" data-testid="business-assets">
             {content.assets.map((asset, index) => (
               <li key={`${asset.title}-${index}`} className="output-view">
-                <h4 dir="auto">
+                <h4 dir={textDir(locale)}>
                   {asset.title}{' '}
                   <span className="badge tone-neutral">
                     {s.assetKinds[asset.kind] ?? asset.kind}
@@ -572,12 +580,12 @@ export function SourcesView({
                   </span>
                   {!asset.isActive && <span className="badge tone-neutral">{s.inactive}</span>}
                 </h4>
-                {asset.description && <RichText text={asset.description} />}
+                {asset.description && <RichText locale={locale} text={asset.description} />}
                 {(asset.url || asset.fileName) && (
                   <p>
-                    {asset.url ? <Address value={asset.url} /> : null}
+                    {asset.url ? <Address locale={locale} value={asset.url} /> : null}
                     {asset.fileName && (
-                      <span dir="auto">
+                      <span dir={textDir(locale)}>
                         {' '}
                         {s.file}: {asset.fileName}
                       </span>
@@ -591,7 +599,7 @@ export function SourcesView({
                         <dt className="muted" dir="ltr">
                           {key}
                         </dt>
-                        <dd dir="auto" className="pre-text">
+                        <dd dir={textDir(locale)} className="pre-text">
                           {Array.isArray(value) ? joinList(locale, value) : value}
                         </dd>
                       </div>
@@ -612,8 +620,8 @@ export function SourcesView({
           <ul className="plain-list">
             {content.business.sources.map((source, index) => (
               <li key={`${source.url}-${index}`}>
-                {source.title && <span dir="auto">{source.title} — </span>}
-                <Address value={source.url} />
+                {source.title && <span dir={textDir(locale)}>{source.title} — </span>}
+                <Address locale={locale} value={source.url} />
               </li>
             ))}
           </ul>
@@ -680,7 +688,7 @@ export function QualityView({
                     {fill(q.count, { count: formatNumber(locale, check.count) })}
                   </span>
                   {check.keys.length > 0 && (
-                    <span dir="auto">
+                    <span dir={textDir(locale)}>
                       {' — '}
                       {joinList(
                         locale,
@@ -720,13 +728,13 @@ export function QualityView({
                 </span>
               )}
             </p>
-            {audit.summary && <RichText text={audit.summary} />}
+            {audit.summary && <RichText locale={locale} text={audit.summary} />}
             {audit.strengths.length > 0 && (
               <>
                 <h4>{q.strengths}</h4>
                 <ul>
                   {audit.strengths.map((item, index) => (
-                    <li key={`${item}-${index}`} dir="auto">
+                    <li key={`${item}-${index}`} dir={textDir(locale)}>
                       {item}
                     </li>
                   ))}
@@ -755,16 +763,16 @@ export function QualityView({
                       <span className="badge tone-neutral">
                         {q.issueStatuses[issue.status] ?? issue.status}
                       </span>{' '}
-                      <strong dir="auto">{issue.title}</strong>
+                      <strong dir={textDir(locale)}>{issue.title}</strong>
                     </p>
                     {issue.target && (
-                      <p className="muted" dir="auto">
+                      <p className="muted" dir={textDir(locale)}>
                         {sectionTitle(locale, issue.target)}
                       </p>
                     )}
-                    {issue.detail && <RichText text={issue.detail} />}
+                    {issue.detail && <RichText locale={locale} text={issue.detail} />}
                     {issue.fix && (
-                      <p dir="auto" className="issue-fix">
+                      <p dir={textDir(locale)} className="issue-fix">
                         <strong>{q.fix}:</strong> {issue.fix}
                       </p>
                     )}
@@ -783,7 +791,7 @@ export function QualityView({
         ) : (
           <ul>
             {content.business.gaps.map((gap, index) => (
-              <li key={`${gap}-${index}`} dir="auto">
+              <li key={`${gap}-${index}`} dir={textDir(locale)}>
                 {gap}
               </li>
             ))}

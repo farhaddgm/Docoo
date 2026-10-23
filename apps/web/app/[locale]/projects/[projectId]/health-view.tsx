@@ -1,4 +1,4 @@
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { healthMessages } from './health-messages';
 import { PROJECT_STAGES, type Health, type HealthReason, type Milestone } from './project-health';
@@ -59,7 +59,7 @@ export function HealthReasons({
     <div className={`notice ${health.level === 'blocked' ? 'error' : 'warn'}`} role="status">
       <ul className="plain-list" aria-label={text.label}>
         {health.reasons.map((reason, index) => (
-          <li key={index} dir="auto">
+          <li key={index} dir={textDir(locale)}>
             {reasonText(locale, reason)}
           </li>
         ))}

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
 
 import { apiGet } from '../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge } from './knowledge-common';
 import { knowledgeMessages } from './knowledge-messages';
@@ -108,7 +108,7 @@ export function UsesPanel({
                   <tbody>
                     {pageRows.map((use) => (
                       <tr key={use.id}>
-                        <th scope="row" dir="auto">
+                        <th scope="row" dir={textDir(locale)}>
                           {use.projectId ? (
                             <Link href={`/${locale}/projects/${use.projectId}` as Route}>
                               {use.projectTitle ?? use.projectId}
@@ -126,7 +126,7 @@ export function UsesPanel({
                             </small>
                           )}
                         </td>
-                        <td dir="auto">{use.query ?? '—'}</td>
+                        <td dir={textDir(locale)}>{use.query ?? '—'}</td>
                         <td>{use.versionNos.map((n) => formatNumber(locale, n)).join(', ')}</td>
                         <td>{formatDateTime(locale, use.createdAt)}</td>
                         <td>

@@ -12,6 +12,7 @@ import { ProjectForm, type ProjectValues } from '../project-form';
 import { projectPageMessages } from './messages';
 import { NextProjectCard, OriginNote } from './next-project';
 import type { ProjectDetail } from './project-types';
+import { textDir } from '../../../i18n';
 
 /** The problem, description and prioritized topics, with editing while the project allows it. */
 export function OverviewPanel({
@@ -121,13 +122,13 @@ export function OverviewPanel({
             </button>
           )}
         </div>
-        <p dir="auto" style={{ whiteSpace: 'pre-wrap' }}>
+        <p dir={textDir(locale)} style={{ whiteSpace: 'pre-wrap' }}>
           {project.initialProblem}
         </p>
         {project.description && (
           <>
             <h3>{text.description}</h3>
-            <p dir="auto" style={{ whiteSpace: 'pre-wrap' }}>
+            <p dir={textDir(locale)} style={{ whiteSpace: 'pre-wrap' }}>
               {project.description}
             </p>
           </>
@@ -141,7 +142,7 @@ export function OverviewPanel({
           <ol className="plain-list">
             {project.topics.map((topic) => (
               <li key={topic.topicId}>
-                <strong dir="auto">{topic.title}</strong>{' '}
+                <strong dir={textDir(locale)}>{topic.title}</strong>{' '}
                 <small className="muted" dir="ltr">
                   {topic.code}
                 </small>
@@ -159,7 +160,7 @@ export function OverviewPanel({
                 {topic.conflictInstruction && (
                   <>
                     <br />
-                    <span className="muted" dir="auto">
+                    <span className="muted" dir={textDir(locale)}>
                       {topic.conflictInstruction}
                     </span>
                   </>

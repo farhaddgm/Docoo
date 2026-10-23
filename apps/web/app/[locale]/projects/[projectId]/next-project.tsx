@@ -11,6 +11,7 @@ import { Notice, useAction } from '../../use-action';
 import { explainProject } from '../explain';
 import { projectMessages } from '../messages';
 import type { ProjectDetail } from './project-types';
+import { textDir } from '../../../i18n';
 
 const copy = {
   fa: {
@@ -135,7 +136,7 @@ export function NextProjectCard({
           <label htmlFor={`${id}-name`}>{text.name}</label>
           <input
             id={`${id}-name`}
-            dir="auto"
+            dir={textDir(locale)}
             maxLength={200}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
@@ -145,7 +146,7 @@ export function NextProjectCard({
               <label htmlFor={`${id}-pivot`}>{text.pivotProblem}</label>
               <textarea
                 id={`${id}-pivot`}
-                dir="auto"
+                dir={textDir(locale)}
                 rows={4}
                 maxLength={8000}
                 value={pivotProblem}

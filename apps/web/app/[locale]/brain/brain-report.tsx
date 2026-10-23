@@ -6,7 +6,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 
 import { ApiError, apiGet, apiPost } from '../../api-client';
-import { formatDateTime, formatNumber, messagesFor, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, messagesFor, type Locale, textDir } from '../../i18n';
 import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
 import { reportMessagesFor } from '../../report-messages';
 import { smartPageContext } from '../../smart/page-context';
@@ -464,7 +464,7 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
                                 </span>
                               </td>
                               <td>{formatNumber(locale, deviation.count)}</td>
-                              <td dir="ltr">{deviation.detail}</td>
+                              <td dir={textDir(locale)}>{deviation.detail}</td>
                               <td dir="ltr">
                                 <ul className="plain-list evidence">
                                   {deviation.evidence.map((item) => (
@@ -494,7 +494,7 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
                   <h3>{text.recommendations}</h3>
                   <ul>
                     {selected.recommendations.map((item) => (
-                      <li key={`${item.rule}-${item.action}`} dir="ltr">
+                      <li key={`${item.rule}-${item.action}`} dir={textDir(locale)}>
                         <strong>{item.target}</strong>: {item.action}
                       </li>
                     ))}

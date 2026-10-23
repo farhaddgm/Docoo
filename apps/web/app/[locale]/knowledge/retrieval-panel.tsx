@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useId, useState, type FormEvent } from 'react';
 
 import { apiSend } from '../../api-client';
-import { formatNumber, type Locale } from '../../i18n';
+import { formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { Badge, useScopeOptions } from './knowledge-common';
@@ -67,7 +67,7 @@ export function RetrievalPanel({
         <label htmlFor={`${id}-q`}>{text.retrievalQuery}</label>
         <input
           id={`${id}-q`}
-          dir="auto"
+          dir={textDir(locale)}
           value={question}
           maxLength={2000}
           onChange={(event) => setQuestion(event.target.value)}
@@ -119,7 +119,7 @@ export function RetrievalPanel({
             </p>
           ) : (
             <>
-              <p className="muted" role="status" dir="auto">
+              <p className="muted" role="status" dir={textDir(locale)}>
                 {fill(text.retrievalSummary, {
                   n: formatNumber(locale, result.results.length),
                   model: result.embeddingModel,
@@ -129,7 +129,7 @@ export function RetrievalPanel({
               <ol className="plain-list">
                 {result.results.map((item) => (
                   <li key={item.chunkId} className="card stack">
-                    <h3 dir="auto">
+                    <h3 dir={textDir(locale)}>
                       <Link href={`/${locale}/knowledge/${item.knowledgeId}` as Route}>
                         {item.title}
                       </Link>{' '}
@@ -161,13 +161,13 @@ export function RetrievalPanel({
                         })}
                       </small>
                     </p>
-                    <p dir="auto" className="retrieved-text">
+                    <p dir={textDir(locale)} className="retrieved-text">
                       {item.text}
                     </p>
                     {item.conflictWarnings.length > 0 && (
                       <ul className="plain-list">
                         {item.conflictWarnings.map((warning) => (
-                          <li key={warning.conflictId} className="highlight" dir="auto">
+                          <li key={warning.conflictId} className="highlight" dir={textDir(locale)}>
                             {fill(text.retrievalWarning, {
                               type:
                                 text.conflictTypes[warning.conflictType] ?? warning.conflictType,

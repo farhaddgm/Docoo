@@ -5,7 +5,7 @@ import type { Route } from 'next';
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiGet, apiSend } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { explainError, Notice, useAction } from '../../use-action';
 import { questionQualityMessages } from './question-quality-messages';
 import { SectionTitle } from '../../../info-tip';
@@ -94,12 +94,13 @@ export function QuestionQuality({
                 </>
               )}
               <br />
-              <span dir="auto">{finding.detail}</span>
+              <span dir={textDir(locale)}>{finding.detail}</span>
               {finding.recommendation && (
                 <>
                   <br />
                   <small className="muted">
-                    {text.recommendation}: <span dir="auto">{finding.recommendation}</span>
+                    {text.recommendation}:{' '}
+                    <span dir={textDir(locale)}>{finding.recommendation}</span>
                   </small>
                 </>
               )}
@@ -159,7 +160,7 @@ export function QuestionQuality({
                   · {fill(text.questionsJudged, { n: formatNumber(locale, latest.questionCount) })}
                 </span>
               </p>
-              <p dir="auto">{latest.summary}</p>
+              <p dir={textDir(locale)}>{latest.summary}</p>
               <p className="muted">
                 {text.criteriaHeading}:{' '}
                 {latest.criteria

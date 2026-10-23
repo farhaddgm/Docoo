@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend, query } from '../../api-client';
-import { formatDateTime, type Locale } from '../../i18n';
+import { formatDateTime, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import {
@@ -255,7 +255,7 @@ export function SourcesPanel({
         <input
           id={`${id}-search`}
           type="search"
-          dir="auto"
+          dir={textDir(locale)}
           value={search}
           maxLength={100}
           onChange={(event) => setSearch(event.target.value)}
@@ -302,18 +302,18 @@ export function SourcesPanel({
             const canVersion = !readOnly && row.kind === 'file' && current !== undefined;
             return (
               <li key={row.id} className="card stack">
-                <h3 dir="auto">{row.title}</h3>
+                <h3 dir={textDir(locale)}>{row.title}</h3>
                 <p>
                   {current && (
                     <Badge tone={sourceTone(current)}>{text.sourceStatuses[current]}</Badge>
                   )}{' '}
-                  <span className="muted" dir="auto">
+                  <span className="muted" dir={textDir(locale)}>
                     {text.kinds[row.kind]} · {scopeText(text, { ...row.scope })} ·{' '}
                     {formatDateTime(locale, row.updatedAt)}
                   </span>
                 </p>
                 {version?.filename && row.kind === 'file' && (
-                  <p className="muted" dir="auto">
+                  <p className="muted" dir={textDir(locale)}>
                     {version.filename}
                   </p>
                 )}
@@ -354,7 +354,7 @@ export function SourcesPanel({
                   ) : (
                     <ul className="plain-list">
                       {row.knowledge.map((item) => (
-                        <li key={item.id} dir="auto">
+                        <li key={item.id} dir={textDir(locale)}>
                           <Link href={`/${locale}/knowledge/${item.id}` as Route}>
                             {item.title}
                           </Link>{' '}
@@ -580,7 +580,7 @@ function AddSource({
       <label htmlFor={`${id}-title`}>{text.sourceTitle}</label>
       <input
         id={`${id}-title`}
-        dir="auto"
+        dir={textDir(locale)}
         value={title}
         maxLength={300}
         placeholder={mode === 'file' ? file?.name : undefined}
@@ -623,7 +623,7 @@ function AddSource({
           </FieldLabel>
           <textarea
             id={`${id}-text`}
-            dir="auto"
+            dir={textDir(locale)}
             rows={8}
             value={body}
             maxLength={5_000_000}
@@ -749,7 +749,7 @@ function CreateKnowledgeForm({
       <label htmlFor={`${id}-title`}>{text.knowledgeTitle}</label>
       <input
         id={`${id}-title`}
-        dir="auto"
+        dir={textDir(locale)}
         value={title}
         maxLength={300}
         onChange={(event) => setTitle(event.target.value)}
@@ -783,7 +783,7 @@ function CreateKnowledgeForm({
       </FieldLabel>
       <textarea
         id={`${id}-declaration`}
-        dir="auto"
+        dir={textDir(locale)}
         rows={3}
         value={declaration}
         maxLength={2000}
@@ -883,7 +883,7 @@ function NewSourceVersionForm({
       <label htmlFor={`${id}-reason`}>{text.newSourceVersionReason}</label>
       <input
         id={`${id}-reason`}
-        dir="auto"
+        dir={textDir(locale)}
         value={reason}
         maxLength={1000}
         onChange={(event) => setReason(event.target.value)}
@@ -934,7 +934,7 @@ function DeleteSourceForm({
         if (!blocked) onDelete(withKnowledge, reason);
       }}
     >
-      <h4 id={`${id}-heading`} dir="auto">
+      <h4 id={`${id}-heading`} dir={textDir(locale)}>
         {fill(text.deleteSourceHeading, { title: source.title })}
       </h4>
       <p className="muted">{text.deleteSourceHelp}</p>

@@ -15,6 +15,7 @@ import type { AgentRole, Definition } from '../../../agents/agent-types';
 import { ProjectAccessBoundary, useReadOnlyAccess } from '../../../resource-access';
 import { SignedIn } from '../../../signed-in';
 import { buildEvaluationReview, type EvaluationRatingDraft } from './evaluation-lab-form';
+import { textDir } from '../../../../i18n';
 
 type Locale = 'fa' | 'en';
 class LabRequestError extends Error {
@@ -810,7 +811,11 @@ export function EvaluationLabScreen({
                       <bdi>{testCase.caseId}</bdi>
                     </h3>
                     <h4>{t.input}</h4>
-                    <p className="evaluation-lab-text" lang={testCase.language} dir="auto">
+                    <p
+                      className="evaluation-lab-text"
+                      lang={testCase.language}
+                      dir={textDir(locale)}
+                    >
                       {testCase.input}
                     </p>
                     <h4>{t.expected}</h4>
@@ -825,7 +830,11 @@ export function EvaluationLabScreen({
                           <h4>
                             {t.output} {variant.label}
                           </h4>
-                          <p className="evaluation-lab-text" lang={testCase.language} dir="auto">
+                          <p
+                            className="evaluation-lab-text"
+                            lang={testCase.language}
+                            dir={textDir(locale)}
+                          >
                             {variant.output}
                           </p>
                           <fieldset disabled={readOnly || busy}>

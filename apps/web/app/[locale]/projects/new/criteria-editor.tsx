@@ -1,6 +1,6 @@
 'use client';
 
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { wizardMessages } from './wizard-messages';
 import { SectionTitle } from '../../../info-tip';
 
@@ -72,7 +72,7 @@ export function CriteriaEditor({
                 <td>
                   <input
                     className="inline-input"
-                    dir="auto"
+                    dir={textDir(locale)}
                     value={item.label}
                     maxLength={200}
                     required

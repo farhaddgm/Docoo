@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 
 import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { agentMessages, fill } from '../../agents/agent-messages';
 import {
   agentRoles,
@@ -232,7 +232,7 @@ export function AgentsPanel({
                   </label>
                   <input
                     id={`${formId}-${role}`}
-                    dir="auto"
+                    dir={textDir(locale)}
                     value={reason}
                     maxLength={1000}
                     onChange={(event) => setReason(event.target.value)}
@@ -327,7 +327,7 @@ function Workbench({
           comparison.map((item) => (
             <div key={item.label}>
               <h4>{item.label}</h4>
-              <DiffView lines={item.lines} text={text} />
+              <DiffView locale={locale} lines={item.lines} text={text} />
             </div>
           ))
         )}
@@ -354,7 +354,7 @@ function Workbench({
                 <strong>{label}</strong>{' '}
                 {item.id === mine.id && <span className="badge state-passed">{text.active}</span>}{' '}
                 <span className="muted">{formatDateTime(locale, item.createdAt)}</span>
-                <p dir="auto">{item.reason}</p>
+                <p dir={textDir(locale)}>{item.reason}</p>
                 {item.id !== mine.id && (
                   <button
                     type="button"

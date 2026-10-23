@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { Locale } from '../../../i18n';
 import { quickDraftMessages } from '../quick-draft-messages';
 import { workflowMessages } from './workflow-messages';
+import { textDir } from '../../../i18n';
 
 const asText = (value: unknown): string => (typeof value === 'string' ? value : '');
 
@@ -40,12 +41,12 @@ function Block({
   );
 }
 
-function Bullets({ items, empty }: { items: string[]; empty: string }) {
+function Bullets({ locale, items, empty }: { locale: Locale; items: string[]; empty: string }) {
   if (items.length === 0) return <p className="muted">{empty}</p>;
   return (
     <ul>
       {items.map((item, index) => (
-        <li key={index} dir="auto">
+        <li key={index} dir={textDir(locale)}>
           {item}
         </li>
       ))}
@@ -76,26 +77,26 @@ export function DefinitionView({
         </p>
       )}
       <Block title={out.problemStatement}>
-        <p dir="auto">{asText(content['problemStatement'])}</p>
+        <p dir={textDir(locale)}>{asText(content['problemStatement'])}</p>
       </Block>
       {asText(content['needStatement']) !== '' && (
         <Block title={out.needStatement}>
-          <p dir="auto">{asText(content['needStatement'])}</p>
+          <p dir={textDir(locale)}>{asText(content['needStatement'])}</p>
         </Block>
       )}
       {(['objectives', 'constraints', 'stakeholders', 'successCriteria'] as const).map(
         (key) =>
           key in content && (
             <Block key={key} title={out[key]}>
-              <Bullets items={textList(content[key])} empty={out.none} />
+              <Bullets locale={locale} items={textList(content[key])} empty={out.none} />
             </Block>
           ),
       )}
       <Block title={out.assumptions} highlight>
-        <Bullets items={textList(content['assumptions'])} empty={out.none} />
+        <Bullets locale={locale} items={textList(content['assumptions'])} empty={out.none} />
       </Block>
       <Block title={out.unresolved} highlight>
-        <Bullets items={unresolved} empty={out.none} />
+        <Bullets locale={locale} items={unresolved} empty={out.none} />
       </Block>
       {glossary.length > 0 && (
         <Block title={out.glossary}>
@@ -110,10 +111,10 @@ export function DefinitionView({
               <tbody>
                 {glossary.map((row, index) => (
                   <tr key={index}>
-                    <th scope="row" dir="auto">
+                    <th scope="row" dir={textDir(locale)}>
                       {row.term}
                     </th>
-                    <td dir="auto">{row.meaning}</td>
+                    <td dir={textDir(locale)}>{row.meaning}</td>
                   </tr>
                 ))}
               </tbody>
@@ -123,12 +124,12 @@ export function DefinitionView({
       )}
       {asText(content['recommendedScope']) !== '' && (
         <Block title={out.recommendedScope}>
-          <p dir="auto">{asText(content['recommendedScope'])}</p>
+          <p dir={textDir(locale)}>{asText(content['recommendedScope'])}</p>
         </Block>
       )}
       {'outOfScope' in content && (
         <Block title={out.outOfScope}>
-          <Bullets items={textList(content['outOfScope'])} empty={out.none} />
+          <Bullets locale={locale} items={textList(content['outOfScope'])} empty={out.none} />
         </Block>
       )}
     </div>
