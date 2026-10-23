@@ -247,7 +247,7 @@ jobs:
           image=json.loads(subprocess.check_output(['docker','image','inspect',os.environ['TRACE_IMAGE']]))[0]
           (p/'provenance.json').write_text(json.dumps({'sourceCommit':os.environ['TRACE_SOURCE'],'workflowRunId':int(os.environ['TRACE_RUN']),'image':os.environ['TRACE_IMAGE'],'imageId':image['Id'],'labels':image['Config']['Labels'],'imageTarSha256':digest.hexdigest()},indent=2)+'\n')
           PYTHON
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: observability-image-${{ matrix.name }}-${{ github.sha }}
           path: trace-image
