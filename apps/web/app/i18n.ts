@@ -10,6 +10,14 @@ export function direction(locale: Locale): 'rtl' | 'ltr' {
   return locale === 'fa' ? 'rtl' : 'ltr';
 }
 
+/**
+ * Direction for free text (user content, model output, errors). Persian pages are always RTL, so a
+ * sentence that starts with a Latin word is not flipped to LTR; English pages keep per-text detection.
+ */
+export function textDir(locale: Locale): 'rtl' | 'auto' {
+  return locale === 'fa' ? 'rtl' : 'auto';
+}
+
 /** BCP 47 tags used for Intl formatting; stored values stay locale-neutral (FR-LOC-004). */
 const intlTag: Record<Locale, string> = { fa: 'fa-IR', en: 'en-US' };
 

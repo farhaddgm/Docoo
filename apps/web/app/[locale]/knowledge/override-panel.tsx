@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
 import { apiSend } from '../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { Badge, decisionTone, localToIso } from './knowledge-common';
@@ -177,7 +177,7 @@ export function OverridePanel({
       </div>
 
       {active && (
-        <p className="notice ok" role="status" dir="auto">
+        <p className="notice ok" role="status" dir={textDir(locale)}>
           <strong>{text.overrideActive}:</strong>{' '}
           {fill(text.overrideActiveText, {
             decision: active.decision === 'approve' ? text.approve : text.reject,
@@ -219,7 +219,7 @@ export function OverridePanel({
           </FieldLabel>
           <textarea
             id={`${id}-reason`}
-            dir="auto"
+            dir={textDir(locale)}
             rows={4}
             value={reason}
             maxLength={2000}
@@ -282,7 +282,7 @@ export function OverridePanel({
           <p>
             <strong>{decisionName}</strong>
           </p>
-          <p dir="auto">{reason.trim()}</p>
+          <p dir={textDir(locale)}>{reason.trim()}</p>
           {effect}
           <p>{text.overrideConfirmText}</p>
           <p className="toolbar">
@@ -306,7 +306,7 @@ export function OverridePanel({
           <h3>{text.overrideHistory}</h3>
           <ul className="plain-list">
             {version.overrides.map((item) => (
-              <li key={item.id} dir="auto">
+              <li key={item.id} dir={textDir(locale)}>
                 {fill(text.overrideRow, {
                   decision: item.decision === 'approve' ? text.approve : text.reject,
                   date: formatDateTime(locale, item.createdAt),

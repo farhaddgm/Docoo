@@ -1,4 +1,4 @@
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { editorMessages, fill } from './editor-messages';
 import { SectionTitle } from '../../../info-tip';
 
@@ -33,7 +33,7 @@ export function TermIssues({
       </SectionTitle>
       <ul className="plain-list">
         {issues.map((issue, index) => (
-          <li key={`${issue.kind}-${issue.term}-${issue.found}-${index}`} dir="auto">
+          <li key={`${issue.kind}-${issue.term}-${issue.found}-${index}`} dir={textDir(locale)}>
             <span className={`badge tone-${issue.kind === 'AVOID' ? 'danger' : 'warn'}`}>
               {issue.kind === 'AVOID' ? text.termAvoidBadge : text.termUseBadge}
             </span>{' '}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { explainError, Notice, useAction } from '../../use-action';
 import { editorMessages, fill } from './editor-messages';
 import { TermIssues, type TermIssueView } from './term-issues';
@@ -240,7 +240,7 @@ export function DocumentWriter({
               id="writer-notes"
               rows={3}
               maxLength={2000}
-              dir="auto"
+              dir={textDir(locale)}
               value={notes}
               disabled={busy}
               aria-describedby="writer-notes-help"
@@ -248,7 +248,7 @@ export function DocumentWriter({
             />
           </div>
           {selected && (
-            <p className="muted" dir="auto">
+            <p className="muted" dir={textDir(locale)}>
               {selected.sections.map((section) => section.label[locale]).join(' · ')}
             </p>
           )}
@@ -307,7 +307,7 @@ export function DocumentWriter({
                     <tbody>
                       {latest.progress.subsections.map((item) => (
                         <tr key={item.id}>
-                          <th scope="row" dir="auto">
+                          <th scope="row" dir={textDir(locale)}>
                             {item.heading ?? item.section}
                           </th>
                           <td>{formatNumber(locale, item.target)}</td>

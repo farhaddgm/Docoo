@@ -18,6 +18,7 @@ import {
   type TopicOption,
 } from './knowledge-types';
 import { FieldLabel, GroupLabel } from '../../info-tip';
+import { textDir, type Locale } from '../../i18n';
 
 /** A status is told by its words; the tone only supports them. */
 export type Tone = 'ok' | 'warn' | 'danger' | 'neutral';
@@ -89,11 +90,19 @@ export function scopeText(
   return `${name} · ${fill(text.onlyRole, { role })}`;
 }
 
-export function ScopeList({ text, scopes }: { text: KnowledgeText; scopes: readonly Scope[] }) {
+export function ScopeList({
+  locale,
+  text,
+  scopes,
+}: {
+  locale: Locale;
+  text: KnowledgeText;
+  scopes: readonly Scope[];
+}) {
   return (
     <ul className="plain-list">
       {scopes.map((scope) => (
-        <li key={`${scope.type}:${scope.id}:${scope.role ?? ''}`} dir="auto">
+        <li key={`${scope.type}:${scope.id}:${scope.role ?? ''}`} dir={textDir(locale)}>
           {scopeText(text, scope)}
         </li>
       ))}

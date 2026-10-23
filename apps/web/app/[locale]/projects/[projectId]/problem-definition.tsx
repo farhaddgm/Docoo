@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 
 import { apiSend, idempotencyKey } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { quickDraftMessages } from '../quick-draft-messages';
 import { DefinitionView } from './definition-view';
 import { problemMessages } from './problem-messages';
@@ -108,14 +108,14 @@ export function DefinitionCard({
             {definition.unresolvedQuestions.map((question) => (
               <li key={question.number}>
                 <strong>{formatNumber(locale, question.number)}.</strong>{' '}
-                <span dir="auto">{question.text}</span>{' '}
+                <span dir={textDir(locale)}>{question.text}</span>{' '}
                 <span className={`badge answer-${question.status}`}>
                   {text.modes[question.status] ?? question.status}
                 </span>
                 {question.note && (
                   <>
                     {' '}
-                    <small className="muted" dir="auto">
+                    <small className="muted" dir={textDir(locale)}>
                       {question.note}
                     </small>
                   </>
@@ -137,7 +137,7 @@ export function DefinitionCard({
                     .replace('{a}', formatNumber(locale, item.questions[0]))
                     .replace('{b}', formatNumber(locale, item.questions[1]))}
                 </strong>{' '}
-                <span dir="auto">{item.description}</span>
+                <span dir={textDir(locale)}>{item.description}</span>
               </li>
             ))}
           </ul>
@@ -146,7 +146,7 @@ export function DefinitionCard({
 
       {definition.status === 'rejected' && definition.rejectionReason && (
         <p className="notice error" role="status">
-          <span dir="auto">{definition.rejectionReason}</span>
+          <span dir={textDir(locale)}>{definition.rejectionReason}</span>
         </p>
       )}
 
@@ -190,7 +190,7 @@ export function DefinitionCard({
               <textarea
                 id="definition-feedback"
                 rows={4}
-                dir="auto"
+                dir={textDir(locale)}
                 value={feedback}
                 minLength={3}
                 maxLength={5000}

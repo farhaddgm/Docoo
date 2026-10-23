@@ -4,7 +4,7 @@ import { useReadOnlyAccess } from '../../resource-access';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { DefinitionCard } from './problem-definition';
@@ -355,12 +355,12 @@ export function ProblemPanel({
           <h3 id="understanding-heading">{text.understandingTitle}</h3>
           <div>
             <h4>{text.understood}</h4>
-            <p dir="auto">{analysis.understanding.understood}</p>
+            <p dir={textDir(locale)}>{analysis.understanding.understood}</p>
           </div>
           {analysis.understanding.nextAmbiguity && (
             <div>
               <h4>{text.nextAmbiguity}</h4>
-              <p dir="auto">{analysis.understanding.nextAmbiguity}</p>
+              <p dir={textDir(locale)}>{analysis.understanding.nextAmbiguity}</p>
             </div>
           )}
         </section>
@@ -379,7 +379,7 @@ export function ProblemPanel({
             {fill(text.batchTitle, { n: formatNumber(locale, openBatch.batchNo) })}
           </SectionTitle>
           {openBatch.understood && (
-            <p dir="auto">
+            <p dir={textDir(locale)}>
               <strong>{text.understood}:</strong> {openBatch.understood}
             </p>
           )}
@@ -550,7 +550,7 @@ export function ProblemPanel({
                   {text.contradictionStatus[item.status]}
                 </span>
                 <br />
-                <span dir="auto">{item.description}</span>
+                <span dir={textDir(locale)}>{item.description}</span>
               </li>
             ))}
           </ul>
@@ -639,7 +639,7 @@ export function ProblemPanel({
                 {batch.submittedAt && <> · {formatDateTime(locale, batch.submittedAt)}</>}
               </summary>
               {batch.understood && (
-                <p dir="auto">
+                <p dir={textDir(locale)}>
                   <strong>{text.understood}:</strong> {batch.understood}
                 </p>
               )}
@@ -647,14 +647,14 @@ export function ProblemPanel({
                 {batch.questions.map((question) => (
                   <li key={question.id}>
                     <strong>{formatNumber(locale, question.number)}.</strong>{' '}
-                    <span dir="auto">{question.text}</span>
+                    <span dir={textDir(locale)}>{question.text}</span>
                     <br />
                     <span className={`badge answer-${question.status}`}>
                       {text.modes[question.status] ?? question.status}
                     </span>{' '}
-                    <span dir="auto">{question.answer?.text ?? ''}</span>
+                    <span dir={textDir(locale)}>{question.answer?.text ?? ''}</span>
                     {question.answer?.attachments.map((file) => (
-                      <small key={file.sourceId} className="muted" dir="auto">
+                      <small key={file.sourceId} className="muted" dir={textDir(locale)}>
                         {' '}
                         · {text.attachmentLabel}: {file.title}
                       </small>

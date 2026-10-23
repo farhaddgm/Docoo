@@ -11,7 +11,7 @@ import {
 } from 'react';
 
 import { ApiError, apiGet } from '../../api-client';
-import { formatNumber, type Locale } from '../../i18n';
+import { formatNumber, type Locale, textDir } from '../../i18n';
 import { explainError, Notice, useAction } from '../use-action';
 import { agentMessages, fill, type AgentMessages } from './agent-messages';
 import {
@@ -101,7 +101,7 @@ function RuleList({
               <textarea
                 id={id}
                 rows={2}
-                dir="auto"
+                dir={textDir(locale)}
                 maxLength={maxLength}
                 value={item}
                 disabled={disabled}
@@ -391,7 +391,7 @@ export function RoleEditor({
         <textarea
           id={`${id}-prompt`}
           rows={6}
-          dir="auto"
+          dir={textDir(locale)}
           maxLength={limits.maxPromptLength}
           value={draft.promptTemplate}
           disabled={locked}
@@ -550,7 +550,7 @@ export function RoleEditor({
             .map((section) => (
               <div key={section}>
                 <h4>{text.sections[section]}</h4>
-                <DiffView lines={previews[section]} text={text} />
+                <DiffView locale={locale} lines={previews[section]} text={text} />
               </div>
             ))
         )}
@@ -562,7 +562,7 @@ export function RoleEditor({
         </FieldLabel>
         <input
           id={`${id}-reason`}
-          dir="auto"
+          dir={textDir(locale)}
           maxLength={limits.maxReasonLength}
           value={reason}
           disabled={locked}

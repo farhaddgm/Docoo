@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type RefObjec
 
 import { apiGet, apiSend, query } from '../../api-client';
 import { FieldLabel } from '../../info-tip';
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { useSessionIdentity } from '../signed-in';
@@ -221,7 +221,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                         <th scope="row" dir="ltr">
                           {topic.code}
                         </th>
-                        <td dir="auto">{topic.title}</td>
+                        <td dir={textDir(locale)}>{topic.title}</td>
                         <td>{text.languages[topic.language]}</td>
                         <td>{formatNumber(locale, topic.version)}</td>
                         <td>
@@ -410,7 +410,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
             <label htmlFor="topic-title">{text.topicTitle}</label>
             <input
               id="topic-title"
-              dir="auto"
+              dir={textDir(locale)}
               value={form.title}
               onChange={(event) => setForm({ ...form, title: event.target.value })}
               maxLength={200}
@@ -420,7 +420,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
             <label htmlFor="topic-description">{text.description}</label>
             <textarea
               id="topic-description"
-              dir="auto"
+              dir={textDir(locale)}
               rows={3}
               value={form.description}
               onChange={(event) => setForm({ ...form, description: event.target.value })}
@@ -520,7 +520,7 @@ function EditTopic({
         <label htmlFor="edit-title">{text.topicTitle}</label>
         <input
           id="edit-title"
-          dir="auto"
+          dir={textDir(locale)}
           value={fields.title}
           onChange={(event) => setFields({ ...fields, title: event.target.value })}
           maxLength={200}
@@ -530,7 +530,7 @@ function EditTopic({
         <label htmlFor="edit-description">{text.description}</label>
         <textarea
           id="edit-description"
-          dir="auto"
+          dir={textDir(locale)}
           rows={3}
           value={fields.description}
           onChange={(event) => setFields({ ...fields, description: event.target.value })}

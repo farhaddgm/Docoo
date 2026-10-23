@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { apiGet, apiSend, idempotencyKey } from '../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { SignedIn } from '../signed-in';
 import { explainError, Notice, useAction } from '../use-action';
 import { agentMessages, fill } from './agent-messages';
@@ -83,7 +83,7 @@ function ActivatePanel({
         <label htmlFor={`${id}-reason`}>{text.activateReason}</label>
         <input
           id={`${id}-reason`}
-          dir="auto"
+          dir={textDir(locale)}
           value={reason}
           maxLength={1000}
           onChange={(event) => setReason(event.target.value)}
@@ -271,7 +271,7 @@ function Role({
           </FieldLabel>
           <input
             id={reasonId}
-            dir="auto"
+            dir={textDir(locale)}
             value={activateReason}
             maxLength={1000}
             onChange={(event) => setActivateReason(event.target.value)}
@@ -292,7 +292,7 @@ function Role({
                   {text.createdAt}: {formatDateTime(locale, item.createdAt)}
                 </p>
                 <p>
-                  {text.reasonOf}: <span dir="auto">{item.reason}</span>
+                  {text.reasonOf}: <span dir={textDir(locale)}>{item.reason}</span>
                 </p>
                 <p>
                   <SectionChips definition={item} locale={locale} />
@@ -387,7 +387,7 @@ function Role({
                 {performance.deviations.map((deviation) => (
                   <li key={deviation.rule}>
                     <span className="badge">{deviation.severity}</span>{' '}
-                    <span dir="auto">{deviation.detail}</span>
+                    <span dir={textDir(locale)}>{deviation.detail}</span>
                   </li>
                 ))}
               </ul>
@@ -425,7 +425,7 @@ function Role({
                   <tbody>
                     {pageRows.map((item) => (
                       <tr key={item.id}>
-                        <td dir="auto">
+                        <td dir={textDir(locale)}>
                           {item.projectId ? (
                             <Link href={`/${locale}/projects/${item.projectId}` as Route}>
                               {item.projectTitle ?? item.projectId}

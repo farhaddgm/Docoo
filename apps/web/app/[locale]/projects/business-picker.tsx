@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 
 import { ApiError, apiGet, query } from '../../api-client';
-import { formatNumber, type Locale } from '../../i18n';
+import { formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { businessMessages } from './business-messages';
 import type { ContenterBusinessItem } from './business-types';
@@ -104,18 +104,18 @@ export function BusinessPicker({
         {picker.title}
         {required && <span aria-hidden="true"> *</span>}
       </h3>
-      <p className="muted" dir="auto">
+      <p className="muted" dir={textDir(locale)}>
         {picker.help}
       </p>
       {required && (
-        <p className="muted" dir="auto">
+        <p className="muted" dir={textDir(locale)}>
           {picker.required}
         </p>
       )}
       <p aria-live="polite" data-testid="business-selected">
         <strong>{picker.selected}:</strong>{' '}
         {value ? (
-          <span dir="auto">
+          <span dir={textDir(locale)}>
             {value.name}
             {value.industry ? ` — ${value.industry}` : ''}
           </span>
@@ -195,8 +195,8 @@ export function BusinessPicker({
                         onChange={() => onChange(item)}
                       />
                       <span>
-                        <strong dir="auto">{item.name}</strong>
-                        {item.industry && <span dir="auto"> — {item.industry}</span>}
+                        <strong dir={textDir(locale)}>{item.name}</strong>
+                        {item.industry && <span dir={textDir(locale)}> — {item.industry}</span>}
                         <br />
                         <small className="muted">
                           {fill(picker.filled, {

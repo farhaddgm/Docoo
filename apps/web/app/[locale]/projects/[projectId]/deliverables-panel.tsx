@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 
 import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { useReadOnlyAccess } from '../../resource-access';
 
 type Kind = 'strategy_document' | 'product_documentation' | 'technical_prototype';
@@ -274,7 +274,7 @@ export function DeliverablesPanel({
                   {field === 'title' ? (
                     <input
                       id={`${id}-${field}-${index}`}
-                      dir="auto"
+                      dir={textDir(locale)}
                       maxLength={max}
                       value={item[field]}
                       required
@@ -289,7 +289,7 @@ export function DeliverablesPanel({
                   ) : (
                     <textarea
                       id={`${id}-${field}-${index}`}
-                      dir="auto"
+                      dir={textDir(locale)}
                       rows={2}
                       maxLength={max}
                       value={item[field]}
@@ -346,23 +346,23 @@ export function DeliverablesPanel({
             <ol className="plain-list">
               {plan.items.map((item, index) => (
                 <li key={index}>
-                  <strong dir="auto">{item.title}</strong>{' '}
+                  <strong dir={textDir(locale)}>{item.title}</strong>{' '}
                   <span className="badge">{text.kinds[item.kind]}</span>
                   {!supported(item.kind) && <p className="muted">{text.outside}</p>}
                   {item.purpose && (
-                    <p dir="auto">
+                    <p dir={textDir(locale)}>
                       <small className="muted">{text.purpose}: </small>
                       {item.purpose}
                     </p>
                   )}
                   {item.scopeIn && (
-                    <p dir="auto">
+                    <p dir={textDir(locale)}>
                       <small className="muted">{text.scopeIn}: </small>
                       {item.scopeIn}
                     </p>
                   )}
                   {item.scopeOut && (
-                    <p dir="auto">
+                    <p dir={textDir(locale)}>
                       <small className="muted">{text.scopeOut}: </small>
                       {item.scopeOut}
                     </p>

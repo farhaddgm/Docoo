@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiGet, query } from '../../api-client';
-import { formatDateTime, type Locale } from '../../i18n';
+import { formatDateTime, type Locale, textDir } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
@@ -153,7 +153,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
             <input
               id="project-search"
               type="search"
-              dir="auto"
+              dir={textDir(locale)}
               value={filters.q}
               maxLength={100}
               onChange={(event) => setFilters({ ...filters, q: event.target.value })}
@@ -275,13 +275,13 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                             {project.code}
                           </Link>
                         </th>
-                        <td dir="auto">{project.title}</td>
-                        <td dir="auto">
+                        <td dir={textDir(locale)}>{project.title}</td>
+                        <td dir={textDir(locale)}>
                           {project.topics.length === 0
                             ? '—'
                             : project.topics.map((topic) => topic.title).join('، ')}
                         </td>
-                        <td dir="auto">{project.business?.name ?? '—'}</td>
+                        <td dir={textDir(locale)}>{project.business?.name ?? '—'}</td>
                         <td>
                           <span className={`badge state-${project.status}`}>
                             {text.statuses[project.status] ?? project.status}
@@ -298,7 +298,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                           )}
                         </td>
                         <td>{text.languages[project.outputLanguage]}</td>
-                        <td dir="auto">{project.owner?.displayName ?? '—'}</td>
+                        <td dir={textDir(locale)}>{project.owner?.displayName ?? '—'}</td>
                         <td>{formatDateTime(locale, project.updatedAt)}</td>
                       </tr>
                     ))}

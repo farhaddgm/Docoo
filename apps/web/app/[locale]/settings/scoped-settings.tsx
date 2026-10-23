@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 
 import { apiGet, apiSend, query } from '../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Notice, useAction } from '../use-action';
 import { ModelPicker } from './model-picker';
@@ -241,7 +241,7 @@ function SettingRow({
   return (
     <li className="setting-row" aria-labelledby={`${id}-name`}>
       <div className="setting-head">
-        <strong id={`${id}-name`} dir="auto">
+        <strong id={`${id}-name`} dir={textDir(locale)}>
           {description}
         </strong>
         <code dir="ltr">{definition.key}</code>
@@ -261,7 +261,7 @@ function SettingRow({
       {readOnly ? (
         <p>
           {text.currentValue}:{' '}
-          <strong dir="auto">{displayValue(locale, text, definition, value)}</strong>
+          <strong dir={textDir(locale)}>{displayValue(locale, text, definition, value)}</strong>
           {definition.key === 'document.level_bounds' && (
             <>
               {' — '}
@@ -303,7 +303,7 @@ function SettingRow({
               </FieldLabel>
               <input
                 id={`${id}-reason`}
-                dir="auto"
+                dir={textDir(locale)}
                 value={reason}
                 maxLength={1000}
                 onChange={(event) => setReason(event.target.value)}
@@ -470,7 +470,7 @@ export function SettingControl({
       </label>
       <input
         id={id}
-        dir={numeric ? 'ltr' : 'auto'}
+        dir={numeric ? 'ltr' : textDir(locale)}
         type={numeric ? 'number' : 'text'}
         inputMode={numeric ? 'decimal' : undefined}
         min={schema.minimum}
@@ -539,14 +539,14 @@ function History({
         <li key={item.sequence} className="version-row">
           <strong>{fill(text.historyVersion, { n: formatNumber(locale, item.sequence) })}</strong>{' '}
           <span className="muted">{formatDateTime(locale, item.createdAt)}</span>
-          <p dir="auto">
+          <p dir={textDir(locale)}>
             {item.cleared
               ? text.historyCleared
               : displayValue(locale, text, definition, item.value)}
             {item.restoredFromSequence !== null &&
               ` — ${fill(text.historyRestored, { n: formatNumber(locale, item.restoredFromSequence) })}`}
           </p>
-          <p className="muted" dir="auto">
+          <p className="muted" dir={textDir(locale)}>
             {item.reason}
           </p>
           {index > 0 && (
@@ -653,7 +653,7 @@ export function EditableProjectModelSection({
         <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
         <input
           id={`${id}-reason`}
-          dir="auto"
+          dir={textDir(locale)}
           value={reason}
           maxLength={1000}
           onChange={(event) => setReason(event.target.value)}

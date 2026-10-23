@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useState } from 'react';
 
 import { apiGet, ApiError, query } from '../../api-client';
-import { formatDate, formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDate, formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Notice } from '../use-action';
 import { WorkspacePage } from '../workspace-page';
@@ -119,7 +119,7 @@ function Detail({
       </p>
 
       <section className="card stack" aria-labelledby={`${id}-title`}>
-        <h2 id={`${id}-title`} dir="auto">
+        <h2 id={`${id}-title`} dir={textDir(locale)}>
           {knowledge.title}
         </h2>
         {version && (
@@ -172,7 +172,7 @@ function Detail({
         </dl>
         <div>
           <strong>{text.factScopes}</strong>
-          <ScopeList text={text} scopes={knowledge.scopes} />
+          <ScopeList locale={locale} text={text} scopes={knowledge.scopes} />
         </div>
       </section>
 

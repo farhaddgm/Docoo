@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ApiError, apiGet, apiPost, apiSend } from '../../api-client';
-import { formatDateTime, type Locale } from '../../i18n';
+import { formatDateTime, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { reportMessagesFor } from '../../report-messages';
 import { SignedIn } from '../signed-in';
@@ -251,7 +251,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
                           <span className={`badge state-${item.status}`}>
                             {statuses[item.status] ?? item.status}
                           </span>
-                          {item.lastError && <small dir="ltr"> {item.lastError}</small>}
+                          {item.lastError && <small dir={textDir(locale)}> {item.lastError}</small>}
                         </td>
                         <td>
                           {item.lastCheckedAt ? formatDateTime(locale, item.lastCheckedAt) : '—'}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, apiGet, query } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { businessMessages, joinList, sectionTitle } from '../business-messages';
 import type { ContextPreview, HistoryItem, RolePreview } from '../business-types';
@@ -133,7 +133,7 @@ export function AiView({
                     <td>{formatNumber(locale, role.summary.facts)}</td>
                     <td>{formatNumber(locale, role.summary.terms)}</td>
                     <td>{formatNumber(locale, role.summary.notes)}</td>
-                    <td dir="auto">
+                    <td dir={textDir(locale)}>
                       {role.summary.omitted.length > 0
                         ? joinList(
                             locale,
@@ -178,16 +178,16 @@ export function AiView({
               {detail.data.sections.map((section) => (
                 <details key={section.key} open>
                   <summary>
-                    <strong dir="auto">{sectionTitle(locale, section.key)}</strong>
+                    <strong dir={textDir(locale)}>{sectionTitle(locale, section.key)}</strong>
                     {!section.confirmed && <span className="badge tone-warn">{ai.draftMark}</span>}
                   </summary>
-                  <div className="pre-text" dir="auto">
+                  <div className="pre-text" dir={textDir(locale)}>
                     {section.text}
                   </div>
                 </details>
               ))}
               {detail.data.notIncluded.length > 0 && (
-                <p className="muted" dir="auto">
+                <p className="muted" dir={textDir(locale)}>
                   {ai.notIncluded}:{' '}
                   {joinList(
                     locale,
@@ -200,7 +200,7 @@ export function AiView({
                   <h5>{ai.keyFacts}</h5>
                   <ul>
                     {detail.data.keyFacts.map((fact, index) => (
-                      <li key={`${fact.label}-${index}`} dir="auto">
+                      <li key={`${fact.label}-${index}`} dir={textDir(locale)}>
                         <strong>{fact.label}:</strong> {fact.value}
                         {!fact.verified && <span className="badge tone-warn">{ai.draftMark}</span>}
                       </li>
@@ -213,7 +213,7 @@ export function AiView({
                   <h5>{ai.terminology}</h5>
                   <ul>
                     {detail.data.terminology.map((term, index) => (
-                      <li key={`${term.term}-${index}`} dir="auto">
+                      <li key={`${term.term}-${index}`} dir={textDir(locale)}>
                         {term.rule}: <strong>{term.term}</strong>
                         {term.alternatives.length > 0 &&
                           ` → ${joinList(locale, term.alternatives)}`}
@@ -227,7 +227,7 @@ export function AiView({
                   <h5>{ai.notesSent}</h5>
                   <ul>
                     {detail.data.adminNotes.map((note, index) => (
-                      <li key={`${note}-${index}`} dir="auto" className="pre-text">
+                      <li key={`${note}-${index}`} dir={textDir(locale)} className="pre-text">
                         {note}
                       </li>
                     ))}
@@ -237,7 +237,7 @@ export function AiView({
               {detail.rules && detail.rules.length > 0 && (
                 <>
                   <h5>{ai.rules}</h5>
-                  <ol dir="ltr">
+                  <ol dir={textDir(locale)}>
                     {detail.rules.map((rule) => (
                       <li key={rule}>{rule}</li>
                     ))}
@@ -344,7 +344,7 @@ export function VersionsView({
                           {item.current && <span className="badge tone-ok">{v.current}</span>}
                         </th>
                         <td>{formatDateTime(locale, item.fetchedAt)}</td>
-                        <td dir="auto">
+                        <td dir={textDir(locale)}>
                           {item.versionNo === 1
                             ? v.first
                             : parts.length > 0

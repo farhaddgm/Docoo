@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { apiGet } from '../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { SignedIn } from '../signed-in';
 import { agentMessages, fill } from './agent-messages';
 import type { RoleSummary } from './agent-types';
@@ -86,7 +86,9 @@ function Roles({ locale, workspaceId }: { locale: Locale; workspaceId: string })
                       {fill(text.versionLabel, { n: formatNumber(locale, item.active.sequence) })}
                     </span>
                   </td>
-                  <td dir="auto">{item.active.modelPolicy?.model ?? text.defaultModel}</td>
+                  <td dir={textDir(locale)}>
+                    {item.active.modelPolicy?.model ?? text.defaultModel}
+                  </td>
                   <td>
                     {formatNumber(locale, item.active.counts.principles)} /{' '}
                     {formatNumber(locale, item.active.counts.duties)}

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { textDir, type Locale } from '../../../i18n';
 
 /**
  * Text written in Contenter (a profile section, a note) is plain text with light Markdown habits:
@@ -151,21 +152,23 @@ export function InlineText({ parts }: { readonly parts: readonly Inline[] }): Re
 
 /** The laid-out text of one section or note. */
 export function RichText({
+  locale,
   text,
   className,
 }: {
+  readonly locale: Locale;
   readonly text: string;
   readonly className?: string;
 }) {
   const blocks = parseRichText(text);
   return (
-    <div className={className ? `rich ${className}` : 'rich'} dir="auto">
+    <div className={className ? `rich ${className}` : 'rich'} dir={textDir(locale)}>
       {blocks.map((block, index) => {
         switch (block.type) {
           case 'heading': {
             const Tag = HEADING_TAGS[block.level];
             return (
-              <Tag key={index} className="rich-heading" dir="auto">
+              <Tag key={index} className="rich-heading" dir={textDir(locale)}>
                 <InlineText parts={block.text} />
               </Tag>
             );
@@ -173,7 +176,7 @@ export function RichText({
           case 'list': {
             const Tag = block.ordered ? 'ol' : 'ul';
             return (
-              <Tag key={index} className="rich-list" dir="auto">
+              <Tag key={index} className="rich-list" dir={textDir(locale)}>
                 {block.items.map((item, position) => (
                   <li key={position}>
                     <InlineText parts={item} />
@@ -184,7 +187,7 @@ export function RichText({
           }
           case 'question':
             return (
-              <div key={index} className="rich-qa" dir="auto">
+              <div key={index} className="rich-qa" dir={textDir(locale)}>
                 <p className="rich-question">
                   <InlineText parts={block.question} />
                 </p>
@@ -197,7 +200,7 @@ export function RichText({
             );
           default:
             return (
-              <p key={index} dir="auto">
+              <p key={index} dir={textDir(locale)}>
                 <InlineText parts={block.text} />
               </p>
             );

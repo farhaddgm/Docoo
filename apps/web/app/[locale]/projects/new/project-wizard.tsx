@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { ApiError, apiGet, apiSend } from '../../../api-client';
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { ModelPicker } from '../../settings/model-picker';
 import { displayValue, problemText, SettingControl } from '../../settings/scoped-settings';
@@ -639,7 +639,7 @@ function Review({
       <dl className="facts">
         <div>
           <dt>{project.titleLabel}</dt>
-          <dd dir="auto">{values.title.trim()}</dd>
+          <dd dir={textDir(locale)}>{values.title.trim()}</dd>
         </div>
         <div>
           <dt>{project.codeLabel}</dt>
@@ -663,7 +663,9 @@ function Review({
         </div>
         <div>
           <dt>{businessText.picker.title}</dt>
-          <dd dir="auto">{business ? business.name : businessText.picker.noneSelected}</dd>
+          <dd dir={textDir(locale)}>
+            {business ? business.name : businessText.picker.noneSelected}
+          </dd>
         </div>
         {!connectionId && (
           <div>
@@ -699,10 +701,12 @@ function Review({
               const kind = sourceKind(review.sources[def.key]);
               return (
                 <tr key={def.key}>
-                  <th scope="row" dir="auto">
+                  <th scope="row" dir={textDir(locale)}>
                     {def.description[locale]} <code dir="ltr">{def.key}</code>
                   </th>
-                  <td dir="auto">{displayValue(locale, settings, def, review.values[def.key])}</td>
+                  <td dir={textDir(locale)}>
+                    {displayValue(locale, settings, def, review.values[def.key])}
+                  </td>
                   <td>
                     <span className={`badge tone-${kind === 'pending' ? 'ok' : 'neutral'}`}>
                       {settings.sources[kind]}

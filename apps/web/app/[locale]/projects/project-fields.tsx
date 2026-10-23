@@ -9,6 +9,7 @@ import { FieldLabel, SectionTitle } from '../../info-tip';
 import type { Locale } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { projectMessages } from './messages';
+import { textDir } from '../../i18n';
 
 export type KnowledgeSharing = 'none' | 'selected' | 'all';
 export const KNOWLEDGE_SHARING: readonly KnowledgeSharing[] = ['none', 'selected', 'all'];
@@ -96,7 +97,7 @@ export function BasicsFields({
           <label htmlFor="project-title">{text.titleLabel}</label>
           <input
             id="project-title"
-            dir="auto"
+            dir={textDir(locale)}
             value={values.title}
             onChange={(event) => setValues({ ...values, title: event.target.value })}
             maxLength={200}
@@ -106,7 +107,7 @@ export function BasicsFields({
           <label htmlFor="project-description">{text.descriptionLabel}</label>
           <textarea
             id="project-description"
-            dir="auto"
+            dir={textDir(locale)}
             rows={2}
             value={values.description}
             onChange={(event) => setValues({ ...values, description: event.target.value })}
@@ -121,7 +122,7 @@ export function BasicsFields({
           </FieldLabel>
           <textarea
             id="project-problem"
-            dir="auto"
+            dir={textDir(locale)}
             rows={8}
             value={values.initialProblem}
             onChange={(event) => setValues({ ...values, initialProblem: event.target.value })}
@@ -231,7 +232,7 @@ export function TopicsSection({
                   <span className="badge" aria-label={`${text.priority} ${index + 1}`}>
                     {index + 1}
                   </span>
-                  <span className="grow" dir="auto">
+                  <span className="grow" dir={textDir(locale)}>
                     <strong>{name}</strong>
                     {topic && (
                       <small className="muted" dir="ltr">
@@ -272,7 +273,7 @@ export function TopicsSection({
                     <label htmlFor={`conflict-${choice.topicId}`}>{text.conflictInstruction}</label>
                     <input
                       id={`conflict-${choice.topicId}`}
-                      dir="auto"
+                      dir={textDir(locale)}
                       value={choice.conflictInstruction}
                       maxLength={2000}
                       onChange={(event) =>
@@ -422,7 +423,7 @@ export function SharedKnowledgeSection({
                   checked={chosen.has(item.id)}
                   onChange={() => toggle(item.id)}
                 />{' '}
-                <span dir="auto">{item.title}</span>
+                <span dir={textDir(locale)}>{item.title}</span>
               </label>
             </li>
           ))}

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { solutionMessages } from './solution-messages';
@@ -261,7 +261,7 @@ export function SolutionsPanel({
                   <td>
                     <input
                       className="inline-input"
-                      dir="auto"
+                      dir={textDir(locale)}
                       value={item.label}
                       maxLength={200}
                       disabled={readOnly}
@@ -346,7 +346,7 @@ export function SolutionsPanel({
         {set.items.map((solution) => (
           <article key={solution.id} className="card" aria-labelledby={`solution-${solution.id}`}>
             <div className="toolbar spread">
-              <h3 id={`solution-${solution.id}`} dir="auto">
+              <h3 id={`solution-${solution.id}`} dir={textDir(locale)}>
                 {formatNumber(locale, solution.ordinal)}. {solution.title}
               </h3>
               <p>
@@ -364,22 +364,22 @@ export function SolutionsPanel({
                 )}
               </p>
             </div>
-            <p dir="auto">{solution.summary}</p>
+            <p dir={textDir(locale)}>{solution.summary}</p>
             <details>
               <summary>{text.assumptions}</summary>
-              <List items={solution.assumptions} />
+              <List locale={locale} items={solution.assumptions} />
             </details>
             <details>
               <summary>{text.evidence}</summary>
-              <List items={solution.evidence} />
+              <List locale={locale} items={solution.evidence} />
             </details>
             <details>
               <summary>{text.plan}</summary>
-              <List items={solution.plan} ordered />
+              <List locale={locale} items={solution.plan} ordered />
             </details>
             <details>
               <summary>{text.risks}</summary>
-              <List items={solution.risks} />
+              <List locale={locale} items={solution.risks} />
             </details>
             <details>
               <summary>{text.scoreDetail}</summary>
@@ -402,7 +402,7 @@ export function SolutionsPanel({
                   <tbody>
                     {solution.score.criteria.map((row) => (
                       <tr key={row.key}>
-                        <th scope="row" dir="auto">
+                        <th scope="row" dir={textDir(locale)}>
                           {row.label}
                         </th>
                         <td>
@@ -410,7 +410,7 @@ export function SolutionsPanel({
                         </td>
                         <td>{formatNumber(locale, row.weight)}</td>
                         <td>{formatNumber(locale, row.weighted)}</td>
-                        <td dir="ltr">{row.explanation}</td>
+                        <td dir={textDir(locale)}>{row.explanation}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -481,7 +481,7 @@ export function SolutionsPanel({
                     <span className="badge" aria-hidden="true">
                       {formatNumber(locale, index + 1)}
                     </span>
-                    <span className="grow" dir="auto">
+                    <span className="grow" dir={textDir(locale)}>
                       <strong>{solution.title}</strong>
                     </span>
                     <button
@@ -532,7 +532,7 @@ export function SolutionsPanel({
                   required
                   minLength={3}
                   maxLength={1000}
-                  dir="auto"
+                  dir={textDir(locale)}
                   onChange={(event) =>
                     setRejectionReasons((previous) => ({ ...previous, [s.id]: event.target.value }))
                   }
@@ -561,7 +561,7 @@ export function SolutionsPanel({
               {formatDateTime(locale, d.recordedAt)} · {locale === 'fa' ? 'ثبت‌کننده' : 'Actor'}:{' '}
               {d.actorName ?? (locale === 'fa' ? 'کاربر پیشین' : 'Former user')}
             </p>
-            <p dir="auto">{d.reason}</p>
+            <p dir={textDir(locale)}>{d.reason}</p>
             <p>
               {locale === 'fa'
                 ? 'گزینه‌های منتخب به ترتیب اولویت'
@@ -570,7 +570,7 @@ export function SolutionsPanel({
             </p>
             <ul>
               {d.snapshot.rejected.map((r) => (
-                <li key={r.solutionId} dir="auto">
+                <li key={r.solutionId} dir={textDir(locale)}>
                   {locale === 'fa' ? 'گزینه' : 'Alternative'} {formatNumber(locale, r.ordinal)}:{' '}
                   {r.reason}
                 </li>
@@ -583,12 +583,20 @@ export function SolutionsPanel({
   );
 }
 
-function List({ items, ordered = false }: { items: string[]; ordered?: boolean }) {
+function List({
+  locale,
+  items,
+  ordered = false,
+}: {
+  locale: Locale;
+  items: string[];
+  ordered?: boolean;
+}) {
   const Tag = ordered ? 'ol' : 'ul';
   return (
     <Tag className="output-list">
       {items.map((item, index) => (
-        <li key={index} dir="auto">
+        <li key={index} dir={textDir(locale)}>
           {item}
         </li>
       ))}

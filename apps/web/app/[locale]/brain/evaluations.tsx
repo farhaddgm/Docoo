@@ -1,4 +1,4 @@
-import { formatNumber, type Locale } from '../../i18n';
+import { formatNumber, type Locale, textDir } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { agentMessages, fill } from '../agents/agent-messages';
 import { SectionTitle } from '../../info-tip';
@@ -101,7 +101,9 @@ export function Evaluations({
                       <strong>
                         {fill(text.scoreOf, { score: formatNumber(locale, evaluation.score) })}
                       </strong>
-                      {evaluation.summary && <span dir="auto"> — {evaluation.summary}</span>}
+                      {evaluation.summary && (
+                        <span dir={textDir(locale)}> — {evaluation.summary}</span>
+                      )}
                     </p>
                   )}
                   {evaluation.samples.length > 0 && (
@@ -128,7 +130,7 @@ export function Evaluations({
                         <ul className="plain-list stack">
                           {evaluation.findings.map((finding, index) => (
                             <li key={index} className="stack">
-                              <p dir="auto">
+                              <p dir={textDir(locale)}>
                                 <span
                                   className={`badge ${
                                     finding.kind === 'deviation'
@@ -142,7 +144,7 @@ export function Evaluations({
                               </p>
                               <ul className="plain-list">
                                 {finding.clauses.map((clause) => (
-                                  <li key={clause.ref} dir="auto">
+                                  <li key={clause.ref} dir={textDir(locale)}>
                                     <small>
                                       <strong>
                                         {text.findingClauses} <span dir="ltr">{clause.ref}</span>
@@ -152,7 +154,7 @@ export function Evaluations({
                                   </li>
                                 ))}
                               </ul>
-                              <p className="muted" dir="ltr">
+                              <p className="muted" dir={textDir(locale)}>
                                 {text.findingEvidence}:{' '}
                                 {finding.evidence.map((item, evidenceIndex) => (
                                   <span key={item.id}>
@@ -162,7 +164,7 @@ export function Evaluations({
                                 ))}
                               </p>
                               {finding.recommendation && (
-                                <p dir="auto">
+                                <p dir={textDir(locale)}>
                                   <strong>{text.findingRecommendation}:</strong>{' '}
                                   {finding.recommendation}
                                 </p>

@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState, type ReactNode } from 'react';
 
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { problemMessages } from './problem-messages';
 import { answerModes, type Attachment, type Draft, type Question } from './problem-types';
 import { ACCEPTED_EXTENSIONS } from './upload-file';
@@ -92,7 +92,7 @@ export function QuestionEditor({
     return (
       <li className="question" id={`${anchor}-question-${question.number}`}>
         {title}
-        <p className="question-text" dir="auto">
+        <p className="question-text" dir={textDir(locale)}>
           {question.text}
         </p>
         {question.priority && (
@@ -104,7 +104,7 @@ export function QuestionEditor({
                 .join(' · ')}
             </p>
             {question.priority.references.map((ref) => (
-              <p key={ref.id} dir="auto">
+              <p key={ref.id} dir={textDir(locale)}>
                 {ref.text}
               </p>
             ))}
@@ -116,7 +116,7 @@ export function QuestionEditor({
               {text.savedAs.replace('{mode}', text.modes[saved] ?? saved)}
             </span>
             {question.answer?.text && (
-              <span className="answer-text" dir="auto">
+              <span className="answer-text" dir={textDir(locale)}>
                 {' '}
                 {question.answer.text}
               </span>
@@ -126,7 +126,7 @@ export function QuestionEditor({
         {question.answer && question.answer.attachments.length > 0 && (
           <ul className="plain-list" aria-label={text.files}>
             {question.answer.attachments.map((file) => (
-              <li key={file.sourceId} dir="auto">
+              <li key={file.sourceId} dir={textDir(locale)}>
                 {text.attachmentLabel}: {file.title}
               </li>
             ))}
@@ -183,7 +183,7 @@ export function QuestionEditor({
   return (
     <li className="question" id={`${anchor}-question-${question.number}`}>
       {title}
-      <p className="question-text" dir="auto">
+      <p className="question-text" dir={textDir(locale)}>
         {question.text}
       </p>
       {question.priority && (
@@ -197,7 +197,7 @@ export function QuestionEditor({
       {question.rationale && (
         <details>
           <summary>{text.why}</summary>
-          <p dir="auto">{question.rationale}</p>
+          <p dir={textDir(locale)}>{question.rationale}</p>
         </details>
       )}
       <div className="field-stack">
@@ -220,7 +220,7 @@ export function QuestionEditor({
         <textarea
           id={`${id}-text`}
           rows={3}
-          dir="auto"
+          dir={textDir(locale)}
           maxLength={8000}
           value={draft.text}
           disabled={disabled}
@@ -279,7 +279,7 @@ export function QuestionEditor({
           <ul className="plain-list" aria-label={text.files}>
             {draft.files.map((file) => (
               <li key={file.sourceId}>
-                <span dir="auto">{file.title}</span>{' '}
+                <span dir={textDir(locale)}>{file.title}</span>{' '}
                 <button
                   type="button"
                   className="secondary-button"

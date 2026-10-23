@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { apiGet, apiSend, ApiError } from '../../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { Notice, useAction } from '../../use-action';
 import { ProjectAccessBoundary, useReadOnlyAccess } from '../../resource-access';
@@ -167,7 +167,7 @@ function ProjectView({
 
       {intelligenceLink}
       <section className="card" aria-labelledby="project-heading">
-        <h2 id="project-heading" dir="auto">
+        <h2 id="project-heading" dir={textDir(locale)}>
           <span dir="ltr">{project.code}</span> — {project.title}
         </h2>
         {project.analysisProfile === 'quick' && (
@@ -192,7 +192,7 @@ function ProjectView({
           </div>
           <div>
             <dt>{text.business}</dt>
-            <dd dir="auto">
+            <dd dir={textDir(locale)}>
               {project.business ? (
                 <button type="button" className="link-button" onClick={() => choose('business')}>
                   {project.business.name}
@@ -230,7 +230,8 @@ function ProjectView({
         </p>
         {project.pauseReason && (
           <p className="notice error" role="status">
-            <strong>{text.pauseReason}:</strong> <span dir="auto">{project.pauseReason}</span>
+            <strong>{text.pauseReason}:</strong>{' '}
+            <span dir={textDir(locale)}>{project.pauseReason}</span>
           </p>
         )}
         {health.reasons.some((reason) => reason.code !== 'paused') && (

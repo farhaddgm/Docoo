@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 
 import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { useReadOnlyAccess } from '../../resource-access';
 
 interface Message {
@@ -200,7 +200,7 @@ export function StageChat({
                       {fill(text.failed, { code: message.content })}
                     </span>
                   ) : (
-                    <span dir="auto" style={{ whiteSpace: 'pre-wrap' }}>
+                    <span dir={textDir(locale)} style={{ whiteSpace: 'pre-wrap' }}>
                       {message.content}
                     </span>
                   )}
@@ -235,7 +235,7 @@ export function StageChat({
               <textarea
                 id={`${id}-input`}
                 rows={3}
-                dir="auto"
+                dir={textDir(locale)}
                 maxLength={4000}
                 value={input}
                 placeholder={text.placeholder}

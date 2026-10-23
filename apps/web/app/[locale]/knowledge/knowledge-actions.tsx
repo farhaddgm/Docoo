@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend } from '../../api-client';
-import { formatNumber, type Locale } from '../../i18n';
+import { formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, useAction } from '../use-action';
 import { isoToLocal, localToIso } from './knowledge-common';
@@ -197,7 +197,7 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
           <label htmlFor={`${id}-content`}>{text.contentLabel}</label>
           <textarea
             id={`${id}-content`}
-            dir="auto"
+            dir={textDir(locale)}
             rows={10}
             value={content}
             maxLength={2_000_000}
@@ -225,7 +225,7 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
           </FieldLabel>
           <input
             id={`${id}-reason`}
-            dir="auto"
+            dir={textDir(locale)}
             value={reason}
             maxLength={1000}
             aria-describedby={`${id}-reason-help`}
@@ -270,7 +270,7 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
             <label htmlFor={`${id}-delete-reason`}>{text.deleteReason}</label>
             <input
               id={`${id}-delete-reason`}
-              dir="auto"
+              dir={textDir(locale)}
               value={deleteReason}
               maxLength={1000}
               onChange={(event) => setDeleteReason(event.target.value)}
@@ -399,7 +399,7 @@ function RenewFromSource({
           <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
           <input
             id={`${id}-reason`}
-            dir="auto"
+            dir={textDir(locale)}
             value={reason}
             maxLength={1000}
             onChange={(event) => setReason(event.target.value)}

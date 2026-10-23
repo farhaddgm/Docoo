@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { apiSend } from '../../../api-client';
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 
 interface Preview {
   setId: string;
@@ -137,7 +137,7 @@ export function SensitivityPanel({
                 {preview.preview.ranking.map((r) => (
                   <tr key={r.id}>
                     <td>{formatNumber(locale, r.rank)}</td>
-                    <td dir="auto">{names.get(r.id)}</td>
+                    <td dir={textDir(locale)}>{names.get(r.id)}</td>
                     <td>{formatNumber(locale, r.total)}</td>
                   </tr>
                 ))}
@@ -163,7 +163,9 @@ export function SensitivityPanel({
                     <td>
                       {formatNumber(locale, r.from)}–{formatNumber(locale, r.to)}%
                     </td>
-                    <td dir="auto">{r.winnerIds.map((id) => names.get(id)).join('، ')}</td>
+                    <td dir={textDir(locale)}>
+                      {r.winnerIds.map((id) => names.get(id)).join('، ')}
+                    </td>
                   </tr>
                 ))}
               </tbody>

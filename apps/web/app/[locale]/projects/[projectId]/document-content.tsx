@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { documentMessages } from './document-messages';
 
 /** Shape of the structured document model of `@docoo/documents`, as the API sends it. */
@@ -180,7 +180,7 @@ function Block({ locale, block, depth }: { locale: Locale; block: DocBlock; dept
         <ol className="output-list">
           {block.entries.map((entry) => (
             <li key={entry.id}>
-              <span dir="auto">{entry.text}</span>
+              <span dir={textDir(locale)}>{entry.text}</span>
               {entry.url && (
                 <>
                   {' '}

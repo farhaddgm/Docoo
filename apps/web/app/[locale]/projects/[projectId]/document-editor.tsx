@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { apiSend } from '../../../api-client';
-import { formatNumber, type Locale } from '../../../i18n';
+import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { explainError, Notice, useAction } from '../../use-action';
 import { BlockList } from './block-editor';
 import type { DocBlock, DocContent } from './document-content';
@@ -152,7 +152,7 @@ export function DocumentEditor({
             <input
               id="editor-doc-title"
               className="inline-input"
-              dir="auto"
+              dir={textDir(locale)}
               value={content.title}
               disabled={busy}
               onChange={(event) => setContent({ ...content, title: event.target.value })}
@@ -208,7 +208,7 @@ export function DocumentEditor({
                 </p>
                 <ul className="plain-list">
                   {check.problems.map((problem) => (
-                    <li key={problem} dir="ltr">
+                    <li key={problem} dir={textDir(locale)}>
                       {problem}
                     </li>
                   ))}
@@ -222,7 +222,7 @@ export function DocumentEditor({
                 <ul className="plain-list">
                   {check.references.map((reference) => (
                     <li key={reference.id}>
-                      <span dir="auto">
+                      <span dir={textDir(locale)}>
                         {reference.id}: {reference.text}
                       </span>{' '}
                       <span className="muted">
@@ -247,7 +247,7 @@ export function DocumentEditor({
                       type="button"
                       className="link-like"
                       onClick={() => jump(item.id)}
-                      dir="auto"
+                      dir={textDir(locale)}
                     >
                       {item.text || item.id}
                     </button>

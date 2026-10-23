@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 
 import { apiGet, query } from '../../api-client';
-import { formatDate, formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDate, formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge, statusTone } from './knowledge-common';
 import { knowledgeMessages } from './knowledge-messages';
@@ -104,7 +104,7 @@ export function HistoryPanel({
                 )}{' '}
                 <span className="muted">{formatDateTime(locale, item.createdAt)}</span>
                 {typeof reason === 'string' && reason && (
-                  <p dir="auto">{fill(text.versionReason, { reason })}</p>
+                  <p dir={textDir(locale)}>{fill(text.versionReason, { reason })}</p>
                 )}
                 {(item.validFrom || item.validUntil) && (
                   <p className="muted">
@@ -131,7 +131,7 @@ export function HistoryPanel({
                   (shown.content === null ? (
                     <p role="status">{text.versionLoading}</p>
                   ) : (
-                    <pre className="json-block" dir="auto" tabIndex={0}>
+                    <pre className="json-block" dir={textDir(locale)} tabIndex={0}>
                       {shown.content}
                     </pre>
                   ))}

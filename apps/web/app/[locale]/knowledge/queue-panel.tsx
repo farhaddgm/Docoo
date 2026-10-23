@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { apiGet, query } from '../../api-client';
-import { formatDate, formatNumber, type Locale } from '../../i18n';
+import { formatDate, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge, decisionTone, ScopeList, statusTone } from './knowledge-common';
 import { knowledgeMessages } from './knowledge-messages';
@@ -192,7 +192,7 @@ export function QueuePanel({
               <input
                 id={`${id}-search`}
                 type="search"
-                dir="auto"
+                dir={textDir(locale)}
                 value={search}
                 maxLength={100}
                 onChange={(e) => setSearch(e.target.value)}
@@ -276,7 +276,7 @@ export function QueuePanel({
                 <tbody>
                   {pageRows.map((row) => (
                     <tr key={row.id}>
-                      <th scope="row" dir="auto" className="title-cell">
+                      <th scope="row" dir={textDir(locale)} className="title-cell">
                         <Link href={`/${locale}/knowledge/${row.id}` as Route}>{row.title}</Link>
                         <br />
                         <small className="muted">
@@ -288,7 +288,7 @@ export function QueuePanel({
                       </th>
                       {!scoped && (
                         <td>
-                          <ScopeList text={text} scopes={row.scopes} />
+                          <ScopeList locale={locale} text={text} scopes={row.scopes} />
                         </td>
                       )}
                       <td>
@@ -357,11 +357,11 @@ export function QueuePanel({
                 <tbody>
                   {pageRows.map((claim) => (
                     <tr key={claim.id}>
-                      <th scope="row" dir="auto" className="claim-cell">
+                      <th scope="row" dir={textDir(locale)} className="claim-cell">
                         {claim.text}
                       </th>
                       <td>{text.claimKinds[claim.kind] ?? claim.kind}</td>
-                      <td dir="auto">
+                      <td dir={textDir(locale)}>
                         <Link href={`/${locale}/knowledge/${claim.knowledgeId}` as Route}>
                           {claim.title}
                         </Link>
