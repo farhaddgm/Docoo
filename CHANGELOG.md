@@ -2,6 +2,24 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.38.0] — 2026-10-23
+
+### Added
+
+- The page name is shown in the top bar on every page.
+- Clicking a business card opens a dialog with the business's details grouped into introduction, profile and content status.
+
+### Changed
+
+- The theme picker lives on the account page and **Sign out** in the account menu, which is now labelled **Account**; the menu no longer clips or moves the profile button.
+- The dashboard is titled **Overview**. **Cost & usage** moved under **Configuration** and the Monitoring group is gone.
+- The business search box is half as wide.
+
+### Removed
+
+- The Audit Log page and its sidebar and dashboard links.
+- The "waiting for your decision" filter on the projects page.
+
 ## [0.37.0] — 2026-10-22
 
 ### Added
