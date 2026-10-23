@@ -232,7 +232,17 @@ jobs:
           docker logs clamd; docker logs temporal; docker logs object-store
           exit 1
       # Document exports use the API's Chromium renderer even when the UI browser differs.
-      - run: pnpm --filter @docoo/web exec playwright install --with-deps chromium ${{ matrix.browser }}
+      - name: Install the browsers (bounded, retried)
+        # The WebKit download or its apt dependencies sometimes hang with no output until the
+        # whole job is cancelled; a short timeout per attempt lets a retry get past it.
+        run: |
+          for attempt in 1 2 3; do
+            if timeout -k 10 300 pnpm --filter @docoo/web exec playwright install --with-deps chromium ${{ matrix.browser }}; then
+              exit 0
+            fi
+            echo "::warning::Browser install attempt ${attempt} failed or timed out"
+          done
+          exit 1
       - name: Prepare end-to-end data
         env:
           DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
