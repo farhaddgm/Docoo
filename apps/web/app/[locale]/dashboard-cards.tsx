@@ -258,9 +258,6 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
               <Link href={`/${locale}/brain` as Route}>{text.openBrain}</Link>
             </li>
             <li>
-              <Link href={`/${locale}/audit` as Route}>{text.openAudit}</Link>
-            </li>
-            <li>
               <Link href={`/${locale}/costs` as Route}>{text.openCosts}</Link>
             </li>
           </ul>

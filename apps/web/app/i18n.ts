@@ -60,7 +60,6 @@ export const navigation = [
   'providers',
   'integrations',
   'costs',
-  'audit',
   'smart',
   'settings',
 ] as const;
@@ -71,10 +70,9 @@ export type NavigationKey = (typeof navigation)[number];
 export const navigationGroups = [
   { key: 'work', items: ['dashboard', 'projects', 'topics', 'knowledge', 'businesses'] },
   { key: 'intelligence', items: ['agents', 'brain', 'smart'] },
-  { key: 'setup', items: ['providers', 'integrations', 'settings'] },
-  { key: 'monitor', items: ['costs', 'audit'] },
+  { key: 'setup', items: ['providers', 'integrations', 'costs', 'settings'] },
 ] as const satisfies readonly {
-  key: 'work' | 'intelligence' | 'setup' | 'monitor';
+  key: 'work' | 'intelligence' | 'setup';
   items: readonly NavigationKey[];
 }[];
 
@@ -95,11 +93,10 @@ const messages = {
       work: 'فضای کار',
       intelligence: 'هوش مصنوعی',
       setup: 'پیکربندی',
-      monitor: 'پایش',
       admin: 'مدیریت',
     },
     adminNav: { users: 'کاربران و ورود' },
-    accountMenu: { open: 'منوی حساب کاربری', settings: 'تنظیمات' },
+    accountMenu: { open: 'منوی حساب کاربری', settings: 'حساب کاربری' },
     roles: { owner: 'مالک', super_admin: 'مدیر', editor: 'ویرایشگر', viewer: 'مشاهده‌گر' },
     workspaceLabel: 'فضای کار',
     theme: {
@@ -126,11 +123,10 @@ const messages = {
       providers: 'ارائه‌دهندگان AI',
       integrations: 'اتصال‌ها',
       costs: 'هزینه و مصرف',
-      audit: 'Audit Log',
       smart: 'اسمارت',
       settings: 'تنظیمات سامانه',
     } satisfies Record<NavigationKey, string>,
-    dashboardTitle: 'داشبورد Docoo',
+    dashboardTitle: 'نمای کلی',
     dashboardSubtitle: 'محیط مدیریت پروژه‌ها و جریان کار',
     today: 'امروز',
     checkingSession: 'در حال بررسی نشست…',
@@ -195,11 +191,10 @@ const messages = {
       work: 'Workspace',
       intelligence: 'Intelligence',
       setup: 'Configuration',
-      monitor: 'Monitoring',
       admin: 'Administration',
     },
     adminNav: { users: 'Users & sign-in' },
-    accountMenu: { open: 'Account menu', settings: 'Settings' },
+    accountMenu: { open: 'Account menu', settings: 'Account' },
     roles: { owner: 'Owner', super_admin: 'Administrator', editor: 'Editor', viewer: 'Viewer' },
     workspaceLabel: 'Workspace',
     theme: {
@@ -226,11 +221,10 @@ const messages = {
       providers: 'AI providers',
       integrations: 'Integrations',
       costs: 'Cost & usage',
-      audit: 'Audit log',
       smart: 'Smart',
       settings: 'System settings',
     } satisfies Record<NavigationKey, string>,
-    dashboardTitle: 'Docoo dashboard',
+    dashboardTitle: 'Overview',
     dashboardSubtitle: 'Project and workflow administration',
     today: 'Today',
     checkingSession: 'Checking your session…',

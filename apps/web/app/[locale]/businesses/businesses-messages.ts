@@ -23,6 +23,13 @@ const messages = {
     pageOf: 'صفحهٔ {page} از {total}',
     total: '{n} کسب‌وکار',
     unnamed: 'بدون نام',
+    close: 'بستن',
+    name: 'نام',
+    tagline: 'شعار',
+    status: 'وضعیت',
+    groupIntro: 'معرفی',
+    groupProfile: 'مشخصات',
+    groupContent: 'وضعیت محتوا',
   },
   en: {
     title: 'Businesses',
@@ -46,6 +53,13 @@ const messages = {
     pageOf: 'Page {page} of {total}',
     total: '{n} businesses',
     unnamed: 'Unnamed',
+    close: 'Close',
+    name: 'Name',
+    tagline: 'Tagline',
+    status: 'Status',
+    groupIntro: 'Introduction',
+    groupProfile: 'Profile',
+    groupContent: 'Content status',
   },
 } as const;
 

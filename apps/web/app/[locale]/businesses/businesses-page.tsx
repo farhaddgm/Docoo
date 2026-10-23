@@ -2,7 +2,7 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 
 import { ApiError, apiGet, query } from '../../api-client';
 import { formatDate, formatNumber, type Locale } from '../../i18n';
@@ -42,6 +42,7 @@ function Businesses({ locale, workspaceId }: { locale: Locale; workspaceId: stri
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const [opened, setOpened] = useState<ContenterBusinessItem | null>(null);
   // Only the newest request may update the list.
   const latest = useRef(0);
 
@@ -104,6 +105,7 @@ function Businesses({ locale, workspaceId }: { locale: Locale; workspaceId: stri
           {text.searchButton}
         </button>
       </form>
+      {opened && <BusinessDialog locale={locale} item={opened} onClose={() => setOpened(null)} />}
       {state.kind === 'loading' && <p role="status">{text.loading}</p>}
       {state.kind === 'failed' && (
         <p className="notice error" role="alert">
@@ -120,7 +122,7 @@ function Businesses({ locale, workspaceId }: { locale: Locale; workspaceId: stri
           </p>
           <ul className="business-grid" aria-label={text.title}>
             {state.page.items.map((item) => (
-              <BusinessCard key={item.id} locale={locale} item={item} />
+              <BusinessCard key={item.id} locale={locale} item={item} onOpen={setOpened} />
             ))}
           </ul>
           {state.page.totalPages > 1 && (
@@ -154,7 +156,15 @@ function Businesses({ locale, workspaceId }: { locale: Locale; workspaceId: stri
   );
 }
 
-function BusinessCard({ locale, item }: { locale: Locale; item: ContenterBusinessItem }) {
+function BusinessCard({
+  locale,
+  item,
+  onOpen,
+}: {
+  locale: Locale;
+  item: ContenterBusinessItem;
+  onOpen: (item: ContenterBusinessItem) => void;
+}) {
   const text = businessesMessages(locale);
   const percent =
     item.totalSections > 0 ? Math.round((item.filledSections / item.totalSections) * 100) : 0;
@@ -170,7 +180,11 @@ function BusinessCard({ locale, item }: { locale: Locale; item: ContenterBusines
           {[...(item.name.trim() || '?')][0]}
         </span>
         <div className="business-card-title">
-          <h2>{item.name || text.unnamed}</h2>
+          <h2>
+            <button type="button" className="business-open" onClick={() => onOpen(item)}>
+              {item.name || text.unnamed}
+            </button>
+          </h2>
           {item.tagline && <p className="muted">{item.tagline}</p>}
         </div>
         {item.status && <span className="badge">{item.status}</span>}
@@ -219,5 +233,96 @@ function BusinessCard({ locale, item }: { locale: Locale; item: ContenterBusines
         )}
       </div>
     </li>
+  );
+}
+
+/** A modal with everything the list knows about one business, grouped into categories. */
+function BusinessDialog({
+  locale,
+  item,
+  onClose,
+}: {
+  locale: Locale;
+  item: ContenterBusinessItem;
+  onClose: () => void;
+}) {
+  const text = businessesMessages(locale);
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const element = dialog.current;
+    if (element && !element.open) element.showModal();
+  }, []);
+  const percent =
+    item.totalSections > 0 ? Math.round((item.filledSections / item.totalSections) * 100) : 0;
+  const isLink = /^https?:\/\//iu.test(item.website);
+  const groups: { title: string; rows: [string, ReactNode][] }[] = [
+    {
+      title: text.groupIntro,
+      rows: [
+        [text.name, item.name || text.unnamed],
+        [text.tagline, item.tagline],
+      ],
+    },
+    {
+      title: text.groupProfile,
+      rows: [
+        [text.industry, item.industry],
+        [text.location, item.location],
+        [text.language, item.language],
+        [
+          text.website,
+          isLink ? (
+            <a href={item.website} target="_blank" rel="noreferrer noopener" dir="ltr">
+              {item.website}
+            </a>
+          ) : (
+            item.website
+          ),
+        ],
+      ],
+    },
+    {
+      title: text.groupContent,
+      rows: [
+        [text.status, item.status],
+        [
+          text.sections,
+          `${formatNumber(locale, item.filledSections)} / ${formatNumber(locale, item.totalSections)} (${formatNumber(locale, percent)}٪)`,
+        ],
+        [text.topics, formatNumber(locale, item.topics)],
+        [text.updated, item.updatedAt ? formatDate(locale, item.updatedAt) : ''],
+      ],
+    },
+  ];
+  return (
+    <dialog
+      ref={dialog}
+      className="business-dialog"
+      aria-labelledby="business-dialog-title"
+      onClose={onClose}
+      onClick={(event) => {
+        if (event.target === dialog.current) dialog.current?.close();
+      }}
+    >
+      <div className="business-dialog-head">
+        <h2 id="business-dialog-title">{item.name || text.unnamed}</h2>
+        <button type="button" className="secondary-button" onClick={() => dialog.current?.close()}>
+          {text.close}
+        </button>
+      </div>
+      {groups.map((group) => (
+        <section key={group.title} className="business-dialog-group">
+          <h3>{group.title}</h3>
+          <dl className="business-facts">
+            {group.rows.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value || '—'}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))}
+    </dialog>
   );
 }

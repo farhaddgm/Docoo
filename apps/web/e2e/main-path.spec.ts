@@ -50,7 +50,7 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     await page.goto('/fa');
     await signInWithKeyboard(page);
 
-    const heading = page.getByRole('heading', { level: 1, name: 'داشبورد Docoo' });
+    const heading = page.getByRole('heading', { level: 1, name: 'نمای کلی' });
     await expect(heading).toBeVisible();
     await expect(heading).toBeFocused();
     const nav = page.getByRole('navigation', { name: 'ناوبری اصلی' });
@@ -64,7 +64,7 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     await page.getByRole('link', { name: 'Switch to English' }).click();
     await expect(page).toHaveURL(/\/en$/);
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
-    await expect(page.getByRole('heading', { level: 1, name: 'Docoo dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
     await expect(page.getByText('E2E Admin')).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 
@@ -111,32 +111,10 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
     ).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 
-    const nav = page.getByRole('navigation', { name: 'ناوبری اصلی' });
-    await nav.getByRole('link', { name: 'Audit Log' }).click();
-    await expect(page).toHaveURL(/\/fa\/audit$/u);
-    await expect(nav.getByRole('link', { name: 'Audit Log' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-    // Other specs add many events before this one, so the seeded event is found by filtering.
-    await expect(page.getByRole('cell').first()).toBeVisible();
-    await page.getByLabel('شدت').selectOption('critical');
-    await page.getByRole('button', { name: 'اعمال فیلتر' }).focus();
-    await page.keyboard.press('Enter');
-    const results = page.getByRole('heading', { level: 2, name: /نتیجه‌ها/u });
-    await expect(results).toBeFocused();
-    await expect(page.getByRole('cell', { name: 'project.create' })).toHaveCount(0);
-    await expect(page.getByRole('cell', { name: 'knowledge.override' }).first()).toBeVisible();
-    const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'خروجی CSV' }).click();
-    expect((await download).suggestedFilename()).toBe('docoo-audit.csv');
-    await expect(page.getByRole('status').filter({ hasText: 'خروجی آماده شد' })).toBeVisible();
-    await expectNoSeriousA11yViolations(page);
-
     await page.getByRole('link', { name: 'Switch to English' }).click();
-    await expect(page).toHaveURL(/\/en\/audit$/u);
+    await expect(page).toHaveURL(/\/en$/u);
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
-    await expect(page.getByRole('heading', { level: 1, name: 'Audit log' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 
     await page.getByRole('link', { name: 'Brain report' }).click();
@@ -159,7 +137,7 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
   }) => {
     await page.goto('/fa');
     await signInWithKeyboard(page);
-    await expect(page.getByRole('heading', { level: 1, name: 'داشبورد Docoo' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'نمای کلی' })).toBeVisible();
 
     // An offline test provider stands in for a real key; the page lists every connection.
     const session = await (await page.request.get('/api/auth/session')).json();

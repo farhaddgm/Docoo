@@ -34,7 +34,6 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   providers: '/providers',
   integrations: '/integrations',
   costs: '/costs',
-  audit: '/audit',
   smart: '/smart/errors',
   settings: '/settings',
 };
@@ -48,12 +47,11 @@ const memberNavigation: readonly NavigationKey[] = [
   'businesses',
 ];
 
-/** Pages only the owner may open: they hold the platform's keys, settings, agents and audit trail. */
+/** Pages only the owner may open: they hold the platform's keys, settings and agents. */
 const ownerNavigation: readonly NavigationKey[] = [
   'providers',
   'integrations',
   'settings',
-  'audit',
   'agents',
 ];
 
@@ -76,7 +74,6 @@ const icons: Record<IconName, string> = {
     'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   costs:
     'M12 2v20M17 6.5C16 5 14.2 4.5 12 4.5c-2.8 0-4.5 1.3-4.5 3.2 0 4.6 9 2.2 9 7 0 2-1.8 3.3-4.5 3.3-2.3 0-4.2-.7-5.2-2.3',
-  audit: 'M9 4h6l1 2h3v15H5V6h3zM9 13l2 2 4-4',
   smart:
     'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
   settings:
@@ -526,6 +523,9 @@ export function AppShell({
             >
               <Icon name="menu" className="" />
             </button>
+            <span className="topbar-title" aria-hidden="true">
+              {title}
+            </span>
             {projectName && (
               <div className="topbar-context">
                 <span className="workspace-chip" title={projectName}>

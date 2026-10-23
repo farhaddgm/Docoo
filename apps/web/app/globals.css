@@ -4251,6 +4251,8 @@ button.link-button {
 .business-search {
   display: flex;
   gap: var(--space-2);
+  max-inline-size: 50%;
+  min-inline-size: min(100%, 16rem);
 }
 
 .business-search input {
@@ -4492,4 +4494,73 @@ button.link-button {
 .notification-read {
   color: var(--color-muted);
   font-size: var(--font-size-sm);
+}
+
+.topbar-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.topbar-title + .topbar-context {
+  margin-inline-start: var(--space-3);
+}
+
+.business-card {
+  position: relative;
+}
+
+.business-open {
+  all: unset;
+  cursor: pointer;
+}
+
+.business-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.business-open:focus-visible {
+  outline: 2px solid var(--color-focus, currentColor);
+  outline-offset: 2px;
+}
+
+.business-card a {
+  position: relative;
+  z-index: 1;
+}
+
+.business-dialog {
+  inline-size: min(34rem, calc(100vw - 2rem));
+  max-block-size: calc(100vh - 4rem);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text, inherit);
+}
+
+.business-dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+.business-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.business-dialog-head h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.business-dialog-group h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
 }
