@@ -36,6 +36,16 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Make apt tolerate a slow mirror
+        # The Ubuntu mirror sometimes stalls a single package for minutes; a short no-data timeout
+        # with retries lets apt move on instead of holding the job (and the dpkg lock) until it is
+        # cancelled.
+        run: |
+          sudo tee /etc/apt/apt.conf.d/80-ci-resilience >/dev/null <<'EOF'
+          Acquire::Retries "5";
+          Acquire::http::Timeout "30";
+          Acquire::https::Timeout "30";
+          EOF
       - name: Install OCR tools (Tesseract fas/eng, poppler)
         run: |
           sudo apt-get update
@@ -85,7 +95,9 @@ jobs:
           done
           docker logs clamd; docker logs temporal; docker logs object-store
           exit 1
-      - run: pnpm --filter @docoo/web exec playwright install --with-deps chromium
+      - name: Install Chromium
+        timeout-minutes: 15
+        run: pnpm --filter @docoo/web exec playwright install --with-deps chromium
       - name: Render a real PDF in Chromium (DOC-103)
         run: pnpm --filter @docoo/documents exec vitest run
         env:
@@ -203,6 +215,16 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Make apt tolerate a slow mirror
+        # The Ubuntu mirror sometimes stalls a single package for minutes; a short no-data timeout
+        # with retries lets apt move on instead of holding the job (and the dpkg lock) until it is
+        # cancelled.
+        run: |
+          sudo tee /etc/apt/apt.conf.d/80-ci-resilience >/dev/null <<'EOF'
+          Acquire::Retries "5";
+          Acquire::http::Timeout "30";
+          Acquire::https::Timeout "30";
+          EOF
       - name: Install OCR tools (Tesseract fas/eng, poppler)
         run: |
           sudo apt-get update
@@ -232,17 +254,9 @@ jobs:
           docker logs clamd; docker logs temporal; docker logs object-store
           exit 1
       # Document exports use the API's Chromium renderer even when the UI browser differs.
-      - name: Install the browsers (bounded, retried)
-        # The WebKit download or its apt dependencies sometimes hang with no output until the
-        # whole job is cancelled; a short timeout per attempt lets a retry get past it.
-        run: |
-          for attempt in 1 2 3; do
-            if timeout -k 10 300 pnpm --filter @docoo/web exec playwright install --with-deps chromium ${{ matrix.browser }}; then
-              exit 0
-            fi
-            echo "::warning::Browser install attempt ${attempt} failed or timed out"
-          done
-          exit 1
+      - name: Install the browsers
+        timeout-minutes: 15
+        run: pnpm --filter @docoo/web exec playwright install --with-deps chromium ${{ matrix.browser }}
       - name: Prepare end-to-end data
         env:
           DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
