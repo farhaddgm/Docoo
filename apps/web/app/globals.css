@@ -683,42 +683,6 @@ a.nav-item:hover {
   display: none;
 }
 
-.signout-button {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 2.25rem;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font: inherit;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    border-color var(--transition),
-    background-color var(--transition);
-}
-
-.signout-button:hover:not(:disabled) {
-  border-color: var(--color-danger-ink);
-  background: var(--color-danger-bg);
-  color: var(--color-danger-ink);
-}
-
-.signout-button:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-.signout-button svg {
-  width: 1.0625rem;
-  height: 1.0625rem;
-}
-
 /* Collapsed sidebar (wide screens): an icon rail; labels stay readable to assistive technology. */
 @media (min-width: 56.0625rem) {
   .shell {
@@ -1334,16 +1298,6 @@ button:disabled {
 
   .menu-collapse {
     display: none;
-  }
-
-  .signout-button span {
-    display: none;
-  }
-
-  .signout-button {
-    width: 2.25rem;
-    padding: 0;
-    justify-content: center;
   }
 
   .nav-item[aria-current='page']::before {
@@ -4229,14 +4183,12 @@ button.link-button {
 }
 
 .account-menu {
-  position: absolute;
-  inset-block-end: calc(100% - var(--space-2));
-  inset-inline: var(--space-2);
-  z-index: 70;
+  position: fixed;
+  z-index: 90;
   display: grid;
-  gap: var(--space-2);
-  min-width: 15rem;
-  padding: var(--space-3);
+  gap: var(--space-1);
+  inline-size: min(16rem, calc(100vw - 1rem));
+  padding: var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -4244,20 +4196,32 @@ button.link-button {
   box-shadow: var(--shadow-md);
 }
 
-.account-menu[hidden] {
-  display: none;
-}
-
 .account-menu-item {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  inline-size: 100%;
   min-height: 2.5rem;
   padding: 0 var(--space-2);
+  border: 0;
   border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--color-ink);
+  font: inherit;
   font-size: var(--font-size-sm);
+  text-align: start;
   text-decoration: none;
+  cursor: pointer;
+}
+
+.account-menu-item:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.account-menu-danger:hover:not(:disabled) {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-ink);
 }
 
 .account-menu-item:hover {
@@ -4287,6 +4251,8 @@ button.link-button {
 .business-search {
   display: flex;
   gap: var(--space-2);
+  max-inline-size: 50%;
+  min-inline-size: min(100%, 16rem);
 }
 
 .business-search input {
@@ -4528,4 +4494,73 @@ button.link-button {
 .notification-read {
   color: var(--color-muted);
   font-size: var(--font-size-sm);
+}
+
+.topbar-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.topbar-title + .topbar-context {
+  margin-inline-start: var(--space-3);
+}
+
+.business-card {
+  position: relative;
+}
+
+.business-open {
+  all: unset;
+  cursor: pointer;
+}
+
+.business-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.business-open:focus-visible {
+  outline: 2px solid var(--color-focus, currentColor);
+  outline-offset: 2px;
+}
+
+.business-card a {
+  position: relative;
+  z-index: 1;
+}
+
+.business-dialog {
+  inline-size: min(34rem, calc(100vw - 2rem));
+  max-block-size: calc(100vh - 4rem);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text, inherit);
+}
+
+.business-dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+.business-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.business-dialog-head h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.business-dialog-group h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
 }

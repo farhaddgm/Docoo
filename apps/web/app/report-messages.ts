@@ -47,7 +47,6 @@ const reportMessages = {
       newTopic: 'ساخت حوزهٔ جدید',
       openProjects: 'فهرست پروژه‌ها',
       openBrain: 'ساخت گزارش Brain',
-      openAudit: 'بررسی Audit Log',
       openCosts: 'گزارش هزینه',
     },
     brain: {
@@ -191,7 +190,6 @@ const reportMessages = {
       newTopic: 'Create a topic',
       openProjects: 'Project list',
       openBrain: 'Generate a Brain report',
-      openAudit: 'Review the audit log',
       openCosts: 'Cost report',
     },
     brain: {

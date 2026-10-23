@@ -32,10 +32,9 @@ interface Filters {
   language: string;
   from: string;
   to: string;
-  waiting: boolean;
 }
 
-const noFilters: Filters = { q: '', topicId: '', language: '', from: '', to: '', waiting: false };
+const noFilters: Filters = { q: '', topicId: '', language: '', from: '', to: '' };
 
 const viewOrder = [
   'current',
@@ -84,7 +83,6 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
           language: filter.language || undefined,
           updatedFrom: filter.from || undefined,
           updatedTo: filter.to || undefined,
-          waiting: filter.waiting ? 'true' : undefined,
         })}`,
       );
       setItems((current) => (cursor && current ? [...current, ...page.items] : page.items));
@@ -206,16 +204,6 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
               onChange={(event) => setFilters({ ...filters, to: event.target.value })}
             />
           </div>
-          <span />
-          <label className="checkbox" htmlFor="project-waiting">
-            <input
-              id="project-waiting"
-              type="checkbox"
-              checked={filters.waiting}
-              onChange={(event) => setFilters({ ...filters, waiting: event.target.checked })}
-            />{' '}
-            {text.waitingOnly}
-          </label>
           {filtered && (
             <>
               <span />

@@ -4,6 +4,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 import {
   direction,
@@ -33,7 +34,6 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   providers: '/providers',
   integrations: '/integrations',
   costs: '/costs',
-  audit: '/audit',
   smart: '/smart/errors',
   settings: '/settings',
 };
@@ -47,12 +47,11 @@ const memberNavigation: readonly NavigationKey[] = [
   'businesses',
 ];
 
-/** Pages only the owner may open: they hold the platform's keys, settings, agents and audit trail. */
+/** Pages only the owner may open: they hold the platform's keys, settings and agents. */
 const ownerNavigation: readonly NavigationKey[] = [
   'providers',
   'integrations',
   'settings',
-  'audit',
   'agents',
 ];
 
@@ -75,7 +74,6 @@ const icons: Record<IconName, string> = {
     'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   costs:
     'M12 2v20M17 6.5C16 5 14.2 4.5 12 4.5c-2.8 0-4.5 1.3-4.5 3.2 0 4.6 9 2.2 9 7 0 2-1.8 3.3-4.5 3.3-2.3 0-4.2-.7-5.2-2.3',
-  audit: 'M9 4h6l1 2h3v15H5V6h3zM9 13l2 2 4-4',
   smart:
     'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
   settings:
@@ -201,7 +199,13 @@ export function AppShell({
   const menuOpen = menu.open && menu.path === pathname;
   const [leaving, setLeaving] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const accountButtonRef = useRef<HTMLButtonElement>(null);
+  const accountPopupRef = useRef<HTMLDivElement>(null);
+  // The popup is drawn outside the sidebar (which clips and scrolls) and placed beside the button.
+  const [accountPlace, setAccountPlace] = useState<{
+    bottom: number;
+    inline: number;
+  } | null>(null);
   // The desktop sidebar folds to an icon rail; the inline script in <head> has already applied it.
   const [collapsed, setCollapsed] = useState(false);
   const isAdmin = !identity || identity.user.role === 'super_admin';
@@ -240,17 +244,35 @@ export function AppShell({
 
   useEffect(() => {
     if (!accountOpen) return;
+    const place = () => {
+      const button = accountButtonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const rtl = document.documentElement.dir === 'rtl';
+      setAccountPlace({
+        bottom: window.innerHeight - rect.top + 8,
+        inline: rtl ? window.innerWidth - rect.right : rect.left,
+      });
+    };
+    place();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setAccountOpen(false);
+      if (event.key !== 'Escape') return;
+      setAccountOpen(false);
+      accountButtonRef.current?.focus();
     };
     const onPointer = (event: PointerEvent) => {
-      if (!accountMenuRef.current?.contains(event.target as Node)) setAccountOpen(false);
+      const target = event.target as Node;
+      if (accountButtonRef.current?.contains(target) || accountPopupRef.current?.contains(target))
+        return;
+      setAccountOpen(false);
     };
     document.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', onPointer);
+    window.addEventListener('resize', place);
     return () => {
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onPointer);
+      window.removeEventListener('resize', place);
     };
   }, [accountOpen]);
 
@@ -292,17 +314,6 @@ export function AppShell({
       >
         {content.switchLanguage}
       </a>
-      {identity && showNavigation && (
-        <button
-          type="button"
-          className="signout-button"
-          disabled={onSignOut ? signOutBusy : leaving}
-          onClick={onSignOut ? () => onSignOut() : () => void signOutHere()}
-        >
-          <Icon name="logout" className="" />
-          <span>{onSignOut && signOutBusy ? content.signingOut : content.signOut}</span>
-        </button>
-      )}
     </div>
   );
 
@@ -428,8 +439,9 @@ export function AppShell({
             })}
           </nav>
           {identity && (
-            <div className="sidebar-foot" ref={accountMenuRef}>
+            <div className="sidebar-foot">
               <button
+                ref={accountButtonRef}
                 type="button"
                 className="user-chip user-chip-button"
                 title={identity.user.displayName}
@@ -447,17 +459,39 @@ export function AppShell({
                   <span className="user-chip-meta">{roleLabel}</span>
                 </span>
               </button>
-              <div id="account-menu" className="account-menu" hidden={!accountOpen}>
-                <Link
-                  className="account-menu-item"
-                  href={`/${locale}/account` as Route}
-                  onClick={() => setAccountOpen(false)}
-                >
-                  <Icon name="settings" />
-                  <span>{content.accountMenu.settings}</span>
-                </Link>
-                <ThemePicker locale={locale} inline />
-              </div>
+              {accountOpen &&
+                accountPlace &&
+                createPortal(
+                  <div
+                    id="account-menu"
+                    ref={accountPopupRef}
+                    className="account-menu"
+                    role="menu"
+                    dir={direction(locale)}
+                    style={{ bottom: accountPlace.bottom, insetInlineStart: accountPlace.inline }}
+                  >
+                    <Link
+                      className="account-menu-item"
+                      role="menuitem"
+                      href={`/${locale}/account` as Route}
+                      onClick={() => setAccountOpen(false)}
+                    >
+                      <Icon name="settings" />
+                      <span>{content.accountMenu.settings}</span>
+                    </Link>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="account-menu-item account-menu-danger"
+                      disabled={onSignOut ? signOutBusy : leaving}
+                      onClick={onSignOut ? () => onSignOut() : () => void signOutHere()}
+                    >
+                      <Icon name="logout" />
+                      <span>{onSignOut && signOutBusy ? content.signingOut : content.signOut}</span>
+                    </button>
+                  </div>,
+                  document.body,
+                )}
             </div>
           )}
         </aside>
@@ -489,6 +523,9 @@ export function AppShell({
             >
               <Icon name="menu" className="" />
             </button>
+            <span className="topbar-title" aria-hidden="true">
+              {title}
+            </span>
             {projectName && (
               <div className="topbar-context">
                 <span className="workspace-chip" title={projectName}>

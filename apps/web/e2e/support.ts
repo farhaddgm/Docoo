@@ -52,7 +52,7 @@ export async function signInWithKeyboard(page: Page) {
   await page.keyboard.press('Enter');
   // The login page briefly renders this heading before its full-page redirect completes.
   await page.waitForURL('/fa');
-  await expect(page.getByRole('heading', { level: 1, name: 'داشبورد Docoo' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'نمای کلی' })).toBeVisible();
 }
 
 /** Workspace of the signed-in administrator and the headers the API's origin check expects. */
