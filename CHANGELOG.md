@@ -10,6 +10,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - **Businesses page.** A new **Businesses** entry under Workspace shows the business profiles defined in Contenter as cards, with search and paging.
 - **Current project in the top bar.** On a project page the top bar names the project you are working on, instead of the workspace.
 
+### Security
+
+- Update Next.js to 16.4.2 for the image-optimization remote-code-execution advisory (GHSA-2464-fhr4-w9xw) and the Server Actions denial-of-service advisory (GHSA-p3m5-59mp-jv5r), both fixed in 16.4.1.
+
 ### Changed
 
 - The sidebar stays in place while a page loads instead of disappearing and coming back.
