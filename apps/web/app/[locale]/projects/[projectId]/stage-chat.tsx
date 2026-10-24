@@ -24,8 +24,45 @@ interface Conversation {
   outputId: string | null;
 }
 
+/** Ready-made messages per stage; touching one puts it in the input, the admin still sends it. */
+const presets: Record<string, Record<Locale, string[]>> = {
+  analysis: {
+    fa: ['بیشتر توضیح بده', 'به زبان ساده بگو', 'خلاصه مهم تحلیل رو بگو'],
+    en: ['Explain more', 'Say it in plain words', 'Summarize the key points of the analysis'],
+  },
+  research: {
+    fa: [
+      'بیشتر توضیح بده',
+      'به زبان ساده بگو',
+      'خلاصه مهم تحقیق رو بگو',
+      'به نظر چه تحقیق دیگه ای کمک کننده است',
+    ],
+    en: [
+      'Explain more',
+      'Say it in plain words',
+      'Summarize the key points of the research',
+      'What other research would help, in your view?',
+    ],
+  },
+  ideation: {
+    fa: [
+      'بیشتر توضیح بده',
+      'به زبان ساده بگو',
+      'فرق های مهم بین ایده ها رو بگو',
+      'خلاصه ایده ها رو بگو',
+    ],
+    en: [
+      'Explain more',
+      'Say it in plain words',
+      'Tell me the important differences between the ideas',
+      'Summarize the ideas',
+    ],
+  },
+};
+
 const copy = {
   fa: {
+    presetsLabel: 'پیام‌های آماده',
     title: 'گفتگو با ایجنت این مرحله',
     askOnly: 'این مرحله اکنون منتظر بازبینی شما نیست؛ فقط می‌توانید دربارهٔ خروجی بپرسید.',
     help: 'می‌توانید دربارهٔ همین خروجی بپرسید. ایجنت فقط توضیح می‌دهد و خروجی را تغییر نمی‌دهد؛ برای اصلاح، «درخواست بازبینی» بفرستید و سپس آن را به‌عنوان رد، برای تلاش بعدی ارسال کنید.',
@@ -54,6 +91,7 @@ const copy = {
     generic: 'انجام نشد. دوباره تلاش کنید.',
   },
   en: {
+    presetsLabel: 'Ready-made messages',
     title: 'Talk to the agent of this stage',
     askOnly: 'This stage is not waiting for your review now; you can only ask about its output.',
     help: 'Ask about this output. The agent only explains and never changes it. To get it corrected, send a revision request, then send it back as a rejection for the next attempt.',
@@ -100,6 +138,7 @@ export function StageChat({
   stageBase,
   onChanged,
   canRevise = true,
+  stage,
 }: {
   locale: Locale;
   /** `/workspaces/{id}/projects/{id}/stages/{stageRunId}` */
@@ -107,8 +146,11 @@ export function StageChat({
   onChanged: () => Promise<void>;
   /** A revision request can be sent back only while the output waits at a gate. */
   canRevise?: boolean;
+  /** Selects the ready-made messages shown under the input. */
+  stage?: string;
 }) {
   const text = copy[locale];
+  const quick = (stage && presets[stage]?.[locale]) || [];
   const readOnly = useReadOnlyAccess();
   const id = useId();
   const [data, setData] = useState<Conversation | null>(null);
@@ -310,6 +352,21 @@ export function StageChat({
                   </small>
                 )}
               </div>
+              {quick.length > 0 && (
+                <div className="toolbar" role="group" aria-label={text.presetsLabel}>
+                  {quick.map((message) => (
+                    <button
+                      key={message}
+                      className="secondary-button"
+                      type="button"
+                      disabled={busy || full}
+                      onClick={() => setInput(message)}
+                    >
+                      {message}
+                    </button>
+                  ))}
+                </div>
+              )}
               {busy && (
                 <p className="muted" role="status">
                   {text.sending}
@@ -376,6 +433,7 @@ export function StageAgentChat({
       <StageChat
         locale={locale}
         stageBase={`${base}/stages/${item.id}`}
+        stage={stage}
         canRevise={Boolean(item.pendingGateOutputId)}
         onChanged={async () => {
           await load();
