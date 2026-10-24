@@ -221,7 +221,7 @@ function ProjectView({
             </dd>
           </div>
           <div>
-            <dt>{text.topics}</dt>
+            <dt>{text.topicsShort}</dt>
             <dd dir={textDir(locale)}>
               {project.topics.length > 0 ? (
                 <ul className="chip-list">
@@ -232,7 +232,7 @@ function ProjectView({
                   ))}
                 </ul>
               ) : (
-                text.noTopics
+                text.noTopicsShort
               )}
             </dd>
           </div>
