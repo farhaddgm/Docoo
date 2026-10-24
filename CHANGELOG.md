@@ -8,6 +8,14 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 - **Creating a project is clearer** ([ADR-0035](docs/adr/0035-guided-project-creation.md)). The wizard has four steps instead of eight: **The problem**, **Context and method** (business, topics and quick or full analysis), **Advanced settings** (optional) and **Review and create**. Each step is marked required or optional, you can jump back to any earlier step, and the advanced settings (workflow, model, knowledge, solutions, documents) are collapsible sections that say whether they are still at their defaults. The review lists what happens after creating the project and lets you edit any part. The project code is suggested from the title. A draft saved by the earlier wizard still opens at the matching step.
 
+### Security
+
+- The Temporal image is rebuilt with Echo 4.16.1 for the advisories GHSA-cxf3-9h37-7rr8 (critical), GHSA-9969-6676-49h5, GHSA-f48p-c9v4-h7xv and GHSA-h7wr-284f-5qvc.
+
+### Fixed
+
+- Typing quickly in the first wizard step can no longer drop a field (each edit is applied on top of the newest values).
+
 ### Added
 
 - **Project journey.** The project's **Overview** tab shows the six steps from creating to completing the project (activate, analysis, research and ideas, documents, complete), which one you are on, what is waiting for you or blocking it, and a button that takes you there.
