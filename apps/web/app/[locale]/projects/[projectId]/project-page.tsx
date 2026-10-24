@@ -2,7 +2,7 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 
 import { apiGet, apiSend, ApiError } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
@@ -196,7 +196,6 @@ function ProjectView({
         </Link>
       </p>
 
-      {intelligenceLink}
       <section className="card" aria-labelledby="project-heading">
         <h2 id="project-heading" dir={textDir(locale)}>
           <span dir="ltr">{project.code}</span> — {project.title}
@@ -289,20 +288,9 @@ function ProjectView({
             onOpenWorkflow={project.status === 'active' ? undefined : () => choose('workflow')}
           />
         )}
-        {canEdit && (
-          <p>
-            <button
-              type="button"
-              data-write-action
-              className="secondary-button"
-              onClick={startEdit}
-            >
-              {text.edit}
-            </button>
-          </p>
-        )}
         {!accessReadOnly && (
           <Lifecycle
+            onEdit={canEdit ? startEdit : undefined}
             locale={locale}
             base={base}
             project={project}
@@ -314,7 +302,8 @@ function ProjectView({
         )}
       </section>
 
-      <p>
+      <p className="toolbar">
+        {intelligenceLink}
         <a href={`/${locale}/projects/${projectId}/evaluation-lab?workspaceId=${workspaceId}`}>
           {locale === 'fa' ? 'مقایسهٔ کیفیت ایجنت‌ها' : 'Compare agent quality'}
         </a>
@@ -512,11 +501,13 @@ function Lifecycle({
   base,
   project,
   onChanged,
+  onEdit,
 }: {
   locale: Locale;
   base: string;
   project: ProjectDetail;
   onChanged: (project: ProjectDetail) => void;
+  onEdit?: (() => void) | undefined;
 }) {
   const text = projectPageMessages(locale);
   const formText = projectMessages(locale);
@@ -561,32 +552,41 @@ function Lifecycle({
   );
   if (project.analysisProfile === 'quick' && project.status === 'completed')
     commands.unshift('analysis/continue');
-  if (commands.length === 0) return <Notice notice={notice} />;
+  if (commands.length === 0 && !onEdit) return <Notice notice={notice} />;
+
+  const editButton = onEdit ? (
+    <button type="button" data-write-action className="secondary-button" onClick={onEdit}>
+      {text.edit}
+    </button>
+  ) : null;
 
   return (
     <div className="stack">
       <Notice notice={notice} />
       <div className="toolbar" role="group" aria-label={text.lifecycle}>
+        {onEdit && !commands.includes('pause') && editButton}
         {commands.map((command) => (
-          <button
-            key={command}
-            className={
-              command === 'activate' || command === 'resume' || command === 'restore'
-                ? 'primary-button'
-                : destructive.has(command)
-                  ? 'secondary-button danger'
-                  : 'secondary-button'
-            }
-            type="button"
-            data-command={command}
-            disabled={busy}
-            aria-expanded={
-              needsConfirmation.has(command) ? pending?.command === command : undefined
-            }
-            onClick={() => choose(command)}
-          >
-            {labels[command] ?? command}
-          </button>
+          <Fragment key={command}>
+            {command === 'pause' && editButton}
+            <button
+              className={
+                command === 'activate' || command === 'resume' || command === 'restore'
+                  ? 'primary-button'
+                  : destructive.has(command)
+                    ? 'secondary-button danger'
+                    : 'secondary-button'
+              }
+              type="button"
+              data-command={command}
+              disabled={busy}
+              aria-expanded={
+                needsConfirmation.has(command) ? pending?.command === command : undefined
+              }
+              onClick={() => choose(command)}
+            >
+              {labels[command] ?? command}
+            </button>
+          </Fragment>
         ))}
       </div>
       {pending && (
