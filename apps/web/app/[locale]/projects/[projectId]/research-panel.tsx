@@ -28,7 +28,8 @@ const copy = {
   fa: {
     title: 'تحقیق',
     help: 'نتیجهٔ مرحلهٔ تحقیق: منابع، یافته‌ها و جست‌وجوی وب. تأیید یا رد خروجی در تب «گردش‌کار» انجام می‌شود.',
-    empty: 'هنوز مرحلهٔ تحقیق خروجی نداده است. بعد از تکمیل تحلیل، گردش‌کار این مرحله را اجرا می‌کند.',
+    empty:
+      'هنوز مرحلهٔ تحقیق خروجی نداده است. بعد از تکمیل تحلیل، گردش‌کار این مرحله را اجرا می‌کند.',
     waiting: 'این خروجی منتظر تأیید شماست.',
     openWorkflow: 'رفتن به گردش‌کار',
     refresh: 'تازه‌سازی',
@@ -37,7 +38,8 @@ const copy = {
   en: {
     title: 'Research',
     help: 'The result of the research stage: sources, findings and web search. Approving or rejecting the output is done in the Workflow tab.',
-    empty: 'The research stage has not produced an output yet. The workflow runs it once the analysis is complete.',
+    empty:
+      'The research stage has not produced an output yet. The workflow runs it once the analysis is complete.',
     waiting: 'This output is waiting for your approval.',
     openWorkflow: 'Go to the workflow',
     refresh: 'Refresh',
