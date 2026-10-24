@@ -16,7 +16,9 @@ const messages = {
     cancelHelp: 'خروجی‌های ساخته‌شده می‌مانند ولی در مرحله‌های بعدی استفاده نمی‌شوند.',
     cancelReason: 'دلیل لغو (لازم)',
     cancelConfirm: 'لغو اجرا',
-    redo: 'انجام دوباره',
+    redo: 'اجرای دوباره',
+    redoUnavailable: 'فقط مرحلهٔ کامل‌شده و وقتی اجرایی در جریان نیست دوباره اجرا می‌شود.',
+    viewOutput: 'مشاهدهٔ خروجی در تب «{stage}»',
     redoHelp:
       'اجرای تازه‌ای ساخته می‌شود: مرحله‌های پیش از «{stage}» همان‌طور که هست می‌مانند و «{stage}» و مرحله‌های بعد از آن از اول انجام می‌شوند. اجرای فعلی و خروجی‌هایش نگه داشته می‌شود.',
     redoReason: 'دلیل انجام دوباره (لازم)',
@@ -260,7 +262,9 @@ const messages = {
     cancelHelp: 'Outputs already made are kept but are not used by later stages.',
     cancelReason: 'Reason for cancelling (required)',
     cancelConfirm: 'Cancel the run',
-    redo: 'Redo',
+    redo: 'Run again',
+    redoUnavailable: 'Only a completed stage can be run again, and not while a run is in progress.',
+    viewOutput: 'View the output in the “{stage}” tab',
     redoHelp:
       'A new run is made: the stages before "{stage}" stay as they are, and "{stage}" and the stages after it are done again from the start. The current run and its outputs are kept.',
     redoReason: 'Reason for redoing (required)',

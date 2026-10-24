@@ -10,8 +10,6 @@ import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { ReasonBar } from '../../reason-bar';
 import { DeliverablesPanel } from './deliverables-panel';
-import { StageChat, StageChatDisclosure } from './stage-chat';
-import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
 import { FieldLabel } from '../../../info-tip';
 
@@ -109,6 +107,7 @@ export function WorkflowPanel({
   projectStatus,
   refreshKey,
   onProjectRefresh,
+  onOpenStage,
 }: {
   locale: Locale;
   workspaceId: string;
@@ -116,6 +115,7 @@ export function WorkflowPanel({
   projectStatus: string;
   refreshKey: number;
   onProjectRefresh: () => void;
+  onOpenStage: (stage: string) => void;
 }) {
   const text = workflowMessages(locale);
   const common = reportMessagesFor(locale);
@@ -371,25 +371,23 @@ export function WorkflowPanel({
               )}
               {stage.passedByDecision && <span className="muted">{text.passedByDecision}</span>}
               {stage.carriedFromStageRunId && <span className="muted">{text.carried}</span>}
-              {!live &&
-                (projectStatus === 'active' || projectStatus === 'completed') &&
-                stage.status === 'completed' &&
-                stage.id && (
-                  <button
-                    data-write-action
-                    className="secondary-button"
-                    type="button"
-                    disabled={busy}
-                    aria-expanded={redoStage === stage.stage}
-                    onClick={() => {
-                      setRedoStage((open) => (open === stage.stage ? null : stage.stage));
-                      setRedoReason('');
-                    }}
-                  >
-                    {text.redo}
-                    <span className="visually-hidden"> {stageLabel(stage.stage)}</span>
-                  </button>
-                )}
+              {(projectStatus === 'active' || projectStatus === 'completed') && (
+                <button
+                  data-write-action
+                  className="secondary-button"
+                  type="button"
+                  disabled={busy || live || stage.status !== 'completed' || !stage.id}
+                  title={live || stage.status !== 'completed' ? text.redoUnavailable : undefined}
+                  aria-expanded={redoStage === stage.stage}
+                  onClick={() => {
+                    setRedoStage((open) => (open === stage.stage ? null : stage.stage));
+                    setRedoReason('');
+                  }}
+                >
+                  {text.redo}
+                  <span className="visually-hidden"> {stageLabel(stage.stage)}</span>
+                </button>
+              )}
               {redoStage === stage.stage && (
                 <form data-write-action className="filter-form" onSubmit={redoRun}>
                   <p className="muted">
@@ -418,13 +416,6 @@ export function WorkflowPanel({
                     </button>
                   </ReasonBar>
                 </form>
-              )}
-              {stage.id && stage.latestOutputId && !stage.pendingGateOutputId && (
-                <StageChatDisclosure
-                  locale={locale}
-                  stageBase={`${base}/stages/${stage.id}`}
-                  onChanged={afterChange}
-                />
               )}
             </li>
           ))}
@@ -539,6 +530,7 @@ export function WorkflowPanel({
           busy={busy}
           run={run}
           onChanged={afterChange}
+          onOpenStage={onOpenStage}
         />
       ))}
     </div>
@@ -639,6 +631,7 @@ function ReviewPanel({
   busy,
   run,
   onChanged,
+  onOpenStage,
 }: {
   locale: Locale;
   base: string;
@@ -648,6 +641,7 @@ function ReviewPanel({
   busy: boolean;
   run: RunAction;
   onChanged: () => Promise<void>;
+  onOpenStage: (stage: string) => void;
 }) {
   const text = workflowMessages(locale);
   const common = reportMessagesFor(locale);
@@ -760,21 +754,17 @@ function ReviewPanel({
       ) : !output ? (
         <p className="muted">{text.noPendingOutput}</p>
       ) : (
-        <>
+        <div className="stack">
           <p className="muted">
             {text.outputVersion.replace('{n}', formatNumber(locale, output.versionNo))} ·{' '}
             {text.outputOrigin[output.origin] ?? output.origin} ·{' '}
             {formatDateTime(locale, output.createdAt)}
           </p>
-          <StageOutput locale={locale} stage={stage.stage} content={output.content} />
-          <details>
-            <summary>{text.rawView}</summary>
-            <pre className="json-block" dir="ltr">
-              {JSON.stringify(output.content, null, 2)}
-            </pre>
-          </details>
-
-          <StageChat locale={locale} stageBase={stageBase} onChanged={onChanged} />
+          <p>
+            <button type="button" className="link-button" onClick={() => onOpenStage(stage.stage)}>
+              {text.viewOutput.replace('{stage}', text.stages[stage.stage] ?? stage.stage)}
+            </button>
+          </p>
 
           {editing ? (
             <form data-write-action className="stack" onSubmit={saveEdit} aria-busy={busy}>
@@ -834,7 +824,7 @@ function ReviewPanel({
                 <textarea
                   id={`review-comment-${stage.stage}`}
                   dir={textDir(locale)}
-                  rows={3}
+                  rows={2}
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
                   maxLength={5000}
@@ -895,7 +885,7 @@ function ReviewPanel({
               ))}
             </ul>
           )}
-        </>
+        </div>
       )}
     </section>
   );
