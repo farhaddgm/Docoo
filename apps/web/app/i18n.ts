@@ -58,7 +58,6 @@ export const navigation = [
   'agents',
   'brain',
   'providers',
-  'integrations',
   'costs',
   'smart',
   'settings',
@@ -70,7 +69,7 @@ export type NavigationKey = (typeof navigation)[number];
 export const navigationGroups = [
   { key: 'work', items: ['dashboard', 'projects', 'topics', 'knowledge', 'businesses'] },
   { key: 'intelligence', items: ['agents', 'brain', 'smart'] },
-  { key: 'setup', items: ['providers', 'integrations', 'costs', 'settings'] },
+  { key: 'setup', items: ['providers', 'costs', 'settings'] },
 ] as const satisfies readonly {
   key: 'work' | 'intelligence' | 'setup';
   items: readonly NavigationKey[];
@@ -121,7 +120,6 @@ const messages = {
       businesses: 'کسب‌وکار',
       brain: 'گزارش Brain',
       providers: 'ارائه‌دهندگان AI',
-      integrations: 'اتصال‌ها',
       costs: 'هزینه و مصرف',
       smart: 'اسمارت',
       settings: 'تنظیمات سامانه',
@@ -219,7 +217,6 @@ const messages = {
       businesses: 'Businesses',
       brain: 'Brain report',
       providers: 'AI providers',
-      integrations: 'Integrations',
       costs: 'Cost & usage',
       smart: 'Smart',
       settings: 'System settings',

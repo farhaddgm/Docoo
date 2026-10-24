@@ -1,6 +1,7 @@
 'use client';
 
 import type { Locale } from '../../i18n';
+import { Integrations } from '../integrations/integrations-page';
 import { Templates } from '../templates/templates-page';
 import { WorkspacePage } from '../workspace-page';
 import { ScopedSettings } from './scoped-settings';
@@ -20,6 +21,7 @@ export function SettingsPage({ locale }: { locale: Locale }) {
             scopeType="workspace"
             scopeId={workspaceId}
           />
+          <Integrations locale={locale} workspaceId={workspaceId} />
         </div>
       )}
     </WorkspacePage>

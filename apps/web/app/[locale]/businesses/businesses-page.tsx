@@ -13,7 +13,6 @@ import {
   ProfileView,
   QualityView,
   SourcesView,
-  safeHref,
 } from '../projects/[projectId]/business-content';
 import { WorkspacePage } from '../workspace-page';
 import { businessesMessages } from './businesses-messages';
@@ -90,7 +89,7 @@ function Businesses({ locale, workspaceId }: { locale: Locale; workspaceId: stri
       <section className="card stack">
         <p className="notice">{text.notConfigured}</p>
         <div className="toolbar">
-          <Link className="secondary-button link-button" href={`/${locale}/integrations` as Route}>
+          <Link className="secondary-button link-button" href={`/${locale}/settings` as Route}>
             {text.openIntegrations}
           </Link>
         </div>
@@ -200,7 +199,6 @@ function BusinessCard({
               {item.name || text.unnamed}
             </button>
           </h2>
-          {item.tagline && <p className="muted">{item.tagline}</p>}
         </div>
         {item.status && <span className="badge">{item.status}</span>}
       </div>
@@ -303,8 +301,6 @@ function BusinessDialog({
     };
   }, [workspaceId, item.id]);
 
-  const href =
-    detail.kind === 'ready' && detail.contenterUrl ? safeHref(detail.contenterUrl) : null;
   return (
     <dialog
       ref={dialog}
@@ -320,24 +316,8 @@ function BusinessDialog({
           <h2 id="business-dialog-title" dir={textDir(locale)}>
             {item.name || text.unnamed}
           </h2>
-          {item.tagline && (
-            <p className="muted" dir={textDir(locale)}>
-              {item.tagline}
-            </p>
-          )}
         </div>
         <div className="toolbar">
-          {href && (
-            <a
-              className="secondary-button link-button"
-              href={href}
-              target="_blank"
-              rel="noreferrer noopener"
-              title={panel.openInContenterHint}
-            >
-              {panel.openInContenter}
-            </a>
-          )}
           <button
             type="button"
             className="secondary-button"

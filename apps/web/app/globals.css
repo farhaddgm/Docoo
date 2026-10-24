@@ -3724,7 +3724,7 @@ button.link-button {
 }
 
 .biz-tabs {
-  margin-block-start: var(--space-2);
+  margin-block: var(--space-2) var(--space-5);
 }
 
 .biz-profile {

@@ -28,7 +28,7 @@ async function signInAs(page: Page, isOwner: boolean) {
   });
 }
 
-const ownerPages = ['/fa/providers', '/fa/integrations', '/fa/settings', '/fa/agents'];
+const ownerPages = ['/fa/providers', '/fa/settings', '/fa/agents'];
 
 test('an administrator who is not the owner does not see the owner pages', async ({ page }) => {
   await signInAs(page, false);
