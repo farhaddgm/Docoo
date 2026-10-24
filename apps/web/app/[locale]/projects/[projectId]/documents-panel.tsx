@@ -6,6 +6,7 @@ import { apiGet, apiSend, query } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
+import { ReasonBar } from '../../reason-bar';
 import { DocumentContent, type DocContent } from './document-content';
 import { DocumentEditor } from './document-editor';
 import { quickDraftMessages } from '../quick-draft-messages';
@@ -501,21 +502,15 @@ function DocumentView({
                   ? text.restoreReason
                   : (text.effects[pending.kind] ?? '')}
             </p>
-            <div className="filter-grid">
-              <label htmlFor="document-reason">
-                {requiresReason ? text.reasonRequired : text.reasonOptional}
-              </label>
-              <input
-                id="document-reason"
-                value={pending.reason}
-                minLength={3}
-                maxLength={1000}
-                onChange={(event) => setPending({ ...pending, reason: event.target.value })}
-                required={requiresReason}
-                autoComplete="off"
-              />
-            </div>
-            <div className="toolbar">
+            <ReasonBar
+              locale={locale}
+              id="document-reason"
+              label={requiresReason ? text.reasonRequired : text.reasonOptional}
+              value={pending.reason}
+              minLength={3}
+              required={requiresReason}
+              onChange={(reason) => setPending({ ...pending, reason })}
+            >
               <button className="primary-button" type="submit" disabled={busy}>
                 {busy ? text.working : text.confirm}
               </button>
@@ -528,7 +523,7 @@ function DocumentView({
               >
                 {text.cancel}
               </button>
-            </div>
+            </ReasonBar>
           </form>
         )}
       </section>

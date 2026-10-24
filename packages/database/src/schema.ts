@@ -985,6 +985,8 @@ export const workflowRuns = pgTable(
     analysisContinuationSessionId: uuid('analysis_continuation_session_id'),
     status: workflowStatus('status').notNull().default('starting'),
     currentStage: stageKind('current_stage'),
+    /** Set when the run was started by redoing a stage (ADR-0036). */
+    redoFromStage: stageKind('redo_from_stage'),
     configSnapshotId: uuid('config_snapshot_id'),
     /** The snapshot of the project's business this run's agents read, fixed at its start (ADR-0021). */
     businessSnapshotId: uuid('business_snapshot_id'),
@@ -1020,6 +1022,8 @@ export const stageRuns = pgTable(
     attemptLimit: integer('attempt_limit').notNull().default(10),
     attemptsUsed: integer('attempts_used').notNull().default(0),
     latestOutputId: uuid('latest_output_id'),
+    /** The stage run of an earlier run this one was carried over from (ADR-0036). */
+    carriedFromStageRunId: uuid('carried_from_stage_run_id'),
     passedByDecision: boolean('passed_by_decision').notNull().default(false),
     startedAt: timestamp('started_at', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),

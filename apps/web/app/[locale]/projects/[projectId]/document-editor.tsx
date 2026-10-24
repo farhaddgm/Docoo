@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { apiSend } from '../../../api-client';
 import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { explainError, Notice, useAction } from '../../use-action';
+import { ReasonBar } from '../../reason-bar';
 import { BlockList } from './block-editor';
 import type { DocBlock, DocContent } from './document-content';
 import {
@@ -258,21 +259,17 @@ export function DocumentEditor({
           </nav>
 
           <form data-write-action className="card filter-form" onSubmit={save} aria-busy={busy}>
-            <div className="field-stack">
-              <label htmlFor="editor-reason">{text.reasonLabel}</label>
-              <input
-                id="editor-reason"
-                value={reason}
-                minLength={3}
-                maxLength={1000}
-                required
-                autoComplete="off"
-                disabled={busy}
-                onChange={(event) => setReason(event.target.value)}
-              />
-            </div>
             {dirty && <p className="muted">{text.unsaved}</p>}
-            <div className="toolbar">
+            <ReasonBar
+              locale={locale}
+              id="editor-reason"
+              label={text.reasonLabel}
+              value={reason}
+              minLength={3}
+              required
+              disabled={busy}
+              onChange={setReason}
+            >
               <button
                 className="primary-button"
                 type="submit"
@@ -283,7 +280,7 @@ export function DocumentEditor({
               <button className="secondary-button" type="button" disabled={busy} onClick={leave}>
                 {dirty ? text.discard : text.close}
               </button>
-            </div>
+            </ReasonBar>
           </form>
         </aside>
       </div>

@@ -9,6 +9,7 @@ import { apiGet, apiSend, query } from '../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Notice, useAction } from '../use-action';
+import { ReasonBar } from '../reason-bar';
 import { ModelPicker } from './model-picker';
 import { settingsMessages, type SettingsText } from './settings-messages';
 import {
@@ -27,7 +28,7 @@ import {
   type Scope,
 } from './settings-model';
 import { explainSettingError } from './settings-errors';
-import { FieldLabel, SectionTitle } from '../../info-tip';
+import { SectionTitle } from '../../info-tip';
 
 export function displayValue(
   locale: Locale,
@@ -292,48 +293,35 @@ function SettingRow({
               {problemText(locale, text, parsed.problem)}
             </p>
           )}
-          <div className="setting-edit">
-            <div className="filter-grid">
-              <FieldLabel
-                htmlFor={`${id}-reason`}
-                help={text.reasonHelp}
-                helpId={`${id}-reason-help`}
-              >
-                {text.reasonLabel}
-              </FieldLabel>
-              <input
-                id={`${id}-reason`}
-                dir={textDir(locale)}
-                value={reason}
-                maxLength={1000}
-                onChange={(event) => setReason(event.target.value)}
-                aria-describedby={`${id}-reason-help`}
-                autoComplete="off"
-              />
-            </div>
-            <div className="toolbar">
+          <ReasonBar
+            locale={locale}
+            id={`${id}-reason`}
+            label={text.reasonLabel}
+            help={text.reasonHelp}
+            value={reason}
+            onChange={setReason}
+          >
+            <button
+              type="button"
+              className="primary-button"
+              disabled={!canSave || action.busy}
+              onClick={() =>
+                parsed.ok && void send(parsed.value, fill(text.saved, { key: definition.key }))
+              }
+            >
+              {action.busy ? text.saving : text.save}
+            </button>
+            {own && (
               <button
                 type="button"
-                className="primary-button"
-                disabled={!canSave || action.busy}
-                onClick={() =>
-                  parsed.ok && void send(parsed.value, fill(text.saved, { key: definition.key }))
-                }
+                className="secondary-button"
+                disabled={reason.trim() === '' || action.busy}
+                onClick={() => void send(null, fill(text.reset, { key: definition.key }))}
               >
-                {action.busy ? text.saving : text.save}
+                {scopeType === 'project' ? text.resetProject : text.resetWorkspace}
               </button>
-              {own && (
-                <button
-                  type="button"
-                  className="secondary-button"
-                  disabled={reason.trim() === '' || action.busy}
-                  onClick={() => void send(null, fill(text.reset, { key: definition.key }))}
-                >
-                  {scopeType === 'project' ? text.resetProject : text.resetWorkspace}
-                </button>
-              )}
-            </div>
-          </div>
+            )}
+          </ReasonBar>
         </>
       )}
       <button
@@ -649,18 +637,13 @@ export function EditableProjectModelSection({
           }}
         />
       )}
-      <div className="filter-grid">
-        <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
-        <input
-          id={`${id}-reason`}
-          dir={textDir(locale)}
-          value={reason}
-          maxLength={1000}
-          onChange={(event) => setReason(event.target.value)}
-          autoComplete="off"
-        />
-      </div>
-      <div className="toolbar">
+      <ReasonBar
+        locale={locale}
+        id={`${id}-reason`}
+        label={text.reasonLabel}
+        value={reason}
+        onChange={setReason}
+      >
         <button
           type="button"
           className="primary-button"
@@ -678,7 +661,7 @@ export function EditableProjectModelSection({
         >
           {action.busy ? text.saving : text.picker.saveModel}
         </button>
-      </div>
+      </ReasonBar>
     </section>
   );
 }

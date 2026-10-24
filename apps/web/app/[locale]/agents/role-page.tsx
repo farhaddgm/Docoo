@@ -8,10 +8,11 @@ import { apiGet, apiSend, idempotencyKey } from '../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { SignedIn } from '../signed-in';
 import { explainError, Notice, useAction } from '../use-action';
+import { ReasonBar } from '../reason-bar';
 import { agentMessages, fill } from './agent-messages';
 import type { AgentRole, Definition, RoleDetail, RoleOutput } from './agent-types';
 import { RoleEditor } from './role-editor';
-import { FieldLabel, SectionTitle } from '../../info-tip';
+import { SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
 
 export function RolePage({ locale, role }: { locale: Locale; role: AgentRole }) {
@@ -79,17 +80,13 @@ function ActivatePanel({
       <p id={`${id}-saved`} className="notice ok" role="status">
         {fill(text.savedNotActive, { n: formatNumber(locale, saved.sequence) })}
       </p>
-      <div className="field-stack">
-        <label htmlFor={`${id}-reason`}>{text.activateReason}</label>
-        <input
-          id={`${id}-reason`}
-          dir={textDir(locale)}
-          value={reason}
-          maxLength={1000}
-          onChange={(event) => setReason(event.target.value)}
-        />
-      </div>
-      <p className="toolbar">
+      <ReasonBar
+        locale={locale}
+        id={`${id}-reason`}
+        label={text.activateReason}
+        value={reason}
+        onChange={setReason}
+      >
         <button
           type="button"
           className="primary-button"
@@ -98,7 +95,7 @@ function ActivatePanel({
         >
           {fill(text.activateNow, { n: formatNumber(locale, saved.sequence) })}
         </button>
-      </p>
+      </ReasonBar>
     </section>
   );
 }
@@ -265,19 +262,14 @@ function Role({
         <SectionTitle id="history-heading" help={text.historyHelp}>
           {text.historyHeading}
         </SectionTitle>
-        <div className="field-stack">
-          <FieldLabel htmlFor={reasonId} help={text.activateReasonHelp} helpId={`${reasonId}-help`}>
-            {text.activateReason}
-          </FieldLabel>
-          <input
-            id={reasonId}
-            dir={textDir(locale)}
-            value={activateReason}
-            maxLength={1000}
-            onChange={(event) => setActivateReason(event.target.value)}
-            aria-describedby={`${reasonId}-help`}
-          />
-        </div>
+        <ReasonBar
+          locale={locale}
+          id={reasonId}
+          label={text.activateReason}
+          help={text.activateReasonHelp}
+          value={activateReason}
+          onChange={setActivateReason}
+        />
         <Notice notice={notice} />
         <ol className="version-list">
           {history.items.map((item) => {

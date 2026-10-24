@@ -24,6 +24,9 @@ const messages = {
     total: '{n} کسب‌وکار',
     unnamed: 'بدون نام',
     close: 'بستن',
+    detailLoading: 'در حال خواندن اطلاعات کسب‌وکار از Contenter…',
+    detailFailed:
+      'اطلاعات کامل این کسب‌وکار از Contenter خوانده نشد؛ فقط آنچه فهرست می‌داند نمایش داده می‌شود.',
     name: 'نام',
     tagline: 'شعار',
     status: 'وضعیت',
@@ -54,6 +57,9 @@ const messages = {
     total: '{n} businesses',
     unnamed: 'Unnamed',
     close: 'Close',
+    detailLoading: 'Reading the business from Contenter…',
+    detailFailed:
+      'The full business could not be read from Contenter; only what the list knows is shown.',
     name: 'Name',
     tagline: 'Tagline',
     status: 'Status',
