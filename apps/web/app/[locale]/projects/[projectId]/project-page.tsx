@@ -24,6 +24,7 @@ import { DocumentsPanel } from './documents-panel';
 import { KnowledgePanel } from './knowledge-panel';
 import { OverviewPanel } from './overview-panel';
 import { ProblemPanel } from './problem-panel';
+import { ResearchPanel } from './research-panel';
 import type { ProjectDetail } from './project-types';
 import { SolutionsPanel } from './solutions-panel';
 import { TimelinePanel } from './timeline-panel';
@@ -33,13 +34,14 @@ import { ProjectSettingsPanel } from './settings-panel';
 const tabs = [
   'overview',
   'business',
-  'problem',
-  'workflow',
-  'solutions',
-  'documents',
   'knowledge',
   'agents',
   'settings',
+  'workflow',
+  'problem',
+  'research',
+  'solutions',
+  'documents',
   'timeline',
 ] as const;
 type Tab = (typeof tabs)[number];
@@ -332,6 +334,15 @@ function ProjectView({
           projectStatus={project.status}
           refreshKey={refreshKey}
           onProjectRefresh={reload}
+        />
+      )}
+      {tab === 'research' && (
+        <ResearchPanel
+          locale={locale}
+          workspaceId={workspaceId}
+          projectId={projectId}
+          refreshKey={refreshKey}
+          onOpenWorkflow={() => choose('workflow')}
         />
       )}
       {tab === 'solutions' && (
