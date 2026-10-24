@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeWeightSensitivity, sensitivityWeights } from './sensitivity.js';
+import { analyzeStability, analyzeWeightSensitivity, sensitivityWeights } from './sensitivity.js';
 import { criteriaProblem, type Criterion } from './scoring.js';
 
 const criteria: Criterion[] = [
@@ -69,5 +69,23 @@ describe('weight sensitivity', () => {
     expect(() =>
       analyzeWeightSensitivity([alternatives[0]!, alternatives[0]!], criteria, 'impact', 50),
     ).toThrow();
+  });
+});
+
+describe('stability across all criteria', () => {
+  it('reports where the baseline winner stops winning, per criterion', () => {
+    const result = analyzeStability(alternatives, criteria);
+    expect(result.baselineWinnerIds).toEqual(['a']);
+    const impact = result.criteria.find((c) => c.criterionKey === 'impact')!;
+    expect(impact).toMatchObject({ stable: false, holdsFrom: 51, holdsTo: 100 });
+  });
+
+  it('is stable when one alternative dominates on every criterion', () => {
+    const dominant = [
+      { id: 'a', inputs: { impact: 5, cost: 5 } },
+      { id: 'b', inputs: { impact: 1, cost: 1 } },
+    ];
+    const result = analyzeStability(dominant, criteria);
+    expect(result.criteria.every((c) => c.stable)).toBe(true);
   });
 });

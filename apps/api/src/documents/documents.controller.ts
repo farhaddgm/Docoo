@@ -67,7 +67,11 @@ const decisionSchema = z
     criteriaVersionId: z.string().uuid().nullable(),
     solutionIds: z.array(z.string().uuid()).min(1).max(20),
     reason,
-    rejected: z.array(z.object({ solutionId: z.string().uuid(), reason }).strict()).max(20),
+    rejected: z
+      .array(
+        z.object({ solutionId: z.string().uuid(), reason: z.string().trim().max(1000) }).strict(),
+      )
+      .max(20),
   })
   .strict();
 const editSchema = z
