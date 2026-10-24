@@ -278,7 +278,12 @@ function ProjectView({
         )}
         {canEdit && (
           <p>
-            <button type="button" className="secondary-button" onClick={startEdit}>
+            <button
+              type="button"
+              data-write-action
+              className="secondary-button"
+              onClick={startEdit}
+            >
               {text.edit}
             </button>
           </p>

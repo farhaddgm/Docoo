@@ -178,16 +178,6 @@ export function OverviewPanel({
       <section className="card" aria-labelledby="problem-title">
         <div className="toolbar spread">
           <h2 id="problem-title">{text.problem}</h2>
-          {!readOnly && (
-            <button
-              data-write-action
-              className="secondary-button"
-              type="button"
-              onClick={() => setEditing(true)}
-            >
-              {text.edit}
-            </button>
-          )}
         </div>
         <p dir={textDir(locale)} style={{ whiteSpace: 'pre-wrap' }}>
           {project.initialProblem}
