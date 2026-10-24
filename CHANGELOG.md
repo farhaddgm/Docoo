@@ -2,6 +2,20 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.41.0] — 2026-10-24
+
+### Added
+
+- **Evaluation tab.** A project has an **Evaluation** tab between Documents and Timeline with the evaluation stage's output, its settings (approval type and attempts), links to the project settings and the agent-quality comparison, and the conversation with its agent.
+- **Run again for every stage.** Every stage in the Workflow tab has a **Run again** button; it is enabled for a completed stage when no run is live, as the API requires.
+
+### Changed
+
+- **The conversation with a stage's agent moved to the stage's own tab** (Analysis, Research, Ideas, Documents, Evaluation) and leaves the Workflow tab. The Workflow tab no longer repeats the output; it links to the tab that shows it. Your messages are now on the right and the agent's on the left; the comment field is smaller and the spacing around it is fixed. Persian tab names are now **ایجنت**, **ایده** and **مستند**.
+- **Connections moved into System settings.** The **Integrations** page is no longer a separate menu item; its settings are the last section of System settings (the old address redirects there).
+- **The business views are simpler.** In the business dialog and the project's Business tab, the "Open in Contenter" button, the written-by/confirmed/AI-draft badges, the profile coverage card, the read-only note and the tagline are gone, and the view tabs are spaced from the section list.
+- **The project list no longer scrolls sideways.** The topics, language and "waiting for a decision" columns are removed.
+
 ## [0.40.0] — 2026-10-24
 
 ### Added
