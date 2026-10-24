@@ -30,6 +30,7 @@ interface RunRow extends QueryResultRow {
   status: string;
   current_stage: string | null;
   config_snapshot_id: string | null;
+  redo_from_stage: string | null;
   started_at: string | null;
   ended_at: string | null;
   created_at: string;
@@ -48,12 +49,13 @@ interface StageRow extends QueryResultRow {
   passed_by_decision: boolean;
   started_at: string | null;
   completed_at: string | null;
+  carried_from_stage_run_id: string | null;
 }
 
-const runColumns = `id, run_no, temporal_workflow_id, status, current_stage, config_snapshot_id,
+const runColumns = `id, run_no, temporal_workflow_id, status, current_stage, config_snapshot_id, redo_from_stage,
   ${isoColumn('started_at', 'started_at')}, ${isoColumn('ended_at', 'ended_at')}, ${isoColumn('created_at', 'created_at')}`;
 const stageColumns = `id, run_id, stage, sequence, status, gate_mode, attempt_limit, attempts_used, latest_output_id,
-  passed_by_decision, ${isoColumn('started_at', 'started_at')}, ${isoColumn('completed_at', 'completed_at')}`;
+  passed_by_decision, carried_from_stage_run_id, ${isoColumn('started_at', 'started_at')}, ${isoColumn('completed_at', 'completed_at')}`;
 
 const LIVE = ['starting', 'running', 'paused', 'waiting_for_human'];
 
@@ -79,7 +81,11 @@ export class WorkflowService {
   // ------------------------------------------------------------------ lifecycle
 
   /** WF-001: an active project gets exactly one live run of the fixed stage sequence. */
-  async start(context: WorkspaceRequestContext, projectId: string) {
+  async start(
+    context: WorkspaceRequestContext,
+    projectId: string,
+    redo?: { stage: (typeof STAGES)[number]; reason: string },
+  ) {
     // The business is read before the run row is made: Contenter is asked first (when the project
     // asks for it), and the snapshot the agents will read is pinned to the run (ADR-0021).
     const business = await this.business.resolveForUse(context, projectId);
@@ -96,7 +102,9 @@ export class WorkflowService {
         )
       ).rows[0];
       if (!project) throw notFound('PROJECT_NOT_FOUND', 'The project was not found.');
-      if (project.status !== 'active') {
+      // A redo also works on a completed project: it goes back to active, as "reopen" does.
+      const reopening = Boolean(redo) && project.status === 'completed';
+      if (project.status !== 'active' && !reopening) {
         throw conflict(
           'WORKFLOW_PROJECT_NOT_ACTIVE',
           'Only an active project can run its workflow.',
@@ -108,7 +116,48 @@ export class WorkflowService {
           [projectId, LIVE],
         )
       ).rows[0];
-      if (live) return live;
+      if (live) {
+        if (redo) {
+          throw conflict(
+            'WORKFLOW_RUN_LIVE',
+            'The project has a live run; cancel it before redoing a stage.',
+          );
+        }
+        return live;
+      }
+      const last = redo
+        ? (
+            await client.query<RunRow>(
+              `select ${runColumns} from workflow_runs where project_id = $1 order by run_no desc limit 1`,
+              [projectId],
+            )
+          ).rows[0]
+        : undefined;
+      const carried: string[] = [];
+      if (redo) {
+        const done = last
+          ? (
+              await client.query<{ stage: string }>(
+                `select stage::text as stage from stage_runs where run_id = $1 and status = 'completed'`,
+                [last.id],
+              )
+            ).rows.map((row) => row.stage)
+          : [];
+        const index = STAGES.indexOf(redo.stage);
+        if (!done.includes(redo.stage)) {
+          throw conflict(
+            'WORKFLOW_STAGE_NOT_COMPLETED',
+            'Only a stage that was completed in the latest run can be redone.',
+          );
+        }
+        carried.push(...STAGES.slice(0, index).filter((stage) => done.includes(stage)));
+      }
+      if (reopening) {
+        await client.query(
+          `update projects set status = 'active', pause_reason = null, version = version + 1 where id = $1`,
+          [projectId],
+        );
+      }
       const runNo = (
         await client.query<{ next: number }>(
           'select coalesce(max(run_no), 0) + 1 as next from workflow_runs where project_id = $1',
@@ -118,8 +167,8 @@ export class WorkflowService {
       const created = (
         await client.query<RunRow>(
           `insert into workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id, config_snapshot_id, created_by,
-                                      business_snapshot_id,analysis_profile,analysis_continuation_session_id)
-           values ($1, $2, $3, $4, $5, $6, $7,$8,$9) returning ${runColumns}`,
+                                      business_snapshot_id,analysis_profile,analysis_continuation_session_id,redo_from_stage)
+           values ($1, $2, $3, $4, $5, $6, $7,$8,$9,$10) returning ${runColumns}`,
           [
             context.workspaceId,
             projectId,
@@ -130,17 +179,35 @@ export class WorkflowService {
             business.snapshotId,
             project.analysis_profile,
             project.analysis_continuation_session_id,
+            redo?.stage ?? null,
           ],
         )
       ).rows[0]!;
+      if (last && carried.length > 0) {
+        // The finished stages before the redone one are carried over as they were (ADR-0036).
+        await client.query(
+          `insert into stage_runs (workspace_id, run_id, project_id, stage, sequence, status, gate_mode,
+                                   attempt_limit, attempts_used, latest_output_id, passed_by_decision,
+                                   started_at, completed_at, carried_from_stage_run_id)
+           select workspace_id, $1, project_id, stage, sequence, status, gate_mode, attempt_limit,
+                  attempts_used, latest_output_id, passed_by_decision, started_at, completed_at,
+                  coalesce(carried_from_stage_run_id, id)
+             from stage_runs where run_id = $2 and status = 'completed' and stage = any($3::stage_kind[])`,
+          [created.id, last.id, carried],
+        );
+      }
       await writeAudit(client, context, {
-        action: 'workflow.run_created',
+        action: redo ? 'workflow.stage_redo_requested' : 'workflow.run_created',
         targetType: 'workflow_run',
         targetId: created.id,
         projectId,
+        ...(redo ? { reason: redo.reason } : {}),
         after: {
           runNo,
           stages: STAGES,
+          ...(redo
+            ? { redoFromStage: redo.stage, carriedStages: carried, reopenedProject: reopening }
+            : {}),
           configSnapshotId: project.config_snapshot_id,
           businessSnapshotId: business.snapshotId,
           analysisProfile: project.analysis_profile,
@@ -162,6 +229,16 @@ export class WorkflowService {
       throw error;
     }
     return this.overview(context, projectId);
+  }
+
+  /** ADR-0036: runs a finished stage (and the ones after it) again as a new run. */
+  async redo(
+    context: WorkspaceRequestContext,
+    projectId: string,
+    stage: (typeof STAGES)[number],
+    reason: string,
+  ) {
+    return this.start(context, projectId, { stage, reason });
   }
 
   /** Keeps the engine in line with the project after a command (pause, resume, cancel). */
@@ -399,20 +476,22 @@ export class WorkflowService {
   async stage(context: WorkspaceRequestContext, projectId: string, stageRunId: string) {
     return this.database.run(context, async (client) => {
       const stage = await this.loadStage(client, projectId, stageRunId);
+      // A carried-over stage shows the history of the stage run it was copied from (ADR-0036).
+      const sourceId = stage.carried_from_stage_run_id ?? stageRunId;
       const outputs = (
         await client.query<Record<string, unknown>>(
           `select id, version_no as "versionNo", content, content_sha256 as "contentSha256", origin,
                   edited_from_id as "editedFromId", attempt_id as "attemptId", created_by as "createdBy",
                   ${isoColumn('created_at', '"createdAt"')}
              from stage_outputs where stage_run_id = $1 order by version_no desc`,
-          [stageRunId],
+          [sourceId],
         )
       ).rows as { id: string }[];
       const reviews = (
         await client.query<Record<string, unknown>>(
           `select id, output_id as "outputId", action, comment, created_by as "createdBy", ${isoColumn('created_at', '"createdAt"')}
              from stage_reviews where stage_run_id = $1 order by created_at, id`,
-          [stageRunId],
+          [sourceId],
         )
       ).rows as { outputId: string; action: string }[];
       const gates = (
@@ -420,7 +499,7 @@ export class WorkflowService {
           `select id, output_id as "outputId", mode, status, reason, decided_by as "decidedBy",
                   ${isoColumn('decided_at', '"decidedAt"')}, ${isoColumn('created_at', '"createdAt"')}
              from gate_decisions where stage_run_id = $1 order by created_at, id`,
-          [stageRunId],
+          [sourceId],
         )
       ).rows;
       const attempts = (
@@ -429,7 +508,7 @@ export class WorkflowService {
                   output_id as "outputId", error_code as "errorCode", ${isoColumn('started_at', '"startedAt"')},
                   ${isoColumn('finished_at', '"finishedAt"')}
              from stage_attempts where stage_run_id = $1 order by attempt_no`,
-          [stageRunId],
+          [sourceId],
         )
       ).rows;
       return {
@@ -889,6 +968,7 @@ export class WorkflowService {
       status: row.status,
       currentStage: row.current_stage,
       configSnapshotId: row.config_snapshot_id,
+      redoFromStage: row.redo_from_stage,
       startedAt: row.started_at,
       endedAt: row.ended_at,
       createdAt: row.created_at,
@@ -906,6 +986,7 @@ export class WorkflowService {
       attemptsUsed: row.attempts_used,
       latestOutputId: row.latest_output_id,
       passedByDecision: row.passed_by_decision,
+      carriedFromStageRunId: row.carried_from_stage_run_id,
       startedAt: row.started_at,
       completedAt: row.completed_at,
     };

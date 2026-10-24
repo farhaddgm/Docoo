@@ -8,6 +8,7 @@ import { apiGet, apiSend } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
+import { ReasonBar } from '../../reason-bar';
 import { solutionMessages } from './solution-messages';
 import { SensitivityPanel } from './sensitivity-panel';
 import { FieldLabel, SectionTitle } from '../../../info-tip';
@@ -305,19 +306,15 @@ export function SolutionsPanel({
         </div>
         {!readOnly && (
           <>
-            <div className="filter-grid">
-              <label htmlFor="criteria-reason">{text.criteriaReason}</label>
-              <input
-                id="criteria-reason"
-                value={criteriaReason}
-                minLength={3}
-                maxLength={1000}
-                onChange={(event) => setCriteriaReason(event.target.value)}
-                autoComplete="off"
-                required={criteriaChanged}
-              />
-            </div>
-            <div className="toolbar">
+            <ReasonBar
+              locale={locale}
+              id="criteria-reason"
+              label={text.criteriaReason}
+              value={criteriaReason}
+              minLength={3}
+              required={criteriaChanged}
+              onChange={setCriteriaReason}
+            >
               <button
                 className="primary-button"
                 type="submit"
@@ -325,7 +322,7 @@ export function SolutionsPanel({
               >
                 {text.saveCriteria}
               </button>
-            </div>
+            </ReasonBar>
           </>
         )}
       </form>
@@ -507,18 +504,15 @@ export function SolutionsPanel({
               })}
             </ol>
           )}
-          <div className="filter-grid">
-            <label htmlFor="selection-reason">{text.selectionReason}</label>
-            <input
-              id="selection-reason"
-              value={selectionReason}
-              minLength={3}
-              maxLength={1000}
-              onChange={(event) => setSelectionReason(event.target.value)}
-              autoComplete="off"
-              required
-            />
-          </div>
+          <ReasonBar
+            locale={locale}
+            id="selection-reason"
+            label={text.selectionReason}
+            value={selectionReason}
+            minLength={3}
+            required
+            onChange={setSelectionReason}
+          />
           {set.items
             .filter((s) => !chosen.includes(s.id))
             .map((s) => (

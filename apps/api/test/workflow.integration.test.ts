@@ -19,9 +19,17 @@ interface StageView {
   latestOutputId?: string | null;
   pendingGateOutputId?: string | null;
   passedByDecision?: boolean;
+  carriedFromStageRunId?: string | null;
 }
 interface Overview {
-  run: { id: string; workflowId: string; status: string; currentStage: string | null } | null;
+  run: {
+    id: string;
+    runNo: number;
+    workflowId: string;
+    status: string;
+    currentStage: string | null;
+    redoFromStage: string | null;
+  } | null;
   stages: StageView[];
   humanTasks: { id: string; kind: string; stageRunId: string }[];
 }
@@ -598,6 +606,41 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       expect(gates.rows.filter((gate) => gate.mode === 'manual')).toHaveLength(1);
       expect(gates.rows.filter((gate) => gate.mode === 'automatic')).toHaveLength(4);
     }, 60_000);
+
+    it('WF-007: redoing a finished stage starts a new run that carries the earlier stages and does the rest again', async () => {
+      const projectId = await project('redo', (id) =>
+        setting('workflow.require_human_approval', false, 'project', id),
+      );
+      const gate = await analysisGate(projectId);
+      expect((await decide(projectId, stageOf(gate, 'analysis'), 'approve')).statusCode).toBe(200);
+      const first = await waitFor(
+        projectId,
+        (current) => current.run?.status === 'completed',
+        'first run completion',
+      );
+      const redo = (payload: unknown) =>
+        h.request('POST', api(`/projects/${projectId}/workflow/redo`), { cookie, payload });
+      expect((await redo({ stage: 'research', reason: 'x' })).statusCode).toBe(400);
+      const started = await redo({ stage: 'research', reason: 'Sources were outdated' });
+      expect(started.statusCode, started.body).toBe(202);
+      const second = await waitFor(
+        projectId,
+        (current) => current.run?.runNo === 2 && current.run.status === 'completed',
+        'redo completion',
+      );
+      expect(second.run?.redoFromStage).toBe('research');
+      const analysis = stageOf(second, 'analysis');
+      expect(analysis.status).toBe('completed');
+      expect(analysis.carriedFromStageRunId).toBe(stageOf(first, 'analysis').id);
+      expect(analysis.latestOutputId).toBe(stageOf(first, 'analysis').latestOutputId);
+      expect(stageOf(second, 'research').carriedFromStageRunId).toBeNull();
+      expect(stageOf(second, 'research').id).not.toBe(stageOf(first, 'research').id);
+      const audit = await h.admin.query(
+        `select 1 from audit_events where project_id = $1 and action = 'workflow.stage_redo_requested' and reason = 'Sources were outdated'`,
+        [projectId],
+      );
+      expect(audit.rowCount).toBe(1);
+    }, 90_000);
 
     it('WF-002: a repeated command has no second side effect and the workflow replays deterministically', async () => {
       const projectId = await project('idempotent');

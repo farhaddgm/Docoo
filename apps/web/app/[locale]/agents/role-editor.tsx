@@ -13,6 +13,7 @@ import {
 import { ApiError, apiGet } from '../../api-client';
 import { formatNumber, type Locale, textDir } from '../../i18n';
 import { explainError, Notice, useAction } from '../use-action';
+import { ReasonBar } from '../reason-bar';
 import { agentMessages, fill, type AgentMessages } from './agent-messages';
 import {
   changedSections,
@@ -614,37 +615,20 @@ export function RoleEditor({
         )}
       </section>
 
-      <div className="field-stack">
-        <FieldLabel htmlFor={`${id}-reason`} help={text.reasonHelp} helpId={`${id}-reason-help`}>
-          {text.reasonLabel}
-        </FieldLabel>
-        <input
-          id={`${id}-reason`}
-          dir={textDir(locale)}
-          maxLength={limits.maxReasonLength}
-          value={reason}
-          disabled={locked}
-          aria-describedby={`${id}-reason-help`}
-          aria-invalid={problems.includes('reason:required') || undefined}
-          onChange={(event) => {
-            setReason(event.target.value);
-            setProblems([]);
-          }}
-        />
-      </div>
-
-      {problems.length > 0 && (
-        <div className="notice error" role="alert">
-          <ul className="plain-list">
-            {problems.map((problem) => (
-              <li key={problem}>{messageOf(problem)}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <Notice notice={notice} />
-
-      <p className="toolbar">
+      <ReasonBar
+        locale={locale}
+        id={`${id}-reason`}
+        label={text.reasonLabel}
+        help={text.reasonHelp}
+        value={reason}
+        maxLength={limits.maxReasonLength}
+        disabled={locked}
+        invalid={problems.includes('reason:required')}
+        onChange={(next) => {
+          setReason(next);
+          setProblems([]);
+        }}
+      >
         <button type="submit" className="primary-button" disabled={locked}>
           {busy ? text.saving : saveLabel}
         </button>
@@ -659,7 +643,19 @@ export function RoleEditor({
         >
           {text.reset}
         </button>
-      </p>
+      </ReasonBar>
+
+      {problems.length > 0 && (
+        <div className="notice error" role="alert">
+          <ul className="plain-list">
+            {problems.map((problem) => (
+              <li key={problem}>{messageOf(problem)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <Notice notice={notice} />
+
       {saved && after?.(saved)}
     </form>
   );

@@ -379,6 +379,20 @@ export class BusinessService {
     };
   }
 
+  /**
+   * One business of Contenter as it is now, for looking at it before it is linked to anything:
+   * nothing is stored, and no project or snapshot is touched.
+   */
+  async preview(context: WorkspaceRequestContext, externalId: string) {
+    const fetched = await this.fetchBusiness(context, externalId);
+    const connection = await this.database.run(context, (client) => this.loadConnection(client));
+    return {
+      content: fetched.content,
+      exportedAt: fetched.exportedAt,
+      contenterUrl: this.contenterUrl(connection, externalId),
+    };
+  }
+
   /** Reads one business from Contenter (no database transaction is held while waiting). */
   async fetchBusiness(
     context: WorkspaceRequestContext,

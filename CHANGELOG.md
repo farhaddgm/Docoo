@@ -2,6 +2,21 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.40.0] — 2026-10-24
+
+### Added
+
+- **Redo a finished stage** ([ADR-0036](docs/adr/0036-redo-stage.md)). In a project's **Workflow** tab every completed stage has a **Redo** button (with a reason). It starts a new run that keeps the stages before it as they were and does that stage and the ones after it again from the start; the earlier run and its outputs stay in the history. New `POST /projects/{id}/workflow/redo` (`project.run`).
+
+### Changed
+
+- **Project tabs are reordered and renamed.** The tabs are now Overview, Business, Knowledge, Agents, Settings, Workflow, Analysis, Research, Ideas, Documents and Timeline ("Problem" became **Analysis**, "Solutions" became **Ideas**; in Persian "Documents" is now **مستندات**). A new **Research** tab shows the research stage's latest output, with a shortcut to the Workflow tab when it waits for approval. Also: drag to reorder an agent role's principles and duties, fixed equal columns in the project list, and the project card shows topics and one edit button.
+
+- **The business dialog shows the business itself.** Clicking a card on **Businesses** opens a dialog with what Contenter holds now (read live, nothing stored): the profile, facts and terms, sources and assets and quality, in the same views as a project's Business tab, with a link to open it in Contenter. If Contenter cannot be read, the dialog says so and shows what the list knows. New `GET /contenter-businesses/{businessId}` (`business.read`).
+- **Topics no longer ask for a language.** The new-topic form, the edit form and the topics table lose the "Language" field, which changed nothing a person could see (a topic starts from the interface language; sources and projects have their own language).
+- **"Reason for the change" is one line everywhere.** Settings, templates and levels, agent roles, knowledge edits, document edits, project and topic edits, business link changes, stage decisions and the confirm panels (pause, complete, cancel and so on) now put the label, the field and the buttons on one line (wrapping on a phone), instead of three stacked rows. Nothing about what is asked or recorded changed.
+- **Conversations with an agent are bubbles.** In the chat under a stage's output, your messages and the agent's are rounded bubbles in two close shades, on opposite sides. At most four messages show at once; older ones are scrolled to, and the thread opens on the newest.
+
 ## [0.39.0] — 2026-10-24
 
 ### Changed

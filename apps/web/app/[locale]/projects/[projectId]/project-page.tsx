@@ -14,6 +14,7 @@ import { WorkspacePage } from '../../workspace-page';
 import { explainProject } from '../explain';
 import { quickDraftMessages } from '../quick-draft-messages';
 import { projectMessages } from '../messages';
+import { ReasonBar } from '../../reason-bar';
 import { projectPageMessages } from './messages';
 import { healthMessages } from './health-messages';
 import { HealthBadge, HealthReasons, MilestoneCard } from './health-view';
@@ -549,20 +550,14 @@ function Lifecycle({
               ? quick.effect
               : (text.effects[pending.command] ?? '')}
           </p>
-          <div className="filter-grid">
-            <label htmlFor="command-reason">
-              {reasonRequired.has(pending.command) ? text.reasonRequired : text.reasonOptional}
-            </label>
-            <input
-              id="command-reason"
-              value={pending.reason}
-              maxLength={1000}
-              onChange={(event) => setPending({ ...pending, reason: event.target.value })}
-              required={reasonRequired.has(pending.command)}
-              autoComplete="off"
-            />
-          </div>
-          <div className="toolbar">
+          <ReasonBar
+            locale={locale}
+            id="command-reason"
+            label={reasonRequired.has(pending.command) ? text.reasonRequired : text.reasonOptional}
+            value={pending.reason}
+            required={reasonRequired.has(pending.command)}
+            onChange={(reason) => setPending({ ...pending, reason })}
+          >
             <button className="primary-button" type="submit" disabled={busy}>
               {busy ? text.working : text.confirm}
             </button>
@@ -575,7 +570,7 @@ function Lifecycle({
             >
               {text.cancel}
             </button>
-          </div>
+          </ReasonBar>
         </form>
       )}
     </div>
