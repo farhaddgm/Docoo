@@ -2,7 +2,7 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
-## [Unreleased]
+## [0.42.0] — 2026-10-24
 
 ### Added
 
