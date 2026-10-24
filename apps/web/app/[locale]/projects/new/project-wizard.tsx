@@ -128,6 +128,12 @@ export function ProjectWizard({
   const [criteria, setCriteria] = useState<Criterion[] | null>(null);
   const [business, setBusiness] = useState<ContenterBusinessItem | null>(null);
   const [codeTouched, setCodeTouched] = useState(false);
+  // The newest values and code flag, also between two renders: a fast second keystroke must not
+  // be built on the values an earlier render saw.
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
+  const codeTouchedRef = useRef(codeTouched);
+  codeTouchedRef.current = codeTouched;
   const [opened, setOpened] = useState<Partial<Record<AdvancedSection, boolean>>>({});
   const [defaultCriteria, setDefaultCriteria] = useState<Criterion[] | null>(null);
   const [restored, setRestored] = useState(false);
@@ -388,19 +394,30 @@ export function ProjectWizard({
     setRestored(false);
   }
 
-  /** The title suggests the code until the person writes the code themselves. */
+  /**
+   * The title suggests the code until the person writes the code themselves. The fields hand
+   * over a full copy of the values they were drawn with; only what they changed is taken from it
+   * and laid over the newest values, so two quick edits in a row never undo each other.
+   */
   function changeBasics(next: ProjectValues) {
-    let value = next;
-    if (next.code !== values.code) {
-      // Emptying the field hands the code back to the title.
-      setCodeTouched(next.code.trim() !== '');
-    } else if (!codeTouched && next.title !== values.title) {
-      const suggestion = shouldSuggestCode(next.title) ? suggestProjectCode(next.title) : '';
-      // A stamped fallback code stays put while the title is typed, instead of changing at once.
-      const keep = suggestion.startsWith('PRJ-') && values.code.startsWith('PRJ-');
-      value = { ...next, code: keep ? values.code : suggestion };
+    const patch: Partial<ProjectValues> = {};
+    for (const key of Object.keys(next) as (keyof ProjectValues)[]) {
+      if (next[key] !== values[key]) Object.assign(patch, { [key]: next[key] });
     }
-    setValues(value);
+    const current = valuesRef.current;
+    let merged: ProjectValues = { ...current, ...patch };
+    if (patch.code !== undefined) {
+      // Emptying the field hands the code back to the title.
+      codeTouchedRef.current = patch.code.trim() !== '';
+      setCodeTouched(codeTouchedRef.current);
+    } else if (patch.title !== undefined && !codeTouchedRef.current) {
+      const suggestion = shouldSuggestCode(patch.title) ? suggestProjectCode(patch.title) : '';
+      // A stamped fallback code stays put while the title is typed, instead of changing at once.
+      const keep = suggestion.startsWith('PRJ-') && current.code.startsWith('PRJ-');
+      merged = { ...merged, code: keep ? current.code : suggestion };
+    }
+    valuesRef.current = merged;
+    setValues(merged);
   }
 
   const stepName = text.steps[step]!;
