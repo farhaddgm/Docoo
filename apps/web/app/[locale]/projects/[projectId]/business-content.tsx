@@ -151,8 +151,6 @@ export function ProfileView({
     group,
     sections: ordered.filter((section) => (SECTION_GROUP[section.key] ?? 'OTHER') === group),
   })).filter((item) => item.sections.length > 0);
-  const drafts = filled.filter((section) => section.source === 'AI' && !section.reviewedAt).length;
-  const percent = Math.round((filled.length / SECTION_ORDER.length) * 100);
 
   return (
     <div className="biz-profile">
@@ -177,32 +175,6 @@ export function ProfileView({
       </aside>
 
       <div className="stack biz-profile-main">
-        <section className="card biz-coverage" aria-labelledby="biz-coverage">
-          <div className="biz-coverage-head">
-            <h3 id="biz-coverage">{profile.sectionsTitle}</h3>
-            <p>
-              <strong>
-                {fill(profile.filled, {
-                  filled: formatNumber(locale, filled.length),
-                  total: formatNumber(locale, SECTION_ORDER.length),
-                })}
-              </strong>
-              {drafts > 0 && (
-                <span className="muted">
-                  {' · '}
-                  {fill(profile.sectionStats, {
-                    confirmed: formatNumber(locale, filled.length - drafts),
-                    drafts: formatNumber(locale, drafts),
-                  })}
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="meter" aria-hidden="true">
-            <span style={{ inlineSize: `${percent}%` }} />
-          </div>
-        </section>
-
         {grouped.map(({ group, sections }) => (
           <section
             key={group}
@@ -214,23 +186,15 @@ export function ProfileView({
               {profile.groups[group] ?? group}
             </h3>
             {sections.map((section) => {
-              const draft = section.source === 'AI' && !section.reviewedAt;
               return (
                 <article
                   key={section.key}
                   id={`biz-s-${section.key}`}
-                  className={draft ? 'card biz-section is-draft' : 'card biz-section'}
+                  className="card biz-section"
                   data-testid={`business-section-${section.key}`}
                 >
                   <header className="biz-section-head">
                     <h4 dir={textDir(locale)}>{sectionTitle(locale, section.key)}</h4>
-                    <span className={`badge tone-${draft ? 'warn' : 'ok'}`}>
-                      {draft
-                        ? profile.aiDraft
-                        : section.source === 'AI'
-                          ? profile.confirmed
-                          : profile.admin}
-                    </span>
                   </header>
                   <Collapsible
                     long={section.content.length > LONG_SECTION}

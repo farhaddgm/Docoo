@@ -279,7 +279,10 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: flow.editSave }).click();
     await expect(page.getByRole('status').filter({ hasText: flow.done.edited })).toBeVisible();
     await expect(page.getByText(flow.outputVersion.replace('{n}', '۳'))).toBeVisible(waiting);
+    // The output itself is read in the Analysis tab, not repeated in the workflow.
+    await page.getByRole('button', { name: detail.tabs.problem, exact: true }).click();
     await expect(page.getByText('بیان مسئلهٔ اصلاح‌شده توسط ادمین').first()).toBeVisible();
+    await page.getByRole('button', { name: detail.tabs.workflow, exact: true }).click();
 
     // Approve every stage in order until the run completes.
     for (const stage of ['analysis', 'research', 'ideation', 'documentation', 'evaluation']) {

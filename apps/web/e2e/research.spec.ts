@@ -93,7 +93,9 @@ test.describe('knowledge-backed research and role evaluation (RSC-001, EVL-002)'
     await expect(page.getByRole('status').filter({ hasText: flow.done.approved })).toBeVisible();
     await expect(review('research')).toBeVisible(wait);
 
-    // The research output tells supported findings from unverified ones, and why.
+    // The research output tells supported findings from unverified ones, and why. It is read in
+    // the Research tab; the workflow only decides on it.
+    await page.getByRole('button', { name: detail.tabs.research, exact: true }).click();
     const output = page.locator('.output-view').filter({ hasText: flow.out.knowledgeHeading });
     await expect(output).toBeVisible();
     await expect(output.getByText(flow.out.supportKnowledge, { exact: true })).toHaveCount(1);

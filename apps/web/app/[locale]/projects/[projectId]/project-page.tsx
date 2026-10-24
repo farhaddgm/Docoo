@@ -21,6 +21,8 @@ import { HealthBadge, HealthReasons, MilestoneCard } from './health-view';
 import { projectHealth, projectMilestone, type WorkflowFacts } from './project-health';
 import { AgentsPanel } from './agents-panel';
 import { BusinessPanel } from './business-panel';
+import { EvaluationPanel } from './evaluation-panel';
+import { StageAgentChat } from './stage-chat';
 import { DocumentsPanel } from './documents-panel';
 import { KnowledgePanel } from './knowledge-panel';
 import { OverviewPanel } from './overview-panel';
@@ -43,9 +45,19 @@ const tabs = [
   'research',
   'solutions',
   'documents',
+  'evaluation',
   'timeline',
 ] as const;
 type Tab = (typeof tabs)[number];
+
+/** The tab that shows the output of each workflow stage. */
+const STAGE_TAB: Record<string, Tab> = {
+  analysis: 'problem',
+  research: 'research',
+  ideation: 'solutions',
+  documentation: 'documents',
+  evaluation: 'evaluation',
+};
 
 const isTab = (value: string | null): value is Tab => tabs.some((tab) => tab === value);
 
@@ -362,6 +374,15 @@ function ProjectView({
           onChanged={changed}
         />
       )}
+      {tab === 'problem' && (
+        <StageAgentChat
+          locale={locale}
+          base={base}
+          stage="analysis"
+          refreshKey={refreshKey}
+          onChanged={changed}
+        />
+      )}
       {tab === 'workflow' && (
         <WorkflowPanel
           locale={locale}
@@ -370,6 +391,7 @@ function ProjectView({
           projectStatus={project.status}
           refreshKey={refreshKey}
           onProjectRefresh={reload}
+          onOpenStage={(stage) => choose(STAGE_TAB[stage] ?? 'workflow')}
         />
       )}
       {tab === 'research' && (
@@ -381,6 +403,15 @@ function ProjectView({
           onOpenWorkflow={() => choose('workflow')}
         />
       )}
+      {tab === 'research' && (
+        <StageAgentChat
+          locale={locale}
+          base={base}
+          stage="research"
+          refreshKey={refreshKey}
+          onChanged={changed}
+        />
+      )}
       {tab === 'solutions' && (
         <SolutionsPanel
           locale={locale}
@@ -390,12 +421,41 @@ function ProjectView({
           onChanged={changed}
         />
       )}
+      {tab === 'solutions' && (
+        <StageAgentChat
+          locale={locale}
+          base={base}
+          stage="ideation"
+          refreshKey={refreshKey}
+          onChanged={changed}
+        />
+      )}
       {tab === 'documents' && (
         <DocumentsPanel
           locale={locale}
           workspaceId={workspaceId}
           projectId={projectId}
           refreshKey={refreshKey}
+        />
+      )}
+      {tab === 'documents' && (
+        <StageAgentChat
+          locale={locale}
+          base={base}
+          stage="documentation"
+          refreshKey={refreshKey}
+          onChanged={changed}
+        />
+      )}
+      {tab === 'evaluation' && (
+        <EvaluationPanel
+          locale={locale}
+          workspaceId={workspaceId}
+          projectId={projectId}
+          refreshKey={refreshKey}
+          onOpenWorkflow={() => choose('workflow')}
+          onOpenSettings={() => choose('settings')}
+          onChanged={changed}
         />
       )}
       {tab === 'knowledge' && (

@@ -17,7 +17,6 @@ import {
   QualityView,
   ScoreRing,
   SourcesView,
-  safeHref,
 } from './business-content';
 import { businessMessages } from '../business-messages';
 import { BusinessPicker } from '../business-picker';
@@ -227,7 +226,6 @@ export function BusinessPanel({
 
   const snapshot = view.snapshot;
   const content = shown?.content ?? snapshot.content;
-  const contenterHref = view.link.contenterUrl ? safeHref(view.link.contenterUrl) : null;
   const connectionBad = view.connection.status !== 'healthy';
   const info = content.business;
 
@@ -247,11 +245,6 @@ export function BusinessPanel({
             <h2 id={`${id}-head`} dir={textDir(locale)}>
               {view.link.name}
             </h2>
-            {info.tagline && (
-              <p className="biz-tagline" dir={textDir(locale)}>
-                {info.tagline}
-              </p>
-            )}
             <ul className="chips biz-hero-chips" aria-label={panel.title}>
               {info.industry && (
                 <li className="badge tone-neutral" dir={textDir(locale)}>
@@ -291,9 +284,6 @@ export function BusinessPanel({
             </div>
           )}
         </div>
-        <p className="muted biz-note" dir={textDir(locale)}>
-          {panel.readOnlyNote}
-        </p>
         <dl className="biz-meta">
           <div>
             <dt>{panel.version}</dt>
@@ -324,7 +314,7 @@ export function BusinessPanel({
         {connectionBad && (
           <p className="notice error" role="status">
             {fill(panel.connectionDown, { status: view.connection.status })}{' '}
-            <Link href={`/${locale}/integrations` as Route}>{panel.manageConnection}</Link>
+            <Link href={`/${locale}/settings` as Route}>{panel.manageConnection}</Link>
           </p>
         )}
         <Notice notice={notice} />
@@ -369,17 +359,6 @@ export function BusinessPanel({
             >
               {panel.unlink}
             </button>
-          )}
-          {contenterHref && (
-            <a
-              className="secondary-button"
-              href={contenterHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={text.openInContenterHint}
-            >
-              {text.openInContenter}
-            </a>
           )}
         </div>
 

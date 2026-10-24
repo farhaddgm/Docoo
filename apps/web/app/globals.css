@@ -3724,7 +3724,7 @@ button.link-button {
 }
 
 .biz-tabs {
-  margin-block-start: var(--space-2);
+  margin-block: var(--space-2) var(--space-5);
 }
 
 .biz-profile {
@@ -4756,14 +4756,14 @@ button.link-button {
 }
 
 .chat-message-mine {
-  align-self: flex-end;
-  border-end-end-radius: 0.3rem;
+  align-self: flex-start;
+  border-end-start-radius: 0.3rem;
   background: var(--color-primary-soft);
 }
 
 .chat-message-agent {
-  align-self: flex-start;
-  border-end-start-radius: 0.3rem;
+  align-self: flex-end;
+  border-end-end-radius: 0.3rem;
   background: var(--color-surface-2);
 }
 
@@ -4838,7 +4838,7 @@ button.link-button {
 /* Project list: equal, stable columns; long text ends in an ellipsis (full text in the title). */
 .table-scroll .project-table {
   table-layout: fixed;
-  min-width: 86rem;
+  width: 100%;
 }
 
 .project-table .clipped-cell,
@@ -4851,8 +4851,7 @@ button.link-button {
 .project-table .col-code {
   width: 6.5rem;
 }
-.project-table .col-title,
-.project-table .col-topics {
+.project-table .col-title {
   width: 13rem;
 }
 .project-table .col-business {
@@ -4863,12 +4862,6 @@ button.link-button {
 }
 .project-table .col-stage {
   width: 7rem;
-}
-.project-table .col-waiting {
-  width: 8rem;
-}
-.project-table .col-language {
-  width: 5rem;
 }
 .project-table .col-owner {
   width: 8rem;

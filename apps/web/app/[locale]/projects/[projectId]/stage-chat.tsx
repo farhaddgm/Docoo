@@ -28,7 +28,6 @@ const copy = {
   fa: {
     title: 'گفتگو با ایجنت این مرحله',
     askOnly: 'این مرحله اکنون منتظر بازبینی شما نیست؛ فقط می‌توانید دربارهٔ خروجی بپرسید.',
-    open: 'گفتگو با ایجنت این مرحله',
     help: 'می‌توانید دربارهٔ همین خروجی بپرسید. ایجنت فقط توضیح می‌دهد و خروجی را تغییر نمی‌دهد؛ برای اصلاح، «درخواست بازبینی» بفرستید و سپس آن را به‌عنوان رد، برای تلاش بعدی ارسال کنید.',
     placeholder: 'پیام شما به ایجنت…',
     ask: 'پرسش',
@@ -44,6 +43,7 @@ const copy = {
     sendNote: 'این کار خروجی را رد می‌کند و یک تلاش تازه می‌سازد که از سقف تلاش‌ها حساب می‌شود.',
     used: '{used} از {limit} پیام',
     empty: 'هنوز پیامی نیست.',
+    noOutput: 'پس از اینکه این مرحله خروجی داد، می‌توانید با ایجنتش گفتگو کنید.',
     loadFailed: 'گفتگو بارگذاری نشد.',
     errors: {
       STAGE_CHAT_LIMIT: 'سقف پیام‌های این مرحله پر شده است.',
@@ -56,7 +56,6 @@ const copy = {
   en: {
     title: 'Talk to the agent of this stage',
     askOnly: 'This stage is not waiting for your review now; you can only ask about its output.',
-    open: 'Talk to the agent of this stage',
     help: 'Ask about this output. The agent only explains and never changes it. To get it corrected, send a revision request, then send it back as a rejection for the next attempt.',
     placeholder: 'Your message to the agent…',
     ask: 'Ask',
@@ -73,6 +72,7 @@ const copy = {
       'This rejects the output and starts a new attempt, which counts against the attempt limit.',
     used: '{used} of {limit} messages',
     empty: 'No messages yet.',
+    noOutput: 'Once this stage has an output you can talk to its agent here.',
     loadFailed: 'The conversation could not be loaded.',
     errors: {
       STAGE_CHAT_LIMIT: 'This stage reached its message limit.',
@@ -329,25 +329,66 @@ export function StageChat({
 }
 
 /**
- * The same conversation for a stage that is not waiting at a gate (running, finished): collapsed
- * until opened, so the page does not read every stage's messages at once.
+ * The conversation with the agent of one stage, shown in that stage's own tab (analysis, research,
+ * ideas, documents, evaluation). It finds the stage run in the workflow and shows nothing until
+ * the stage has an output to talk about.
  */
-export function StageChatDisclosure({
+export function StageAgentChat({
   locale,
-  stageBase,
+  base,
+  stage,
+  refreshKey = 0,
   onChanged,
 }: {
   locale: Locale;
-  stageBase: string;
-  onChanged: () => Promise<void>;
+  /** `/workspaces/{id}/projects/{id}` */
+  base: string;
+  stage: string;
+  refreshKey?: number;
+  onChanged?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const text = copy[locale];
+  const [item, setItem] = useState<StageRef | null | undefined>(undefined);
+
+  const load = useCallback(async () => {
+    try {
+      const { workflow } = await apiGet<{ workflow: { stages: StageRef[] } }>(`${base}/workflow`);
+      setItem(workflow.stages.find((entry) => entry.stage === stage) ?? null);
+    } catch {
+      setItem(null);
+    }
+  }, [base, stage]);
+
+  useEffect(() => {
+    void load();
+  }, [load, refreshKey]);
+
+  if (!item?.id || !item.latestOutputId) {
+    return (
+      <section className="card stack">
+        <h3>{text.title}</h3>
+        <p className="muted">{text.noOutput}</p>
+      </section>
+    );
+  }
   return (
-    <details onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary>{copy[locale].open}</summary>
-      {open && (
-        <StageChat locale={locale} stageBase={stageBase} onChanged={onChanged} canRevise={false} />
-      )}
-    </details>
+    <div className="card">
+      <StageChat
+        locale={locale}
+        stageBase={`${base}/stages/${item.id}`}
+        canRevise={Boolean(item.pendingGateOutputId)}
+        onChanged={async () => {
+          await load();
+          onChanged?.();
+        }}
+      />
+    </div>
   );
+}
+
+interface StageRef {
+  id: string | null;
+  stage: string;
+  latestOutputId?: string | null;
+  pendingGateOutputId?: string | null;
 }
