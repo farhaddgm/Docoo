@@ -2,6 +2,7 @@ import {
   DELIVERABLE_STAGE_RULES,
   NO_RESEARCH_PLAN_RULES,
   OUTPUT_REQUIREMENT_RULES,
+  RESEARCH_FOLLOWUP_RULES,
   RESEARCH_PLAN_STAGE_RULES,
   type PromptRequirement,
   type PromptResearchQuestion,
@@ -209,6 +210,11 @@ export interface StageContext {
   readonly deliverables?: readonly PromptDeliverable[] | undefined;
   /** The research questions the administrator confirmed (ADR-0038); absent when there is no plan. */
   readonly researchPlan?: readonly PromptResearchQuestion[] | undefined;
+  /**
+   * Set in a follow-up round (ADR-0039): what the earlier rounds found for all questions, so the
+   * researcher builds on it and works only on the open questions of `researchPlan`.
+   */
+  readonly earlierFindings?: unknown;
   /** What the administrator requires of the final output (ADR-0037); absent when nothing was written. */
   readonly requirements?: readonly PromptRequirement[] | undefined;
   /** Web pages the research stage found (ADR-0026); absent when it searched nothing. */
@@ -287,7 +293,10 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
         : []),
       ...(context.stage === 'research'
         ? context.researchPlan && context.researchPlan.length > 0
-          ? RESEARCH_PLAN_STAGE_RULES
+          ? [
+              ...RESEARCH_PLAN_STAGE_RULES,
+              ...(context.earlierFindings !== undefined ? RESEARCH_FOLLOWUP_RULES : []),
+            ]
           : NO_RESEARCH_PLAN_RULES
         : []),
       ...(context.web && context.web.length > 0 ? WEB_SEARCH_RULES : []),
@@ -322,6 +331,9 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
     ...(context.web && context.web.length > 0 ? { webSources: context.web } : {}),
     ...(context.stage === 'research' && context.researchPlan && context.researchPlan.length > 0
       ? { researchPlan: context.researchPlan }
+      : {}),
+    ...(context.stage === 'research' && context.earlierFindings !== undefined
+      ? { earlierFindings: context.earlierFindings }
       : {}),
     ...(context.deliverables && context.deliverables.length > 0
       ? { confirmedDeliverables: context.deliverables }

@@ -206,10 +206,12 @@ function Finding({
 function Overview({
   text,
   summary,
+  rounds,
   num,
 }: {
   text: Text;
   summary: Record<string, unknown>;
+  rounds: number;
   num: (value: unknown) => string;
 }) {
   const questions =
@@ -252,6 +254,7 @@ function Overview({
           web: num(sources['web']),
         })}
       </p>
+      {rounds > 0 && <p>{fill(text.overviewRounds, { n: num(rounds) })}</p>}
       {open > 0 && <p>{text.overviewNext}</p>}
     </section>
   );
@@ -297,7 +300,9 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
 
   return (
     <div className="output-view">
-      {summary && <Overview text={text} summary={summary} num={num} />}
+      {summary && (
+        <Overview text={text} summary={summary} rounds={records(data['rounds']).length} num={num} />
+      )}
       <WebBlock locale={locale} text={text} web={web} num={num} />
       {verification && !summary && (
         <p>

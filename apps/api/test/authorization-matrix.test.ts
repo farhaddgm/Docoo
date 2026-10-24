@@ -177,6 +177,8 @@ const expectedMatrix: Record<string, string> = {
   'PUT workspaces/:workspaceId/projects/:projectId/research-plan': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/research-plan/propose': 'project.run',
   'POST workspaces/:workspaceId/projects/:projectId/research-plan/confirm': 'workflow.approve',
+  'POST workspaces/:workspaceId/projects/:projectId/research-plan/followup': 'workflow.reject',
+  'POST workspaces/:workspaceId/projects/:projectId/research-plan/requirement-gaps': 'project.run',
   'GET workspaces/:workspaceId/projects/:projectId/output-requirements': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/output-requirements': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/output-requirements/check': 'project.run',

@@ -118,6 +118,8 @@ export function assignReferences(
   limit: number,
   /** `research.max_sources`: at most this many distinct knowledge items (sources) are used. */
   maxSources: number = Number.POSITIVE_INFINITY,
+  /** References continue after this many earlier ones, so a follow-up round never reuses `K1` (ADR-0039). */
+  refOffset = 0,
 ): KnowledgePassage[] {
   const best = new Map<string, { passage: RetrievedPassage; snapshotId: string }>();
   for (const retrieval of retrievals) {
@@ -144,7 +146,7 @@ export function assignReferences(
     })
     .slice(0, Math.max(0, limit))
     .map(({ passage, snapshotId }, index) =>
-      toKnowledgePassage(passage, snapshotId, `K${index + 1}`),
+      toKnowledgePassage(passage, snapshotId, `K${refOffset + index + 1}`),
     );
 }
 
@@ -406,6 +408,8 @@ export interface ResearchContent {
   readonly plan?: ResearchPlanInfo;
   /** Absent in outputs written before the research plan existed. */
   readonly summary?: ResearchSummary;
+  /** The follow-up rounds joined onto this output, oldest first (ADR-0039). */
+  readonly rounds?: readonly ResearchRound[];
 }
 
 /**
@@ -564,15 +568,7 @@ export function verifyResearch(input: {
     conflicts.push({ description, refs });
   }
 
-  // A finding is disputed when a reported conflict names a source it cites.
-  const disputedRefs = new Set(conflicts.flatMap((conflict) => conflict.refs));
-  const graded: ResearchFinding[] = findings.map((finding) => ({
-    ...finding,
-    level: classifyFinding(
-      finding.support,
-      finding.evidence.some((cite) => disputedRefs.has(cite.ref)),
-    ),
-  }));
+  const graded = gradeFindings(findings, conflicts);
 
   const citations = findings.reduce((sum, finding) => sum + finding.evidence.length, 0);
   const verified = findings.reduce(
@@ -582,39 +578,8 @@ export function verifyResearch(input: {
   const supported = findings.filter((finding) => finding.support !== 'unverified').length;
   const cited = input.passages.filter((passage) => citedRefs.has(passage.ref));
 
-  const planInfo: ResearchPlanInfo | undefined = input.plan
-    ? {
-        versionNo: input.plan.versionNo,
-        questions: input.plan.questions.map((question) => {
-          const mine = graded.filter((finding) => finding.questionId === question.id);
-          const supportedCount = mine.filter((finding) => finding.support !== 'unverified').length;
-          return {
-            id: question.id,
-            question: question.question,
-            channel: question.channel,
-            findings: mine.length,
-            supported: supportedCount,
-            status: supportedCount > 0 ? 'answered' : mine.length > 0 ? 'weak' : 'unanswered',
-          };
-        }),
-      }
-    : undefined;
-  const levelCount = (level: FindingLevel) =>
-    graded.filter((finding) => finding.level === level).length;
-  const summary: ResearchSummary = {
-    findings: graded.length,
-    solid: levelCount('solid'),
-    limited: levelCount('limited'),
-    unverified: levelCount('unverified'),
-    disputed: levelCount('disputed'),
-    questions: {
-      total: planInfo?.questions.length ?? 0,
-      answered: planInfo?.questions.filter((item) => item.status === 'answered').length ?? 0,
-      weak: planInfo?.questions.filter((item) => item.status === 'weak').length ?? 0,
-      unanswered: planInfo?.questions.filter((item) => item.status === 'unanswered').length ?? 0,
-    },
-    sources: { knowledge: citedRefs.size, web: citedWeb.size },
-  };
+  const planInfo = coverPlan(graded, input.plan);
+  const summary = summarizeResearch(graded, planInfo, citedRefs.size, citedWeb.size);
 
   return {
     cited,
@@ -663,6 +628,171 @@ export function verifyResearch(input: {
       ...(planInfo ? { plan: planInfo } : {}),
       summary,
     },
+  };
+}
+
+/** A finding is disputed when a reported conflict names a source it cites. */
+function gradeFindings(
+  findings: readonly ResearchFinding[],
+  conflicts: readonly { readonly refs: readonly string[] }[],
+): ResearchFinding[] {
+  const disputedRefs = new Set(conflicts.flatMap((conflict) => conflict.refs));
+  return findings.map((finding) => ({
+    ...finding,
+    level: classifyFinding(
+      finding.support,
+      finding.evidence.some((cite) => disputedRefs.has(cite.ref)),
+    ),
+  }));
+}
+
+/** How each planned question fared, counted from the graded findings. */
+function coverPlan(
+  graded: readonly ResearchFinding[],
+  plan:
+    | { readonly versionNo: number; readonly questions: readonly PromptResearchQuestion[] }
+    | undefined,
+): ResearchPlanInfo | undefined {
+  if (!plan) return undefined;
+  return {
+    versionNo: plan.versionNo,
+    questions: plan.questions.map((question) => {
+      const mine = graded.filter((finding) => finding.questionId === question.id);
+      const supportedCount = mine.filter((finding) => finding.support !== 'unverified').length;
+      return {
+        id: question.id,
+        question: question.question,
+        channel: question.channel,
+        findings: mine.length,
+        supported: supportedCount,
+        status: supportedCount > 0 ? 'answered' : mine.length > 0 ? 'weak' : 'unanswered',
+      };
+    }),
+  };
+}
+
+function summarizeResearch(
+  graded: readonly ResearchFinding[],
+  planInfo: ResearchPlanInfo | undefined,
+  citedKnowledge: number,
+  citedWeb: number,
+): ResearchSummary {
+  const levelCount = (level: FindingLevel) =>
+    graded.filter((finding) => finding.level === level).length;
+  const questionCount = (status: ResearchQuestionCoverage['status']) =>
+    planInfo?.questions.filter((item) => item.status === status).length ?? 0;
+  return {
+    findings: graded.length,
+    solid: levelCount('solid'),
+    limited: levelCount('limited'),
+    unverified: levelCount('unverified'),
+    disputed: levelCount('disputed'),
+    questions: {
+      total: planInfo?.questions.length ?? 0,
+      answered: questionCount('answered'),
+      weak: questionCount('weak'),
+      unanswered: questionCount('unanswered'),
+    },
+    sources: { knowledge: citedKnowledge, web: citedWeb },
+  };
+}
+
+const refNumber = (ref: string): number => Number(ref.slice(1)) || 0;
+
+/** The highest `K` and `W` number an earlier output used: where a follow-up round continues from. */
+export function refOffsetsOf(content: unknown): { knowledge: number; web: number } {
+  const raw =
+    content !== null && typeof content === 'object' ? (content as Record<string, unknown>) : {};
+  const knowledge = raw['knowledge'] as { offered?: { ref?: unknown }[] } | undefined;
+  const web = raw['web'] as { sources?: { ref?: unknown }[] } | undefined;
+  const top = (items: { ref?: unknown }[] | undefined) =>
+    (items ?? []).reduce(
+      (max, item) => (typeof item.ref === 'string' ? Math.max(max, refNumber(item.ref)) : max),
+      0,
+    );
+  return { knowledge: top(knowledge?.offered), web: top(web?.sources) };
+}
+
+/** What a follow-up round is recorded as in the output. */
+export interface ResearchRound {
+  readonly questions: readonly string[];
+}
+
+const mentionsAny = (text: string, ids: ReadonlySet<string>): boolean =>
+  [...text.matchAll(/\bQ\d+\b/giu)].some((match) => ids.has(match[0].toUpperCase()));
+
+/**
+ * Joins a follow-up round onto the output it follows (ADR-0039). The findings of the questions
+ * the round worked on are replaced by the new ones; every other finding stays exactly as it was,
+ * citations included (the new references continue after the old ones, so they never collide).
+ * Everything derived — grades, question coverage, summary, verification — is counted again over
+ * the joined findings, so the merged output is as self-consistent as a fresh one.
+ */
+export function mergeFollowup(input: {
+  readonly previous: ResearchContent;
+  readonly fresh: ResearchContent;
+  /** The ids of the questions the round worked on. */
+  readonly focus: readonly string[];
+  /** The whole current plan, for the coverage of every question. */
+  readonly plan: {
+    readonly versionNo: number;
+    readonly questions: readonly PromptResearchQuestion[];
+  };
+}): ResearchContent {
+  const { previous, fresh } = input;
+  const focus = new Set(input.focus);
+  const kept = previous.findings.filter((finding) => !focus.has(finding.questionId ?? ''));
+  const conflicts = [...previous.conflicts, ...fresh.conflicts];
+  const graded = gradeFindings([...kept, ...fresh.findings], conflicts);
+  const offered = [...previous.knowledge.offered, ...fresh.knowledge.offered];
+  const webSources = [...(previous.web?.sources ?? []), ...(fresh.web?.sources ?? [])];
+  const planInfo = coverPlan(graded, input.plan);
+  const citations = graded.reduce((sum, finding) => sum + finding.evidence.length, 0);
+  const verified = graded.reduce(
+    (sum, finding) => sum + finding.evidence.filter((cite) => cite.verified).length,
+    0,
+  );
+  const supported = graded.filter((finding) => finding.support !== 'unverified').length;
+  const previousWebStatus = previous.web?.status ?? 'off';
+  const freshWebStatus = fresh.web?.status ?? 'off';
+  return {
+    findings: graded,
+    gaps: [...previous.gaps.filter((gap) => !mentionsAny(gap, focus)), ...fresh.gaps],
+    conflicts,
+    knowledge: {
+      ...fresh.knowledge,
+      queries: [...previous.knowledge.queries, ...fresh.knowledge.queries],
+      snapshots: [...previous.knowledge.snapshots, ...fresh.knowledge.snapshots],
+      offered,
+      excludedRestricted:
+        previous.knowledge.excludedRestricted || fresh.knowledge.excludedRestricted,
+      conflictWarnings: [
+        ...previous.knowledge.conflictWarnings,
+        ...fresh.knowledge.conflictWarnings,
+      ],
+    },
+    web: {
+      status: previousWebStatus === 'used' || freshWebStatus === 'used' ? 'used' : freshWebStatus,
+      code: fresh.web?.code ?? previous.web?.code ?? null,
+      queries: [...(previous.web?.queries ?? []), ...(fresh.web?.queries ?? [])],
+      sources: webSources,
+    },
+    verification: {
+      findings: graded.length,
+      supported,
+      unverified: graded.length - supported,
+      citations,
+      verified,
+      rejected: citations - verified,
+    },
+    ...(planInfo ? { plan: planInfo } : {}),
+    summary: summarizeResearch(
+      graded,
+      planInfo,
+      offered.filter((item) => item.cited).length,
+      webSources.filter((item) => item.cited).length,
+    ),
+    rounds: [...(previous.rounds ?? []), { questions: [...input.focus] }],
   };
 }
 

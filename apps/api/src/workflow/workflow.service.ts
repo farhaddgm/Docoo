@@ -312,7 +312,8 @@ export class WorkflowService {
       async (client) =>
         (
           await client.query<{ id: string }>(
-            `select id from stage_runs where run_id = $1 and stage = 'research' and status = 'waiting_for_human'`,
+            `select id from stage_runs where run_id = $1 and stage = 'research' and status = 'waiting_for_human'
+                and latest_output_id is null`,
             [live.id],
           )
         ).rows[0],

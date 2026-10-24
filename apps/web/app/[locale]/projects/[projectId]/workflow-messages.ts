@@ -234,7 +234,8 @@ const messages = {
         'از {total} پرسش برنامه: {answered} پاسخ‌داده‌شده، {weak} ضعیف (فقط یافتهٔ بی‌شاهد) و {unanswered} بی‌پاسخ.',
       overviewSources: 'منابع ارجاع‌شده: {knowledge} دانش تأییدشده و {web} صفحهٔ وب.',
       overviewNext:
-        'برای پرسش‌های ضعیف یا بی‌پاسخ، در بخش «گفتگو با ایجنت» همین تب «درخواست بازبینی» بفرستید یا برنامهٔ تحقیق را ویرایش کنید.',
+        'برای پرسش‌های ضعیف یا بی‌پاسخ، در بخش «تکمیل شکاف‌های تحقیق» همین تب یک دور تحقیق تکمیلی بگیرید.',
+      overviewRounds: '{n} دور تکمیلی به این خروجی افزوده شده است.',
       questionStatus: {
         answered: 'پاسخ‌داده‌شده',
         weak: 'ضعیف',
@@ -507,7 +508,8 @@ const messages = {
         'Of {total} planned questions: {answered} answered, {weak} weak (only unverified findings) and {unanswered} unanswered.',
       overviewSources: 'Sources cited: {knowledge} approved knowledge and {web} web pages.',
       overviewNext:
-        'For weak or unanswered questions, send a revision request in the conversation with the agent on this tab, or edit the research plan.',
+        'For weak or unanswered questions, run a follow-up round in the “Fill the research gaps” section of this tab.',
+      overviewRounds: '{n} follow-up round(s) were added to this output.',
       questionStatus: {
         answered: 'Answered',
         weak: 'Weak',

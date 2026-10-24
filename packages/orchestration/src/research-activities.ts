@@ -1,10 +1,12 @@
 import type { PromptResearchQuestion } from '@docoo/domain';
 import type { PoolClient } from 'pg';
 
+import type { ResearchFollowup } from './research-followup.js';
 import { retrieveKnowledge, type RetrievedPassage } from './knowledge-retrieval.js';
 import {
   assignReferences,
   buildResearchQueries,
+  mergeFollowup,
   verifyResearch,
   type KnowledgePassage,
   type ResearchContent,
@@ -47,6 +49,8 @@ export async function prepareResearch(
     readonly analysis: unknown;
     /** The confirmed research questions (ADR-0038); they replace the default queries. */
     readonly plan?: readonly PromptResearchQuestion[] | undefined;
+    /** Passage references continue after this many earlier ones in a follow-up round (ADR-0039). */
+    readonly refOffset?: number | undefined;
   },
 ): Promise<ResearchRun> {
   const { scope, config } = input;
@@ -73,6 +77,7 @@ export async function prepareResearch(
         rows.map((row) => ({ snapshotId: row.id, results: row.results })),
         config.researchKnowledgeLimit,
         config.researchMaxSources,
+        input.refOffset,
       ),
       queries: rows.map((row) => row.query),
       snapshots: rows.map((row) => ({ id: row.id, query: row.query, results: row.results.length })),
@@ -164,6 +169,7 @@ export async function prepareResearch(
       retrievals,
       config.researchKnowledgeLimit,
       config.researchMaxSources,
+      input.refOffset,
     ),
     queries,
     snapshots,
@@ -205,4 +211,26 @@ export async function finishResearch(
     errorCode: run.verifierTool === 'denied' ? 'tool_not_allowed' : null,
   });
   return content;
+}
+
+/**
+ * The content the research stage stores: the verified answer of this attempt, and, in a follow-up
+ * round (ADR-0039), that answer joined onto the output the round follows.
+ */
+export async function finishedResearch(
+  client: PoolClient,
+  scope: ToolCallScope,
+  run: ResearchRun,
+  output: unknown,
+  plan?: { readonly versionNo: number; readonly questions: readonly PromptResearchQuestion[] },
+  followup?: ResearchFollowup | null,
+): Promise<ResearchContent> {
+  const fresh = await finishResearch(client, scope, run, output, plan);
+  if (!followup) return fresh;
+  return mergeFollowup({
+    previous: followup.previous,
+    fresh,
+    focus: followup.focus.map((question) => question.id),
+    plan: followup.plan,
+  });
 }

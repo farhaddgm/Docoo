@@ -122,3 +122,143 @@ export interface PromptResearchQuestion {
   readonly why: string;
   readonly channel: ResearchChannel;
 }
+
+/** Rules added to the research stage in a follow-up round (ADR-0039). */
+export const RESEARCH_FOLLOWUP_RULES: readonly string[] = [
+  'This is a follow-up round. researchPlan lists only the questions that are still open (weakly answered, unanswered, or added later); earlierFindings holds everything earlier rounds already found for all questions.',
+  'Look for new, better-supported evidence for the open questions only. Do not repeat or restate an earlier finding; build on it only when it helps an open question.',
+  'Set questionId only to the ids in researchPlan. If the material still does not answer an open question, say so in gaps with its id instead of inventing support.',
+];
+
+/** The questions a follow-up round works on, from the output it follows and the current plan. */
+export interface OpenQuestionSource {
+  readonly id: string;
+  readonly question: string;
+  readonly status: string;
+}
+
+const sameText = (a: string, b: string): boolean =>
+  a.replace(/\s+/g, ' ').trim().toLowerCase() === b.replace(/\s+/g, ' ').trim().toLowerCase();
+
+/**
+ * Whether the current plan only adds to the plan the output was written for: the same questions,
+ * in the same order, then possibly new ones. Only then do the ids of the output still mean what
+ * they meant, so a follow-up round can keep the earlier findings.
+ */
+export function planExtends(
+  older: readonly { readonly question: string }[],
+  newer: readonly { readonly question: string }[],
+): boolean {
+  return (
+    newer.length >= older.length &&
+    older.every((item, index) => sameText(item.question, newer[index]!.question))
+  );
+}
+
+/**
+ * The questions still open after an output: those it answered weakly or not at all, and those the
+ * plan gained afterwards. Empty when the current plan does not extend the output's plan.
+ */
+export function openFollowupQuestions(
+  output: readonly OpenQuestionSource[],
+  current: readonly PromptResearchQuestion[],
+): PromptResearchQuestion[] {
+  if (!planExtends(output, current)) return [];
+  return current.filter((question, index) => {
+    const earlier = output[index];
+    return earlier === undefined || earlier.status !== 'answered';
+  });
+}
+
+export const REQUIREMENT_GAP_VERDICTS = ['supported', 'partial', 'missing'] as const;
+export type RequirementGapVerdict = (typeof REQUIREMENT_GAP_VERDICTS)[number];
+
+export const REQUIREMENT_GAP_SCHEMA_NAME = 'research_requirement_gaps';
+
+/** The structured answer of the requirement check; strict-mode compatible (all keys required). */
+export const REQUIREMENT_GAP_SCHEMA: Readonly<Record<string, unknown>> = {
+  type: 'object',
+  properties: {
+    results: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          requirementId: { type: 'string' },
+          verdict: { type: 'string', enum: [...REQUIREMENT_GAP_VERDICTS] },
+          evidence: { type: 'string' },
+          question: { type: 'string' },
+          why: { type: 'string' },
+          channel: { type: 'string', enum: [...RESEARCH_CHANNELS] },
+        },
+        required: ['requirementId', 'verdict', 'evidence', 'question', 'why', 'channel'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['results'],
+  additionalProperties: false,
+};
+
+export const REQUIREMENT_GAP_RULES: readonly string[] = [
+  'You check, for the administrator, whether the research gives evidence for what each "must" item of outputRequirements needs. Judge only from researchFindings, researchGaps and researchPlan in <data>; never assume evidence that is not there.',
+  'supported: findings graded solid or limited bear directly on the requirement. partial: findings touch it but are vague, unverified or disputed. missing: nothing bears on it.',
+  'For partial and missing, propose one specific research question that would find the missing evidence: question, why (one sentence) and channel (knowledge, web or both; web or both only when sources.web is true). For supported leave question and why empty and set channel to both.',
+  'Answer once for every requirement, using its exact requirementId, and give one or two sentences of evidence that point at the finding you relied on (or say that nothing was found).',
+];
+
+export interface RequirementGapResult {
+  readonly requirementId: string;
+  readonly verdict: RequirementGapVerdict | 'unchecked';
+  readonly evidence: string;
+  readonly suggestion: ResearchQuestionInput | null;
+}
+
+/**
+ * One result per requirement: an unknown id, a repeat or an unusable verdict is dropped, a
+ * requirement the model skipped is `unchecked`, and a suggestion is kept only for a requirement
+ * that is not fully supported and only when it is a usable question.
+ */
+export function normalizeRequirementGaps(
+  raw: unknown,
+  requirementIds: readonly string[],
+): { readonly results: RequirementGapResult[]; readonly discarded: number } {
+  const list = Array.isArray(raw) ? raw : [];
+  const wanted = new Set(requirementIds);
+  const byId = new Map<string, RequirementGapResult>();
+  let discarded = 0;
+  for (const entry of list) {
+    const record =
+      entry !== null && typeof entry === 'object' ? (entry as Record<string, unknown>) : {};
+    const id = record['requirementId'];
+    const verdict = record['verdict'];
+    if (
+      typeof id !== 'string' ||
+      !wanted.has(id) ||
+      byId.has(id) ||
+      !REQUIREMENT_GAP_VERDICTS.some((item) => item === verdict)
+    ) {
+      discarded += 1;
+      continue;
+    }
+    const suggestion =
+      verdict === 'supported'
+        ? null
+        : (normalizeResearchQuestions([
+            { question: record['question'], why: record['why'], channel: record['channel'] },
+          ]).items[0] ?? null);
+    byId.set(id, {
+      requirementId: id,
+      verdict: verdict as RequirementGapVerdict,
+      evidence: clean(record['evidence'], 1000),
+      suggestion,
+    });
+  }
+  return {
+    results: requirementIds.map(
+      (id) =>
+        byId.get(id) ?? { requirementId: id, verdict: 'unchecked', evidence: '', suggestion: null },
+    ),
+    discarded,
+  };
+}

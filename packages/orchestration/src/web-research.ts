@@ -54,9 +54,9 @@ export function webSearchPrompt(input: {
 }
 
 /** The pages and queries of a search as the numbered web side of a research attempt. */
-export function webRunFrom(result: WebSearchResult | undefined): WebRun {
+export function webRunFrom(result: WebSearchResult | undefined, refOffset = 0): WebRun {
   const sources = (result?.sources ?? []).slice(0, WEB_SOURCE_LIMIT).map((source, index) => ({
-    ref: `W${index + 1}`,
+    ref: `W${refOffset + index + 1}`,
     url: source.url,
     title: source.title,
     text: source.text,

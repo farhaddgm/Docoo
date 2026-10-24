@@ -414,6 +414,13 @@
       "when": 1793376756910,
       "tag": "0058_research_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1793463156910,
+      "tag": "0059_research_followups",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,15 @@ const saveBody = z
     basedOnVersionNo: z.number().int().min(0).max(100_000),
   })
   .strict();
+const followupBody = z
+  .object({
+    questionIds: z
+      .array(z.string().regex(/^Q\d{1,2}$/u))
+      .min(1)
+      .max(12)
+      .optional(),
+  })
+  .strict();
 const confirmBody = z
   .object({
     versionNo: z.number().int().min(1).max(100_000),
@@ -39,6 +48,15 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const parsed = schema.safeParse(value ?? {});
   if (!parsed.success) throw invalid();
   return parsed.data;
+}
+
+function idempotencyKey(request: FastifyRequest): string | undefined {
+  const header = request.headers['idempotency-key'];
+  if (header === undefined) return undefined;
+  if (typeof header !== 'string' || !/^[A-Za-z0-9_.:-]{8,128}$/u.test(header)) {
+    throw badRequest('RESEARCH_PLAN_INVALID_REQUEST', 'The Idempotency-Key header is invalid.');
+  }
+  return header;
 }
 
 @ApiTags('research-plan')
@@ -83,5 +101,33 @@ export class ResearchPlanController {
     @Body() body: unknown,
   ) {
     return this.plans.confirm(workspaceContext(request), id(project), parse(confirmBody, body));
+  }
+
+  @Post('projects/:projectId/research-plan/followup')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Start a follow-up research round for the open questions (a rejection: a new attempt that counts against the limit)',
+  })
+  @RequireWorkspacePermission('workflow.reject')
+  async followup(
+    @Req() request: FastifyRequest,
+    @Param('projectId') project: string,
+    @Body() body: unknown,
+  ) {
+    return this.plans.followup(workspaceContext(request), id(project), {
+      ...parse(followupBody, body),
+      idempotencyKey: idempotencyKey(request),
+    });
+  }
+
+  @Post('projects/:projectId/research-plan/requirement-gaps')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Check the research against the "must" output requirements (costs a model call)',
+  })
+  @RequireWorkspacePermission('project.run')
+  async requirementGaps(@Req() request: FastifyRequest, @Param('projectId') project: string) {
+    return this.plans.requirementGaps(workspaceContext(request), id(project));
   }
 }

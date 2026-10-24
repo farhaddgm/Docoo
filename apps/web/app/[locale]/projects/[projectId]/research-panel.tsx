@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
+import { ResearchFollowupPanel } from './research-followup-panel';
 import { ResearchPlanPanel } from './research-plan-panel';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
@@ -72,6 +73,8 @@ export function ResearchPanel({
   const [stage, setStage] = useState<StageItem | null | undefined>(undefined);
   const [output, setOutput] = useState<Output | null>(null);
   const [failed, setFailed] = useState(false);
+  // Bumped when a question is added to the plan from the follow-up card, so the plan card reloads.
+  const [planTick, setPlanTick] = useState(0);
 
   const load = useCallback(async () => {
     const { workflow } = await apiGet<{ workflow: { stages: StageItem[] } }>(`${base}/workflow`);
@@ -107,9 +110,18 @@ export function ResearchPanel({
       <ResearchPlanPanel
         locale={locale}
         base={base}
-        refreshKey={refreshKey}
+        refreshKey={refreshKey + planTick}
         onChanged={onChanged}
       />
+      {output && (
+        <ResearchFollowupPanel
+          locale={locale}
+          base={base}
+          refreshKey={refreshKey + planTick}
+          onChanged={onChanged}
+          onPlanChanged={() => setPlanTick((tick) => tick + 1)}
+        />
+      )}
       <section className="card" aria-labelledby="research-title">
         <div className="toolbar spread">
           <h2 id="research-title">{text.title}</h2>

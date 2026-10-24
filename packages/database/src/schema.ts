@@ -1298,6 +1298,29 @@ export const researchPlanConfirmations = pgTable(
   (table) => [uniqueIndex('research_plan_confirmations_plan_uq').on(table.planId)],
 );
 
+/** A follow-up round of the research stage and the questions it works on (ADR-0039); append-only. */
+export const researchFollowups = pgTable(
+  'research_followups',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    stageRunId: uuid('stage_run_id').notNull(),
+    outputId: uuid('output_id').notNull(),
+    planId: uuid('plan_id').notNull(),
+    token: text('token').notNull(),
+    questions: jsonb('questions').notNull(),
+    requestedBy: uuid('requested_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('research_followups_token_uq').on(table.stageRunId, table.token),
+    index('research_followups_stage_idx').on(table.stageRunId, table.createdAt),
+  ],
+);
+
 export const gateDecisions = pgTable(
   'gate_decisions',
   {
