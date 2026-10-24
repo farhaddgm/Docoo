@@ -39,7 +39,49 @@ const OFFICIAL_DOMAINS: readonly string[] = [
 
 export const MAX_OFFICIAL_DOMAINS = 50;
 
-const HOSTNAME = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/u;
+const MAX_ENTRY_CHARS = 300;
+
+const isLabelChar = (char: string): boolean =>
+  (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char === '-';
+
+/** A host name of at least two labels, each 1 to 63 letters, digits or inner hyphens; checked without regular expressions. */
+function isHostname(host: string): boolean {
+  if (host.length < 3 || host.length > 253) return false;
+  const labels = host.split('.');
+  if (labels.length < 2) return false;
+  const last = labels[labels.length - 1]!;
+  if (last.length < 2 || !(last[0]! >= 'a' && last[0]! <= 'z')) return false;
+  return labels.every(
+    (label) =>
+      label.length >= 1 &&
+      label.length <= 63 &&
+      label[0] !== '-' &&
+      label[label.length - 1] !== '-' &&
+      [...label].every(isLabelChar),
+  );
+}
+
+/** The host of a pasted address or bare host: scheme, path, query, fragment and port cut off. */
+function hostFromEntry(entry: string): string {
+  let text = entry.trim().toLowerCase().slice(0, MAX_ENTRY_CHARS);
+  const scheme = text.indexOf('://');
+  if (scheme > 0) text = text.slice(scheme + 3);
+  for (const stop of ['/', '?', '#']) {
+    const at = text.indexOf(stop);
+    if (at >= 0) text = text.slice(0, at);
+  }
+  const colon = text.lastIndexOf(':');
+  if (
+    colon >= 0 &&
+    colon < text.length - 1 &&
+    [...text.slice(colon + 1)].every((c) => c >= '0' && c <= '9')
+  ) {
+    text = text.slice(0, colon);
+  }
+  if (text.startsWith('*.')) text = text.slice(2);
+  else if (text.startsWith('www.')) text = text.slice(4);
+  return text;
+}
 
 /**
  * The domains of the `research.official_domains` setting, cleaned: lower case, a pasted address
@@ -50,14 +92,8 @@ export function normalizeOfficialDomains(value: unknown): string[] {
   const domains = new Set<string>();
   for (const entry of list) {
     if (typeof entry !== 'string') continue;
-    const host = entry
-      .trim()
-      .toLowerCase()
-      .replace(/^[a-z][a-z0-9+.-]*:\/\//u, '')
-      .replace(/[/?#].*$/u, '')
-      .replace(/:\d+$/u, '')
-      .replace(/^(\*\.|www\.)/u, '');
-    if (HOSTNAME.test(host)) domains.add(host);
+    const host = hostFromEntry(entry);
+    if (isHostname(host)) domains.add(host);
     if (domains.size >= MAX_OFFICIAL_DOMAINS) break;
   }
   return [...domains];

@@ -85,3 +85,24 @@ describe('conflict fingerprint', () => {
     expect(conflictFingerprint('Churn is rising', ['K1', 'W1'])).not.toBe(a);
   });
 });
+
+describe('cleaning the listed domains stays linear', () => {
+  it('handles hostile input quickly and still refuses what is not a host', () => {
+    const started = Date.now();
+    const hostile = [
+      '#'.repeat(50_000),
+      `a${'.a'.repeat(5_000)}`,
+      `${'-'.repeat(50_000)}.test`,
+      'x://'.repeat(10_000),
+    ];
+    expect(normalizeOfficialDomains(hostile)).toEqual([]);
+    expect(Date.now() - started).toBeLessThan(500);
+    expect(
+      normalizeOfficialDomains([
+        'https://Sub.Agency.test:8443/path#frag',
+        'bad-.test',
+        '-bad.test',
+      ]),
+    ).toEqual(['sub.agency.test']);
+  });
+});
