@@ -4722,3 +4722,45 @@ button.link-button {
   padding: 0;
   list-style: none;
 }
+
+/* Project list: equal, stable columns; long text ends in an ellipsis (full text in the title). */
+.table-scroll .project-table {
+  table-layout: fixed;
+  min-width: 86rem;
+}
+
+.project-table .clipped-cell,
+.project-table th[scope='row'] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-table .col-code {
+  width: 6.5rem;
+}
+.project-table .col-title,
+.project-table .col-topics {
+  width: 13rem;
+}
+.project-table .col-business {
+  width: 10rem;
+}
+.project-table .col-status {
+  width: 6.5rem;
+}
+.project-table .col-stage {
+  width: 7rem;
+}
+.project-table .col-waiting {
+  width: 8rem;
+}
+.project-table .col-language {
+  width: 5rem;
+}
+.project-table .col-owner {
+  width: 8rem;
+}
+.project-table .col-updated {
+  width: 10rem;
+}
