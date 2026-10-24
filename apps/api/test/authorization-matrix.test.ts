@@ -19,6 +19,7 @@ import {
 } from '../src/auth/auth.authorization.js';
 import type { AuthService } from '../src/auth/auth.service.js';
 import { DeliverablesController } from '../src/deliverables/deliverables.controller.js';
+import { ResearchPlanController } from '../src/research-plan/research-plan.controller.js';
 import { OutputRequirementsController } from '../src/output-requirements/output-requirements.controller.js';
 import { DocumentsController } from '../src/documents/documents.controller.js';
 import { ReportsController } from '../src/reports/reports.controller.js';
@@ -172,6 +173,10 @@ const expectedMatrix: Record<string, string> = {
   'PUT workspaces/:workspaceId/projects/:projectId/deliverables': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/deliverables/propose': 'project.run',
   'POST workspaces/:workspaceId/projects/:projectId/deliverables/confirm': 'workflow.approve',
+  'GET workspaces/:workspaceId/projects/:projectId/research-plan': 'project.read',
+  'PUT workspaces/:workspaceId/projects/:projectId/research-plan': 'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/research-plan/propose': 'project.run',
+  'POST workspaces/:workspaceId/projects/:projectId/research-plan/confirm': 'workflow.approve',
   'GET workspaces/:workspaceId/projects/:projectId/output-requirements': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/output-requirements': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/output-requirements/check': 'project.run',
@@ -276,6 +281,7 @@ const controllers = [
   StageChatController,
   DeliverablesController,
   OutputRequirementsController,
+  ResearchPlanController,
   AgentsController,
   AnalysisController,
   BusinessController,

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
+import { ResearchPlanPanel } from './research-plan-panel';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
 
@@ -27,7 +28,7 @@ interface Output {
 const copy = {
   fa: {
     title: 'تحقیق',
-    help: 'نتیجهٔ مرحلهٔ تحقیق: منابع، یافته‌ها و جست‌وجوی وب. تأیید یا رد خروجی در تب «گردش‌کار» انجام می‌شود.',
+    help: 'نتیجهٔ مرحلهٔ تحقیق: خلاصه، یافته‌ها زیر هر پرسش برنامه، منابع و جست‌وجوی وب. تأیید یا رد خروجی در تب «گردش‌کار» انجام می‌شود.',
     empty:
       'هنوز مرحلهٔ تحقیق خروجی نداده است. بعد از تکمیل تحلیل، گردش‌کار این مرحله را اجرا می‌کند.',
     waiting: 'این خروجی منتظر تأیید شماست.',
@@ -54,12 +55,15 @@ export function ResearchPanel({
   projectId,
   refreshKey,
   onOpenWorkflow,
+  onChanged,
 }: {
   locale: Locale;
   workspaceId: string;
   projectId: string;
   refreshKey: number;
   onOpenWorkflow: () => void;
+  /** Called after the research plan is confirmed, so the other tabs follow. */
+  onChanged: () => void;
 }) {
   const text = copy[locale === 'fa' ? 'fa' : 'en'];
   const wf = workflowMessages(locale);
@@ -99,45 +103,53 @@ export function ResearchPanel({
   if (stage === undefined) return <p role="status">{common.loading}</p>;
 
   return (
-    <section className="card" aria-labelledby="research-title">
-      <div className="toolbar spread">
-        <h2 id="research-title">{text.title}</h2>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => void load().catch(() => setFailed(true))}
-        >
-          {text.refresh}
-        </button>
-      </div>
-      <p className="muted">{text.help}</p>
-      {stage && (
-        <p>
-          <span className={`badge state-${stage.status}`}>
-            {wf.stageStatuses[stage.status] ?? stage.status}
-          </span>
-        </p>
-      )}
-      {!output ? (
-        <p className="muted">{text.empty}</p>
-      ) : (
-        <>
-          <p className="muted">
-            {text.version.replace('{n}', formatNumber(locale, output.versionNo))} ·{' '}
-            {wf.outputOrigin[output.origin] ?? output.origin} ·{' '}
-            {formatDateTime(locale, output.createdAt)}
+    <div className="stack">
+      <ResearchPlanPanel
+        locale={locale}
+        base={base}
+        refreshKey={refreshKey}
+        onChanged={onChanged}
+      />
+      <section className="card" aria-labelledby="research-title">
+        <div className="toolbar spread">
+          <h2 id="research-title">{text.title}</h2>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => void load().catch(() => setFailed(true))}
+          >
+            {text.refresh}
+          </button>
+        </div>
+        <p className="muted">{text.help}</p>
+        {stage && (
+          <p>
+            <span className={`badge state-${stage.status}`}>
+              {wf.stageStatuses[stage.status] ?? stage.status}
+            </span>
           </p>
-          {stage?.pendingGateOutputId === output.id && (
-            <p className="notice" role="status">
-              {text.waiting}{' '}
-              <button type="button" className="link-button" onClick={onOpenWorkflow}>
-                {text.openWorkflow}
-              </button>
+        )}
+        {!output ? (
+          <p className="muted">{text.empty}</p>
+        ) : (
+          <>
+            <p className="muted">
+              {text.version.replace('{n}', formatNumber(locale, output.versionNo))} ·{' '}
+              {wf.outputOrigin[output.origin] ?? output.origin} ·{' '}
+              {formatDateTime(locale, output.createdAt)}
             </p>
-          )}
-          <StageOutput locale={locale} stage="research" content={output.content} />
-        </>
-      )}
-    </section>
+            {stage?.pendingGateOutputId === output.id && (
+              <p className="notice" role="status">
+                {text.waiting}{' '}
+                <button type="button" className="link-button" onClick={onOpenWorkflow}>
+                  {text.openWorkflow}
+                </button>
+              </p>
+            )}
+            <StageOutput locale={locale} stage="research" content={output.content} />
+          </>
+        )}
+      </section>
+    </div>
   );
 }

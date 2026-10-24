@@ -1249,6 +1249,55 @@ export const outputRequirementChecks = pgTable(
   ],
 );
 
+/** The research plan of a project, one version per edit (ADR-0038); append-only. */
+export const researchPlans = pgTable(
+  'research_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    versionNo: integer('version_no').notNull(),
+    source: text('source').notNull(),
+    invocationId: uuid('invocation_id'),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('research_plans_version_uq').on(table.projectId, table.versionNo)],
+);
+
+export const researchQuestions = pgTable(
+  'research_questions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    planId: uuid('plan_id').notNull(),
+    ordinal: integer('ordinal').notNull(),
+    question: text('question').notNull(),
+    why: text('why').notNull().default(''),
+    channel: text('channel').notNull(),
+  },
+  (table) => [uniqueIndex('research_questions_ordinal_uq').on(table.planId, table.ordinal)],
+);
+
+export const researchPlanConfirmations = pgTable(
+  'research_plan_confirmations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    planId: uuid('plan_id').notNull(),
+    confirmedBy: uuid('confirmed_by').notNull(),
+    note: text('note').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('research_plan_confirmations_plan_uq').on(table.planId)],
+);
+
 export const gateDecisions = pgTable(
   'gate_decisions',
   {

@@ -38,6 +38,8 @@ export interface Settings {
   researchWebMaxSearches: number;
   /** Ideation waits for the administrator to confirm the plan of deliverables (ADR-0031). */
   requireDeliverableConfirmation: boolean;
+  /** Research waits for the administrator to confirm the research plan (ADR-0038). */
+  requireResearchPlanConfirmation: boolean;
 }
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
@@ -102,5 +104,7 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
     researchWebEnabled: values['research.web_enabled'] !== false,
     researchWebMaxSearches: boundedInteger(values['research.web_max_searches'], 5, 1, 10),
     requireDeliverableConfirmation: values['workflow.require_deliverable_confirmation'] !== false,
+    requireResearchPlanConfirmation:
+      values['workflow.require_research_plan_confirmation'] !== false,
   };
 }

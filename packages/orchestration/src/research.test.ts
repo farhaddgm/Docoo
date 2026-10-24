@@ -319,7 +319,13 @@ describe('research output for later stages', () => {
     });
     expect(compactResearchForPrompt(content)).toEqual({
       findings: [
-        { claim: 'c', source: 's', support: 'knowledge', approvedKnowledge: ['Title a (v1)'] },
+        {
+          claim: 'c',
+          source: 's',
+          support: 'knowledge',
+          level: 'solid',
+          approvedKnowledge: ['Title a (v1)'],
+        },
       ],
       gaps: ['g'],
     });

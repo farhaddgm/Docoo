@@ -1,3 +1,4 @@
+import type { PromptResearchQuestion } from '@docoo/domain';
 import { normalizeForSearch } from '@docoo/knowledge';
 
 import type { RetrievedPassage } from './knowledge-retrieval.js';
@@ -299,7 +300,25 @@ export interface ResearchEvidence {
   readonly problem: CitationProblem | null;
 }
 
+/**
+ * How far a finding can be trusted, in words the administrator can act on: `solid` rests on
+ * approved knowledge, `limited` only on web pages, `unverified` on no verified citation, and
+ * `disputed` is any of them that a reported conflict also names.
+ */
+export type FindingLevel = 'solid' | 'limited' | 'unverified' | 'disputed';
+
+export function classifyFinding(
+  support: 'knowledge' | 'web' | 'unverified',
+  disputed: boolean,
+): FindingLevel {
+  if (disputed) return 'disputed';
+  return support === 'knowledge' ? 'solid' : support === 'web' ? 'limited' : 'unverified';
+}
+
 export interface ResearchFinding {
+  /** The planned question this finding answers (`Q1`, …); empty when it answers none (ADR-0038). */
+  readonly questionId?: string;
+  readonly level?: FindingLevel;
   readonly claim: string;
   readonly source: string;
   /** `knowledge` only when at least one citation was found verbatim in an approved passage. */
@@ -343,6 +362,38 @@ export interface ResearchKnowledgeInfo {
   }[];
 }
 
+/** How well one planned question was answered, counted from its findings. */
+export interface ResearchQuestionCoverage {
+  readonly id: string;
+  readonly question: string;
+  readonly channel: string;
+  readonly findings: number;
+  readonly supported: number;
+  /** `answered`: a supported finding · `weak`: findings, none supported · `unanswered`: none. */
+  readonly status: 'answered' | 'weak' | 'unanswered';
+}
+
+export interface ResearchPlanInfo {
+  readonly versionNo: number;
+  readonly questions: readonly ResearchQuestionCoverage[];
+}
+
+/** The whole output at a glance (ADR-0038): counted by code from the stored findings. */
+export interface ResearchSummary {
+  readonly findings: number;
+  readonly solid: number;
+  readonly limited: number;
+  readonly unverified: number;
+  readonly disputed: number;
+  readonly questions: {
+    readonly total: number;
+    readonly answered: number;
+    readonly weak: number;
+    readonly unanswered: number;
+  };
+  readonly sources: { readonly knowledge: number; readonly web: number };
+}
+
 export interface ResearchContent {
   readonly findings: readonly ResearchFinding[];
   readonly gaps: readonly string[];
@@ -351,6 +402,10 @@ export interface ResearchContent {
   /** Absent in outputs written before web search existed. */
   readonly web?: ResearchWebInfo;
   readonly verification: ResearchVerification;
+  /** The confirmed plan and how each question fared; absent when the stage ran without one. */
+  readonly plan?: ResearchPlanInfo;
+  /** Absent in outputs written before the research plan existed. */
+  readonly summary?: ResearchSummary;
 }
 
 /**
@@ -417,6 +472,10 @@ export function verifyResearch(input: {
   readonly verifierTool: 'allowed' | 'denied';
   /** The web pages the model was given, if the attempt searched. */
   readonly web?: WebRun | undefined;
+  /** The confirmed plan the stage worked to (ADR-0038); absent when it ran without one. */
+  readonly plan?:
+    | { readonly versionNo: number; readonly questions: readonly PromptResearchQuestion[] }
+    | undefined;
 }): { content: ResearchContent; cited: readonly KnowledgePassage[] } {
   const raw =
     input.output !== null && typeof input.output === 'object'
@@ -428,6 +487,7 @@ export function verifyResearch(input: {
   const citedRefs = new Set<string>();
   const citedWeb = new Set<string>();
   const verifierAllowed = input.verifierTool === 'allowed';
+  const plannedIds = new Set((input.plan?.questions ?? []).map((question) => question.id));
 
   const findings: ResearchFinding[] = [];
   const rawFindings = Array.isArray(raw['findings']) ? raw['findings'] : [];
@@ -476,7 +536,9 @@ export function verifyResearch(input: {
         problem,
       });
     }
+    const askedId = asText(entry['questionId']).toUpperCase();
     findings.push({
+      questionId: plannedIds.has(askedId) ? askedId : '',
       claim,
       source: clip(asText(entry['source']), RESEARCH_LIMITS.maxTextLength),
       // Approved knowledge counts first; a web page alone makes the finding `web`, never `knowledge`.
@@ -502,6 +564,16 @@ export function verifyResearch(input: {
     conflicts.push({ description, refs });
   }
 
+  // A finding is disputed when a reported conflict names a source it cites.
+  const disputedRefs = new Set(conflicts.flatMap((conflict) => conflict.refs));
+  const graded: ResearchFinding[] = findings.map((finding) => ({
+    ...finding,
+    level: classifyFinding(
+      finding.support,
+      finding.evidence.some((cite) => disputedRefs.has(cite.ref)),
+    ),
+  }));
+
   const citations = findings.reduce((sum, finding) => sum + finding.evidence.length, 0);
   const verified = findings.reduce(
     (sum, finding) => sum + finding.evidence.filter((cite) => cite.verified).length,
@@ -510,10 +582,44 @@ export function verifyResearch(input: {
   const supported = findings.filter((finding) => finding.support !== 'unverified').length;
   const cited = input.passages.filter((passage) => citedRefs.has(passage.ref));
 
+  const planInfo: ResearchPlanInfo | undefined = input.plan
+    ? {
+        versionNo: input.plan.versionNo,
+        questions: input.plan.questions.map((question) => {
+          const mine = graded.filter((finding) => finding.questionId === question.id);
+          const supportedCount = mine.filter((finding) => finding.support !== 'unverified').length;
+          return {
+            id: question.id,
+            question: question.question,
+            channel: question.channel,
+            findings: mine.length,
+            supported: supportedCount,
+            status: supportedCount > 0 ? 'answered' : mine.length > 0 ? 'weak' : 'unanswered',
+          };
+        }),
+      }
+    : undefined;
+  const levelCount = (level: FindingLevel) =>
+    graded.filter((finding) => finding.level === level).length;
+  const summary: ResearchSummary = {
+    findings: graded.length,
+    solid: levelCount('solid'),
+    limited: levelCount('limited'),
+    unverified: levelCount('unverified'),
+    disputed: levelCount('disputed'),
+    questions: {
+      total: planInfo?.questions.length ?? 0,
+      answered: planInfo?.questions.filter((item) => item.status === 'answered').length ?? 0,
+      weak: planInfo?.questions.filter((item) => item.status === 'weak').length ?? 0,
+      unanswered: planInfo?.questions.filter((item) => item.status === 'unanswered').length ?? 0,
+    },
+    sources: { knowledge: citedRefs.size, web: citedWeb.size },
+  };
+
   return {
     cited,
     content: {
-      findings,
+      findings: graded,
       gaps: asTextList(raw['gaps'])
         .slice(0, RESEARCH_LIMITS.maxGaps)
         .map((gap) => clip(gap, RESEARCH_LIMITS.maxTextLength)),
@@ -554,6 +660,8 @@ export function verifyResearch(input: {
         verified,
         rejected: citations - verified,
       },
+      ...(planInfo ? { plan: planInfo } : {}),
+      summary,
     },
   };
 }
@@ -592,13 +700,33 @@ export function compactResearchForPrompt(content: unknown): unknown {
         source: entry['source'],
         // Older outputs carry no support field; they were never checked against knowledge.
         support: entry['support'] ?? 'unverified',
+        ...(typeof entry['level'] === 'string' ? { level: entry['level'] } : {}),
+        ...(asText(entry['questionId']) !== '' ? { questionId: entry['questionId'] } : {}),
         ...(sources.length > 0 ? { approvedKnowledge: [...new Set(sources)] } : {}),
         ...(pages.length > 0 ? { webPages: [...new Set(pages)] } : {}),
       };
     }),
     gaps: raw['gaps'],
+    ...openQuestions(raw['plan']),
     ...(Array.isArray(raw['conflicts']) && raw['conflicts'].length > 0
       ? { conflicts: raw['conflicts'] }
       : {}),
   };
+}
+
+/** The planned questions the research left weakly answered or unanswered, for the stages after it. */
+function openQuestions(plan: unknown): { openQuestions?: unknown[] } {
+  const questions =
+    plan !== null && typeof plan === 'object'
+      ? (plan as Record<string, unknown>)['questions']
+      : undefined;
+  if (!Array.isArray(questions)) return {};
+  const open = questions.flatMap((item) => {
+    const entry =
+      item !== null && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+    return entry['status'] === 'answered' || typeof entry['id'] !== 'string'
+      ? []
+      : [{ id: entry['id'], question: entry['question'], status: entry['status'] }];
+  });
+  return open.length > 0 ? { openQuestions: open } : {};
 }

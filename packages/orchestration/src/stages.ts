@@ -1,7 +1,10 @@
 import {
   DELIVERABLE_STAGE_RULES,
+  NO_RESEARCH_PLAN_RULES,
   OUTPUT_REQUIREMENT_RULES,
+  RESEARCH_PLAN_STAGE_RULES,
   type PromptRequirement,
+  type PromptResearchQuestion,
   STAGE_ROLE,
   composeInstructions,
   type AgentDefinitionContent,
@@ -78,6 +81,7 @@ export const STAGE_SCHEMAS: Record<Stage, JsonSchema> = {
         items: {
           type: 'object',
           properties: {
+            questionId: text,
             claim: text,
             source: text,
             evidence: {
@@ -90,7 +94,7 @@ export const STAGE_SCHEMAS: Record<Stage, JsonSchema> = {
               },
             },
           },
-          required: ['claim', 'source', 'evidence'],
+          required: ['questionId', 'claim', 'source', 'evidence'],
           additionalProperties: false,
         },
       },
@@ -203,6 +207,8 @@ export interface StageContext {
   readonly toolRules?: readonly string[] | undefined;
   /** The deliverables the administrator confirmed (ADR-0031); absent when none were. */
   readonly deliverables?: readonly PromptDeliverable[] | undefined;
+  /** The research questions the administrator confirmed (ADR-0038); absent when there is no plan. */
+  readonly researchPlan?: readonly PromptResearchQuestion[] | undefined;
   /** What the administrator requires of the final output (ADR-0037); absent when nothing was written. */
   readonly requirements?: readonly PromptRequirement[] | undefined;
   /** Web pages the research stage found (ADR-0026); absent when it searched nothing. */
@@ -279,6 +285,11 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
             'This is an explicitly selected optional quick draft, less complete than full analysis. The complete-analysis minimum of30 is reserved for the full continuation. Preserve unresolved ambiguity and state that this draft does not complete full analysis.',
           ]
         : []),
+      ...(context.stage === 'research'
+        ? context.researchPlan && context.researchPlan.length > 0
+          ? RESEARCH_PLAN_STAGE_RULES
+          : NO_RESEARCH_PLAN_RULES
+        : []),
       ...(context.web && context.web.length > 0 ? WEB_SEARCH_RULES : []),
       ...(context.deliverables && context.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),
       ...(context.requirements && context.requirements.length > 0 ? OUTPUT_REQUIREMENT_RULES : []),
@@ -309,6 +320,9 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
       : {}),
     ...(context.business ? { businessProfile: context.business.data } : {}),
     ...(context.web && context.web.length > 0 ? { webSources: context.web } : {}),
+    ...(context.stage === 'research' && context.researchPlan && context.researchPlan.length > 0
+      ? { researchPlan: context.researchPlan }
+      : {}),
     ...(context.deliverables && context.deliverables.length > 0
       ? { confirmedDeliverables: context.deliverables }
       : {}),

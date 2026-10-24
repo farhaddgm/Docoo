@@ -11,6 +11,7 @@ import type { AnalysisActivities } from './analysis-activities.js';
 import { businessForRole, loadRunBusiness } from './business.js';
 import { confirmedDeliverables, deliverableGate } from './deliverables.js';
 import { promptRequirements } from './output-requirements.js';
+import { confirmedResearchPlan, researchPlanGate } from './research-plan.js';
 import { audit, inWorkspace } from './db.js';
 import type { RunRef, StageRef } from './refs.js';
 import {
@@ -345,6 +346,25 @@ export function createOrchestrationActivities(
           }
           if (held.waiting) return { needsInput: 'deliverables' } as const;
         }
+        // Research does not start before the administrator confirmed the research plan
+        // (ADR-0038); confirming it, even with no question, signals the stage like an answer.
+        if (stage.stage === 'research' && config.requireResearchPlanConfirmation) {
+          const held = await researchPlanGate(client, {
+            workspaceId: ref.workspaceId,
+            projectId: ref.projectId,
+            stageRunId: ref.stageRunId,
+            runId: ref.runId,
+          });
+          if (held.newlyOpened) {
+            await audit(client, ref.workspaceId, {
+              action: 'workflow.research_plan_awaiting',
+              targetType: 'stage_run',
+              targetId: ref.stageRunId,
+              projectId: ref.projectId,
+            });
+          }
+          if (held.waiting) return { needsInput: 'research_plan' } as const;
+        }
         await client.query(
           `update stage_runs set status = 'running' where id = $1 and status = 'waiting_for_human'`,
           [ref.stageRunId],
@@ -353,9 +373,12 @@ export function createOrchestrationActivities(
           `update workflow_runs set status = 'running' where id = $1 and status = 'waiting_for_human'`,
           [ref.runId],
         );
+        const researchPlan =
+          stage.stage === 'research' ? await confirmedResearchPlan(client, ref.projectId) : null;
         const research: ResearchRun | null =
           stage.stage === 'research'
             ? await prepareResearch(client, {
+                plan: researchPlan?.questions,
                 scope: toolScope,
                 config,
                 projectTitle: stage.project_title,
@@ -396,6 +419,7 @@ export function createOrchestrationActivities(
               ? ((await confirmedDeliverables(client, ref.projectId)) ?? undefined)
               : undefined,
           requirements: await promptRequirements(client, ref.projectId),
+          researchPlan: researchPlan?.questions,
         };
         const prompt = stagePrompt(promptInput);
         // Tools the model itself may call (ADR-0023): off unless the setting is on, and only those
@@ -412,6 +436,7 @@ export function createOrchestrationActivities(
           stage: stage.stage,
           toolScope,
           research,
+          researchPlan,
           tools,
         } as const;
       });
@@ -479,6 +504,9 @@ export function createOrchestrationActivities(
                 topics: prepared.promptInput.topics,
                 analysis: prepared.promptInput.previous.find((item) => item.stage === 'analysis')
                   ?.content,
+                questions: prepared.researchPlan?.questions.filter(
+                  (question) => question.channel !== 'knowledge',
+                ),
               });
               const started = Date.now();
               try {
@@ -612,7 +640,13 @@ export function createOrchestrationActivities(
           // model was given (the gated `citation_verifier`); other stages store it as returned.
           const content = JSON.stringify(
             research
-              ? await finishResearch(client, prepared.toolScope, research, response.json)
+              ? await finishResearch(
+                  client,
+                  prepared.toolScope,
+                  research,
+                  response.json,
+                  prepared.researchPlan ?? undefined,
+                )
               : prepared.stage === 'evaluation'
                 ? scopeOutlineEvaluation(response.json)
                 : prepared.stage === 'analysis'

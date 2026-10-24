@@ -403,6 +403,7 @@ function ProjectView({
           projectId={projectId}
           refreshKey={refreshKey}
           onOpenWorkflow={() => choose('workflow')}
+          onChanged={changed}
         />
       )}
       {tab === 'research' && (

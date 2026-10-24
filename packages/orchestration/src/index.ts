@@ -11,6 +11,7 @@ export * from './project-materials.js';
 export * from './db.js';
 export * from './deliverables.js';
 export * from './output-requirements.js';
+export * from './research-plan.js';
 export * from './research.js';
 export * from './research-activities.js';
 export * from './runtime.js';

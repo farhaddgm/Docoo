@@ -579,15 +579,20 @@ export async function createHarness(
     return String(Array.isArray(setCookie) ? setCookie[0] : setCookie).split(';')[0] ?? '';
   };
 
-  // Suites that run the stages are not about the plan of deliverables, so ideation does not wait
-  // for a confirmation there unless the suite asks for the real default (ADR-0031).
+  // Suites that run the stages are not about the plan of deliverables or the research plan, so
+  // ideation and research do not wait for a confirmation there unless the suite asks for the real
+  // default (ADR-0031, ADR-0038).
   if (options.workflow && options.deliverableGate !== true) {
     for (const [email, workspaceId] of [
       [emails.a, ids.workspaceA],
       [emails.b, ids.workspaceB],
     ] as const) {
       const cookie = await login(email);
-      for (const key of ['workflow.require_deliverable_confirmation', 'research.web_enabled']) {
+      for (const key of [
+        'workflow.require_deliverable_confirmation',
+        'workflow.require_research_plan_confirmation',
+        'research.web_enabled',
+      ]) {
         const response = await request(
           'PUT',
           `/v1/workspaces/${workspaceId}/settings/assignments`,

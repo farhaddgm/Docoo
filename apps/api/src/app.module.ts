@@ -7,6 +7,7 @@ import { BusinessModule } from './business/business.module.js';
 import { ConfigModule } from './config/config.module.js';
 import { CoreModule } from './core.module.js';
 import { DeliverablesModule } from './deliverables/deliverables.module.js';
+import { ResearchPlanModule } from './research-plan/research-plan.module.js';
 import { OutputRequirementsModule } from './output-requirements/output-requirements.module.js';
 import { DocumentsModule } from './documents/documents.module.js';
 import { HealthController } from './health.controller.js';
@@ -40,6 +41,7 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
     StageChatModule,
     DeliverablesModule,
     OutputRequirementsModule,
+    ResearchPlanModule,
     AgentsModule,
     AnalysisModule,
     BusinessModule,
