@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
 import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatNumber, type Locale, textDir } from '../../../i18n';
@@ -84,6 +84,9 @@ const copy = {
   },
 } as const;
 
+/** How many messages of a long conversation show at once; older ones are scrolled to. */
+const VISIBLE_MESSAGES = 4;
+
 const fill = (template: string, values: Record<string, string>) =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? '');
 
@@ -113,6 +116,7 @@ export function StageChat({
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const thread = useRef<HTMLUListElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -173,6 +177,31 @@ export function StageChat({
   const visible = (data?.items ?? []).filter((m) => m.kind !== 'rejection_sent');
   const full = data ? data.used >= data.limit : false;
 
+  // The thread is as tall as its last four bubbles, whatever their length, and shows the newest.
+  const count = visible.length;
+  useLayoutEffect(() => {
+    const list = thread.current;
+    if (!list) return;
+    const fit = () => {
+      const bubbles = Array.from(list.children).slice(-VISIBLE_MESSAGES) as HTMLElement[];
+      const style = getComputedStyle(list);
+      const gap = Number.parseFloat(style.rowGap) || 0;
+      const padding =
+        Number.parseFloat(style.paddingBlockStart) + Number.parseFloat(style.paddingBlockEnd);
+      const border =
+        Number.parseFloat(style.borderBlockStartWidth) +
+        Number.parseFloat(style.borderBlockEndWidth);
+      const height = bubbles.reduce((sum, bubble) => sum + bubble.offsetHeight, 0);
+      const wanted = height + gap * Math.max(bubbles.length - 1, 0) + padding + border;
+      list.style.maxBlockSize = count > VISIBLE_MESSAGES ? `${Math.ceil(wanted)}px` : '';
+      list.scrollTop = list.scrollHeight;
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [count, locale, data]);
+
   return (
     <section className="stack" aria-labelledby={`${id}-title`}>
       <h3 id={`${id}-title`}>{text.title}</h3>
@@ -186,23 +215,32 @@ export function StageChat({
           {visible.length === 0 ? (
             <p className="muted">{text.empty}</p>
           ) : (
-            <ul className="plain-list" aria-label={text.title}>
+            <ul
+              ref={thread}
+              className="chat-thread"
+              aria-label={text.title}
+              // The thread scrolls once there are more than four messages; it must be reachable
+              // from the keyboard then.
+              tabIndex={count > VISIBLE_MESSAGES ? 0 : undefined}
+            >
               {visible.map((message) => (
-                <li key={message.id}>
-                  <strong>{message.role === 'admin' ? text.you : text.agent}</strong>
-                  {message.kind === 'revision_request' && (
-                    <span className="badge"> {text.revisionBadge}</span>
-                  )}
-                  {sent.has(message.id) && <span className="badge"> {text.sentBadge}</span>}
-                  <br />
+                <li
+                  key={message.id}
+                  className={`chat-message ${message.role === 'admin' ? 'chat-message-mine' : 'chat-message-agent'}`}
+                >
+                  <p className="chat-meta">
+                    <strong>{message.role === 'admin' ? text.you : text.agent}</strong>
+                    {message.kind === 'revision_request' && (
+                      <span className="badge">{text.revisionBadge}</span>
+                    )}
+                    {sent.has(message.id) && <span className="badge">{text.sentBadge}</span>}
+                  </p>
                   {message.status === 'failed' ? (
-                    <span className="notice error">
-                      {fill(text.failed, { code: message.content })}
-                    </span>
+                    <p className="notice error">{fill(text.failed, { code: message.content })}</p>
                   ) : (
-                    <span dir={textDir(locale)} style={{ whiteSpace: 'pre-wrap' }}>
+                    <p className="chat-text" dir={textDir(locale)}>
                       {message.content}
-                    </span>
+                    </p>
                   )}
                 </li>
               ))}

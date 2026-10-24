@@ -2,6 +2,12 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [Unreleased]
+
+### Changed
+
+- **Conversations with an agent are bubbles.** In the chat under a stage's output, your messages and the agent's are rounded bubbles in two close shades, on opposite sides. At most four messages show at once; older ones are scrolled to, and the thread opens on the newest.
+
 ## [0.39.0] — 2026-10-24
 
 ### Changed
