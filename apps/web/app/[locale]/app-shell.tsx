@@ -47,11 +47,7 @@ const memberNavigation: readonly NavigationKey[] = [
 ];
 
 /** Pages only the owner may open: they hold the platform's keys, settings and agents. */
-const ownerNavigation: readonly NavigationKey[] = [
-  'providers',
-  'settings',
-  'agents',
-];
+const ownerNavigation: readonly NavigationKey[] = ['providers', 'settings', 'agents'];
 
 type IconName =
   NavigationKey | 'users' | 'mail' | 'logout' | 'menu' | 'close' | 'workspace' | 'owner';
