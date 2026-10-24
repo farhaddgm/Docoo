@@ -4579,11 +4579,15 @@ button.link-button {
   cursor: pointer;
 }
 
-.stepper li[aria-current='step'] .step-button {
+.stepper li[aria-current='step'] .step-button,
+.stepper li[aria-current='step'] .step-name,
+.stepper li[aria-current='step'] .step-kind {
   color: var(--color-on-primary);
 }
 
-.stepper li.step-done .step-button {
+.stepper li.step-done .step-button,
+.stepper li.step-done .step-name,
+.stepper li.step-done .step-kind {
   color: var(--color-ok-ink);
 }
 
