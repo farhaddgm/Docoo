@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **Redo a finished stage** ([ADR-0036](docs/adr/0036-redo-stage.md)). In a project's **Workflow** tab every completed stage has a **Redo** button (with a reason). It starts a new run that keeps the stages before it as they were and does that stage and the ones after it again from the start; the earlier run and its outputs stay in the history. New `POST /projects/{id}/workflow/redo` (`project.run`).
+
 ### Changed
 
 - **The business dialog shows the business itself.** Clicking a card on **Businesses** opens a dialog with what Contenter holds now (read live, nothing stored): the profile, facts and terms, sources and assets and quality, in the same views as a project's Business tab, with a link to open it in Contenter. If Contenter cannot be read, the dialog says so and shows what the list knows. New `GET /contenter-businesses/{businessId}` (`business.read`).

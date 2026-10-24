@@ -135,6 +135,7 @@ notion_sync: true
 | `POST /projects/{id}/workflow/start`                                 | `project.run`               |
 | `POST /projects/{id}/workflow/sync`                                  | `project.run`               |
 | `POST /projects/{id}/workflow/cancel`                                | `workflow.cancel`           |
+| `POST /projects/{id}/workflow/redo`                                  | `project.run`               |
 | `GET /projects/{id}/stages/{stageRunId}`                             | `project.read`              |
 | `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/approve` | `workflow.approve`          |
 | `POST /projects/{id}/stages/{stageRunId}/outputs/{outputId}/reject`  | `workflow.reject`           |

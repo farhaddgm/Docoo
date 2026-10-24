@@ -35,6 +35,7 @@ interface StageItem {
   passedByDecision?: boolean;
   pendingGateOutputId?: string | null;
   latestOutputId?: string | null;
+  carriedFromStageRunId?: string | null;
 }
 
 interface HumanTask {
@@ -125,6 +126,8 @@ export function WorkflowPanel({
   const [tick, setTick] = useState(0);
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [redoStage, setRedoStage] = useState<string | null>(null);
+  const [redoReason, setRedoReason] = useState('');
   const signature = useRef('');
   const explain = useCallback(
     (error: unknown) => explainError(error, text.errors, common.loadFailed),
@@ -206,6 +209,18 @@ export function WorkflowPanel({
       setCancelReason('');
       await afterChange();
     }, text.done.cancelled);
+  }
+
+  function redoRun(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const stage = redoStage;
+    if (!stage) return;
+    void run(async () => {
+      await apiSend('POST', `${base}/workflow/redo`, { stage, reason: redoReason.trim() });
+      setRedoStage(null);
+      setRedoReason('');
+      await afterChange();
+    }, text.done.redone);
   }
 
   if (failed && !overview) {
@@ -355,6 +370,52 @@ export function WorkflowPanel({
                 </span>
               )}
               {stage.passedByDecision && <span className="muted">{text.passedByDecision}</span>}
+              {stage.carriedFromStageRunId && <span className="muted">{text.carried}</span>}
+              {!live && projectStatus === 'active' && stage.status === 'completed' && stage.id && (
+                <button
+                  data-write-action
+                  className="secondary-button"
+                  type="button"
+                  disabled={busy}
+                  aria-expanded={redoStage === stage.stage}
+                  onClick={() => {
+                    setRedoStage((open) => (open === stage.stage ? null : stage.stage));
+                    setRedoReason('');
+                  }}
+                >
+                  {text.redo}
+                  <span className="visually-hidden"> {stageLabel(stage.stage)}</span>
+                </button>
+              )}
+              {redoStage === stage.stage && (
+                <form data-write-action className="filter-form" onSubmit={redoRun}>
+                  <p className="muted">
+                    {text.redoHelp.replaceAll('{stage}', stageLabel(stage.stage))}
+                  </p>
+                  <ReasonBar
+                    locale={locale}
+                    id={`redo-reason-${stage.stage}`}
+                    label={text.redoReason}
+                    value={redoReason}
+                    minLength={3}
+                    required
+                    onChange={setRedoReason}
+                  >
+                    <button className="primary-button" type="submit" disabled={busy}>
+                      {busy ? text.working : text.redoConfirm}
+                    </button>
+                    <button
+                      data-write-action
+                      className="secondary-button"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setRedoStage(null)}
+                    >
+                      {text.cancel}
+                    </button>
+                  </ReasonBar>
+                </form>
+              )}
               {stage.id && stage.latestOutputId && !stage.pendingGateOutputId && (
                 <StageChatDisclosure
                   locale={locale}

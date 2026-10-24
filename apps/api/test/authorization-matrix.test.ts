@@ -141,6 +141,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/projects/:projectId/workflow/start': 'project.run',
   'POST workspaces/:workspaceId/projects/:projectId/workflow/sync': 'project.run',
   'POST workspaces/:workspaceId/projects/:projectId/workflow/cancel': 'workflow.cancel',
+  'POST workspaces/:workspaceId/projects/:projectId/workflow/redo': 'project.run',
   'GET workspaces/:workspaceId/projects/:projectId/stages/:stageRunId': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/outputs/:outputId/approve':
     'workflow.approve',

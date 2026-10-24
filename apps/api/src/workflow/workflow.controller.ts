@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Post, Query, Req } from '@nestj
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { STAGES } from '@docoo/orchestration';
 
 import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
@@ -21,6 +22,9 @@ const decisionSchema = z
   .object({ decision: z.enum(['extend', 'pass']), reason: z.string().trim().min(10).max(1000) })
   .strict();
 const answerSchema = z.object({ answer: z.string().trim().min(1).max(4000).nullable() }).strict();
+const redoSchema = z
+  .object({ stage: z.enum(STAGES), reason: z.string().trim().min(3).max(1000) })
+  .strict();
 const cancelSchema = z.object({ reason: z.string().trim().min(3).max(1000) }).strict();
 const tasksQuery = z
   .object({ status: z.enum(['pending', 'resolved', 'cancelled']).default('pending') })
@@ -92,6 +96,23 @@ export class WorkflowController {
   ) {
     const { reason } = parse(cancelSchema, body);
     return { workflow: await this.workflow.cancel(workspaceContext(request), id(raw), reason) };
+  }
+
+  @Post('projects/:projectId/workflow/redo')
+  @HttpCode(202)
+  @ApiOperation({
+    summary: 'Redo a finished stage: a new run carries the earlier stages and runs this one again',
+  })
+  @RequireWorkspacePermission('project.run')
+  async redo(
+    @Req() request: FastifyRequest,
+    @Param('projectId') raw: string,
+    @Body() body: unknown,
+  ) {
+    const { stage, reason } = parse(redoSchema, body);
+    return {
+      workflow: await this.workflow.redo(workspaceContext(request), id(raw), stage, reason),
+    };
   }
 
   @Get('projects/:projectId/stages/:stageRunId')
