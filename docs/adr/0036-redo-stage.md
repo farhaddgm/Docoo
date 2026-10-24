@@ -1,6 +1,6 @@
 # ADR-0036 — انجام دوباره یک مرحله
 
-وضعیت: **پذیرفته‌شده**. به مدل run در [ADR-0010](0010-orchestration.md) و کارکرد workflow تکیه می‌کند؛ موتور Temporal تغییر نمی‌کند.
+وضعیت: **پذیرفته‌شده**. به مدل run در [ADR-0009](0009-project-workflow-and-provider-runtime.md) و کارکرد workflow تکیه می‌کند؛ موتور Temporal تغییر نمی‌کند.
 
 ## زمینه
 
