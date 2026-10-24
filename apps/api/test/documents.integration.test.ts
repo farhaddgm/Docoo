@@ -317,9 +317,10 @@ describe.skipIf(!adminUrl)('solutions, documents and evaluation (SOL-*, DOC-*, E
           setId: string;
           preview: { criteria: { enabled: boolean; weight: number }[] };
           intervals: unknown[];
+          stability: { baselineWinnerIds: string[]; criteria: { criterionKey: string }[] };
         };
       }>().sensitivity,
-    ).toMatchObject({ setId: set.setId });
+    ).toMatchObject({ setId: set.setId, stability: { criteria: expect.any(Array) } });
     const afterPreview = await h.request('GET', api(`/projects/${projectId}/solution-criteria`), {
       cookie,
     });
@@ -337,9 +338,11 @@ describe.skipIf(!adminUrl)('solutions, documents and evaluation (SOL-*, DOC-*, E
       criteriaVersionId: set.criteria.versionId,
       solutionIds: [set.items[0]!.id],
       reason: 'Measured impact outweighs higher delivery cost.',
-      rejected: set.items
-        .slice(1)
-        .map((s) => ({ solutionId: s.id, reason: 'Higher risk than the selected alternative.' })),
+      rejected: set.items.slice(1).map((s, index) => ({
+        solutionId: s.id,
+        // A reason per rejected alternative is optional.
+        reason: index === 0 ? '' : 'Higher risk than the selected alternative.',
+      })),
     };
     expect(
       (await post(`/projects/${projectId}/solution-decisions`, { ...decision, reason: '' }))

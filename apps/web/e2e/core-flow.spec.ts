@@ -606,6 +606,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(articles).toHaveCount(3);
     await expectNoSeriousA11yViolations(page);
 
+    await page.locator('details:has(#criteria-title) > summary').click();
     const impact = page.getByLabel(`${solutionText.weight}: Impact on the problem`);
     const cost = page.getByLabel(`${solutionText.weight}: Cost and resources`);
     const save = page.getByRole('button', { name: solutionText.saveCriteria });
@@ -622,6 +623,8 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     ).toBeVisible();
     await expect(articles.first().getByText(solutionText.outOf)).toBeVisible();
 
+    await expect(page.locator('#sensitivity-title')).toBeVisible();
+    await page.getByText('پیشرفته: آزمایش دستی وزن‌ها').click();
     await page.locator('#sensitivity-weight').focus();
     await page.locator('#sensitivity-weight').press('Home');
     await page.getByRole('button', { name: 'محاسبهٔ رتبه‌ها' }).click();
@@ -638,7 +641,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       .getByRole('button', { name: new RegExp(solutionText.moveUp, 'u') })
       .click();
     await page.locator('#selection-reason').fill('دو گزینهٔ برتر');
-    await page.locator('input[id^="reject-"]').fill('این گزینه ریسک بیشتری دارد');
+    await page.locator('#rejected-reason').fill('این گزینه ریسک بیشتری دارد');
     await page.getByRole('button', { name: solutionText.select }).click();
     await expect(
       page.getByRole('status').filter({ hasText: solutionText.done.selected }),

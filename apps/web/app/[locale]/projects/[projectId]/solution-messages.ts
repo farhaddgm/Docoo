@@ -12,14 +12,20 @@ const messages = {
     generating: 'در حال تولید… (چند ثانیه تا چند دقیقه)',
     openProviders: 'تنظیم ارائه‌دهندهٔ AI',
     criteriaTitle: 'معیارها و وزن‌ها',
-    criteriaHelp: 'وزن معیارهای فعال باید دقیقاً ۱۰۰ شود. هر ذخیره یک نسخهٔ تازه می‌سازد.',
+    criteriaHelp:
+      'وزن هر معیار نشان می‌دهد در رتبه‌بندی راه‌حل‌ها چقدر اهمیت دارد. جمع وزن‌های فعال همیشه ۱۰۰ می‌ماند. هر ذخیره یک نسخهٔ تازه می‌سازد.',
+    criteriaIntro:
+      'هر راه‌حل روی هر معیار نمرهٔ ۱ تا ۵ می‌گیرد و ۵ همیشه بهتر است (برای هزینه و ریسک، ۵ یعنی ارزان‌تر و کم‌خطرتر). وزن، سهم هر معیار از امتیاز ۱۰۰ است. معمولاً لازم نیست این بخش را تغییر دهید.',
+    criteriaExample:
+      'مثال: اگر وزن معیار «هزینه» را بالا ببرید، راه‌حل‌های ارزان‌تر رتبهٔ بهتری می‌گیرند و وزن بقیهٔ معیارها خودکار و متناسب کم می‌شود.',
+    criteriaSummary: 'معیارهای فعال: {n} · نسخهٔ {v}',
+    slider: 'وزن با اسلایدر',
     criterion: 'معیار',
     weight: 'وزن',
     enabled: 'فعال',
     total: 'جمع وزن‌های فعال',
     saveCriteria: 'ذخیرهٔ معیارها',
     criteriaReason: 'دلیل تغییر (لازم)',
-    criteriaVersion: 'نسخهٔ معیارها: {n}',
     listTitle: 'راه‌حل‌ها',
     none: 'هنوز راه‌حلی ساخته نشده است.',
     generatedAt: 'مجموعهٔ ساخته‌شده در {time}',
@@ -38,7 +44,15 @@ const messages = {
     addToSelection: 'افزودن به انتخاب',
     removeFromSelection: 'حذف از انتخاب',
     selectionTitle: 'انتخاب و اولویت',
-    selectionHelp: 'ترتیب فهرست همان اولویت است. برای هر راه‌حل منتخب یک سند مستقل ساخته می‌شود.',
+    selectionHelp:
+      'با دکمهٔ «افزودن به انتخاب» روی کارت هر راه‌حل آن را برگزینید و اینجا ترتیب اولویت را بدهید. برای هر راه‌حل منتخب یک سند مستقل ساخته می‌شود.',
+    rejectedReason: 'دلیل رد بقیهٔ گزینه‌ها (اختیاری)',
+    rejectedReasonHelp:
+      'این دلیل برای همهٔ گزینه‌های انتخاب‌نشده در دفتر تصمیم ثبت می‌شود، مگر برای یکی دلیل جداگانه بنویسید.',
+    rejectedEach: 'دلیل جداگانه برای هر گزینهٔ ردشده (اختیاری)',
+    rejectedOne: 'دلیل رد گزینه',
+    higherScoreWarning:
+      'این گزینه‌ها امتیاز بالاتری از همهٔ گزینه‌های منتخب دارند ولی انتخاب نشده‌اند: {titles}. در «دلیل تصمیم» بنویسید چرا.',
     selectionEmpty: 'راه‌حلی انتخاب نشده است.',
     moveUp: 'بالا',
     moveDown: 'پایین',
@@ -53,7 +67,8 @@ const messages = {
     errors: {
       ...rateLimitErrors.fa,
       SOLUTION_DECISION_STALE: 'راه‌حل‌ها یا معیارها تغییر کرده‌اند؛ صفحه را تازه کنید.',
-      SOLUTION_DECISION_INVALID: 'دلیل تصمیم و رد همهٔ گزینه‌های باقی‌مانده لازم است.',
+      SOLUTION_DECISION_INVALID:
+        'دلیل تصمیم لازم است (دست‌کم ۳ نویسه) و همهٔ گزینه‌های انتخاب‌نشده باید در فهرست رد باشند.',
       SOLUTION_COUNT_INVALID: 'تعداد باید بین ۲ تا ۲۰ باشد.',
       SOLUTION_CRITERIA_INVALID: 'معیارها معتبر نیست؛ جمع وزن‌های فعال باید ۱۰۰ باشد.',
       SOLUTION_GENERATION_FAILED: 'ارائهٔ AI پاسخ نداد؛ اتصال را بررسی و دوباره تلاش کنید.',
@@ -76,14 +91,20 @@ const messages = {
     generating: 'Generating… (a few seconds to a few minutes)',
     openProviders: 'Set up the AI provider',
     criteriaTitle: 'Criteria and weights',
-    criteriaHelp: 'The enabled weights must add up to exactly 100. Every save makes a new version.',
+    criteriaHelp:
+      'A weight shows how much a criterion matters in ranking the solutions. The enabled weights always add up to 100. Every save makes a new version.',
+    criteriaIntro:
+      'Every solution gets a score from 1 to 5 on each criterion, and 5 is always better (for cost and risk, 5 means cheaper and safer). The weight is the criterion’s share of the 100-point score. You usually do not need to change this.',
+    criteriaExample:
+      'Example: raising the weight of “Cost” makes cheaper solutions rank higher, and the other weights shrink automatically in proportion.',
+    criteriaSummary: 'Enabled criteria: {n} · version {v}',
+    slider: 'Weight slider',
     criterion: 'Criterion',
     weight: 'Weight',
     enabled: 'Enabled',
     total: 'Sum of enabled weights',
     saveCriteria: 'Save criteria',
     criteriaReason: 'Reason for the change (required)',
-    criteriaVersion: 'Criteria version: {n}',
     listTitle: 'Solutions',
     none: 'No solutions have been generated yet.',
     generatedAt: 'Set generated at {time}',
@@ -102,7 +123,15 @@ const messages = {
     addToSelection: 'Add to selection',
     removeFromSelection: 'Remove from selection',
     selectionTitle: 'Selection and priority',
-    selectionHelp: 'The list order is the priority. Every selected solution gets its own document.',
+    selectionHelp:
+      'Pick each solution with “Add to selection” on its card and set the priority order here. Every selected solution gets its own document.',
+    rejectedReason: 'Reason for rejecting the rest (optional)',
+    rejectedReasonHelp:
+      'This reason is recorded in the decision journal for every unselected alternative, unless you write a separate one for it.',
+    rejectedEach: 'A separate reason for each rejected alternative (optional)',
+    rejectedOne: 'Reason for rejecting',
+    higherScoreWarning:
+      'These alternatives score higher than every selected one but are not selected: {titles}. Explain why in the decision reason.',
     selectionEmpty: 'No solution is selected.',
     moveUp: 'Move up',
     moveDown: 'Move down',
@@ -118,7 +147,7 @@ const messages = {
       ...rateLimitErrors.en,
       SOLUTION_DECISION_STALE: 'Solutions or criteria changed; reload before deciding.',
       SOLUTION_DECISION_INVALID:
-        'Provide a decision reason and a reason for every rejected alternative.',
+        'Provide a decision reason (at least 3 characters); every unselected alternative must be listed as rejected.',
       SOLUTION_COUNT_INVALID: 'The count must be between 2 and 20.',
       SOLUTION_CRITERIA_INVALID: 'The criteria are not valid; enabled weights must add up to 100.',
       SOLUTION_GENERATION_FAILED: 'The AI provider did not answer; check the connection and retry.',
