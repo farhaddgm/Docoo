@@ -1183,6 +1183,171 @@ export const deliverableConfirmations = pgTable(
   (table) => [uniqueIndex('deliverable_confirmations_plan_uq').on(table.planId)],
 );
 
+/** What the administrator requires of the final output, one row per requirement (ADR-0037); append-only. */
+export const outputRequirements = pgTable(
+  'output_requirements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    kind: text('kind').notNull(),
+    body: text('body').notNull(),
+    source: text('source').notNull(),
+    stage: stageKind('stage'),
+    messageId: uuid('message_id').references(() => stageMessages.id),
+    supersedesId: uuid('supersedes_id'),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('output_requirements_project_idx').on(table.projectId, table.createdAt),
+    index('output_requirements_message_idx').on(table.messageId),
+  ],
+);
+
+/** A requirement no longer in force: withdrawn, or replaced by an edit. */
+export const outputRequirementWithdrawals = pgTable(
+  'output_requirement_withdrawals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    requirementId: uuid('requirement_id').notNull(),
+    reasonKind: text('reason_kind').notNull(),
+    reason: text('reason').notNull().default(''),
+    withdrawnBy: uuid('withdrawn_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('output_requirement_withdrawals_uq').on(table.requirementId)],
+);
+
+/** The result of a coverage check for one requirement; the rows of one check share `checkId`. */
+export const outputRequirementChecks = pgTable(
+  'output_requirement_checks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    checkId: uuid('check_id').notNull(),
+    requirementId: uuid('requirement_id').notNull(),
+    verdict: text('verdict').notNull(),
+    evidence: text('evidence').notNull().default(''),
+    foundIn: text('found_in').notNull().default(''),
+    invocationId: uuid('invocation_id'),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('output_requirement_checks_uq').on(table.checkId, table.requirementId),
+    index('output_requirement_checks_project_idx').on(table.projectId, table.createdAt),
+  ],
+);
+
+/** The research plan of a project, one version per edit (ADR-0038); append-only. */
+export const researchPlans = pgTable(
+  'research_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    versionNo: integer('version_no').notNull(),
+    source: text('source').notNull(),
+    invocationId: uuid('invocation_id'),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('research_plans_version_uq').on(table.projectId, table.versionNo)],
+);
+
+export const researchQuestions = pgTable(
+  'research_questions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    planId: uuid('plan_id').notNull(),
+    ordinal: integer('ordinal').notNull(),
+    question: text('question').notNull(),
+    why: text('why').notNull().default(''),
+    channel: text('channel').notNull(),
+  },
+  (table) => [uniqueIndex('research_questions_ordinal_uq').on(table.planId, table.ordinal)],
+);
+
+export const researchPlanConfirmations = pgTable(
+  'research_plan_confirmations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    planId: uuid('plan_id').notNull(),
+    confirmedBy: uuid('confirmed_by').notNull(),
+    note: text('note').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('research_plan_confirmations_plan_uq').on(table.planId)],
+);
+
+/** A follow-up round of the research stage and the questions it works on (ADR-0039); append-only. */
+export const researchFollowups = pgTable(
+  'research_followups',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    stageRunId: uuid('stage_run_id').notNull(),
+    outputId: uuid('output_id').notNull(),
+    planId: uuid('plan_id').notNull(),
+    token: text('token').notNull(),
+    questions: jsonb('questions').notNull(),
+    requestedBy: uuid('requested_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('research_followups_token_uq').on(table.stageRunId, table.token),
+    index('research_followups_stage_idx').on(table.stageRunId, table.createdAt),
+  ],
+);
+
+/** The administrator's decision on a conflict the research reported (ADR-0040); append-only. */
+export const researchConflictDecisions = pgTable(
+  'research_conflict_decisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    stageRunId: uuid('stage_run_id').notNull(),
+    outputId: uuid('output_id').notNull(),
+    fingerprint: text('fingerprint').notNull(),
+    decision: text('decision').notNull(),
+    trustedRef: text('trusted_ref'),
+    note: text('note').notNull().default(''),
+    decidedBy: uuid('decided_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('research_conflict_decisions_idx').on(
+      table.stageRunId,
+      table.fingerprint,
+      table.createdAt,
+    ),
+  ],
+);
+
 export const gateDecisions = pgTable(
   'gate_decisions',
   {

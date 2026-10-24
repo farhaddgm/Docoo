@@ -300,6 +300,31 @@ export class WorkflowService {
     }
   }
 
+  /**
+   * The administrator confirmed the research plan: tells the research stage that waits for it to
+   * go on (ADR-0038). Safe to repeat; with no waiting stage there is nothing to signal.
+   */
+  async resumeAfterResearchPlan(context: WorkspaceRequestContext, projectId: string) {
+    const live = await this.liveRun(context, projectId);
+    if (!live) return;
+    const waiting = await this.database.run(
+      context,
+      async (client) =>
+        (
+          await client.query<{ id: string }>(
+            `select id from stage_runs where run_id = $1 and stage = 'research' and status = 'waiting_for_human'
+                and latest_output_id is null`,
+            [live.id],
+          )
+        ).rows[0],
+    );
+    if (waiting) {
+      await this.engine.signal(live.temporal_workflow_id, 'agentInput', {
+        stageRunId: waiting.id,
+      });
+    }
+  }
+
   /** Re-sends the signal the project state implies; safe to repeat. */
   async sync(context: WorkspaceRequestContext, projectId: string) {
     const status = await this.database.run(context, async (client) => {
@@ -379,6 +404,12 @@ export class WorkflowService {
                            join deliverable_confirmations c on c.plan_id = p.id
                           where p.project_id = sr.project_id
                             and p.version_no = (select max(version_no) from deliverable_plans
+                                                 where project_id = sr.project_id)))
+                   or (sr.stage = 'research' and sr.latest_output_id is null and exists (
+                         select 1 from research_plans p
+                           join research_plan_confirmations c on c.plan_id = p.id
+                          where p.project_id = sr.project_id
+                            and p.version_no = (select max(version_no) from research_plans
                                                  where project_id = sr.project_id))))`,
           [live.id],
         )

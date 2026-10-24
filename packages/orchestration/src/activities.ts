@@ -10,16 +10,21 @@ import { createWritingActivities, type WritingActivities } from './writing-activ
 import type { AnalysisActivities } from './analysis-activities.js';
 import { businessForRole, loadRunBusiness } from './business.js';
 import { confirmedDeliverables, deliverableGate } from './deliverables.js';
+import { promptRequirements } from './output-requirements.js';
+import { promptConflictDecisions } from './research-conflicts.js';
+import { activeResearchFollowup } from './research-followup.js';
+import { confirmedResearchPlan, researchPlanGate } from './research-plan.js';
 import { audit, inWorkspace } from './db.js';
 import type { RunRef, StageRef } from './refs.js';
 import {
   compactResearchForPrompt,
   knowledgePromptItems,
   NO_WEB,
+  refOffsetsOf,
   webPromptItems,
   type WebRun,
 } from './research.js';
-import { finishResearch, prepareResearch, type ResearchRun } from './research-activities.js';
+import { finishedResearch, prepareResearch, type ResearchRun } from './research-activities.js';
 import type { ProviderRuntime } from './runtime.js';
 import { loadSettings } from './settings.js';
 import { loadAgentVersion, promptDigest, resolveAgentProfile } from './agents.js';
@@ -254,11 +259,16 @@ export function createOrchestrationActivities(
           `select t.title from project_topics pt join topics t on t.id = pt.topic_id where pt.project_id = $1 order by pt.priority`,
           [ref.projectId],
         );
-        const previous = await client.query<{ stage: Stage; content: unknown }>(
-          `select s.stage, o.content from stage_runs s join stage_outputs o on o.id = s.latest_output_id
+        const previous = await client.query<{ stage: Stage; content: unknown; stageRunId: string }>(
+          `select s.id as "stageRunId", s.stage, o.content from stage_runs s join stage_outputs o on o.id = s.latest_output_id
             where s.run_id = $1 and s.status = 'completed' order by s.sequence`,
           [ref.runId],
         );
+        // The administrator's decisions on conflicts of the research reach the stages after it.
+        const researchBefore = previous.rows.find((row) => row.stage === 'research');
+        const conflictDecisions = researchBefore
+          ? await promptConflictDecisions(client, researchBefore.stageRunId, researchBefore.content)
+          : [];
         const feedback = await client.query<{ comment: string }>(
           `select comment from stage_reviews where stage_run_id = $1 and action = 'reject' and comment is not null order by created_at`,
           [ref.stageRunId],
@@ -344,6 +354,25 @@ export function createOrchestrationActivities(
           }
           if (held.waiting) return { needsInput: 'deliverables' } as const;
         }
+        // Research does not start before the administrator confirmed the research plan
+        // (ADR-0038); confirming it, even with no question, signals the stage like an answer.
+        if (stage.stage === 'research' && config.requireResearchPlanConfirmation) {
+          const held = await researchPlanGate(client, {
+            workspaceId: ref.workspaceId,
+            projectId: ref.projectId,
+            stageRunId: ref.stageRunId,
+            runId: ref.runId,
+          });
+          if (held.newlyOpened) {
+            await audit(client, ref.workspaceId, {
+              action: 'workflow.research_plan_awaiting',
+              targetType: 'stage_run',
+              targetId: ref.stageRunId,
+              projectId: ref.projectId,
+            });
+          }
+          if (held.waiting) return { needsInput: 'research_plan' } as const;
+        }
         await client.query(
           `update stage_runs set status = 'running' where id = $1 and status = 'waiting_for_human'`,
           [ref.stageRunId],
@@ -352,9 +381,23 @@ export function createOrchestrationActivities(
           `update workflow_runs set status = 'running' where id = $1 and status = 'waiting_for_human'`,
           [ref.runId],
         );
+        // A follow-up round (ADR-0039) works only on the open questions and is joined onto the
+        // output it follows; any other attempt works to the whole confirmed plan.
+        const followup =
+          stage.stage === 'research'
+            ? await activeResearchFollowup(client, ref.stageRunId, ref.projectId)
+            : null;
+        const researchPlan = followup
+          ? { versionNo: followup.plan.versionNo, questions: followup.focus }
+          : stage.stage === 'research'
+            ? await confirmedResearchPlan(client, ref.projectId)
+            : null;
+        const offsets = followup ? refOffsetsOf(followup.previous) : { knowledge: 0, web: 0 };
         const research: ResearchRun | null =
           stage.stage === 'research'
             ? await prepareResearch(client, {
+                plan: researchPlan?.questions,
+                refOffset: offsets.knowledge,
                 scope: toolScope,
                 config,
                 projectTitle: stage.project_title,
@@ -380,7 +423,10 @@ export function createOrchestrationActivities(
           // Later stages see the research as claims with their support, not as raw evidence.
           previous: previous.rows.map((row) =>
             row.stage === 'research'
-              ? { stage: row.stage, content: compactResearchForPrompt(row.content) }
+              ? {
+                  stage: row.stage,
+                  content: compactResearchForPrompt(row.content, conflictDecisions),
+                }
               : row,
           ),
           feedback: feedback.rows.map((row) => row.comment),
@@ -394,6 +440,9 @@ export function createOrchestrationActivities(
             stage.stage === 'evaluation'
               ? ((await confirmedDeliverables(client, ref.projectId)) ?? undefined)
               : undefined,
+          requirements: await promptRequirements(client, ref.projectId),
+          researchPlan: researchPlan?.questions,
+          earlierFindings: followup ? compactResearchForPrompt(followup.previous) : undefined,
         };
         const prompt = stagePrompt(promptInput);
         // Tools the model itself may call (ADR-0023): off unless the setting is on, and only those
@@ -410,6 +459,9 @@ export function createOrchestrationActivities(
           stage: stage.stage,
           toolScope,
           research,
+          researchPlan,
+          followup,
+          webOffset: offsets.web,
           tools,
         } as const;
       });
@@ -477,6 +529,9 @@ export function createOrchestrationActivities(
                 topics: prepared.promptInput.topics,
                 analysis: prepared.promptInput.previous.find((item) => item.stage === 'analysis')
                   ?.content,
+                questions: prepared.researchPlan?.questions.filter(
+                  (question) => question.channel !== 'knowledge',
+                ),
               });
               const started = Date.now();
               try {
@@ -492,7 +547,11 @@ export function createOrchestrationActivities(
                     idempotencyKey: `${key}:${ref.retryNo}:web`,
                   },
                 );
-                web = webRunFrom(found.response.web);
+                web = webRunFrom(
+                  found.response.web,
+                  prepared.webOffset,
+                  prepared.config.researchOfficialDomains,
+                );
                 await run(ref.workspaceId, (client) =>
                   recordToolCall(client, prepared.toolScope, {
                     tool: 'web_search',
@@ -610,7 +669,14 @@ export function createOrchestrationActivities(
           // model was given (the gated `citation_verifier`); other stages store it as returned.
           const content = JSON.stringify(
             research
-              ? await finishResearch(client, prepared.toolScope, research, response.json)
+              ? await finishedResearch(
+                  client,
+                  prepared.toolScope,
+                  research,
+                  response.json,
+                  prepared.researchPlan ?? undefined,
+                  prepared.followup,
+                )
               : prepared.stage === 'evaluation'
                 ? scopeOutlineEvaluation(response.json)
                 : prepared.stage === 'analysis'

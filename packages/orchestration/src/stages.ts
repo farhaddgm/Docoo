@@ -1,5 +1,13 @@
 import {
   DELIVERABLE_STAGE_RULES,
+  NO_RESEARCH_PLAN_RULES,
+  OUTPUT_REQUIREMENT_RULES,
+  RESEARCH_DECISION_RULES,
+  RESEARCH_FOLLOWUP_RULES,
+  RESEARCH_PLAN_STAGE_RULES,
+  type PromptRequirement,
+  WEB_SOURCE_CLASS_RULES,
+  type PromptResearchQuestion,
   STAGE_ROLE,
   composeInstructions,
   type AgentDefinitionContent,
@@ -76,6 +84,7 @@ export const STAGE_SCHEMAS: Record<Stage, JsonSchema> = {
         items: {
           type: 'object',
           properties: {
+            questionId: text,
             claim: text,
             source: text,
             evidence: {
@@ -88,7 +97,7 @@ export const STAGE_SCHEMAS: Record<Stage, JsonSchema> = {
               },
             },
           },
-          required: ['claim', 'source', 'evidence'],
+          required: ['questionId', 'claim', 'source', 'evidence'],
           additionalProperties: false,
         },
       },
@@ -201,6 +210,15 @@ export interface StageContext {
   readonly toolRules?: readonly string[] | undefined;
   /** The deliverables the administrator confirmed (ADR-0031); absent when none were. */
   readonly deliverables?: readonly PromptDeliverable[] | undefined;
+  /** The research questions the administrator confirmed (ADR-0038); absent when there is no plan. */
+  readonly researchPlan?: readonly PromptResearchQuestion[] | undefined;
+  /**
+   * Set in a follow-up round (ADR-0039): what the earlier rounds found for all questions, so the
+   * researcher builds on it and works only on the open questions of `researchPlan`.
+   */
+  readonly earlierFindings?: unknown;
+  /** What the administrator requires of the final output (ADR-0037); absent when nothing was written. */
+  readonly requirements?: readonly PromptRequirement[] | undefined;
   /** Web pages the research stage found (ADR-0026); absent when it searched nothing. */
   readonly web?: readonly WebPromptItem[] | undefined;
 }
@@ -252,6 +270,20 @@ export function scopeAnalysisDefinition(output: unknown, profile: 'full' | 'quic
  * Builds the provider request of one stage attempt. Content and instructions stay in
  * separate channels: project data is quoted as data, never as instructions.
  */
+/** Whether the research output a stage reads carries decisions of the administrator on its conflicts. */
+function decidesConflicts(previous: StageContext['previous']): boolean {
+  return previous.some((item) => {
+    const content = item.content;
+    return (
+      item.stage === 'research' &&
+      content !== null &&
+      typeof content === 'object' &&
+      Array.isArray((content as Record<string, unknown>)['conflictDecisions']) &&
+      ((content as Record<string, unknown>)['conflictDecisions'] as unknown[]).length > 0
+    );
+  });
+}
+
 export function stagePrompt(context: StageContext): { instructions: string; message: string } {
   const instructions = composeInstructions({
     role: STAGE_ROLE[context.stage],
@@ -275,8 +307,20 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
             'This is an explicitly selected optional quick draft, less complete than full analysis. The complete-analysis minimum of30 is reserved for the full continuation. Preserve unresolved ambiguity and state that this draft does not complete full analysis.',
           ]
         : []),
-      ...(context.web && context.web.length > 0 ? WEB_SEARCH_RULES : []),
+      ...(context.stage === 'research'
+        ? context.researchPlan && context.researchPlan.length > 0
+          ? [
+              ...RESEARCH_PLAN_STAGE_RULES,
+              ...(context.earlierFindings !== undefined ? RESEARCH_FOLLOWUP_RULES : []),
+            ]
+          : NO_RESEARCH_PLAN_RULES
+        : []),
+      ...(context.web && context.web.length > 0
+        ? [...WEB_SEARCH_RULES, ...WEB_SOURCE_CLASS_RULES]
+        : []),
+      ...(decidesConflicts(context.previous) ? RESEARCH_DECISION_RULES : []),
       ...(context.deliverables && context.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),
+      ...(context.requirements && context.requirements.length > 0 ? OUTPUT_REQUIREMENT_RULES : []),
       ...(context.business?.rules ?? []),
       ...(context.toolRules ?? []),
       ...(context.humanAnswers && context.humanAnswers.length > 0 ? HUMAN_ANSWER_RULES : []),
@@ -304,8 +348,17 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
       : {}),
     ...(context.business ? { businessProfile: context.business.data } : {}),
     ...(context.web && context.web.length > 0 ? { webSources: context.web } : {}),
+    ...(context.stage === 'research' && context.researchPlan && context.researchPlan.length > 0
+      ? { researchPlan: context.researchPlan }
+      : {}),
+    ...(context.stage === 'research' && context.earlierFindings !== undefined
+      ? { earlierFindings: context.earlierFindings }
+      : {}),
     ...(context.deliverables && context.deliverables.length > 0
       ? { confirmedDeliverables: context.deliverables }
+      : {}),
+    ...(context.requirements && context.requirements.length > 0
+      ? { outputRequirements: context.requirements }
       : {}),
     ...(context.humanAnswers && context.humanAnswers.length > 0
       ? { humanAnswers: context.humanAnswers }

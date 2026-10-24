@@ -194,6 +194,33 @@ describe('prompts', () => {
   });
 });
 
+describe('decisions on research conflicts (ADR-0040)', () => {
+  it('tells the documenter the administrator’s decisions, only when there are some', () => {
+    const decided = outlinePrompt({
+      definition,
+      material: material({
+        researchConflictDecisions: [
+          { conflict: 'Rates differ', decision: 'trust', trustedSource: 'W1 — World Bank' },
+        ],
+      }),
+      plan: plan(5),
+      tablesAllowed: true,
+    });
+    expect(decided.instructions).toContain('researchConflictDecisions');
+    expect(parse(decided.message)).toMatchObject({
+      researchConflictDecisions: [{ conflict: 'Rates differ', decision: 'trust' }],
+    });
+    const plain = outlinePrompt({
+      definition,
+      material: material({ researchConflictDecisions: [] }),
+      plan: plan(5),
+      tablesAllowed: true,
+    });
+    expect(plain.instructions).not.toContain('researchConflictDecisions');
+    expect(plain.message).not.toContain('researchConflictDecisions');
+  });
+});
+
 describe('queries', () => {
   it('starts from the solution, then the problem and its objectives, without duplicates', () => {
     const queries = buildWritingQueries({

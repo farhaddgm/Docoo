@@ -3,6 +3,9 @@ import { createHash } from 'node:crypto';
 import {
   composeInstructions,
   DELIVERABLE_STAGE_RULES,
+  OUTPUT_REQUIREMENT_RULES,
+  type PromptConflictDecision,
+  type PromptRequirement,
   defaultDefinition,
   type AgentDefinitionContent,
   clampBusinessBudget,
@@ -88,7 +91,14 @@ export interface WritingMaterial {
   readonly problem: Record<string, unknown>;
   readonly solution: Record<string, unknown>;
   /** Research findings as claims with their support; never raw evidence. */
-  readonly research: readonly { readonly claim: string; readonly support: string }[];
+  readonly research: readonly {
+    readonly claim: string;
+    readonly support: string;
+    /** strong / limited / no evidence / disputed (ADR-0038); absent in older research. */
+    readonly level?: string;
+  }[];
+  /** The administrator's decisions on conflicts of the research (ADR-0040); absent when none. */
+  readonly researchConflictDecisions?: readonly PromptConflictDecision[] | undefined;
   /** The outline of the project's documentation stage, when the administrator approved one. */
   readonly stageOutline: readonly { readonly heading: string; readonly summary: string }[];
   readonly notes: string | null;
@@ -97,6 +107,8 @@ export interface WritingMaterial {
   readonly business?: BusinessPrompt | null | undefined;
   /** The deliverables the administrator confirmed (ADR-0031); absent when none were. */
   readonly deliverables?: readonly PromptDeliverable[] | undefined;
+  /** What the administrator requires of the final output (ADR-0037); absent when nothing was written. */
+  readonly requirements?: readonly PromptRequirement[] | undefined;
 }
 
 const approxWords = (letters: number, language: 'fa' | 'en') =>
@@ -114,6 +126,9 @@ const shared = (material: WritingMaterial) => ({
   problem: material.problem,
   solution: material.solution,
   research: material.research,
+  ...(material.researchConflictDecisions && material.researchConflictDecisions.length > 0
+    ? { researchConflictDecisions: material.researchConflictDecisions }
+    : {}),
   ...(material.stageOutline.length > 0 ? { approvedOutlineOfTheStage: material.stageOutline } : {}),
   ...(material.notes ? { notesFromTheAdministrator: material.notes } : {}),
   ...(material.knowledge.length > 0
@@ -123,7 +138,14 @@ const shared = (material: WritingMaterial) => ({
   ...(material.deliverables && material.deliverables.length > 0
     ? { confirmedDeliverables: material.deliverables }
     : {}),
+  ...(material.requirements && material.requirements.length > 0
+    ? { outputRequirements: material.requirements }
+    : {}),
 });
+
+/** The writer reads the decisions under the key of its own data. */
+const WRITER_DECISION_RULE =
+  'researchConflictDecisions holds what the administrator decided about conflicts the research reported. "trust": treat the named trustedSource as correct and the other sources of that conflict as superseded. "dismiss": the conflict is not real; ignore it. These decisions are binding; do not reopen them.';
 
 function instructionsFor(
   definition: AgentDefinitionContent,
@@ -155,6 +177,12 @@ function instructionsFor(
         ? []
         : ['Tables and charts are not allowed for this document; use paragraphs and lists only.']),
       ...(material.deliverables && material.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),
+      ...(material.requirements && material.requirements.length > 0
+        ? OUTPUT_REQUIREMENT_RULES
+        : []),
+      ...(material.researchConflictDecisions && material.researchConflictDecisions.length > 0
+        ? [WRITER_DECISION_RULE]
+        : []),
       ...(material.business?.rules ?? []),
       ...callRules,
     ],

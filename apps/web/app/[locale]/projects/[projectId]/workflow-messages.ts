@@ -72,6 +72,7 @@ const messages = {
       cost_limit: 'سقف هزینهٔ این پروژه رسیده است',
       agent_question: 'یک ایجنت از شما سؤال پرسیده است',
       deliverables_confirmation: 'خروجی‌های موردانتظار باید تأیید شوند',
+      research_plan_confirmation: 'برنامهٔ تحقیق باید تأیید شود',
     } as Record<string, string>,
     taskHelp: {
       analysis_answers: 'در بخش «مسئله» به پرسش‌ها پاسخ دهید یا برایشان وضعیت بگذارید.',
@@ -86,6 +87,8 @@ const messages = {
         'در بخش «سؤال ایجنت» پایین همین صفحه پاسخ دهید؛ مرحله با پاسخ شما ادامه می‌یابد.',
       deliverables_confirmation:
         'در بخش «خروجی‌های موردانتظار» همین صفحه فهرست را ویرایش و تأیید کنید؛ ایده‌پردازی با تأیید شما شروع می‌شود.',
+      research_plan_confirmation:
+        'در تب «تحقیق»، برنامهٔ تحقیق را بنویسید یا پیشنهاد هوش مصنوعی را ویرایش و تأیید کنید؛ تحقیق با تأیید شما شروع می‌شود.',
     } as Record<string, string>,
     openProviders: 'رفتن به ارائه‌دهندگان AI',
     providerSaid: 'پاسخ ارائه‌دهنده',
@@ -212,6 +215,44 @@ const messages = {
       cited: 'ارجاع شد',
       notCited: 'ارجاع نشد',
       conflictsHeading: 'تعارض‌ها',
+      levels: {
+        solid: 'قوی',
+        limited: 'محدود',
+        unverified: 'بی‌شاهد',
+        disputed: 'مورد تناقض',
+      } as Record<string, string>,
+      levelHelp: {
+        solid: 'بر دانش تأییدشده تکیه دارد و نقل‌قولش عیناً در متن پیدا شد.',
+        limited: 'فقط بر صفحهٔ وب تکیه دارد؛ پیش از استفاده درستی آن را بسنجید.',
+        unverified: 'هیچ ارجاع تأییدشده‌ای ندارد؛ آن را قطعی فرض نکنید.',
+        disputed: 'منبعی که به آن تکیه دارد در فهرست تعارض‌ها آمده است.',
+      } as Record<string, string>,
+      sourceKinds: {
+        knowledge: 'دانش تأییدشده',
+        official: 'وب رسمی',
+        public: 'وب عمومی',
+      } as Record<string, string>,
+      singleSourceBadge: 'تک‌منبعی',
+      singleSourceHelp: 'فقط یک منبع تأییدشده پشتوانهٔ این یافته است.',
+      overviewWebClasses: 'صفحه‌های وب ارجاع‌شده: {official} رسمی و {public} عمومی.',
+      overviewSingle: '{n} یافته فقط به یک منبع تأییدشده تکیه دارد.',
+      overviewHeading: 'خلاصهٔ تحقیق',
+      overviewFindings:
+        '{findings} یافته: {solid} قوی (دانش تأییدشده)، {limited} محدود (فقط وب)، {unverified} بی‌شاهد و {disputed} مورد تناقض.',
+      overviewQuestions:
+        'از {total} پرسش برنامه: {answered} پاسخ‌داده‌شده، {weak} ضعیف (فقط یافتهٔ بی‌شاهد) و {unanswered} بی‌پاسخ.',
+      overviewSources: 'منابع ارجاع‌شده: {knowledge} دانش تأییدشده و {web} صفحهٔ وب.',
+      overviewNext:
+        'برای پرسش‌های ضعیف یا بی‌پاسخ، در بخش «تکمیل شکاف‌های تحقیق» همین تب یک دور تحقیق تکمیلی بگیرید.',
+      overviewRounds: '{n} دور تکمیلی به این خروجی افزوده شده است.',
+      questionStatus: {
+        answered: 'پاسخ‌داده‌شده',
+        weak: 'ضعیف',
+        unanswered: 'بی‌پاسخ',
+      } as Record<string, string>,
+      questionCounts: '{findings} یافته، {supported} با پشتوانه',
+      questionNoFindings: 'برای این پرسش یافته‌ای ثبت نشد.',
+      unplannedHeading: 'یافته‌های بیرون از پرسش‌های برنامه',
       verificationSummary:
         '{findings} یافته: {supported} پشتیبانی‌شده (با دانش تأییدشده یا صفحهٔ وب) و {unverified} تأییدنشده. {verified} از {citations} ارجاع تأیید شد.',
     },
@@ -317,6 +358,7 @@ const messages = {
       cost_limit: "The project's cost ceiling was reached",
       agent_question: 'An agent asked you a question',
       deliverables_confirmation: 'The expected deliverables need your confirmation',
+      research_plan_confirmation: 'The research plan needs your confirmation',
     } as Record<string, string>,
     taskHelp: {
       analysis_answers: 'Answer the questions or give them a status in the "Problem" section.',
@@ -331,6 +373,8 @@ const messages = {
         'Answer in the "Agent question" section lower on this page; the stage goes on with your answer.',
       deliverables_confirmation:
         'Edit and confirm the list in the "Expected deliverables" section of this page; ideation starts when you confirm.',
+      research_plan_confirmation:
+        'On the Research tab, write the research plan or edit the AI proposal and confirm it; research starts when you confirm.',
     } as Record<string, string>,
     openProviders: 'Go to AI providers',
     providerSaid: 'The provider said',
@@ -454,6 +498,44 @@ const messages = {
       cited: 'Cited',
       notCited: 'Not cited',
       conflictsHeading: 'Conflicts',
+      levels: {
+        solid: 'Strong',
+        limited: 'Limited',
+        unverified: 'No evidence',
+        disputed: 'Disputed',
+      } as Record<string, string>,
+      levelHelp: {
+        solid: 'Rests on approved knowledge and its quote was found verbatim.',
+        limited: 'Rests only on a web page; check it before relying on it.',
+        unverified: 'Has no verified citation; do not treat it as settled.',
+        disputed: 'A source it rests on is named in the conflicts list.',
+      } as Record<string, string>,
+      sourceKinds: {
+        knowledge: 'Approved knowledge',
+        official: 'Official web',
+        public: 'Public web',
+      } as Record<string, string>,
+      singleSourceBadge: 'Single source',
+      singleSourceHelp: 'Only one verified source backs this finding.',
+      overviewWebClasses: 'Web pages cited: {official} official and {public} public.',
+      overviewSingle: '{n} finding(s) rest on a single verified source.',
+      overviewHeading: 'Research at a glance',
+      overviewFindings:
+        '{findings} findings: {solid} strong (approved knowledge), {limited} limited (web only), {unverified} without evidence and {disputed} disputed.',
+      overviewQuestions:
+        'Of {total} planned questions: {answered} answered, {weak} weak (only unverified findings) and {unanswered} unanswered.',
+      overviewSources: 'Sources cited: {knowledge} approved knowledge and {web} web pages.',
+      overviewNext:
+        'For weak or unanswered questions, run a follow-up round in the “Fill the research gaps” section of this tab.',
+      overviewRounds: '{n} follow-up round(s) were added to this output.',
+      questionStatus: {
+        answered: 'Answered',
+        weak: 'Weak',
+        unanswered: 'Unanswered',
+      } as Record<string, string>,
+      questionCounts: '{findings} findings, {supported} with support',
+      questionNoFindings: 'No finding was recorded for this question.',
+      unplannedHeading: 'Findings outside the planned questions',
       verificationSummary:
         '{findings} findings: {supported} supported (by approved knowledge or a web page) and {unverified} unverified. {verified} of {citations} citations were verified.',
     },
