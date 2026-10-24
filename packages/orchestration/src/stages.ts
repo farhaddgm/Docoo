@@ -1,5 +1,7 @@
 import {
   DELIVERABLE_STAGE_RULES,
+  OUTPUT_REQUIREMENT_RULES,
+  type PromptRequirement,
   STAGE_ROLE,
   composeInstructions,
   type AgentDefinitionContent,
@@ -201,6 +203,8 @@ export interface StageContext {
   readonly toolRules?: readonly string[] | undefined;
   /** The deliverables the administrator confirmed (ADR-0031); absent when none were. */
   readonly deliverables?: readonly PromptDeliverable[] | undefined;
+  /** What the administrator requires of the final output (ADR-0037); absent when nothing was written. */
+  readonly requirements?: readonly PromptRequirement[] | undefined;
   /** Web pages the research stage found (ADR-0026); absent when it searched nothing. */
   readonly web?: readonly WebPromptItem[] | undefined;
 }
@@ -277,6 +281,7 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
         : []),
       ...(context.web && context.web.length > 0 ? WEB_SEARCH_RULES : []),
       ...(context.deliverables && context.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),
+      ...(context.requirements && context.requirements.length > 0 ? OUTPUT_REQUIREMENT_RULES : []),
       ...(context.business?.rules ?? []),
       ...(context.toolRules ?? []),
       ...(context.humanAnswers && context.humanAnswers.length > 0 ? HUMAN_ANSWER_RULES : []),
@@ -306,6 +311,9 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
     ...(context.web && context.web.length > 0 ? { webSources: context.web } : {}),
     ...(context.deliverables && context.deliverables.length > 0
       ? { confirmedDeliverables: context.deliverables }
+      : {}),
+    ...(context.requirements && context.requirements.length > 0
+      ? { outputRequirements: context.requirements }
       : {}),
     ...(context.humanAnswers && context.humanAnswers.length > 0
       ? { humanAnswers: context.humanAnswers }

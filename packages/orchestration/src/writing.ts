@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import {
   composeInstructions,
   DELIVERABLE_STAGE_RULES,
+  OUTPUT_REQUIREMENT_RULES,
+  type PromptRequirement,
   defaultDefinition,
   type AgentDefinitionContent,
   clampBusinessBudget,
@@ -97,6 +99,8 @@ export interface WritingMaterial {
   readonly business?: BusinessPrompt | null | undefined;
   /** The deliverables the administrator confirmed (ADR-0031); absent when none were. */
   readonly deliverables?: readonly PromptDeliverable[] | undefined;
+  /** What the administrator requires of the final output (ADR-0037); absent when nothing was written. */
+  readonly requirements?: readonly PromptRequirement[] | undefined;
 }
 
 const approxWords = (letters: number, language: 'fa' | 'en') =>
@@ -122,6 +126,9 @@ const shared = (material: WritingMaterial) => ({
   ...(material.business ? { businessProfile: material.business.data } : {}),
   ...(material.deliverables && material.deliverables.length > 0
     ? { confirmedDeliverables: material.deliverables }
+    : {}),
+  ...(material.requirements && material.requirements.length > 0
+    ? { outputRequirements: material.requirements }
     : {}),
 });
 
@@ -155,6 +162,9 @@ function instructionsFor(
         ? []
         : ['Tables and charts are not allowed for this document; use paragraphs and lists only.']),
       ...(material.deliverables && material.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),
+      ...(material.requirements && material.requirements.length > 0
+        ? OUTPUT_REQUIREMENT_RULES
+        : []),
       ...(material.business?.rules ?? []),
       ...callRules,
     ],

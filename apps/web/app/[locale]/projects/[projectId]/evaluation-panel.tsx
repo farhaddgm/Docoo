@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
+import { RequirementCoverage } from './requirements-panel';
 import { StageAgentChat } from './stage-chat';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
@@ -197,6 +198,8 @@ export function EvaluationPanel({
           </a>
         </div>
       </section>
+
+      <RequirementCoverage locale={locale} base={base} refreshKey={refreshKey} />
 
       <StageAgentChat
         locale={locale}

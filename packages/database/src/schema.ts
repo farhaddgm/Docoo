@@ -1183,6 +1183,72 @@ export const deliverableConfirmations = pgTable(
   (table) => [uniqueIndex('deliverable_confirmations_plan_uq').on(table.planId)],
 );
 
+/** What the administrator requires of the final output, one row per requirement (ADR-0037); append-only. */
+export const outputRequirements = pgTable(
+  'output_requirements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    kind: text('kind').notNull(),
+    body: text('body').notNull(),
+    source: text('source').notNull(),
+    stage: stageKind('stage'),
+    messageId: uuid('message_id').references(() => stageMessages.id),
+    supersedesId: uuid('supersedes_id'),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('output_requirements_project_idx').on(table.projectId, table.createdAt),
+    index('output_requirements_message_idx').on(table.messageId),
+  ],
+);
+
+/** A requirement no longer in force: withdrawn, or replaced by an edit. */
+export const outputRequirementWithdrawals = pgTable(
+  'output_requirement_withdrawals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    requirementId: uuid('requirement_id').notNull(),
+    reasonKind: text('reason_kind').notNull(),
+    reason: text('reason').notNull().default(''),
+    withdrawnBy: uuid('withdrawn_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('output_requirement_withdrawals_uq').on(table.requirementId)],
+);
+
+/** The result of a coverage check for one requirement; the rows of one check share `checkId`. */
+export const outputRequirementChecks = pgTable(
+  'output_requirement_checks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    checkId: uuid('check_id').notNull(),
+    requirementId: uuid('requirement_id').notNull(),
+    verdict: text('verdict').notNull(),
+    evidence: text('evidence').notNull().default(''),
+    foundIn: text('found_in').notNull().default(''),
+    invocationId: uuid('invocation_id'),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('output_requirement_checks_uq').on(table.checkId, table.requirementId),
+    index('output_requirement_checks_project_idx').on(table.projectId, table.createdAt),
+  ],
+);
+
 export const gateDecisions = pgTable(
   'gate_decisions',
   {

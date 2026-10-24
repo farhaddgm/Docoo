@@ -28,7 +28,7 @@ import {
 import type { ObjectStore } from '@docoo/ingestion';
 import { recordDocumentExport } from '@docoo/observability';
 import { dataBlock } from '@docoo/domain';
-import { confirmedDeliverables, ProviderRuntime } from '@docoo/orchestration';
+import { confirmedDeliverables, promptRequirements, ProviderRuntime } from '@docoo/orchestration';
 import { ProviderError, type JsonSchema } from '@docoo/providers';
 import type { PoolClient, QueryResultRow } from 'pg';
 
@@ -675,6 +675,8 @@ export class DocumentsService {
         problem,
         // What the administrator confirmed as the expected outputs (ADR-0031), if anything.
         deliverables: await confirmedDeliverables(client, document.project_id),
+        // What the administrator requires of the final output (ADR-0037).
+        requirements: await promptRequirements(client, document.project_id),
         // The evaluator also checks the document against what the business says about itself.
         company: await this.business.roleBusiness(
           client,
@@ -714,6 +716,11 @@ export class DocumentsService {
                   'confirmedDeliverables lists the outputs the administrator expects from the project. Report as a finding (under the criterion about requirement coverage) any in-scope point of the item this document serves that it leaves out, and any content that belongs to a scopeOut entry. Items marked outsideDocoo are not documents; ignore them.',
                 ]
               : []),
+            ...(prepared.requirements && prepared.requirements.length > 0
+              ? [
+                  'outputRequirements lists what the administrator requires of the final output. Report as a finding (under the criterion about requirement coverage) every "must" item this document leaves out and every "must_not" item whose content it contains; name the requirement in the evidence.',
+                ]
+              : []),
             ...(prepared.company
               ? [
                   'Also report as a finding any place where the document contradicts businessProfile or states a price, number or date of the company that is not there.',
@@ -737,6 +744,9 @@ export class DocumentsService {
                 rubric: prepared.rubric.rubric.criteria,
                 ...(prepared.deliverables && prepared.deliverables.length > 0
                   ? { confirmedDeliverables: prepared.deliverables }
+                  : {}),
+                ...(prepared.requirements && prepared.requirements.length > 0
+                  ? { outputRequirements: prepared.requirements }
                   : {}),
                 document: prepared.version.content,
                 ...(prepared.company ? { businessProfile: prepared.company.prompt.data } : {}),

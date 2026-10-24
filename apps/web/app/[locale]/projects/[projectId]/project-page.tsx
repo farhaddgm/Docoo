@@ -27,6 +27,7 @@ import { DocumentsPanel } from './documents-panel';
 import { KnowledgePanel } from './knowledge-panel';
 import { OverviewPanel } from './overview-panel';
 import { ProblemPanel } from './problem-panel';
+import { RequirementsPanel } from './requirements-panel';
 import { ResearchPanel } from './research-panel';
 import type { ProjectDetail } from './project-types';
 import { SolutionsPanel } from './solutions-panel';
@@ -46,6 +47,7 @@ const tabs = [
   'solutions',
   'documents',
   'evaluation',
+  'requirements',
   'timeline',
 ] as const;
 type Tab = (typeof tabs)[number];
@@ -456,6 +458,14 @@ function ProjectView({
           onOpenWorkflow={() => choose('workflow')}
           onOpenSettings={() => choose('settings')}
           onChanged={changed}
+        />
+      )}
+      {tab === 'requirements' && (
+        <RequirementsPanel
+          locale={locale}
+          base={base}
+          refreshKey={refreshKey}
+          onOpenStage={(stage) => choose(STAGE_TAB[stage] ?? 'workflow')}
         />
       )}
       {tab === 'knowledge' && (

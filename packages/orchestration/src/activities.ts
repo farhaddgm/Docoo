@@ -10,6 +10,7 @@ import { createWritingActivities, type WritingActivities } from './writing-activ
 import type { AnalysisActivities } from './analysis-activities.js';
 import { businessForRole, loadRunBusiness } from './business.js';
 import { confirmedDeliverables, deliverableGate } from './deliverables.js';
+import { promptRequirements } from './output-requirements.js';
 import { audit, inWorkspace } from './db.js';
 import type { RunRef, StageRef } from './refs.js';
 import {
@@ -394,6 +395,7 @@ export function createOrchestrationActivities(
             stage.stage === 'evaluation'
               ? ((await confirmedDeliverables(client, ref.projectId)) ?? undefined)
               : undefined,
+          requirements: await promptRequirements(client, ref.projectId),
         };
         const prompt = stagePrompt(promptInput);
         // Tools the model itself may call (ADR-0023): off unless the setting is on, and only those

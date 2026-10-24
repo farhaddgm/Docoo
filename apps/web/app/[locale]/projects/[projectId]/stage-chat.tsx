@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { useReadOnlyAccess } from '../../resource-access';
+import type { RequirementKind, RequirementsData } from './requirements-panel';
 
 interface Message {
   id: string;
@@ -14,6 +15,8 @@ interface Message {
   status: 'done' | 'failed';
   outputId: string | null;
   replyTo: string | null;
+  /** An active output requirement was taken from this message (ADR-0037). */
+  savedAsRequirement?: boolean;
 }
 
 interface Conversation {
@@ -62,6 +65,22 @@ const presets: Record<string, Record<Locale, string[]>> = {
 
 const copy = {
   fa: {
+    addRequirement: 'افزودن به الزامات خروجی',
+    requirementSaved: 'در الزامات خروجی ثبت شد',
+    requirementFrom: 'الزام خروجی از این پیام',
+    requirementKind: 'نوع',
+    requirementKinds: { must: 'باید داشته باشد', must_not: 'نباید داشته باشد' },
+    requirementText: 'متن الزام',
+    requirementSave: 'ثبت الزام',
+    requirementCancel: 'انصراف',
+    requirementHint: 'متن را می‌توانید پیش از ثبت کوتاه یا بازنویسی کنید.',
+    behindNotice:
+      '{n} الزام خروجی بعد از ساخته شدن این خروجی ثبت شده است و ممکن است در آن لحاظ نشده باشد.',
+    behindAction: 'پیشنهاد متن درخواست بازبینی',
+    behindNoGate: 'این مرحله اکنون منتظر بازبینی نیست؛ برای اعمال آن‌ها مرحله را از نو اجرا کنید.',
+    behindPrefix: 'لطفاً خروجی را با این الزام‌های تازه بازبینی کن:',
+    behindMust: 'باید داشته باشد',
+    behindMustNot: 'نباید داشته باشد',
     presetsLabel: 'پیام‌های آماده',
     title: 'گفتگو با ایجنت این مرحله',
     askOnly: 'این مرحله اکنون منتظر بازبینی شما نیست؛ فقط می‌توانید دربارهٔ خروجی بپرسید.',
@@ -87,11 +106,32 @@ const copy = {
       AI_NOT_CONFIGURED: 'هوش مصنوعی هنوز تنظیم نشده است.',
       WORKFLOW_OUTPUT_SUPERSEDED: 'این نسخه از خروجی عوض شده است؛ صفحه را تازه کنید.',
       STAGE_CHAT_ALREADY_SENT: 'این درخواست قبلاً فرستاده شده است.',
+      OUTPUT_REQUIREMENT_DUPLICATE: 'این الزام قبلاً ثبت شده است.',
+      OUTPUT_REQUIREMENT_LIMIT:
+        'به سقف الزام‌های فعال رسیده‌اید؛ در تب «الزامات خروجی» یکی را بردارید.',
+      OUTPUT_REQUIREMENT_INVALID_REQUEST: 'نوع و متنی دست‌کم سه حرفی لازم است.',
     } as Record<string, string>,
     generic: 'انجام نشد. دوباره تلاش کنید.',
   },
   en: {
     presetsLabel: 'Ready-made messages',
+    addRequirement: 'Add to output requirements',
+    requirementSaved: 'Saved as an output requirement',
+    requirementFrom: 'Output requirement from this message',
+    requirementKind: 'Kind',
+    requirementKinds: { must: 'Must have', must_not: 'Must not have' },
+    requirementText: 'Requirement',
+    requirementSave: 'Save requirement',
+    requirementCancel: 'Cancel',
+    requirementHint: 'You can shorten or reword the text before saving.',
+    behindNotice:
+      '{n} output requirement(s) were added after this output was written, so it may not reflect them.',
+    behindAction: 'Suggest a revision request',
+    behindNoGate: 'This stage is not waiting for your review now; redo the stage to apply them.',
+    behindPrefix: 'Please revise the output for these new requirements:',
+    behindMust: 'Must have',
+    behindMustNot: 'Must not have',
+
     title: 'Talk to the agent of this stage',
     askOnly: 'This stage is not waiting for your review now; you can only ask about its output.',
     help: 'Ask about this output. The agent only explains and never changes it. To get it corrected, send a revision request, then send it back as a rejection for the next attempt.',
@@ -117,6 +157,11 @@ const copy = {
       AI_NOT_CONFIGURED: 'AI is not configured yet.',
       WORKFLOW_OUTPUT_SUPERSEDED: 'This output version was replaced; reload the page.',
       STAGE_CHAT_ALREADY_SENT: 'This request was already sent back.',
+      OUTPUT_REQUIREMENT_DUPLICATE: 'This requirement already exists.',
+      OUTPUT_REQUIREMENT_LIMIT:
+        'You reached the limit of active requirements; withdraw one on the “Output requirements” tab.',
+      OUTPUT_REQUIREMENT_INVALID_REQUEST:
+        'A kind and a text of at least three characters are needed.',
     } as Record<string, string>,
     generic: 'It did not work. Try again.',
   },
@@ -159,6 +204,26 @@ export function StageChat({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const thread = useRef<HTMLUListElement>(null);
+  const [requirements, setRequirements] = useState<RequirementsData | null>(null);
+  const [saving, setSaving] = useState<{
+    messageId: string;
+    kind: RequirementKind;
+    text: string;
+  } | null>(null);
+  /** `/workspaces/{id}/projects/{id}` */
+  const projectBase = stageBase.replace(/\/stages\/[^/]+$/, '');
+
+  const loadRequirements = useCallback(async () => {
+    try {
+      setRequirements(await apiGet<RequirementsData>(`${projectBase}/output-requirements`));
+    } catch {
+      setRequirements(null);
+    }
+  }, [projectBase]);
+
+  useEffect(() => {
+    void loadRequirements();
+  }, [loadRequirements]);
 
   const load = useCallback(async () => {
     try {
@@ -193,6 +258,24 @@ export function StageChat({
     }
   }
 
+  async function saveRequirement() {
+    if (!saving || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await apiSend('POST', `${stageBase}/messages/${saving.messageId}/requirements`, {
+        kind: saving.kind,
+        text: saving.text,
+      });
+      setSaving(null);
+    } catch (caught) {
+      setError(explain(caught));
+    } finally {
+      setBusy(false);
+      await Promise.all([load(), loadRequirements()]);
+    }
+  }
+
   async function sendBack() {
     if (!data || data.pendingRevisionIds.length === 0 || busy) return;
     setBusy(true);
@@ -218,6 +301,19 @@ export function StageChat({
   );
   const visible = (data?.items ?? []).filter((m) => m.kind !== 'rejection_sent');
   const full = data ? data.used >= data.limit : false;
+  // Requirements written after this stage's current output: it has not seen them.
+  const behind = stage
+    ? (requirements?.items ?? []).filter((item) => item.behindStages.includes(stage))
+    : [];
+  const suggestion = () =>
+    [
+      text.behindPrefix,
+      ...behind.map(
+        (item) => `- ${item.kind === 'must' ? text.behindMust : text.behindMustNot}: ${item.text}`,
+      ),
+    ]
+      .join('\n')
+      .slice(0, 4000);
 
   // The thread is as tall as its last four bubbles, whatever their length, and shows the newest.
   const count = visible.length;
@@ -248,6 +344,35 @@ export function StageChat({
     <section className="stack" aria-labelledby={`${id}-title`}>
       <h3 id={`${id}-title`}>{text.title}</h3>
       <p className="muted">{canRevise ? text.help : text.askOnly}</p>
+      {behind.length > 0 && (
+        <div className="notice warn" role="status">
+          <p>{fill(text.behindNotice, { n: formatNumber(locale, behind.length) })}</p>
+          <ul className="plain-list">
+            {behind.map((item) => (
+              <li key={item.id} dir={textDir(locale)}>
+                <span className="badge">
+                  {item.kind === 'must' ? text.behindMust : text.behindMustNot}
+                </span>{' '}
+                {item.text}
+              </li>
+            ))}
+          </ul>
+          {canRevise && !readOnly ? (
+            <div className="toolbar compact">
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={busy || full}
+                onClick={() => setInput(suggestion())}
+              >
+                {text.behindAction}
+              </button>
+            </div>
+          ) : (
+            <p className="muted">{text.behindNoGate}</p>
+          )}
+        </div>
+      )}
       {failed && !data ? (
         <p className="notice error" role="alert">
           {text.loadFailed}
@@ -284,9 +409,86 @@ export function StageChat({
                       {message.content}
                     </p>
                   )}
+                  {message.status !== 'failed' &&
+                    (message.savedAsRequirement ? (
+                      <p className="chat-meta">
+                        <span className="badge tone-ok">{text.requirementSaved}</span>
+                      </p>
+                    ) : (
+                      !readOnly && (
+                        <p className="chat-meta">
+                          <button
+                            data-write-action
+                            className="secondary-button"
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              setSaving({
+                                messageId: message.id,
+                                kind: 'must',
+                                text: message.content.slice(0, 1000),
+                              })
+                            }
+                          >
+                            {text.addRequirement}
+                          </button>
+                        </p>
+                      )
+                    ))}
                 </li>
               ))}
             </ul>
+          )}
+          {saving && !readOnly && (
+            <form
+              className="field-stack"
+              aria-label={text.requirementFrom}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveRequirement();
+              }}
+            >
+              <strong>{text.requirementFrom}</strong>
+              <label htmlFor={`${id}-req-kind`}>{text.requirementKind}</label>
+              <select
+                id={`${id}-req-kind`}
+                value={saving.kind}
+                onChange={(event) =>
+                  setSaving({ ...saving, kind: event.target.value as RequirementKind })
+                }
+              >
+                <option value="must">{text.requirementKinds.must}</option>
+                <option value="must_not">{text.requirementKinds.must_not}</option>
+              </select>
+              <label htmlFor={`${id}-req-text`}>{text.requirementText}</label>
+              <textarea
+                id={`${id}-req-text`}
+                rows={3}
+                dir={textDir(locale)}
+                maxLength={1000}
+                value={saving.text}
+                onChange={(event) => setSaving({ ...saving, text: event.target.value })}
+              />
+              <small className="muted">{text.requirementHint}</small>
+              <div className="toolbar">
+                <button
+                  data-write-action
+                  className="primary-button"
+                  type="submit"
+                  disabled={busy || saving.text.trim().length < 3}
+                >
+                  {text.requirementSave}
+                </button>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setSaving(null)}
+                >
+                  {text.requirementCancel}
+                </button>
+              </div>
+            </form>
           )}
           {data && data.pendingRevisionIds.length > 0 && !readOnly && (
             <div className="stack">
