@@ -3555,7 +3555,6 @@ button.link-button {
 .rich {
   display: grid;
   gap: var(--space-3);
-  max-inline-size: 70ch;
   line-height: 1.85;
   overflow-wrap: anywhere;
 }
