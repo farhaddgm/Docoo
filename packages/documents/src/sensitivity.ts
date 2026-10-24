@@ -95,3 +95,40 @@ export function analyzeWeightSensitivity(
     intervals,
   };
 }
+
+export interface CriterionStability {
+  readonly criterionKey: string;
+  readonly intervals: { from: number; to: number; winnerIds: string[] }[];
+  /** True when the baseline winner(s) stay the sole winner across every whole-percent weight. */
+  readonly stable: boolean;
+  /** Lowest and highest whole-percent weight at which the baseline winner is still the sole winner. */
+  readonly holdsFrom: number | null;
+  readonly holdsTo: number | null;
+}
+
+/** Runs the weight sweep for every enabled criterion at once, so no one tries them one by one. */
+export function analyzeStability(
+  alternatives: readonly ScoredAlternative[],
+  criteria: readonly Criterion[],
+): { baselineWinnerIds: string[]; criteria: CriterionStability[] } {
+  const baselineWinnerIds = rankAlternatives(alternatives, criteria)
+    .filter((r) => r.rank === 1)
+    .map((r) => r.id);
+  const soleWinner = baselineWinnerIds.length === 1 ? baselineWinnerIds[0] : undefined;
+  const result = criteria
+    .filter((c) => c.enabled)
+    .map((c) => {
+      const { intervals } = analyzeWeightSensitivity(alternatives, criteria, c.key, c.weight);
+      const holding = intervals.filter(
+        (i) => i.winnerIds.length === 1 && i.winnerIds[0] === soleWinner,
+      );
+      return {
+        criterionKey: c.key,
+        intervals,
+        stable: soleWinner !== undefined && intervals.length === 1 && holding.length === 1,
+        holdsFrom: holding.length ? Math.min(...holding.map((i) => i.from)) : null,
+        holdsTo: holding.length ? Math.max(...holding.map((i) => i.to)) : null,
+      };
+    });
+  return { baselineWinnerIds, criteria: result };
+}
