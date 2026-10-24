@@ -81,6 +81,8 @@ function ProjectView({
   const [load, setLoad] = useState<Load>('loading');
   const [tab, setTab] = useState<Tab>('overview');
   const [refreshKey, setRefreshKey] = useState(0);
+  // The card's edit button opens the overview's edit form.
+  const [editRequested, setEditRequested] = useState(false);
   // What the header's health and the overview's milestone are drawn from; null if unreadable.
   const [facts, setFacts] = useState<WorkflowFacts | null>(null);
 
@@ -120,6 +122,11 @@ function ProjectView({
     const url = new URL(location.href);
     url.searchParams.set('tab', next);
     history.replaceState(null, '', url);
+  }
+
+  function startEdit() {
+    setEditRequested(true);
+    choose('overview');
   }
 
   /** The journey card presses one of the lifecycle buttons, so its confirmation stays the same. */
@@ -164,6 +171,7 @@ function ProjectView({
       {locale === 'fa' ? 'شواهد و تصمیم' : 'Evidence and decisions'}
     </Link>
   );
+  const canEdit = !accessReadOnly && project.status !== 'archived' && project.status !== 'deleted';
   const health = projectHealth(project, facts);
   const milestone = projectMilestone(project.status, facts);
 
@@ -213,6 +221,22 @@ function ProjectView({
             </dd>
           </div>
           <div>
+            <dt>{text.topics}</dt>
+            <dd dir={textDir(locale)}>
+              {project.topics.length > 0 ? (
+                <ul className="chip-list">
+                  {project.topics.map((topic) => (
+                    <li key={topic.topicId}>
+                      <span className="badge">{topic.title}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                text.noTopics
+              )}
+            </dd>
+          </div>
+          <div>
             <dt>{text.stage}</dt>
             <dd>{text.stages[project.currentStage] ?? project.currentStage}</dd>
           </div>
@@ -235,9 +259,6 @@ function ProjectView({
             </div>
           )}
         </dl>
-        <p>
-          <strong>{text.nextAction}:</strong> {text.nextActions[project.nextAction] ?? ''}
-        </p>
         {project.pauseReason && (
           <p className="notice error" role="status">
             <strong>{text.pauseReason}:</strong>{' '}
@@ -252,8 +273,15 @@ function ProjectView({
               // The pause itself is already written out above, with its reason.
               reasons: health.reasons.filter((reason) => reason.code !== 'paused'),
             }}
-            onOpenWorkflow={() => choose('workflow')}
+            onOpenWorkflow={project.status === 'active' ? undefined : () => choose('workflow')}
           />
+        )}
+        {canEdit && (
+          <p>
+            <button type="button" className="secondary-button" onClick={startEdit}>
+              {text.edit}
+            </button>
+          </p>
         )}
         {!accessReadOnly && (
           <Lifecycle
@@ -302,6 +330,8 @@ function ProjectView({
             setProject(next);
             setRefreshKey((key) => key + 1);
           }}
+          startEditing={editRequested}
+          onEditStarted={() => setEditRequested(false)}
           onOpenTab={choose}
           onCommand={runCommand}
         />

@@ -4497,11 +4497,35 @@ button.link-button {
 }
 
 .topbar-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.topbar-title h1 {
+  margin: 0;
+  font-size: inherit;
   font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   min-width: 0;
+}
+
+.topbar-title .owner-crown {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.topbar-title .owner-crown svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .topbar-title + .topbar-context {
@@ -4688,4 +4712,13 @@ button.link-button {
 
 .journey-upcoming .journey-head {
   color: var(--color-muted);
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }

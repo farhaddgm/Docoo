@@ -317,19 +317,13 @@ export function AppShell({
     </div>
   );
 
-  const pageHeadFor = (ownerPage: boolean) => (
+  const pageHead = (
     <div className="page-head">
       <SectionTitle as="h1" id="page-title" focusable help={subtitle}>
         {title}
       </SectionTitle>
-      {ownerPage && (
-        <span className="owner-crown" role="img" aria-label={content.ownerOnlyBadge}>
-          <Icon name="owner" className="" />
-        </span>
-      )}
     </div>
   );
-  const pageHead = pageHeadFor(false);
 
   const skipLink = (
     <a className="skip-link" href="#main-content">
@@ -523,9 +517,16 @@ export function AppShell({
             >
               <Icon name="menu" className="" />
             </button>
-            <span className="topbar-title" aria-hidden="true">
-              {title}
-            </span>
+            <div className="topbar-title">
+              <SectionTitle as="h1" id="page-title" focusable help={subtitle}>
+                {title}
+              </SectionTitle>
+              {ownerSection && isOwner && (
+                <span className="owner-crown" role="img" aria-label={content.ownerOnlyBadge}>
+                  <Icon name="owner" className="" />
+                </span>
+              )}
+            </div>
             {projectName && (
               <div className="topbar-context">
                 <span className="workspace-chip" title={projectName}>
@@ -537,7 +538,6 @@ export function AppShell({
             {topbarActions}
           </header>
           <div className="content">
-            {pageHeadFor(ownerSection && isOwner)}
             <main id="main-content" tabIndex={-1}>
               {ownerSection && !isOwner ? (
                 <p className="notice error" role="alert">

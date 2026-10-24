@@ -51,7 +51,8 @@ export function HealthReasons({
 }: {
   locale: Locale;
   health: Health;
-  onOpenWorkflow: () => void;
+  /** Left out for an active project, which does not need a pointer to the workflow. */
+  onOpenWorkflow?: (() => void) | undefined;
 }) {
   const text = healthMessages(locale);
   if (health.reasons.length === 0) return null;
@@ -64,9 +65,11 @@ export function HealthReasons({
           </li>
         ))}
       </ul>
-      <button className="secondary-button" type="button" onClick={onOpenWorkflow}>
-        {text.openWorkflow}
-      </button>
+      {onOpenWorkflow && (
+        <button className="secondary-button" type="button" onClick={onOpenWorkflow}>
+          {text.openWorkflow}
+        </button>
+      )}
     </div>
   );
 }
