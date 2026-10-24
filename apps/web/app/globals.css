@@ -4118,21 +4118,6 @@ button.link-button {
   min-height: var(--control-height);
 }
 
-.setting-edit {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: var(--space-2) var(--space-3);
-}
-
-.setting-edit .filter-grid {
-  flex: 1 1 11rem;
-}
-
-.setting-edit .toolbar {
-  flex: none;
-}
-
 .setting-row .link-like {
   justify-self: start;
   font-size: 0.8125rem;
@@ -4742,4 +4727,33 @@ button.link-button {
 
 .chat-message .notice {
   margin: 0;
+}
+
+/* The reason for a change: label, field and buttons on one line (wrapping when narrow). */
+.reason-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0;
+}
+
+.reason-bar > .field-label {
+  flex: none;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.reason-bar .reason-input {
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+  inline-size: auto;
+  max-inline-size: 100%;
+}
+
+.reason-actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }

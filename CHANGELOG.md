@@ -6,6 +6,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Changed
 
+- **"Reason for the change" is one line everywhere.** Settings, templates and levels, agent roles, knowledge edits, document edits, project and topic edits, business link changes, stage decisions and the confirm panels (pause, complete, cancel and so on) now put the label, the field and the buttons on one line (wrapping on a phone), instead of three stacked rows. Nothing about what is asked or recorded changed.
 - **Conversations with an agent are bubbles.** In the chat under a stage's output, your messages and the agent's are rounded bubbles in two close shades, on opposite sides. At most four messages show at once; older ones are scrolled to, and the thread opens on the newest.
 
 ## [0.39.0] — 2026-10-24

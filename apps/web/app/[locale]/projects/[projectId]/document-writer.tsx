@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { apiGet, apiSend } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { explainError, Notice, useAction } from '../../use-action';
+import { ReasonBar } from '../../reason-bar';
 import { editorMessages, fill } from './editor-messages';
 import { TermIssues, type TermIssueView } from './term-issues';
 import { FieldLabel, SectionTitle } from '../../../info-tip';
@@ -367,17 +368,13 @@ export function DocumentWriter({
           )}
           {cancelReason !== null && LIVE.includes(latest.status) && (
             <div className="card confirm-panel">
-              <div className="field-stack">
-                <label htmlFor="writer-cancel-reason">{text.cancelReason}</label>
-                <input
-                  id="writer-cancel-reason"
-                  value={cancelReason}
-                  maxLength={1000}
-                  autoComplete="off"
-                  onChange={(event) => setCancelReason(event.target.value)}
-                />
-              </div>
-              <div className="toolbar">
+              <ReasonBar
+                locale={locale}
+                id="writer-cancel-reason"
+                label={text.cancelReason}
+                value={cancelReason}
+                onChange={setCancelReason}
+              >
                 <button
                   data-write-action
                   className="secondary-button danger"
@@ -399,7 +396,7 @@ export function DocumentWriter({
                 >
                   {text.keepWriting}
                 </button>
-              </div>
+              </ReasonBar>
             </div>
           )}
 

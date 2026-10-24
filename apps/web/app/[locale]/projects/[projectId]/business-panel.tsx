@@ -8,6 +8,7 @@ import { apiGet, apiSend } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { explainError, Notice, useAction } from '../../use-action';
+import { ReasonBar } from '../../reason-bar';
 import { AiView, VersionsView } from './business-ai';
 import {
   Address,
@@ -393,17 +394,13 @@ export function BusinessPanel({
               onChange={setPicked}
               disabled={busy}
             />
-            <div className="filter-grid">
-              <label htmlFor={`${id}-reason`}>{panel.reason}</label>
-              <input
-                id={`${id}-reason`}
-                value={reason}
-                maxLength={1000}
-                onChange={(event) => setReason(event.target.value)}
-                autoComplete="off"
-              />
-            </div>
-            <div className="toolbar">
+            <ReasonBar
+              locale={locale}
+              id={`${id}-reason`}
+              label={panel.reason}
+              value={reason}
+              onChange={setReason}
+            >
               <button
                 className="primary-button"
                 type="button"
@@ -420,24 +417,20 @@ export function BusinessPanel({
               >
                 {panel.cancel}
               </button>
-            </div>
+            </ReasonBar>
           </div>
         )}
         {mode === 'unlink' && (
           <div className="card confirm-panel stack" role="group" aria-labelledby={`${id}-unlink`}>
             <h3 id={`${id}-unlink`}>{panel.unlink}</h3>
             <p>{panel.unlinkHelp}</p>
-            <div className="filter-grid">
-              <label htmlFor={`${id}-unlink-reason`}>{panel.reason}</label>
-              <input
-                id={`${id}-unlink-reason`}
-                value={reason}
-                maxLength={1000}
-                onChange={(event) => setReason(event.target.value)}
-                autoComplete="off"
-              />
-            </div>
-            <div className="toolbar">
+            <ReasonBar
+              locale={locale}
+              id={`${id}-unlink-reason`}
+              label={panel.reason}
+              value={reason}
+              onChange={setReason}
+            >
               <button className="primary-button" type="button" disabled={busy} onClick={unlink}>
                 {busy ? panel.working : panel.confirm}
               </button>
@@ -449,7 +442,7 @@ export function BusinessPanel({
               >
                 {panel.cancel}
               </button>
-            </div>
+            </ReasonBar>
           </div>
         )}
       </section>

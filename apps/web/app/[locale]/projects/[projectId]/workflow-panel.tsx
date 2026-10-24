@@ -8,6 +8,7 @@ import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, messagesFor, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
+import { ReasonBar } from '../../reason-bar';
 import { DeliverablesPanel } from './deliverables-panel';
 import { StageChat, StageChatDisclosure } from './stage-chat';
 import { StageOutput } from './stage-output';
@@ -306,19 +307,15 @@ export function WorkflowPanel({
         {cancelling && (
           <form data-write-action className="filter-form" onSubmit={cancelRun}>
             <p className="muted">{text.cancelHelp}</p>
-            <div className="filter-grid">
-              <label htmlFor="cancel-reason">{text.cancelReason}</label>
-              <input
-                id="cancel-reason"
-                value={cancelReason}
-                minLength={3}
-                maxLength={1000}
-                onChange={(event) => setCancelReason(event.target.value)}
-                autoComplete="off"
-                required
-              />
-            </div>
-            <div className="toolbar">
+            <ReasonBar
+              locale={locale}
+              id="cancel-reason"
+              label={text.cancelReason}
+              value={cancelReason}
+              minLength={3}
+              required
+              onChange={setCancelReason}
+            >
               <button className="primary-button" type="submit" disabled={busy}>
                 {busy ? text.working : text.cancelConfirm}
               </button>
@@ -331,7 +328,7 @@ export function WorkflowPanel({
               >
                 {text.cancel}
               </button>
-            </div>
+            </ReasonBar>
           </form>
         )}
         <h3>{text.stagesTitle}</h3>
@@ -736,18 +733,16 @@ function ReviewPanel({
                     {text.editInvalid}
                   </p>
                 )}
-                <label htmlFor={`edit-reason-${stage.stage}`}>{text.editReason}</label>
-                <input
-                  id={`edit-reason-${stage.stage}`}
-                  value={reason}
-                  minLength={3}
-                  maxLength={1000}
-                  onChange={(event) => setReason(event.target.value)}
-                  autoComplete="off"
-                  required
-                />
               </div>
-              <div className="toolbar">
+              <ReasonBar
+                locale={locale}
+                id={`edit-reason-${stage.stage}`}
+                label={text.editReason}
+                value={reason}
+                minLength={3}
+                required
+                onChange={setReason}
+              >
                 <button className="primary-button" type="submit" disabled={busy}>
                   {busy ? text.working : text.editSave}
                 </button>
@@ -760,7 +755,7 @@ function ReviewPanel({
                 >
                   {text.cancel}
                 </button>
-              </div>
+              </ReasonBar>
             </form>
           ) : (
             <div className="stack">
@@ -898,22 +893,20 @@ function AttemptDecision({
           <option value="extend">{text.decisionExtend}</option>
           <option value="pass">{text.decisionPass}</option>
         </select>
-        <label htmlFor={`decision-reason-${stage.stage}`}>{text.decisionReason}</label>
-        <input
-          id={`decision-reason-${stage.stage}`}
-          value={reason}
-          minLength={10}
-          maxLength={1000}
-          onChange={(event) => setReason(event.target.value)}
-          autoComplete="off"
-          required
-        />
       </div>
-      <div className="toolbar">
+      <ReasonBar
+        locale={locale}
+        id={`decision-reason-${stage.stage}`}
+        label={text.decisionReason}
+        value={reason}
+        minLength={10}
+        required
+        onChange={setReason}
+      >
         <button className="primary-button" type="submit" disabled={busy}>
           {busy ? text.working : text.decisionSubmit}
         </button>
-      </div>
+      </ReasonBar>
     </form>
   );
 }

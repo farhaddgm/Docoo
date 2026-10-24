@@ -7,6 +7,7 @@ import { FieldLabel } from '../../info-tip';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { explainError, Notice, useAction } from '../use-action';
+import { ReasonBar } from '../reason-bar';
 import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
 import { topicMessages } from './messages';
@@ -330,17 +331,13 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
               ))}
             </ul>
           )}
-          <div className="filter-grid">
-            <label htmlFor="confirm-reason">{text.reason}</label>
-            <input
-              id="confirm-reason"
-              value={confirming.reason}
-              maxLength={1000}
-              onChange={(event) => setConfirming({ ...confirming, reason: event.target.value })}
-              autoComplete="off"
-            />
-          </div>
-          <div className="toolbar">
+          <ReasonBar
+            locale={locale}
+            id="confirm-reason"
+            label={text.reason}
+            value={confirming.reason}
+            onChange={(reason) => setConfirming({ ...confirming, reason })}
+          >
             <button
               className="primary-button"
               type="button"
@@ -357,7 +354,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
             >
               {text.cancel}
             </button>
-          </div>
+          </ReasonBar>
         </section>
       )}
 
@@ -547,23 +544,21 @@ function EditTopic({
           <option value="fa">{text.languages.fa}</option>
           <option value="en">{text.languages.en}</option>
         </select>
-        <label htmlFor="edit-reason">{text.reason}</label>
-        <input
-          id="edit-reason"
-          value={reason}
-          maxLength={1000}
-          onChange={(event) => setReason(event.target.value)}
-          autoComplete="off"
-        />
       </div>
-      <div className="toolbar">
+      <ReasonBar
+        locale={locale}
+        id="edit-reason"
+        label={text.reason}
+        value={reason}
+        onChange={setReason}
+      >
         <button className="primary-button" type="submit" disabled={busy}>
           {busy ? text.working : text.save}
         </button>
         <button className="secondary-button" type="button" disabled={busy} onClick={onCancel}>
           {text.cancel}
         </button>
-      </div>
+      </ReasonBar>
     </form>
   );
 }
