@@ -122,33 +122,33 @@ function RuleList({
               ]
                 .filter(Boolean)
                 .join(' ')}
-              onDragOver={(event) => {
-                if (dragging === null || disabled) return;
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'move';
-                if (over !== index) setOver(index);
-              }}
-              onDrop={(event) => {
-                if (dragging === null || disabled) return;
-                event.preventDefault();
-                moveTo(dragging, index);
-                setDragging(null);
-                setOver(null);
-              }}
+              data-rule-list={idPrefix}
+              data-rule-row={index}
             >
               <span
                 className="drag-handle"
                 aria-hidden="true"
                 title={dragTitle}
-                draggable={!disabled}
-                onDragStart={(event) => {
-                  const row = event.currentTarget.closest('li');
-                  if (row) event.dataTransfer.setDragImage(row, 16, 16);
-                  event.dataTransfer.effectAllowed = 'move';
-                  event.dataTransfer.setData('text/plain', String(index));
+                onPointerDown={(event) => {
+                  if (disabled || event.button !== 0) return;
+                  event.currentTarget.setPointerCapture(event.pointerId);
                   setDragging(index);
+                  setOver(index);
                 }}
-                onDragEnd={() => {
+                onPointerMove={(event) => {
+                  if (dragging !== index) return;
+                  const row = document
+                    .elementFromPoint(event.clientX, event.clientY)
+                    ?.closest<HTMLElement>(`[data-rule-list="${idPrefix}"]`);
+                  const target = row ? Number(row.dataset['ruleRow']) : NaN;
+                  if (!Number.isNaN(target)) setOver(target);
+                }}
+                onPointerUp={() => {
+                  if (dragging === index && over !== null) moveTo(index, over);
+                  setDragging(null);
+                  setOver(null);
+                }}
+                onPointerCancel={() => {
                   setDragging(null);
                   setOver(null);
                 }}
