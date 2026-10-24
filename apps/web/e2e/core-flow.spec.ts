@@ -86,7 +86,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: topicText.save }).click();
     await expect(page.getByRole('status').filter({ hasText: topicText.updatedDone })).toBeVisible();
     await expect(row).toContainText(titles.marketEdited);
-    await expect(row.getByRole('cell').nth(2)).toHaveText('۲'); // version 2, in Persian digits
+    await expect(row.getByRole('cell').nth(1)).toHaveText('۲'); // version 2, in Persian digits
 
     // Archive shows its effect first and moves the topic to the archived view.
     await row.getByRole('button', { name: topicText.archive }).click();
