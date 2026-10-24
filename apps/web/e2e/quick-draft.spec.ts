@@ -27,21 +27,23 @@ test('an optional quick draft continues to full analysis with the original answe
     title: `حوزهٔ پیش‌نویس سریع ${stamp}`,
   });
   await page.goto('/fa/projects/new');
-  await expect(page.locator('#analysis-profile')).toHaveValue('full');
   await page.locator('#project-code').fill(`qd-${stamp}`);
   await page.locator('#project-title').fill(`آزمون ادامهٔ پیش‌نویس ${stamp}`);
   await page.locator('#project-problem').fill('چگونه مشتریان تکراری را حفظ کنیم؟');
+  const wizard = wizardMessages('fa');
+  // The kind of analysis is chosen on the second step, with the business and the topics.
+  await page.getByRole('button', { name: wizard.next }).click();
+  await expect(page.locator('#analysis-profile')).toHaveValue('full');
   await page.locator('#analysis-profile').selectOption('quick');
   await expect(page.getByText(quickDraftMessages('fa').warning, { exact: true })).toBeVisible();
   await expectNoSeriousA11yViolations(page);
   await page.reload();
   await expect(page.locator('#analysis-profile')).toHaveValue('quick');
-  const wizard = wizardMessages('fa');
-  await page.getByRole('button', { name: wizard.next }).click();
   await page.locator('#project-add-topic').selectOption(topic.topic.id);
   await page.getByRole('button', { name: 'افزودن حوزه', exact: true }).click();
-  for (let step = 2; step <= 7; step += 1)
-    await page.getByRole('button', { name: wizard.next }).click();
+  // The advanced settings keep their defaults; the second Next goes straight to the review.
+  await page.getByRole('button', { name: wizard.next }).click();
+  await page.getByRole('button', { name: wizard.continueDefaults }).click();
   await expect(page.getByText(quickDraftMessages('fa').quick, { exact: true })).toBeVisible();
   await page.getByRole('button', { name: wizard.create }).click();
   await expect(page).toHaveURL(/\/fa\/projects\/[0-9a-f-]{36}$/u);

@@ -120,6 +120,14 @@ function ProjectView({
     history.replaceState(null, '', url);
   }
 
+  /** The journey card presses one of the lifecycle buttons, so its confirmation stays the same. */
+  function runCommand(command: string) {
+    const button = document.querySelector<HTMLButtonElement>(`[data-command="${command}"]`);
+    if (!button) return;
+    button.click();
+    button.scrollIntoView?.({ block: 'center' });
+  }
+
   /** Called when something else on the page may have changed the project or its workflow. */
   const changed = useCallback(() => {
     void reload();
@@ -280,17 +288,20 @@ function ProjectView({
       </nav>
 
       {tab === 'overview' && (
-        <MilestoneCard locale={locale} milestone={milestone} stages={facts?.stages ?? []} />
-      )}
-      {tab === 'overview' && (
         <OverviewPanel
           locale={locale}
           workspaceId={workspaceId}
           project={project}
+          facts={facts}
+          milestone={
+            <MilestoneCard locale={locale} milestone={milestone} stages={facts?.stages ?? []} />
+          }
           onChanged={(next) => {
             setProject(next);
             setRefreshKey((key) => key + 1);
           }}
+          onOpenTab={choose}
+          onCommand={runCommand}
         />
       )}
       {tab === 'business' && (
@@ -460,6 +471,7 @@ function Lifecycle({
                   : 'secondary-button'
             }
             type="button"
+            data-command={command}
             disabled={busy}
             aria-expanded={
               needsConfirmation.has(command) ? pending?.command === command : undefined

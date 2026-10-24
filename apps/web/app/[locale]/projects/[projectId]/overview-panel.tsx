@@ -1,7 +1,7 @@
 'use client';
 import { useReadOnlyAccess } from '../../resource-access';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 
 import { apiSend } from '../../../api-client';
 import type { Locale } from '../../../i18n';
@@ -9,7 +9,10 @@ import { Notice, useAction } from '../../use-action';
 import { explainProject } from '../explain';
 import { projectMessages } from '../messages';
 import { ProjectForm, type ProjectValues } from '../project-form';
+import { JourneyCard } from './journey-card';
 import { projectPageMessages } from './messages';
+import type { WorkflowFacts } from './project-health';
+import { hasJourney } from './project-journey';
 import { NextProjectCard, OriginNote } from './next-project';
 import type { ProjectDetail } from './project-types';
 import { textDir } from '../../../i18n';
@@ -19,12 +22,23 @@ export function OverviewPanel({
   locale,
   workspaceId,
   project,
+  facts,
+  milestone,
   onChanged,
+  onOpenTab,
+  onCommand,
 }: {
   locale: Locale;
   workspaceId: string;
   project: ProjectDetail;
+  /** The latest workflow facts the journey is drawn from; null when they could not be read. */
+  facts: WorkflowFacts | null;
+  /** The progress card; it comes after the journey, which is the main guide of the page. */
+  milestone: ReactNode;
   onChanged: (project: ProjectDetail) => void;
+  onOpenTab: (tab: 'problem' | 'workflow' | 'solutions' | 'documents') => void;
+  /** Runs one of the project's lifecycle buttons (activate, complete, resume). */
+  onCommand: (command: string) => void;
 }) {
   const accessReadOnly = useReadOnlyAccess();
   const text = projectPageMessages(locale);
@@ -107,6 +121,18 @@ export function OverviewPanel({
   return (
     <div className="stack">
       <Notice notice={notice} />
+      {hasJourney(project.status) && (
+        <JourneyCard
+          locale={locale}
+          project={project}
+          facts={facts}
+          readOnly={readOnly}
+          onEditProblem={() => setEditing(true)}
+          onOpenTab={onOpenTab}
+          onCommand={onCommand}
+        />
+      )}
+      {milestone}
       <OriginNote locale={locale} project={project} />
       <section className="card" aria-labelledby="problem-title">
         <div className="toolbar spread">

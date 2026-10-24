@@ -34,32 +34,31 @@ import {
 import { CriteriaEditor, criteriaIssue, sameCriteria, type Criterion } from './criteria-editor';
 import { quickDraftMessages } from '../quick-draft-messages';
 import { wizardMessages } from './wizard-messages';
+import {
+  ADVANCED_SECTIONS,
+  ADVANCED_STEP,
+  CONTEXT_STEP,
+  PROBLEM_STEP,
+  REQUIRED_STEPS,
+  REVIEW_STEP,
+  STEP_COUNT,
+  changedInSection,
+  migrateDraftStep,
+  reachableSteps,
+  shouldSuggestCode,
+  suggestProjectCode,
+  type AdvancedSection,
+} from './wizard-model';
 import { FieldLabel } from '../../../info-tip';
 
-/** The settings each step offers, in the order of UX §5 (steps 3 to 7). */
-const STEP_KEYS: Record<number, readonly string[]> = {
-  2: [
-    'workflow.require_human_approval',
-    'workflow.max_attempts_per_stage',
-    'ai.max_cost_usd_per_run',
-  ],
-  4: [
-    'research.max_queries',
-    'research.knowledge_limit',
-    'research.max_sources',
-    'knowledge.min_audit_score',
-  ],
-  5: ['solution.count'],
-  6: ['document.level', 'document.default_template', 'document.default_export_format'],
-};
-const STEP_COUNT = 8;
-const MODEL_STEP = 3;
-const SOLUTIONS_STEP = 5;
-const REVIEW_STEP = 7;
 const MAX_CODE = 64;
 
 interface Draft {
+  /** 2 for the four-step wizard (ADR-0035); a draft without it came from the eight-step one. */
+  v?: number;
   step: number;
+  /** The person edited the code by hand, so the title no longer suggests one. */
+  codeTouched?: boolean;
   values: ProjectValues;
   /** Texts the administrator changed; a key missing here keeps its inherited value. */
   touched: Record<string, string>;
@@ -92,10 +91,10 @@ function writeDraft(workspaceId: string, draft: Draft | null) {
 }
 
 /**
- * Creating a project in eight steps (UX §5, ADR-0018): basics, topics, workflow, model,
- * knowledge, solutions, documents and a review of the effective configuration. Everything the
- * administrator changes is sent with the project and saved in one transaction; a value left
- * alone stays inherited from the topics and the workspace.
+ * Creating a project in four steps (UX §5, ADR-0035): the problem, the context and method, the
+ * optional advanced settings (workflow, model, knowledge, solutions, documents) and a review of
+ * the effective configuration. Everything the administrator changes is sent with the project and
+ * saved in one transaction; a value left alone stays inherited from the topics and the workspace.
  */
 export function ProjectWizard({
   locale,
@@ -128,6 +127,8 @@ export function ProjectWizard({
   const [model, setModel] = useState('');
   const [criteria, setCriteria] = useState<Criterion[] | null>(null);
   const [business, setBusiness] = useState<ContenterBusinessItem | null>(null);
+  const [codeTouched, setCodeTouched] = useState(false);
+  const [opened, setOpened] = useState<Partial<Record<AdvancedSection, boolean>>>({});
   const [defaultCriteria, setDefaultCriteria] = useState<Criterion[] | null>(null);
   const [restored, setRestored] = useState(false);
   const [ready, setReady] = useState(false);
@@ -144,7 +145,10 @@ export function ProjectWizard({
   useEffect(() => {
     const draft = readDraft(workspaceId);
     if (draft) {
-      setStep(Math.min(Math.max(draft.step, 0), STEP_COUNT - 1));
+      // A draft of the eight-step wizard has no version; its step is mapped onto the new four.
+      const restoredStep = draft.v === 2 ? draft.step : migrateDraftStep(draft.step);
+      setStep(Math.min(Math.max(restoredStep, 0), STEP_COUNT - 1));
+      setCodeTouched(draft.codeTouched ?? draft.values.code.trim() !== '');
       // Drafts saved before topic knowledge sharing existed have no such fields.
       setValues({
         ...draft.values,
@@ -166,8 +170,29 @@ export function ProjectWizard({
 
   useEffect(() => {
     if (!ready) return;
-    writeDraft(workspaceId, { step, values, touched, connectionId, model, criteria, business });
-  }, [ready, workspaceId, step, values, touched, connectionId, model, criteria, business]);
+    writeDraft(workspaceId, {
+      v: 2,
+      step,
+      codeTouched,
+      values,
+      touched,
+      connectionId,
+      model,
+      criteria,
+      business,
+    });
+  }, [
+    ready,
+    workspaceId,
+    step,
+    codeTouched,
+    values,
+    touched,
+    connectionId,
+    model,
+    criteria,
+    business,
+  ]);
 
   useEffect(() => {
     apiGet<{ items: Definition[] }>(`${base}/settings/definitions`)
@@ -287,17 +312,31 @@ export function ProjectWizard({
   // The workspace or a topic can require every project to belong to a business.
   const businessRequired = baseline?.values['business.required'] === true;
   const businessProblem = businessRequired && business === null;
-  const stepProblem = (() => {
-    if (step === 0 && !basicsOk) return text.needBasics;
-    if (step === 0 && businessProblem) return businessText.picker.needed;
-    if (step === SOLUTIONS_STEP && criteriaProblem !== null)
+  // The section of the advanced step that holds a value which cannot be sent, if any.
+  const problemSection: AdvancedSection | null = (() => {
+    if (choices.problem) {
+      const found = ADVANCED_SECTIONS.find((section) =>
+        (section.keys as readonly string[]).includes(choices.problem!.key),
+      );
+      if (found) return found.id;
+    }
+    return criteriaProblem !== null ? 'solutions' : null;
+  })();
+  const advancedProblem = (() => {
+    if (criteriaProblem !== null)
       return criteriaProblem === 'none_enabled'
         ? text.criteriaNoneEnabled
         : fill(text.criteriaNotHundred, { n: formatNumber(locale, criteriaProblem) });
-    const own = STEP_KEYS[step];
-    if (own && choices.problem && own.includes(choices.problem.key)) return choices.problem.text;
+    return choices.problem?.text ?? null;
+  })();
+  const stepProblem = (() => {
+    if (step === PROBLEM_STEP && !basicsOk) return text.needBasics;
+    if (step === CONTEXT_STEP && businessProblem) return businessText.picker.needed;
+    if (step === ADVANCED_STEP) return advancedProblem;
     return null;
   })();
+  const reachable = reachableSteps({ problem: basicsOk, context: !businessProblem });
+  const changedKeys = new Set(choices.overrides.map((item) => item.key));
 
   function submit() {
     void action.run(async () => {
@@ -343,12 +382,91 @@ export function ProjectWizard({
     setModel('');
     setCriteria(null);
     setBusiness(null);
+    setCodeTouched(false);
+    setOpened({});
     setStep(0);
     setRestored(false);
   }
 
+  /** The title suggests the code until the person writes the code themselves. */
+  function changeBasics(next: ProjectValues) {
+    let value = next;
+    if (next.code !== values.code) {
+      // Emptying the field hands the code back to the title.
+      setCodeTouched(next.code.trim() !== '');
+    } else if (!codeTouched && next.title !== values.title) {
+      const suggestion = shouldSuggestCode(next.title) ? suggestProjectCode(next.title) : '';
+      // A stamped fallback code stays put while the title is typed, instead of changing at once.
+      const keep = suggestion.startsWith('PRJ-') && values.code.startsWith('PRJ-');
+      value = { ...next, code: keep ? values.code : suggestion };
+    }
+    setValues(value);
+  }
+
   const stepName = text.steps[step]!;
-  const keys = STEP_KEYS[step];
+  const modelChanged = connectionId !== '' && model !== '';
+  const criteriaChanged = customCriteria !== null;
+  const sectionCounts = ADVANCED_SECTIONS.map((section) =>
+    changedInSection(section.id, changedKeys, { modelChanged, criteriaChanged }),
+  );
+  const totalChanged = sectionCounts.reduce((sum, count) => sum + count, 0);
+
+  function goTo(index: number) {
+    if (index <= step || index <= reachable) setStep(index);
+  }
+
+  /** How the stepper shows a step the person has left: finished, or still missing something. */
+  function stepMark(index: number): 'done' | 'problem' | null {
+    if (index >= step) return null;
+    if (index === PROBLEM_STEP) return basicsOk ? 'done' : 'problem';
+    if (index === CONTEXT_STEP) return businessProblem ? 'problem' : 'done';
+    if (index === ADVANCED_STEP) return advancedProblem ? 'problem' : 'done';
+    return null;
+  }
+
+  const settingsList = (keys: readonly string[]) =>
+    baseline && keys.length > 0 ? (
+      <ul className="plain-list stack">
+        {keys.map((key) => {
+          const def = definition(key);
+          if (!def) return null;
+          const inherited = baseline.values[key];
+          const draft = touched[key] ?? toControlText(def.valueSchema, inherited);
+          const parsed = parseControlText(def.valueSchema, draft);
+          const changed = key in touched && parsed.ok && !sameValue(parsed.value, inherited);
+          return (
+            <li key={key} className="stack">
+              <SettingControl
+                id={`${id}-${key}`}
+                locale={locale}
+                definition={def}
+                draft={draft}
+                onChange={(next) => setTouched({ ...touched, [key]: next })}
+                describedBy={`${id}-${key}-note`}
+              />
+              <p id={`${id}-${key}-note`} className="muted">
+                <code dir="ltr">{key}</code> —{' '}
+                {changed ? (
+                  <strong>{text.changedHere}</strong>
+                ) : (
+                  <>
+                    {text.inherited}: {displayValue(locale, settings, def, inherited)} (
+                    {settings.sources[sourceKind(baseline.sources[key])]})
+                  </>
+                )}
+                {NOT_ENFORCED.has(key) && <> — {settings.notEnforced}</>}
+              </p>
+              {!parsed.ok && (
+                <p className="notice error" role="alert">
+                  {problemText(locale, settings, parsed.problem)}
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    ) : null;
+
   return (
     <fieldset
       className="stack wizard-fields"
@@ -358,21 +476,47 @@ export function ProjectWizard({
     >
       <nav aria-label={text.stepsLabel}>
         <ol className="stepper">
-          {text.steps.map((name, index) => (
-            <li
-              key={name}
-              className={index < step ? 'step-done' : undefined}
-              aria-current={index === step ? 'step' : undefined}
-            >
-              <span className="step-number" aria-hidden="true">
-                {formatNumber(locale, index + 1)}
-              </span>
-              <span className="step-name">
-                <span className="visually-hidden">{formatNumber(locale, index + 1)}. </span>
-                {name}
-              </span>
-            </li>
-          ))}
+          {text.steps.map((name, index) => {
+            const mark = stepMark(index);
+            const required = REQUIRED_STEPS.includes(index);
+            return (
+              <li
+                key={name}
+                className={
+                  mark === 'done' ? 'step-done' : mark === 'problem' ? 'step-problem' : undefined
+                }
+                aria-current={index === step ? 'step' : undefined}
+              >
+                <button
+                  type="button"
+                  className="step-button"
+                  disabled={!(index <= step || index <= reachable)}
+                  onClick={() => goTo(index)}
+                >
+                  <span className="step-number" aria-hidden="true">
+                    {mark === 'done' ? '✓' : formatNumber(locale, index + 1)}
+                  </span>
+                  <span className="step-name">
+                    <span className="visually-hidden">{formatNumber(locale, index + 1)}. </span>
+                    {name}
+                  </span>
+                  <span className="step-kind">
+                    {required ? text.required : text.optional}
+                    {mark === 'done' && (
+                      <span className="visually-hidden"> — {text.stepDoneMark}</span>
+                    )}
+                    {mark === 'problem' && <> — {text.stepNeedsWork}</>}
+                    {index === ADVANCED_STEP && totalChanged > 0 && (
+                      <>
+                        {' '}
+                        — {fill(text.stepChangedCount, { n: formatNumber(locale, totalChanged) })}
+                      </>
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ol>
       </nav>
       <p className="muted">{text.draftSaved}</p>
@@ -397,9 +541,36 @@ export function ProjectWizard({
         </h2>
         <p className="muted">{text.stepHelp[step]}</p>
 
-        {step === 0 && (
+        {step === PROBLEM_STEP && (
           <>
-            <BasicsFields locale={locale} values={values} onChange={setValues} />
+            <BasicsFields locale={locale} values={values} onChange={changeBasics} />
+            {!codeTouched && values.code !== '' && (
+              <p className="muted" role="status">
+                {text.codeSuggested}
+              </p>
+            )}
+          </>
+        )}
+        {step === CONTEXT_STEP && (
+          <>
+            <BusinessPicker
+              locale={locale}
+              workspaceId={workspaceId}
+              value={business}
+              onChange={setBusiness}
+              required={businessRequired}
+            />
+            <TopicsSection
+              locale={locale}
+              workspaceId={workspaceId}
+              values={values}
+              onChange={setValues}
+            />
+            {values.topics.length === 0 && (
+              <p className="notice" role="status">
+                {text.noTopicsNote}
+              </p>
+            )}
             <div className="filter-grid">
               <FieldLabel
                 htmlFor="analysis-profile"
@@ -427,111 +598,95 @@ export function ProjectWizard({
             </div>
           </>
         )}
-        {step === 0 && (
-          <BusinessPicker
-            locale={locale}
-            workspaceId={workspaceId}
-            value={business}
-            onChange={setBusiness}
-            required={businessRequired}
-          />
-        )}
-        {step === 1 && (
-          <TopicsSection
-            locale={locale}
-            workspaceId={workspaceId}
-            values={values}
-            onChange={setValues}
-          />
-        )}
-        {step === MODEL_STEP && (
-          <ModelPicker
-            locale={locale}
-            workspaceId={workspaceId}
-            connectionId={connectionId}
-            model={model}
-            idPrefix={`${id}-model`}
-            onChange={(nextConnection, nextModel) => {
-              setConnectionId(nextConnection);
-              setModel(nextModel);
-            }}
-          />
-        )}
-        {step === 6 && values.analysisProfile === 'quick' && (
-          <p className="notice">{quickDraftMessages(locale).level}</p>
-        )}
-        {baselineFailed && (
-          <div className="stack" role="alert">
-            <p className="notice error">{text.baselineFailed}</p>
-            <div className="toolbar">
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() => setBaselineTry((value) => value + 1)}
-              >
-                {text.baselineRetry}
-              </button>
+        {step === ADVANCED_STEP && (
+          <>
+            <p className="muted">{text.advancedIntro}</p>
+            {baselineFailed && (
+              <div className="stack" role="alert">
+                <p className="notice error">{text.baselineFailed}</p>
+                <div className="toolbar">
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => setBaselineTry((value) => value + 1)}
+                  >
+                    {text.baselineRetry}
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="stack">
+              {ADVANCED_SECTIONS.map((section, index) => {
+                const count = sectionCounts[index]!;
+                return (
+                  <details
+                    key={section.id}
+                    className="wizard-section"
+                    open={Boolean(opened[section.id]) || problemSection === section.id}
+                    onToggle={(event) => {
+                      const open = event.currentTarget.open;
+                      setOpened((current) =>
+                        Boolean(current[section.id]) === open
+                          ? current
+                          : { ...current, [section.id]: open },
+                      );
+                    }}
+                  >
+                    <summary>
+                      <span className="wizard-section-title">{text.sectionTitles[section.id]}</span>
+                      <span className={`badge ${count > 0 ? 'tone-ok' : 'tone-neutral'}`}>
+                        {count > 0
+                          ? fill(text.sectionChanged, { n: formatNumber(locale, count) })
+                          : text.sectionDefault}
+                      </span>
+                    </summary>
+                    <div className="stack wizard-section-body">
+                      <p className="muted">{text.sectionHelp[section.id]}</p>
+                      {section.id === 'model' && (
+                        <ModelPicker
+                          locale={locale}
+                          workspaceId={workspaceId}
+                          connectionId={connectionId}
+                          model={model}
+                          idPrefix={`${id}-model`}
+                          onChange={(nextConnection, nextModel) => {
+                            setConnectionId(nextConnection);
+                            setModel(nextModel);
+                          }}
+                        />
+                      )}
+                      {settingsList(section.keys)}
+                      {section.id === 'solutions' &&
+                        (shownCriteria ? (
+                          <CriteriaEditor
+                            locale={locale}
+                            idPrefix={`${id}-criteria`}
+                            criteria={shownCriteria}
+                            onChange={setCriteria}
+                          />
+                        ) : (
+                          <p role="status">{text.criteriaLoading}</p>
+                        ))}
+                      {section.id === 'solutions' && customCriteria && (
+                        <div>
+                          <button
+                            type="button"
+                            className="link-like"
+                            onClick={() => setCriteria(null)}
+                          >
+                            {text.criteriaReset}
+                          </button>
+                        </div>
+                      )}
+                      {section.id === 'documents' && values.analysisProfile === 'quick' && (
+                        <p className="notice">{quickDraftMessages(locale).level}</p>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
             </div>
-          </div>
-        )}
-        {keys && baseline && (
-          <ul className="plain-list stack">
-            {keys.map((key) => {
-              const def = definition(key);
-              if (!def) return null;
-              const inherited = baseline.values[key];
-              const draft = touched[key] ?? toControlText(def.valueSchema, inherited);
-              const parsed = parseControlText(def.valueSchema, draft);
-              const changed = key in touched && parsed.ok && !sameValue(parsed.value, inherited);
-              return (
-                <li key={key} className="stack">
-                  <SettingControl
-                    id={`${id}-${key}`}
-                    locale={locale}
-                    definition={def}
-                    draft={draft}
-                    onChange={(next) => setTouched({ ...touched, [key]: next })}
-                    describedBy={`${id}-${key}-note`}
-                  />
-                  <p id={`${id}-${key}-note`} className="muted">
-                    <code dir="ltr">{key}</code> —{' '}
-                    {changed ? (
-                      <strong>{text.changedHere}</strong>
-                    ) : (
-                      <>
-                        {text.inherited}: {displayValue(locale, settings, def, inherited)} (
-                        {settings.sources[sourceKind(baseline.sources[key])]})
-                      </>
-                    )}
-                    {NOT_ENFORCED.has(key) && <> — {settings.notEnforced}</>}
-                  </p>
-                  {!parsed.ok && (
-                    <p className="notice error" role="alert">
-                      {problemText(locale, settings, parsed.problem)}
-                    </p>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {step === SOLUTIONS_STEP &&
-          (shownCriteria ? (
-            <CriteriaEditor
-              locale={locale}
-              idPrefix={`${id}-criteria`}
-              criteria={shownCriteria}
-              onChange={setCriteria}
-            />
-          ) : (
-            <p role="status">{text.criteriaLoading}</p>
-          ))}
-        {step === SOLUTIONS_STEP && customCriteria && (
-          <div>
-            <button type="button" className="link-like" onClick={() => setCriteria(null)}>
-              {text.criteriaReset}
-            </button>
-          </div>
+          </>
         )}
         {step === REVIEW_STEP && (
           <Review
@@ -546,6 +701,7 @@ export function ProjectWizard({
             criteriaCount={
               customCriteria ? customCriteria.filter((item) => item.enabled).length : null
             }
+            onEdit={setStep}
           />
         )}
         {stepProblem && (
@@ -571,7 +727,7 @@ export function ProjectWizard({
             disabled={stepProblem !== null || action.busy}
             onClick={() => setStep(step + 1)}
           >
-            {text.next}
+            {step === ADVANCED_STEP && totalChanged === 0 ? text.continueDefaults : text.next}
           </button>
         ) : (
           <button
@@ -604,6 +760,7 @@ function Review({
   connectionId,
   business,
   criteriaCount,
+  onEdit,
 }: {
   locale: Locale;
   definitions: Definition[];
@@ -614,6 +771,7 @@ function Review({
   connectionId: string;
   business: ContenterBusinessItem | null;
   criteriaCount: number | null;
+  onEdit: (step: number) => void;
 }) {
   const text = wizardMessages(locale);
   const businessText = businessMessages(locale);
@@ -682,6 +840,26 @@ function Review({
           </dd>
         </div>
       </dl>
+      <div className="toolbar">
+        <button type="button" className="secondary-button" onClick={() => onEdit(PROBLEM_STEP)}>
+          {text.reviewEditProblem}
+        </button>
+        <button type="button" className="secondary-button" onClick={() => onEdit(CONTEXT_STEP)}>
+          {text.reviewEditContext}
+        </button>
+        <button type="button" className="secondary-button" onClick={() => onEdit(ADVANCED_STEP)}>
+          {text.reviewEditAdvanced}
+        </button>
+      </div>
+      <section className="card stack" aria-labelledby="wizard-roadmap-title">
+        <h3 id="wizard-roadmap-title">{text.roadmapTitle}</h3>
+        <p className="muted">{text.roadmapIntro}</p>
+        <ol className="roadmap">
+          {text.roadmap.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ol>
+      </section>
       <p>
         {overrides > 0
           ? fill(text.overridesCount, { n: formatNumber(locale, overrides) })
