@@ -255,12 +255,9 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                   <colgroup>
                     <col className="col-code" />
                     <col className="col-title" />
-                    <col className="col-topics" />
                     <col className="col-business" />
                     <col className="col-status" />
                     <col className="col-stage" />
-                    <col className="col-waiting" />
-                    <col className="col-language" />
                     <col className="col-owner" />
                     <col className="col-updated" />
                   </colgroup>
@@ -268,12 +265,9 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                     <tr>
                       <th scope="col">{text.code}</th>
                       <th scope="col">{text.projectTitle}</th>
-                      <th scope="col">{text.topics}</th>
                       <th scope="col">{text.business}</th>
                       <th scope="col">{text.status}</th>
                       <th scope="col">{text.stage}</th>
-                      <th scope="col">{text.waiting}</th>
-                      <th scope="col">{text.language}</th>
                       <th scope="col">{text.owner}</th>
                       <th scope="col">{text.updated}</th>
                     </tr>
@@ -287,14 +281,6 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                           </Link>
                         </th>
                         <ClippedCell dir={textDir(locale)} value={project.title} />
-                        <ClippedCell
-                          dir={textDir(locale)}
-                          value={
-                            project.topics.length === 0
-                              ? '—'
-                              : project.topics.map((topic) => topic.title).join('، ')
-                          }
-                        />
                         <ClippedCell dir={textDir(locale)} value={project.business?.name ?? '—'} />
                         <td>
                           <span className={`badge state-${project.status}`}>
@@ -302,16 +288,6 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                           </span>
                         </td>
                         <td>{text.stages[project.currentStage] ?? project.currentStage}</td>
-                        <td>
-                          {project.waiting ? (
-                            <span className="badge state-waiting_for_human">
-                              {text.waitingKinds[project.waiting.kind] ?? text.waitingOther}
-                            </span>
-                          ) : (
-                            text.noneWaiting
-                          )}
-                        </td>
-                        <td>{text.languages[project.outputLanguage]}</td>
                         <ClippedCell
                           dir={textDir(locale)}
                           value={project.owner?.displayName ?? '—'}
