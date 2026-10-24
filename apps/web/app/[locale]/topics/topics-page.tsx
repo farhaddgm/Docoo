@@ -100,7 +100,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
     if (editing) editHeading.current?.focus();
   }, [editing?.id]);
 
-  const [form, setForm] = useState({ code: '', title: '', description: '', language: locale });
+  const [form, setForm] = useState({ code: '', title: '', description: '' });
 
   function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,9 +109,10 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
         code: form.code.trim(),
         title: form.title.trim(),
         description: form.description.trim(),
-        language: form.language,
+        // The topic has no language of its own to choose; it starts from the interface language.
+        language: locale,
       });
-      setForm({ code: '', title: '', description: '', language: locale });
+      setForm({ code: '', title: '', description: '' });
       if (view === 'active') await load('active');
       else setView('active');
     }, text.created);
@@ -208,7 +209,6 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                     <tr>
                       <th scope="col">{text.code}</th>
                       <th scope="col">{text.topicTitle}</th>
-                      <th scope="col">{text.language}</th>
                       <th scope="col">{text.version}</th>
                       <th scope="col">{view === 'deleted' ? text.purgeAfter : text.updated}</th>
                       <th scope="col">
@@ -223,7 +223,6 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                           {topic.code}
                         </th>
                         <td dir={textDir(locale)}>{topic.title}</td>
-                        <td>{text.languages[topic.language]}</td>
                         <td>{formatNumber(locale, topic.version)}</td>
                         <td>
                           {formatDateTime(
@@ -423,15 +422,6 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
               onChange={(event) => setForm({ ...form, description: event.target.value })}
               maxLength={10000}
             />
-            <label htmlFor="topic-language">{text.language}</label>
-            <select
-              id="topic-language"
-              value={form.language}
-              onChange={(event) => setForm({ ...form, language: event.target.value as Locale })}
-            >
-              <option value="fa">{text.languages.fa}</option>
-              <option value="en">{text.languages.en}</option>
-            </select>
           </div>
           <div className="toolbar">
             <button className="primary-button" type="submit" disabled={busy}>
@@ -459,7 +449,7 @@ function EditTopic({
   heading: RefObject<HTMLHeadingElement | null>;
   onCancel: () => void;
   onSave: (
-    changes: Partial<Pick<Topic, 'code' | 'title' | 'description' | 'language'>>,
+    changes: Partial<Pick<Topic, 'code' | 'title' | 'description'>>,
     reason: string,
   ) => Promise<boolean>;
   onUnchanged: () => void;
@@ -469,7 +459,6 @@ function EditTopic({
     code: topic.code,
     title: topic.title,
     description: topic.description,
-    language: topic.language,
   });
   const [reason, setReason] = useState('');
 
@@ -479,13 +468,11 @@ function EditTopic({
       code: fields.code.trim(),
       title: fields.title.trim(),
       description: fields.description.trim(),
-      language: fields.language,
     };
     const changes: Partial<typeof trimmed> = {};
     if (trimmed.code !== topic.code) changes.code = trimmed.code;
     if (trimmed.title !== topic.title) changes.title = trimmed.title;
     if (trimmed.description !== topic.description) changes.description = trimmed.description;
-    if (trimmed.language !== topic.language) changes.language = trimmed.language;
     if (Object.keys(changes).length === 0) {
       onUnchanged();
       return;
@@ -533,17 +520,6 @@ function EditTopic({
           onChange={(event) => setFields({ ...fields, description: event.target.value })}
           maxLength={10000}
         />
-        <label htmlFor="edit-language">{text.language}</label>
-        <select
-          id="edit-language"
-          value={fields.language}
-          onChange={(event) =>
-            setFields({ ...fields, language: event.target.value as TopicLanguage })
-          }
-        >
-          <option value="fa">{text.languages.fa}</option>
-          <option value="en">{text.languages.en}</option>
-        </select>
       </div>
       <ReasonBar
         locale={locale}
