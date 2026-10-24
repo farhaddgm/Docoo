@@ -30,6 +30,16 @@ const followupBody = z
       .optional(),
   })
   .strict();
+const decisionBody = z
+  .object({
+    decision: z.enum(['trust', 'dismiss']),
+    trustedRef: z
+      .string()
+      .regex(/^[KWkw]\d{1,4}$/u)
+      .optional(),
+    note: z.string().trim().max(500).optional(),
+  })
+  .strict();
 const confirmBody = z
   .object({
     versionNo: z.number().int().min(1).max(100_000),
@@ -129,5 +139,31 @@ export class ResearchPlanController {
   @RequireWorkspacePermission('project.run')
   async requirementGaps(@Req() request: FastifyRequest, @Param('projectId') project: string) {
     return this.plans.requirementGaps(workspaceContext(request), id(project));
+  }
+
+  @Get('projects/:projectId/research-conflicts')
+  @ApiOperation({ summary: 'The conflicts the research reports and the decisions on them' })
+  @RequireWorkspacePermission('project.read')
+  async conflicts(@Req() request: FastifyRequest, @Param('projectId') project: string) {
+    return this.plans.conflicts(workspaceContext(request), id(project));
+  }
+
+  @Post('projects/:projectId/research-conflicts/:fingerprint/decision')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Trust one source of a research conflict, or dismiss the conflict' })
+  @RequireWorkspacePermission('project.update')
+  async decide(
+    @Req() request: FastifyRequest,
+    @Param('projectId') project: string,
+    @Param('fingerprint') fingerprint: string,
+    @Body() body: unknown,
+  ) {
+    if (!/^[0-9a-f]{16}$/u.test(fingerprint)) throw invalid();
+    return this.plans.decideConflict(
+      workspaceContext(request),
+      id(project),
+      fingerprint,
+      parse(decisionBody, body),
+    );
   }
 }

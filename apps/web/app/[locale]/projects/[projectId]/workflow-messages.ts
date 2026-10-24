@@ -227,6 +227,15 @@ const messages = {
         unverified: 'هیچ ارجاع تأییدشده‌ای ندارد؛ آن را قطعی فرض نکنید.',
         disputed: 'منبعی که به آن تکیه دارد در فهرست تعارض‌ها آمده است.',
       } as Record<string, string>,
+      sourceKinds: {
+        knowledge: 'دانش تأییدشده',
+        official: 'وب رسمی',
+        public: 'وب عمومی',
+      } as Record<string, string>,
+      singleSourceBadge: 'تک‌منبعی',
+      singleSourceHelp: 'فقط یک منبع تأییدشده پشتوانهٔ این یافته است.',
+      overviewWebClasses: 'صفحه‌های وب ارجاع‌شده: {official} رسمی و {public} عمومی.',
+      overviewSingle: '{n} یافته فقط به یک منبع تأییدشده تکیه دارد.',
       overviewHeading: 'خلاصهٔ تحقیق',
       overviewFindings:
         '{findings} یافته: {solid} قوی (دانش تأییدشده)، {limited} محدود (فقط وب)، {unverified} بی‌شاهد و {disputed} مورد تناقض.',
@@ -501,6 +510,15 @@ const messages = {
         unverified: 'Has no verified citation; do not treat it as settled.',
         disputed: 'A source it rests on is named in the conflicts list.',
       } as Record<string, string>,
+      sourceKinds: {
+        knowledge: 'Approved knowledge',
+        official: 'Official web',
+        public: 'Public web',
+      } as Record<string, string>,
+      singleSourceBadge: 'Single source',
+      singleSourceHelp: 'Only one verified source backs this finding.',
+      overviewWebClasses: 'Web pages cited: {official} official and {public} public.',
+      overviewSingle: '{n} finding(s) rest on a single verified source.',
       overviewHeading: 'Research at a glance',
       overviewFindings:
         '{findings} findings: {solid} strong (approved knowledge), {limited} limited (web only), {unverified} without evidence and {disputed} disputed.',

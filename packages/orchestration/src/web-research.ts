@@ -1,4 +1,4 @@
-import { dataBlock, type PromptResearchQuestion } from '@docoo/domain';
+import { classifyWebSource, dataBlock, type PromptResearchQuestion } from '@docoo/domain';
 import type { WebSearchResult } from '@docoo/providers';
 
 import { NO_WEB, type WebRun } from './research.js';
@@ -54,12 +54,18 @@ export function webSearchPrompt(input: {
 }
 
 /** The pages and queries of a search as the numbered web side of a research attempt. */
-export function webRunFrom(result: WebSearchResult | undefined, refOffset = 0): WebRun {
+export function webRunFrom(
+  result: WebSearchResult | undefined,
+  refOffset = 0,
+  /** Domains the administrator counts as official (`research.official_domains`, ADR-0040). */
+  officialDomains: readonly string[] = [],
+): WebRun {
   const sources = (result?.sources ?? []).slice(0, WEB_SOURCE_LIMIT).map((source, index) => ({
     ref: `W${refOffset + index + 1}`,
     url: source.url,
     title: source.title,
     text: source.text,
+    sourceClass: classifyWebSource(source.url, officialDomains),
   }));
   return {
     status: sources.length > 0 ? 'used' : 'none',

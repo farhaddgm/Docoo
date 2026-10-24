@@ -2,7 +2,9 @@ import { randomBytes } from 'node:crypto';
 
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  CONFLICT_NOTE_MAX,
   dataBlock,
+  isConflictDecision,
   normalizeRequirementGaps,
   normalizeResearchQuestions,
   openFollowupQuestions,
@@ -23,9 +25,11 @@ import {
   confirmedResearchPlan,
   followupMarker,
   insertResearchPlan,
+  latestConflictDecisions,
   latestResearchPlan,
   promptRequirements,
   ProviderRuntime,
+  researchConflicts,
   confirmedDeliverables,
   type ResearchContent,
   type ResearchPlanView,
@@ -551,6 +555,98 @@ export class ResearchPlanService {
     // After the commit: a lost signal is repaired by the workflow sync.
     await this.workflow.resumeAfterResearchPlan(context, projectId);
     return { plan };
+  }
+
+  /** The conflicts the newest research output reports, with the administrator's decision on each. */
+  async conflicts(context: WorkspaceRequestContext, projectId: string) {
+    return this.database.run(context, async (client) => {
+      await this.project(client, projectId);
+      return this.conflictsView(client, projectId);
+    });
+  }
+
+  /**
+   * Records what the administrator decided about one conflict: trust one of the sources it names,
+   * or dismiss it as not real. The decision is binding for the stages after the research and
+   * stays with the conflict when a follow-up round is joined onto the output (ADR-0040).
+   */
+  async decideConflict(
+    context: WorkspaceRequestContext,
+    projectId: string,
+    fingerprint: string,
+    input: { decision: unknown; trustedRef?: unknown; note?: unknown },
+  ) {
+    return this.database.run(context, async (client) => {
+      await this.project(client, projectId);
+      const research = await this.researchState(client, projectId);
+      const conflict = research
+        ? researchConflicts(research.content).find((item) => item.fingerprint === fingerprint)
+        : undefined;
+      if (!research || !conflict) {
+        throw notFound(
+          'RESEARCH_CONFLICT_NOT_FOUND',
+          'The research does not report this conflict.',
+        );
+      }
+      const note =
+        typeof input.note === 'string' ? input.note.trim().slice(0, CONFLICT_NOTE_MAX) : '';
+      const trustedRef =
+        input.decision === 'trust' && typeof input.trustedRef === 'string'
+          ? input.trustedRef.toUpperCase()
+          : null;
+      if (
+        !isConflictDecision(input.decision) ||
+        (input.decision === 'trust' &&
+          !conflict.sources.some((source) => source.ref === trustedRef)) ||
+        (input.decision === 'dismiss' &&
+          input.trustedRef !== undefined &&
+          input.trustedRef !== null)
+      ) {
+        throw badRequest(
+          'RESEARCH_CONFLICT_INVALID',
+          'Trust one of the sources of the conflict, or dismiss it.',
+        );
+      }
+      await client.query(
+        `insert into research_conflict_decisions
+           (workspace_id, project_id, stage_run_id, output_id, fingerprint, decision, trusted_ref, note, decided_by)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          context.workspaceId,
+          projectId,
+          research.stageRunId,
+          research.outputId,
+          fingerprint,
+          input.decision,
+          trustedRef,
+          note,
+          context.actorId,
+        ],
+      );
+      // The decision and its kind only: the conflict's text is the project's own content.
+      await writeAudit(client, context, {
+        action: 'research_plan.conflict_decided',
+        targetType: 'stage_run',
+        targetId: research.stageRunId,
+        projectId,
+        after: { fingerprint, decision: input.decision },
+      });
+      return this.conflictsView(client, projectId);
+    });
+  }
+
+  private async conflictsView(client: PoolClient, projectId: string) {
+    const research = await this.researchState(client, projectId);
+    if (!research) return { stageRunId: null, outputId: null, items: [] };
+    const decisions = await latestConflictDecisions(client, research.stageRunId);
+    return {
+      stageRunId: research.stageRunId,
+      outputId: research.outputId,
+      items: researchConflicts(research.content).map((conflict) => ({
+        ...conflict,
+        decision: decisions.get(conflict.fingerprint) ?? null,
+      })),
+    };
   }
 
   /** The research stage of the latest run with its newest output, or null while it has none. */

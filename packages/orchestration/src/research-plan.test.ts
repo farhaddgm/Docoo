@@ -167,7 +167,8 @@ describe('research findings filed under planned questions (ADR-0038)', () => {
       unverified: 2,
       disputed: 1,
       questions: { total: 4, answered: 3, weak: 1, unanswered: 0 },
-      sources: { knowledge: 2, web: 1 },
+      sources: { knowledge: 2, web: 1, official: 0, public: 1 },
+      singleSource: 3,
     });
   });
 
@@ -387,7 +388,8 @@ describe('follow-up round (ADR-0039)', () => {
       unverified: 1,
       disputed: 1,
       questions: { total: 5, answered: 5, weak: 0, unanswered: 0 },
-      sources: { knowledge: 3, web: 2 },
+      sources: { knowledge: 3, web: 2, official: 0, public: 2 },
+      singleSource: 5,
     });
     expect(merged.verification.findings).toBe(6);
     expect(merged.verification.supported).toBe(5);

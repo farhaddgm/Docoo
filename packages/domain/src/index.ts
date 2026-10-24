@@ -4,6 +4,7 @@ export * from './business.js';
 export * from './deliverables.js';
 export * from './output-requirements.js';
 export * from './research-plan.js';
+export * from './research-sources.js';
 export * from './project.js';
 export * from './role-evaluation.js';
 export * from './calculator.js';

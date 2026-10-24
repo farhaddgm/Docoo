@@ -1,4 +1,9 @@
-import type { PromptResearchQuestion } from '@docoo/domain';
+import type {
+  PromptConflictDecision,
+  PromptResearchQuestion,
+  SourceClass,
+  WebSourceClass,
+} from '@docoo/domain';
 import { normalizeForSearch } from '@docoo/knowledge';
 
 import type { RetrievedPassage } from './knowledge-retrieval.js';
@@ -243,6 +248,8 @@ export interface WebPassage {
   readonly title: string;
   /** The part of the provider's notes that rests on the page; quotes are checked against it. */
   readonly text: string;
+  /** Decided by code from the address (ADR-0040); older outputs have none and count as public. */
+  readonly sourceClass?: WebSourceClass;
 }
 
 /** How the web side of one research attempt went. */
@@ -262,6 +269,7 @@ export interface WebPromptItem {
   readonly ref: string;
   readonly title: string;
   readonly url: string;
+  readonly sourceClass: WebSourceClass;
   readonly text: string;
 }
 
@@ -270,6 +278,7 @@ export const webPromptItems = (web: WebRun | undefined): WebPromptItem[] =>
     ref: source.ref,
     title: source.title,
     url: source.url,
+    sourceClass: source.sourceClass ?? 'public',
     text: source.text,
   }));
 
@@ -283,6 +292,7 @@ export interface ResearchWebInfo {
     readonly url: string;
     readonly title: string;
     readonly cited: boolean;
+    readonly sourceClass?: WebSourceClass;
   }[];
 }
 
@@ -291,6 +301,8 @@ export type CitationProblem =
 
 export interface ResearchEvidence {
   readonly ref: string;
+  /** Where the cited source stands (ADR-0040); absent in older outputs. */
+  readonly sourceClass?: SourceClass;
   /** The page a `W` citation points at. */
   readonly url?: string | null;
   readonly knowledgeId: string | null;
@@ -321,6 +333,10 @@ export interface ResearchFinding {
   /** The planned question this finding answers (`Q1`, …); empty when it answers none (ADR-0038). */
   readonly questionId?: string;
   readonly level?: FindingLevel;
+  /** The classes of the sources that verifiably back this finding (ADR-0040). */
+  readonly sourceKinds?: readonly SourceClass[];
+  /** How many distinct sources verifiably back it; 1 means it rests on a single source. */
+  readonly verifiedSources?: number;
   readonly claim: string;
   readonly source: string;
   /** `knowledge` only when at least one citation was found verbatim in an approved passage. */
@@ -393,7 +409,15 @@ export interface ResearchSummary {
     readonly weak: number;
     readonly unanswered: number;
   };
-  readonly sources: { readonly knowledge: number; readonly web: number };
+  readonly sources: {
+    readonly knowledge: number;
+    readonly web: number;
+    /** Of the cited web pages: those of an official body and the others (ADR-0040). */
+    readonly official: number;
+    readonly public: number;
+  };
+  /** Findings backed by exactly one verified source. */
+  readonly singleSource: number;
 }
 
 export interface ResearchContent {
@@ -530,7 +554,8 @@ export function verifyResearch(input: {
       if (verified && page) citedWeb.add(page.ref);
       evidence.push({
         ref,
-        ...(page ? { url: page.url } : {}),
+        ...(passage ? { sourceClass: 'knowledge' as const } : {}),
+        ...(page ? { url: page.url, sourceClass: page.sourceClass ?? ('public' as const) } : {}),
         knowledgeId: passage?.knowledgeId ?? null,
         versionId: passage?.versionId ?? null,
         versionNo: passage?.versionNo ?? null,
@@ -579,7 +604,12 @@ export function verifyResearch(input: {
   const cited = input.passages.filter((passage) => citedRefs.has(passage.ref));
 
   const planInfo = coverPlan(graded, input.plan);
-  const summary = summarizeResearch(graded, planInfo, citedRefs.size, citedWeb.size);
+  const summary = summarizeResearch(
+    graded,
+    planInfo,
+    citedRefs.size,
+    web.sources.filter((source) => citedWeb.has(source.ref)),
+  );
 
   return {
     cited,
@@ -615,6 +645,7 @@ export function verifyResearch(input: {
           url: source.url,
           title: source.title,
           cited: citedWeb.has(source.ref),
+          sourceClass: source.sourceClass ?? ('public' as const),
         })),
       },
       verification: {
@@ -637,13 +668,24 @@ function gradeFindings(
   conflicts: readonly { readonly refs: readonly string[] }[],
 ): ResearchFinding[] {
   const disputedRefs = new Set(conflicts.flatMap((conflict) => conflict.refs));
-  return findings.map((finding) => ({
-    ...finding,
-    level: classifyFinding(
-      finding.support,
-      finding.evidence.some((cite) => disputedRefs.has(cite.ref)),
-    ),
-  }));
+  return findings.map((finding) => {
+    // What verifiably backs the finding, by class; an older citation without a class is read from its ref.
+    const backing = finding.evidence.filter((cite) => cite.verified);
+    const kinds = new Set<SourceClass>(
+      backing.map(
+        (cite) => cite.sourceClass ?? (cite.ref.startsWith('W') ? 'public' : 'knowledge'),
+      ),
+    );
+    return {
+      ...finding,
+      level: classifyFinding(
+        finding.support,
+        finding.evidence.some((cite) => disputedRefs.has(cite.ref)),
+      ),
+      sourceKinds: [...kinds],
+      verifiedSources: new Set(backing.map((cite) => cite.ref)).size,
+    };
+  });
 }
 
 /** How each planned question fared, counted from the graded findings. */
@@ -675,7 +717,7 @@ function summarizeResearch(
   graded: readonly ResearchFinding[],
   planInfo: ResearchPlanInfo | undefined,
   citedKnowledge: number,
-  citedWeb: number,
+  citedPages: readonly { readonly sourceClass?: WebSourceClass }[],
 ): ResearchSummary {
   const levelCount = (level: FindingLevel) =>
     graded.filter((finding) => finding.level === level).length;
@@ -693,7 +735,13 @@ function summarizeResearch(
       weak: questionCount('weak'),
       unanswered: questionCount('unanswered'),
     },
-    sources: { knowledge: citedKnowledge, web: citedWeb },
+    sources: {
+      knowledge: citedKnowledge,
+      web: citedPages.length,
+      official: citedPages.filter((page) => page.sourceClass === 'official').length,
+      public: citedPages.filter((page) => page.sourceClass !== 'official').length,
+    },
+    singleSource: graded.filter((finding) => finding.verifiedSources === 1).length,
   };
 }
 
@@ -790,7 +838,7 @@ export function mergeFollowup(input: {
       graded,
       planInfo,
       offered.filter((item) => item.cited).length,
-      webSources.filter((item) => item.cited).length,
+      webSources.filter((item) => item.cited),
     ),
     rounds: [...(previous.rounds ?? []), { questions: [...input.focus] }],
   };
@@ -801,7 +849,10 @@ export function mergeFollowup(input: {
  * titles it rests on. Quotes, ids and the retrieval details stay in the stored output; they
  * would only crowd the next prompt.
  */
-export function compactResearchForPrompt(content: unknown): unknown {
+export function compactResearchForPrompt(
+  content: unknown,
+  decisions: readonly PromptConflictDecision[] = [],
+): unknown {
   if (content === null || typeof content !== 'object') return content;
   const raw = content as Record<string, unknown>;
   if (!Array.isArray(raw['findings'])) return content;
@@ -831,6 +882,10 @@ export function compactResearchForPrompt(content: unknown): unknown {
         // Older outputs carry no support field; they were never checked against knowledge.
         support: entry['support'] ?? 'unverified',
         ...(typeof entry['level'] === 'string' ? { level: entry['level'] } : {}),
+        ...(Array.isArray(entry['sourceKinds']) && entry['sourceKinds'].length > 0
+          ? { sourceKinds: entry['sourceKinds'] }
+          : {}),
+        ...(entry['verifiedSources'] === 1 ? { singleSource: true } : {}),
         ...(asText(entry['questionId']) !== '' ? { questionId: entry['questionId'] } : {}),
         ...(sources.length > 0 ? { approvedKnowledge: [...new Set(sources)] } : {}),
         ...(pages.length > 0 ? { webPages: [...new Set(pages)] } : {}),
@@ -838,6 +893,7 @@ export function compactResearchForPrompt(content: unknown): unknown {
     }),
     gaps: raw['gaps'],
     ...openQuestions(raw['plan']),
+    ...(decisions.length > 0 ? { conflictDecisions: decisions } : {}),
     ...(Array.isArray(raw['conflicts']) && raw['conflicts'].length > 0
       ? { conflicts: raw['conflicts'] }
       : {}),

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
+import { ResearchConflictsPanel } from './research-conflicts-panel';
 import { ResearchFollowupPanel } from './research-followup-panel';
 import { ResearchPlanPanel } from './research-plan-panel';
 import { StageOutput } from './stage-output';
@@ -113,6 +114,9 @@ export function ResearchPanel({
         refreshKey={refreshKey + planTick}
         onChanged={onChanged}
       />
+      {output && (
+        <ResearchConflictsPanel locale={locale} base={base} refreshKey={refreshKey + planTick} />
+      )}
       {output && (
         <ResearchFollowupPanel
           locale={locale}

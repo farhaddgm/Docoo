@@ -2,9 +2,11 @@ import {
   DELIVERABLE_STAGE_RULES,
   NO_RESEARCH_PLAN_RULES,
   OUTPUT_REQUIREMENT_RULES,
+  RESEARCH_DECISION_RULES,
   RESEARCH_FOLLOWUP_RULES,
   RESEARCH_PLAN_STAGE_RULES,
   type PromptRequirement,
+  WEB_SOURCE_CLASS_RULES,
   type PromptResearchQuestion,
   STAGE_ROLE,
   composeInstructions,
@@ -268,6 +270,20 @@ export function scopeAnalysisDefinition(output: unknown, profile: 'full' | 'quic
  * Builds the provider request of one stage attempt. Content and instructions stay in
  * separate channels: project data is quoted as data, never as instructions.
  */
+/** Whether the research output a stage reads carries decisions of the administrator on its conflicts. */
+function decidesConflicts(previous: StageContext['previous']): boolean {
+  return previous.some((item) => {
+    const content = item.content;
+    return (
+      item.stage === 'research' &&
+      content !== null &&
+      typeof content === 'object' &&
+      Array.isArray((content as Record<string, unknown>)['conflictDecisions']) &&
+      ((content as Record<string, unknown>)['conflictDecisions'] as unknown[]).length > 0
+    );
+  });
+}
+
 export function stagePrompt(context: StageContext): { instructions: string; message: string } {
   const instructions = composeInstructions({
     role: STAGE_ROLE[context.stage],
@@ -299,7 +315,10 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
             ]
           : NO_RESEARCH_PLAN_RULES
         : []),
-      ...(context.web && context.web.length > 0 ? WEB_SEARCH_RULES : []),
+      ...(context.web && context.web.length > 0
+        ? [...WEB_SEARCH_RULES, ...WEB_SOURCE_CLASS_RULES]
+        : []),
+      ...(decidesConflicts(context.previous) ? RESEARCH_DECISION_RULES : []),
       ...(context.deliverables && context.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),
       ...(context.requirements && context.requirements.length > 0 ? OUTPUT_REQUIREMENT_RULES : []),
       ...(context.business?.rules ?? []),

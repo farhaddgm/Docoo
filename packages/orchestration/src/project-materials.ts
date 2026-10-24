@@ -2,6 +2,7 @@ import { validateDocument, visibleText } from '@docoo/documents';
 import { WORKFLOW_STAGES, type WorkflowStage } from '@docoo/domain';
 import type { PoolClient } from 'pg';
 
+import { promptConflictDecisions } from './research-conflicts.js';
 import { compactResearchForPrompt } from './research.js';
 
 /**
@@ -158,15 +159,20 @@ export async function readMaterial(
     raw = row ? JSON.stringify(row.content) : null;
   } else if (parsed.kind === 'stage') {
     const row = (
-      await client.query<{ content: unknown }>(
-        `select o.content from stage_runs s join stage_outputs o on o.id = s.latest_output_id
+      await client.query<{ content: unknown; stageRunId: string }>(
+        `select s.id as "stageRunId", o.content from stage_runs s join stage_outputs o on o.id = s.latest_output_id
           where s.run_id = $1 and s.stage = $2 and s.status = 'completed'`,
         [context.runId, parsed.stage],
       )
     ).rows[0];
     raw = row
       ? JSON.stringify(
-          parsed.stage === 'research' ? compactResearchForPrompt(row.content) : row.content,
+          parsed.stage === 'research'
+            ? compactResearchForPrompt(
+                row.content,
+                await promptConflictDecisions(client, row.stageRunId, row.content),
+              )
+            : row.content,
         )
       : null;
   } else if (parsed.kind === 'solution') {

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
-import { activeResearchFollowup } from '@docoo/orchestration';
+import { conflictFingerprint } from '@docoo/domain';
+import { activeResearchFollowup, promptConflictDecisions } from '@docoo/orchestration';
 import type { PoolClient } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -43,7 +44,7 @@ const OUTPUT = {
     },
   ],
   gaps: ['Q3: nothing found'],
-  conflicts: [],
+  conflicts: [{ description: 'Sources disagree on churn', refs: ['K1', 'K2'] }],
   knowledge: {
     queries: ['q'],
     snapshots: [],
@@ -56,6 +57,15 @@ const OUTPUT = {
         title: 'T',
         snapshotId: 's',
         cited: true,
+      },
+      {
+        ref: 'K2',
+        knowledgeId: 'k2',
+        versionId: 'v2',
+        versionNo: 1,
+        title: 'Other study',
+        snapshotId: 's',
+        cited: false,
       },
     ],
     excludedRestricted: true,
@@ -332,6 +342,100 @@ describe.skipIf(!adminUrl)('Research follow-up round and requirement gaps (ADR-0
     } finally {
       h.fake.responder = original;
     }
+  });
+
+  describe('decisions on research conflicts (ADR-0040)', () => {
+    const fingerprint = conflictFingerprint('Sources disagree on churn', ['K1', 'K2']);
+    const conflicts = () => api(`/projects/${projectId}/research-conflicts`);
+    const decide = (payload: unknown, print = fingerprint) =>
+      post(`${conflicts()}/${print}/decision`, payload);
+    interface Listing {
+      stageRunId: string | null;
+      items: {
+        fingerprint: string;
+        description: string;
+        sources: { ref: string; title: string; kind: string }[];
+        decision: { decision: string; trustedRef: string | null; note: string } | null;
+      }[];
+    }
+    const listing = async () => (await h.request('GET', conflicts(), { cookie })).json<Listing>();
+
+    it('lists the conflict with the sources it names and no decision yet', async () => {
+      const view = await listing();
+      expect(view.stageRunId).toBe(stageRunId);
+      expect(view.items).toHaveLength(1);
+      expect(view.items[0]).toMatchObject({ fingerprint, decision: null });
+      expect(
+        view.items[0]!.sources.map((source) => [source.ref, source.title, source.kind]),
+      ).toEqual([
+        ['K1', 'T', 'knowledge'],
+        ['K2', 'Other study', 'knowledge'],
+      ]);
+    });
+
+    it('refuses a decision that does not fit the conflict', async () => {
+      for (const payload of [
+        { decision: 'trust' },
+        { decision: 'trust', trustedRef: 'K9' },
+        { decision: 'dismiss', trustedRef: 'K1' },
+      ]) {
+        const bad = await decide(payload);
+        expect(bad.statusCode, JSON.stringify(payload)).toBe(400);
+        expect(code(bad)).toBe('RESEARCH_CONFLICT_INVALID');
+      }
+      expect((await decide({ decision: 'maybe' })).statusCode).toBe(400);
+      expect((await decide({ decision: 'dismiss' }, 'not-a-print')).statusCode).toBe(400);
+      const unknown = await decide({ decision: 'dismiss' }, '0123456789abcdef');
+      expect(unknown.statusCode).toBe(404);
+      expect(code(unknown)).toBe('RESEARCH_CONFLICT_NOT_FOUND');
+    });
+
+    it('records a decision, lets a later one replace it, and tells the later stages', async () => {
+      const trusted = await decide({ decision: 'trust', trustedRef: 'k2', note: 'Newer data' });
+      expect(trusted.statusCode, trusted.body).toBe(200);
+      expect((await listing()).items[0]!.decision).toMatchObject({
+        decision: 'trust',
+        trustedRef: 'K2',
+        note: 'Newer data',
+      });
+      const told = await promptConflictDecisions(asClient(), stageRunId, OUTPUT);
+      expect(told).toEqual([
+        {
+          conflict: 'Sources disagree on churn',
+          decision: 'trust',
+          trustedSource: 'K2 — Other study',
+          note: 'Newer data',
+        },
+      ]);
+
+      expect((await decide({ decision: 'dismiss' })).statusCode).toBe(200);
+      expect((await listing()).items[0]!.decision).toMatchObject({
+        decision: 'dismiss',
+        trustedRef: null,
+      });
+      expect(await promptConflictDecisions(asClient(), stageRunId, OUTPUT)).toEqual([
+        { conflict: 'Sources disagree on churn', decision: 'dismiss' },
+      ]);
+      // A conflict the output no longer reports needs no decision.
+      expect(
+        await promptConflictDecisions(asClient(), stageRunId, { ...OUTPUT, conflicts: [] }),
+      ).toEqual([]);
+    });
+
+    it('audits the kind of decision, never the conflict text', async () => {
+      const audit = await h.admin.query(
+        `select after from audit_events where action = 'research_plan.conflict_decided' and project_id = $1`,
+        [projectId],
+      );
+      expect(audit.rows.length).toBeGreaterThanOrEqual(2);
+      expect(JSON.stringify(audit.rows)).not.toContain('Sources disagree');
+    });
+
+    it('keeps the decisions append-only', async () => {
+      await expect(
+        h.admin.query(`update research_conflict_decisions set note = 'x'`),
+      ).rejects.toThrow(/append-only/);
+    });
   });
 
   it('keeps the follow-up rows append-only', async () => {

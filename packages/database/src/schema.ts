@@ -1321,6 +1321,33 @@ export const researchFollowups = pgTable(
   ],
 );
 
+/** The administrator's decision on a conflict the research reported (ADR-0040); append-only. */
+export const researchConflictDecisions = pgTable(
+  'research_conflict_decisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    stageRunId: uuid('stage_run_id').notNull(),
+    outputId: uuid('output_id').notNull(),
+    fingerprint: text('fingerprint').notNull(),
+    decision: text('decision').notNull(),
+    trustedRef: text('trusted_ref'),
+    note: text('note').notNull().default(''),
+    decidedBy: uuid('decided_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('research_conflict_decisions_idx').on(
+      table.stageRunId,
+      table.fingerprint,
+      table.createdAt,
+    ),
+  ],
+);
+
 export const gateDecisions = pgTable(
   'gate_decisions',
   {

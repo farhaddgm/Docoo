@@ -11,6 +11,7 @@ import type { AnalysisActivities } from './analysis-activities.js';
 import { businessForRole, loadRunBusiness } from './business.js';
 import { confirmedDeliverables, deliverableGate } from './deliverables.js';
 import { promptRequirements } from './output-requirements.js';
+import { promptConflictDecisions } from './research-conflicts.js';
 import { activeResearchFollowup } from './research-followup.js';
 import { confirmedResearchPlan, researchPlanGate } from './research-plan.js';
 import { audit, inWorkspace } from './db.js';
@@ -258,11 +259,16 @@ export function createOrchestrationActivities(
           `select t.title from project_topics pt join topics t on t.id = pt.topic_id where pt.project_id = $1 order by pt.priority`,
           [ref.projectId],
         );
-        const previous = await client.query<{ stage: Stage; content: unknown }>(
-          `select s.stage, o.content from stage_runs s join stage_outputs o on o.id = s.latest_output_id
+        const previous = await client.query<{ stage: Stage; content: unknown; stageRunId: string }>(
+          `select s.id as "stageRunId", s.stage, o.content from stage_runs s join stage_outputs o on o.id = s.latest_output_id
             where s.run_id = $1 and s.status = 'completed' order by s.sequence`,
           [ref.runId],
         );
+        // The administrator's decisions on conflicts of the research reach the stages after it.
+        const researchBefore = previous.rows.find((row) => row.stage === 'research');
+        const conflictDecisions = researchBefore
+          ? await promptConflictDecisions(client, researchBefore.stageRunId, researchBefore.content)
+          : [];
         const feedback = await client.query<{ comment: string }>(
           `select comment from stage_reviews where stage_run_id = $1 and action = 'reject' and comment is not null order by created_at`,
           [ref.stageRunId],
@@ -417,7 +423,10 @@ export function createOrchestrationActivities(
           // Later stages see the research as claims with their support, not as raw evidence.
           previous: previous.rows.map((row) =>
             row.stage === 'research'
-              ? { stage: row.stage, content: compactResearchForPrompt(row.content) }
+              ? {
+                  stage: row.stage,
+                  content: compactResearchForPrompt(row.content, conflictDecisions),
+                }
               : row,
           ),
           feedback: feedback.rows.map((row) => row.comment),
@@ -538,7 +547,11 @@ export function createOrchestrationActivities(
                     idempotencyKey: `${key}:${ref.retryNo}:web`,
                   },
                 );
-                web = webRunFrom(found.response.web, prepared.webOffset);
+                web = webRunFrom(
+                  found.response.web,
+                  prepared.webOffset,
+                  prepared.config.researchOfficialDomains,
+                );
                 await run(ref.workspaceId, (client) =>
                   recordToolCall(client, prepared.toolScope, {
                     tool: 'web_search',

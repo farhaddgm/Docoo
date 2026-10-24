@@ -142,6 +142,7 @@ function Finding({
   const support = asText(finding['support']);
   const evidence = records(finding['evidence']);
   const level = levelOf(finding);
+  const kinds = strings(finding['sourceKinds']);
   return (
     <li className="stack">
       <p dir={textDir(locale)}>
@@ -152,6 +153,16 @@ function Finding({
         {support !== '' && (
           <span className={`badge ${LEVEL_TONE[level]}`} title={text.levelHelp[level]}>
             {text.levels[level]}
+          </span>
+        )}
+        {kinds.map((kind) => (
+          <span key={kind} className={`badge ${kind === 'public' ? 'tone-warn' : 'tone-neutral'}`}>
+            {text.sourceKinds[kind] ?? kind}
+          </span>
+        ))}
+        {finding['verifiedSources'] === 1 && (
+          <span className="badge tone-warn" title={text.singleSourceHelp}>
+            {text.singleSourceBadge}
           </span>
         )}
       </p>
@@ -254,6 +265,17 @@ function Overview({
           web: num(sources['web']),
         })}
       </p>
+      {typeof sources['web'] === 'number' && sources['web'] > 0 && (
+        <p>
+          {fill(text.overviewWebClasses, {
+            official: num(sources['official']),
+            public: num(sources['public']),
+          })}
+        </p>
+      )}
+      {typeof summary['singleSource'] === 'number' && summary['singleSource'] > 0 && (
+        <p>{fill(text.overviewSingle, { n: num(summary['singleSource']) })}</p>
+      )}
       {rounds > 0 && <p>{fill(text.overviewRounds, { n: num(rounds) })}</p>}
       {open > 0 && <p>{text.overviewNext}</p>}
     </section>
