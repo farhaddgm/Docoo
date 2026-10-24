@@ -371,22 +371,25 @@ export function WorkflowPanel({
               )}
               {stage.passedByDecision && <span className="muted">{text.passedByDecision}</span>}
               {stage.carriedFromStageRunId && <span className="muted">{text.carried}</span>}
-              {!live && projectStatus === 'active' && stage.status === 'completed' && stage.id && (
-                <button
-                  data-write-action
-                  className="secondary-button"
-                  type="button"
-                  disabled={busy}
-                  aria-expanded={redoStage === stage.stage}
-                  onClick={() => {
-                    setRedoStage((open) => (open === stage.stage ? null : stage.stage));
-                    setRedoReason('');
-                  }}
-                >
-                  {text.redo}
-                  <span className="visually-hidden"> {stageLabel(stage.stage)}</span>
-                </button>
-              )}
+              {!live &&
+                (projectStatus === 'active' || projectStatus === 'completed') &&
+                stage.status === 'completed' &&
+                stage.id && (
+                  <button
+                    data-write-action
+                    className="secondary-button"
+                    type="button"
+                    disabled={busy}
+                    aria-expanded={redoStage === stage.stage}
+                    onClick={() => {
+                      setRedoStage((open) => (open === stage.stage ? null : stage.stage));
+                      setRedoReason('');
+                    }}
+                  >
+                    {text.redo}
+                    <span className="visually-hidden"> {stageLabel(stage.stage)}</span>
+                  </button>
+                )}
               {redoStage === stage.stage && (
                 <form data-write-action className="filter-form" onSubmit={redoRun}>
                   <p className="muted">

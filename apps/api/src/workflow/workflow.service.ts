@@ -102,7 +102,9 @@ export class WorkflowService {
         )
       ).rows[0];
       if (!project) throw notFound('PROJECT_NOT_FOUND', 'The project was not found.');
-      if (project.status !== 'active') {
+      // A redo also works on a completed project: it goes back to active, as "reopen" does.
+      const reopening = Boolean(redo) && project.status === 'completed';
+      if (project.status !== 'active' && !reopening) {
         throw conflict(
           'WORKFLOW_PROJECT_NOT_ACTIVE',
           'Only an active project can run its workflow.',
@@ -149,6 +151,12 @@ export class WorkflowService {
           );
         }
         carried.push(...STAGES.slice(0, index).filter((stage) => done.includes(stage)));
+      }
+      if (reopening) {
+        await client.query(
+          `update projects set status = 'active', pause_reason = null, version = version + 1 where id = $1`,
+          [projectId],
+        );
       }
       const runNo = (
         await client.query<{ next: number }>(
@@ -197,7 +205,9 @@ export class WorkflowService {
         after: {
           runNo,
           stages: STAGES,
-          ...(redo ? { redoFromStage: redo.stage, carriedStages: carried } : {}),
+          ...(redo
+            ? { redoFromStage: redo.stage, carriedStages: carried, reopenedProject: reopening }
+            : {}),
           configSnapshotId: project.config_snapshot_id,
           businessSnapshotId: business.snapshotId,
           analysisProfile: project.analysis_profile,
