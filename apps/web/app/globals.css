@@ -4564,3 +4564,128 @@ button.link-button {
   font-size: var(--font-size-sm);
   color: var(--color-muted);
 }
+
+/* The creation wizard (ADR-0035): a stepper of buttons, and the advanced settings in sections. */
+.stepper .step-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.stepper li[aria-current='step'] .step-button,
+.stepper li[aria-current='step'] .step-name,
+.stepper li[aria-current='step'] .step-kind {
+  color: var(--color-on-primary);
+}
+
+.stepper li.step-done .step-button,
+.stepper li.step-done .step-name,
+.stepper li.step-done .step-kind {
+  color: var(--color-ok-ink);
+}
+
+.stepper .step-button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.stepper .step-kind {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.stepper li.step-problem {
+  border-color: var(--color-warn-ink, var(--color-border));
+}
+
+.wizard-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.wizard-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wizard-section-body {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.roadmap {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+/* The project journey (ADR-0035): numbered steps with the current one marked. */
+.journey {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.journey-step {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.journey-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.journey-done .journey-mark {
+  background: var(--color-ok-bg);
+  color: var(--color-ok-ink);
+}
+
+.journey-current .journey-mark,
+.journey-waiting .journey-mark {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.journey-blocked .journey-mark {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-ink);
+}
+
+.journey-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.journey-body p {
+  margin: 0 0 var(--space-2);
+}
+
+.journey-upcoming .journey-head {
+  color: var(--color-muted);
+}

@@ -2,6 +2,16 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [0.39.0] — 2026-10-24
+
+### Changed
+
+- **Creating a project is clearer** ([ADR-0035](docs/adr/0035-guided-project-creation.md)). The wizard has four steps instead of eight: **The problem**, **Context and method** (business, topics and quick or full analysis), **Advanced settings** (optional) and **Review and create**. Each step is marked required or optional, you can jump back to any earlier step, and the advanced settings (workflow, model, knowledge, solutions, documents) are collapsible sections that say whether they are still at their defaults. The review lists what happens after creating the project and lets you edit any part. The project code is suggested from the title. A draft saved by the earlier wizard still opens at the matching step.
+
+### Added
+
+- **Project journey.** The project's **Overview** tab shows the six steps from creating to completing the project (activate, analysis, research and ideas, documents, complete), which one you are on, what is waiting for you or blocking it, and a button that takes you there.
+
 ## [0.38.0] — 2026-10-23
 
 ### Added

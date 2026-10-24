@@ -115,6 +115,8 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
     await page.locator('#project-code').fill(`biz-${stamp}`);
     await page.locator('#project-title').fill(`پروژهٔ کسب‌وکار ${stamp}`);
     await page.locator('#project-problem').fill('افزایش درخواست وام دیجیتال');
+    // The business is chosen on the second step, with the topics.
+    await page.getByRole('button', { name: wizard.next }).click();
 
     const radios = page.getByRole('radio');
     await expect(radios).toHaveCount(2);
@@ -136,7 +138,8 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
     await page.reload();
     await expect(page.getByTestId('business-selected')).toContainText(FIRST);
     const next = page.getByRole('button', { name: wizard.next });
-    for (let step = 0; step < 7; step += 1) await next.click();
+    await next.click();
+    await page.getByRole('button', { name: wizard.continueDefaults }).click();
     await expect(page.locator('dl.facts').getByText(FIRST)).toBeVisible();
     await page.getByRole('button', { name: wizard.create }).click();
 

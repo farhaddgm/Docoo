@@ -20,13 +20,7 @@ test('the static wizard cannot accept input before hydration and draft restorati
   // Render the actual server markup without any client JavaScript. A fast user must
   // not be able to enter values that hydration or draft restoration will overwrite.
   await page.setContent(html);
-  for (const id of [
-    'project-code',
-    'project-title',
-    'project-description',
-    'project-problem',
-    'analysis-profile',
-  ]) {
+  for (const id of ['project-code', 'project-title', 'project-description', 'project-problem']) {
     await expect(page.locator('#' + id)).toBeDisabled();
   }
 });

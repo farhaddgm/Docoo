@@ -142,10 +142,9 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: `${projectText.moveDown}: ${titles.first}` }).click();
     await expect(order.first()).toContainText(titles.second);
     await expectNoSeriousA11yViolations(page);
-    // Nothing is changed in the later steps, so the project inherits every value.
-    for (let step = 2; step <= 7; step += 1) {
-      await page.getByRole('button', { name: wizardText.next }).click();
-    }
+    // Nothing is changed in the advanced settings, so the project inherits every value.
+    await page.getByRole('button', { name: wizardText.next }).click();
+    await page.getByRole('button', { name: wizardText.continueDefaults }).click();
     await expect(page.getByRole('region', { name: wizardText.reviewTable })).toBeVisible();
     await page.getByRole('button', { name: wizardText.create }).click();
 

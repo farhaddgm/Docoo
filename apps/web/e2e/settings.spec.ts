@@ -223,34 +223,40 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await expect(page.locator('#project-title')).toHaveValue(`پروژهٔ ویزارد ${stamp}`);
     await next.click();
 
-    // Step 2: topics.
+    // Step 2: topics (and the business and the kind of analysis).
     await page.locator('#project-add-topic').selectOption(topic.topic.id);
     await page.getByRole('button', { name: project.addTopic }).click();
     await expectNoSeriousA11yViolations(page);
     await next.click();
 
-    // Step 3: workflow and gates; only a changed value becomes the project's own.
-    const attempts = page.getByRole('spinbutton').first();
-    await expect(page.getByText(wizard.inherited).first()).toBeVisible();
-    await page.getByRole('checkbox').uncheck();
-    await expect(page.getByText(wizard.changedHere)).toBeVisible();
+    // Step 3: the optional advanced settings, in sections that open one by one. Only a changed
+    // value becomes the project's own.
+    await expect(
+      page.getByRole('heading', { level: 2, name: new RegExp(wizard.steps[2]!, 'u') }),
+    ).toBeVisible();
+    const section = (index: number) => page.locator('details.wizard-section').nth(index);
+    const open = async (index: number) => {
+      await section(index).locator('summary').click();
+      return section(index);
+    };
+    const flow = await open(0);
+    const attempts = flow.getByRole('spinbutton').first();
+    await expect(flow.getByText(wizard.inherited).first()).toBeVisible();
+    await flow.getByRole('checkbox').uncheck();
+    await expect(flow.getByText(wizard.changedHere)).toBeVisible();
     await attempts.fill('0');
     await expect(problem(page).first()).toContainText('کمتر از ۱');
     await expect(next).toBeDisabled();
     await attempts.fill('4');
     await expectNoSeriousA11yViolations(page);
-    await next.click();
-
-    // Step 4: model; left to the workspace default.
-    await expect(
-      page.getByRole('heading', { level: 2, name: new RegExp(wizard.steps[3]!, 'u') }),
-    ).toBeVisible();
-    await next.click();
-    // Step 5: knowledge.
-    await page.getByRole('spinbutton').first().fill('3');
-    await next.click();
-    // Step 6: solutions, and their criteria; the enabled weights must add up to 100.
-    await page.getByRole('spinbutton').first().fill('6');
+    // The model is left to the workspace default.
+    await open(1);
+    // Knowledge.
+    const research = await open(2);
+    await research.getByRole('spinbutton').first().fill('3');
+    // Solutions, and their criteria; the enabled weights must add up to 100.
+    const solutions = await open(3);
+    await solutions.getByRole('spinbutton').first().fill('6');
     const criteria = page.getByRole('region', { name: wizard.criteriaTitle });
     await expect(criteria).toBeVisible();
     await expect(next).toBeEnabled(); // the defaults are valid and nothing is sent for them
@@ -263,16 +269,17 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
       .getByRole('spinbutton', { name: new RegExp(`^${wizard.weight}: Impact`, 'u') })
       .fill('35');
     await expect(next).toBeEnabled();
+    // Documents.
+    const documents = await open(4);
+    await documents.getByRole('spinbutton').first().fill('4');
+    await documents.getByRole('combobox').first().selectOption('brief');
+    await documents.getByRole('combobox').nth(1).selectOption('pdf');
     await expectNoSeriousA11yViolations(page);
-    await next.click();
-    // Step 7: documents.
-    await page.getByRole('spinbutton').first().fill('4');
-    await page.getByRole('combobox').first().selectOption('brief');
-    await page.getByRole('combobox').nth(1).selectOption('pdf');
-    await expectNoSeriousA11yViolations(page);
+    // The stepper counts what was changed, and the sections say so.
+    await expect(section(0).locator('.badge')).toContainText('۲');
     await next.click();
 
-    // Step 8: the effective configuration with the source of every value.
+    // Step 4: the effective configuration with the source of every value.
     const review = page.getByRole('region', { name: wizard.reviewTable });
     await expect(review).toBeVisible();
     const reviewRow = (key: string) =>
@@ -301,7 +308,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await expect(page.getByText(wizard.overridesCount.replace('{n}', '۷'))).toBeVisible();
     await expect(page.getByText(wizard.criteriaCustom.replace('{n}', '۵'))).toBeVisible();
     await expect(
-      page.getByRole('heading', { level: 2, name: new RegExp(wizard.steps[7]!, 'u') }),
+      page.getByRole('heading', { level: 2, name: new RegExp(wizard.steps[3]!, 'u') }),
     ).toBeVisible();
     await expectNoSeriousA11yViolations(page);
     await page.getByRole('button', { name: wizard.create }).click();

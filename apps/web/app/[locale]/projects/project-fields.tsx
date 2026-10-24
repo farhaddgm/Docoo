@@ -81,6 +81,16 @@ export function BasicsFields({
       <section className="card filter-form" aria-labelledby="project-basics-title">
         <h2 id="project-basics-title">{text.basics}</h2>
         <div className="filter-grid">
+          <label htmlFor="project-title">{text.titleLabel}</label>
+          <input
+            id="project-title"
+            dir={textDir(locale)}
+            value={values.title}
+            onChange={(event) => setValues({ ...values, title: event.target.value })}
+            maxLength={200}
+            autoComplete="off"
+            required
+          />
           <FieldLabel htmlFor="project-code" help={text.codeHelp} helpId="project-code-help">
             {text.codeLabel}
           </FieldLabel>
@@ -91,16 +101,6 @@ export function BasicsFields({
             onChange={(event) => setValues({ ...values, code: event.target.value })}
             pattern="[a-zA-Z0-9][a-zA-Z0-9_\-]{0,63}"
             aria-describedby="project-code-help"
-            autoComplete="off"
-            required
-          />
-          <label htmlFor="project-title">{text.titleLabel}</label>
-          <input
-            id="project-title"
-            dir={textDir(locale)}
-            value={values.title}
-            onChange={(event) => setValues({ ...values, title: event.target.value })}
-            maxLength={200}
             autoComplete="off"
             required
           />
