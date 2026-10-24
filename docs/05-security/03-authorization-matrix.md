@@ -122,6 +122,7 @@ notion_sync: true
 | `POST /integrations/contenter/test`                                  | `integration.configure`     |
 | `DELETE /integrations/contenter`                                     | `integration.configure`     |
 | `GET /contenter-businesses`                                          | `business.read`             |
+| `GET /contenter-businesses/{businessId}`                             | `business.read`             |
 | `GET /projects/{id}/business`                                        | `business.read`             |
 | `PUT /projects/{id}/business`                                        | `business.link`             |
 | `POST /projects/{id}/business/unlink`                                | `business.link`             |

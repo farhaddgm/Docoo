@@ -128,6 +128,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/integrations/contenter/test': 'integration.configure',
   'DELETE workspaces/:workspaceId/integrations/contenter': 'integration.configure',
   'GET workspaces/:workspaceId/contenter-businesses': 'business.read',
+  'GET workspaces/:workspaceId/contenter-businesses/:businessId': 'business.read',
   'GET workspaces/:workspaceId/projects/:projectId/business': 'business.read',
   'PUT workspaces/:workspaceId/projects/:projectId/business': 'business.link',
   'POST workspaces/:workspaceId/projects/:projectId/business/unlink': 'business.link',

@@ -6,6 +6,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Changed
 
+- **The business dialog shows the business itself.** Clicking a card on **Businesses** opens a dialog with what Contenter holds now (read live, nothing stored): the profile, facts and terms, sources and assets and quality, in the same views as a project's Business tab, with a link to open it in Contenter. If Contenter cannot be read, the dialog says so and shows what the list knows. New `GET /contenter-businesses/{businessId}` (`business.read`).
 - **Topics no longer ask for a language.** The new-topic form, the edit form and the topics table lose the "Language" field, which changed nothing a person could see (a topic starts from the interface language; sources and projects have their own language).
 - **"Reason for the change" is one line everywhere.** Settings, templates and levels, agent roles, knowledge edits, document edits, project and topic edits, business link changes, stage decisions and the confirm panels (pause, complete, cancel and so on) now put the label, the field and the buttons on one line (wrapping on a phone), instead of three stacked rows. Nothing about what is asked or recorded changed.
 - **Conversations with an agent are bubbles.** In the chat under a stage's output, your messages and the agent's are rounded bubbles in two close shades, on opposite sides. At most four messages show at once; older ones are scrolled to, and the thread opens on the newest.

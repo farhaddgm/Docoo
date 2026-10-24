@@ -4757,3 +4757,14 @@ button.link-button {
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* The business dialog shows a whole business, so it is wide and its content scrolls inside it. */
+.business-dialog-wide {
+  inline-size: min(64rem, calc(100vw - 2rem));
+  max-block-size: calc(100vh - 3rem);
+}
+
+.business-dialog-wide .business-dialog-head {
+  align-items: flex-start;
+  margin-block-end: var(--space-3);
+}
