@@ -2554,12 +2554,45 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
 
 .rule-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   grid-template-areas:
-    'label label'
-    'field actions';
+    'handle label label'
+    'field field actions';
   gap: var(--space-2);
   align-items: start;
+  position: relative;
+}
+
+.rule-row .drag-handle {
+  grid-area: handle;
+  cursor: grab;
+  user-select: none;
+  color: var(--color-muted);
+  line-height: 1.5;
+  touch-action: none;
+}
+
+.rule-row.dragging {
+  opacity: 0.45;
+}
+
+.rule-row.drop-before::before,
+.rule-row.drop-after::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  pointer-events: none;
+}
+
+.rule-row.drop-before::before {
+  inset-block-start: calc(var(--space-3) / -2 - 1px);
+}
+
+.rule-row.drop-after::after {
+  inset-block-end: calc(var(--space-3) / -2 - 1px);
 }
 
 .rule-row > label {

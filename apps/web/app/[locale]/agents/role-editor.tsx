@@ -82,6 +82,19 @@ function RuleList({
   disabled: boolean;
   onChange: (items: string[]) => void;
 }) {
+  // The row being dragged and the row it hovers over (drag and drop; the arrows stay for keyboards).
+  const dragTitle = locale === 'fa' ? 'برای جابه‌جایی بکشید' : 'Drag to reorder';
+  const [dragging, setDragging] = useState<number | null>(null);
+  const [over, setOver] = useState<number | null>(null);
+
+  function moveTo(from: number, to: number) {
+    if (from === to || to < 0 || to >= items.length) return;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved!);
+    onChange(next);
+  }
+
   function move(index: number, by: -1 | 1) {
     const next = [...items];
     const target = index + by;
@@ -96,7 +109,52 @@ function RuleList({
           const label = labelOf(index + 1);
           const id = `${idPrefix}-${index}`;
           return (
-            <li key={index} className="rule-row">
+            <li
+              key={index}
+              className={[
+                'rule-row',
+                dragging === index ? 'dragging' : '',
+                over === index && dragging !== null && dragging !== index
+                  ? dragging < index
+                    ? 'drop-after'
+                    : 'drop-before'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onDragOver={(event) => {
+                if (dragging === null || disabled) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                if (over !== index) setOver(index);
+              }}
+              onDrop={(event) => {
+                if (dragging === null || disabled) return;
+                event.preventDefault();
+                moveTo(dragging, index);
+                setDragging(null);
+                setOver(null);
+              }}
+            >
+              <span
+                className="drag-handle"
+                aria-hidden="true"
+                title={dragTitle}
+                draggable={!disabled}
+                onDragStart={(event) => {
+                  const row = event.currentTarget.closest('li');
+                  if (row) event.dataTransfer.setDragImage(row, 16, 16);
+                  event.dataTransfer.effectAllowed = 'move';
+                  event.dataTransfer.setData('text/plain', String(index));
+                  setDragging(index);
+                }}
+                onDragEnd={() => {
+                  setDragging(null);
+                  setOver(null);
+                }}
+              >
+                ⠿
+              </span>
               <label htmlFor={id}>{label}</label>
               <textarea
                 id={id}
