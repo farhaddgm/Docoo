@@ -48,6 +48,15 @@ const viewOrder = [
 ] as const;
 type View = (typeof viewOrder)[number];
 
+/** A single-line cell; what does not fit ends in an ellipsis and the whole text shows on hover. */
+function ClippedCell({ value, dir }: { value: string; dir?: 'rtl' | 'ltr' | 'auto' }) {
+  return (
+    <td className="clipped-cell" title={value} {...(dir ? { dir } : {})}>
+      {value}
+    </td>
+  );
+}
+
 export function ProjectsPage({ locale }: { locale: Locale }) {
   const text = projectMessages(locale);
   return (
@@ -119,18 +128,6 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
         <div className="toolbar spread">
           <h2 id="project-list-title">{text.list}</h2>
           <div className="toolbar">
-            <label htmlFor="project-view">{text.view}</label>
-            <select
-              id="project-view"
-              value={view}
-              onChange={(event) => setView(event.target.value as View)}
-            >
-              {viewOrder.map((item) => (
-                <option key={item} value={item}>
-                  {text.views[item]}
-                </option>
-              ))}
-            </select>
             {identity?.user.role !== 'viewer' && (
               <Link
                 className="primary-button link-button"
@@ -146,6 +143,20 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
           aria-label={text.filters}
           onSubmit={(event) => event.preventDefault()}
         >
+          <div className="field">
+            <label htmlFor="project-view">{text.view}</label>
+            <select
+              id="project-view"
+              value={view}
+              onChange={(event) => setView(event.target.value as View)}
+            >
+              {viewOrder.map((item) => (
+                <option key={item} value={item}>
+                  {text.views[item]}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="field">
             <label htmlFor="project-search">{text.searchLabel}</label>
             <input
@@ -240,7 +251,19 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                 role="region"
                 aria-labelledby="project-list-title"
               >
-                <table>
+                <table className="project-table">
+                  <colgroup>
+                    <col className="col-code" />
+                    <col className="col-title" />
+                    <col className="col-topics" />
+                    <col className="col-business" />
+                    <col className="col-status" />
+                    <col className="col-stage" />
+                    <col className="col-waiting" />
+                    <col className="col-language" />
+                    <col className="col-owner" />
+                    <col className="col-updated" />
+                  </colgroup>
                   <thead>
                     <tr>
                       <th scope="col">{text.code}</th>
@@ -263,13 +286,16 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                             {project.code}
                           </Link>
                         </th>
-                        <td dir={textDir(locale)}>{project.title}</td>
-                        <td dir={textDir(locale)}>
-                          {project.topics.length === 0
-                            ? '—'
-                            : project.topics.map((topic) => topic.title).join('، ')}
-                        </td>
-                        <td dir={textDir(locale)}>{project.business?.name ?? '—'}</td>
+                        <ClippedCell dir={textDir(locale)} value={project.title} />
+                        <ClippedCell
+                          dir={textDir(locale)}
+                          value={
+                            project.topics.length === 0
+                              ? '—'
+                              : project.topics.map((topic) => topic.title).join('، ')
+                          }
+                        />
+                        <ClippedCell dir={textDir(locale)} value={project.business?.name ?? '—'} />
                         <td>
                           <span className={`badge state-${project.status}`}>
                             {text.statuses[project.status] ?? project.status}
@@ -286,8 +312,11 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                           )}
                         </td>
                         <td>{text.languages[project.outputLanguage]}</td>
-                        <td dir={textDir(locale)}>{project.owner?.displayName ?? '—'}</td>
-                        <td>{formatDateTime(locale, project.updatedAt)}</td>
+                        <ClippedCell
+                          dir={textDir(locale)}
+                          value={project.owner?.displayName ?? '—'}
+                        />
+                        <ClippedCell value={formatDateTime(locale, project.updatedAt)} />
                       </tr>
                     ))}
                   </tbody>

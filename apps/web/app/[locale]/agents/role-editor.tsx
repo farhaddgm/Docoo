@@ -82,6 +82,19 @@ function RuleList({
   disabled: boolean;
   onChange: (items: string[]) => void;
 }) {
+  // The row being dragged and the row it hovers over (drag and drop; the arrows stay for keyboards).
+  const dragTitle = locale === 'fa' ? 'برای جابه‌جایی بکشید' : 'Drag to reorder';
+  const [dragging, setDragging] = useState<number | null>(null);
+  const [over, setOver] = useState<number | null>(null);
+
+  function moveTo(from: number, to: number) {
+    if (from === to || to < 0 || to >= items.length) return;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved!);
+    onChange(next);
+  }
+
   function move(index: number, by: -1 | 1) {
     const next = [...items];
     const target = index + by;
@@ -96,7 +109,52 @@ function RuleList({
           const label = labelOf(index + 1);
           const id = `${idPrefix}-${index}`;
           return (
-            <li key={index} className="rule-row">
+            <li
+              key={index}
+              className={[
+                'rule-row',
+                dragging === index ? 'dragging' : '',
+                over === index && dragging !== null && dragging !== index
+                  ? dragging < index
+                    ? 'drop-after'
+                    : 'drop-before'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              data-rule-list={idPrefix}
+              data-rule-row={index}
+            >
+              <span
+                className="drag-handle"
+                aria-hidden="true"
+                title={dragTitle}
+                onPointerDown={(event) => {
+                  if (disabled || event.button !== 0) return;
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  setDragging(index);
+                  setOver(index);
+                }}
+                onPointerMove={(event) => {
+                  if (dragging !== index) return;
+                  const row = document
+                    .elementFromPoint(event.clientX, event.clientY)
+                    ?.closest<HTMLElement>(`[data-rule-list="${idPrefix}"]`);
+                  const target = row ? Number(row.dataset['ruleRow']) : NaN;
+                  if (!Number.isNaN(target)) setOver(target);
+                }}
+                onPointerUp={() => {
+                  if (dragging === index && over !== null) moveTo(index, over);
+                  setDragging(null);
+                  setOver(null);
+                }}
+                onPointerCancel={() => {
+                  setDragging(null);
+                  setOver(null);
+                }}
+              >
+                ⠿
+              </span>
               <label htmlFor={id}>{label}</label>
               <textarea
                 id={id}
