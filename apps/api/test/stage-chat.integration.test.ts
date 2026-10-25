@@ -1,10 +1,9 @@
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { StageChatService } from '../src/stage-chat/stage-chat.service.js';
-
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { StageChatService } from '../src/stage-chat/stage-chat.service.js';
 import { adminUrl, createHarness, type Harness } from './support/harness.js';
 
 let h: Harness;
@@ -123,10 +122,7 @@ describe.skipIf(!adminUrl)('Stage conversation with the agent (ADR-0031 P1)', ()
     // A newly uploaded attachment takes time to scan; that wait must consume the same
     // request budget as the model so the combined response stays below the proxy timeout.
     const files = vi
-      .spyOn(
-        h.app.get(StageChatService) as unknown as { readAttachments: () => Promise<[]> },
-        'readAttachments',
-      )
+      .spyOn(h.app.get<{ readAttachments: () => Promise<[]> }>(StageChatService), 'readAttachments')
       .mockImplementationOnce(async () => {
         await delay(120);
         return [];
