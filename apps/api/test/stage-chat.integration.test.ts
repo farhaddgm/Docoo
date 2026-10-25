@@ -1,4 +1,7 @@
 import { createHash } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
+
+import { StageChatService } from '../src/stage-chat/stage-chat.service.js';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -117,7 +120,19 @@ describe.skipIf(!adminUrl)('Stage conversation with the agent (ADR-0031 P1)', ()
 
   it('answers a question from the stage output without changing it', async () => {
     const invoke = vi.spyOn(h.fake, 'invoke');
+    // A newly uploaded attachment takes time to scan; that wait must consume the same
+    // request budget as the model so the combined response stays below the proxy timeout.
+    const files = vi
+      .spyOn(
+        h.app.get(StageChatService) as unknown as { readAttachments: () => Promise<[]> },
+        'readAttachments',
+      )
+      .mockImplementationOnce(async () => {
+        await delay(120);
+        return [];
+      });
     const sent = await post(chat(), { kind: 'ask', content: 'Why do you say churn doubles?' });
+    files.mockRestore();
     expect(sent.statusCode, sent.body).toBe(200);
     const { asked, answer } = sent.json<{ asked: Message; answer: Message }>();
     expect(asked).toMatchObject({ role: 'admin', kind: 'ask', status: 'done' });
@@ -125,6 +140,8 @@ describe.skipIf(!adminUrl)('Stage conversation with the agent (ADR-0031 P1)', ()
     expect(answer.content).toMatch(/^Fake answer: /);
 
     const request = invoke.mock.calls[0]![0];
+    expect(request.timeoutMs).toBeGreaterThan(0);
+    expect(request.timeoutMs).toBeLessThanOrEqual(24_880);
     expect(request.responseSchema).toBeUndefined();
     expect(request.instructions ?? '').toContain('researcher');
     expect(request.instructions ?? '').toContain(

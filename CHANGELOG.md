@@ -17,6 +17,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Fixed
 
+- Keep attachment scanning and the stage-chat model call inside one proxy-safe timeout budget so a slow scan does not add ten seconds on top of the model timeout.
 - Upgrade React and React DOM together to 19.3.1 so server rendering and browser startup use matching runtimes.
 - Apply Fastify 5.12.7 to both the API and Nest adapter through the workspace override; regenerate the frozen lockfile for Nodemailer 10.1.4 and the observability updates.
 - Upgrade all CodeQL steps together to 4.39.0 and upload-artifact to 7.0.2; group coupled Dependabot updates to prevent partial upgrades.
