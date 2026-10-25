@@ -307,6 +307,7 @@ export class RoleEvaluationService {
       const { response, invocationId } = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId: input.projectId,
           stageRunId: null,
           attemptId: null,

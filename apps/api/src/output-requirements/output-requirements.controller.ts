@@ -3,22 +3,32 @@ import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { OutputRequirementsService } from './output-requirements.service.js';
 
 const kind = z.enum(['must', 'must_not']);
+const stage = z.enum(['analysis', 'research', 'ideation', 'documentation', 'evaluation']);
 const createBody = z
   .object({
     kind,
     text: z.string().max(4000),
-    stage: z.enum(['analysis', 'research', 'ideation', 'documentation', 'evaluation']).optional(),
+    stage: stage.optional(),
+    // The stage the requirement binds; absent: the final output as a whole.
+    target: stage.nullish(),
   })
   .strict();
-const fromMessageBody = z.object({ kind, text: z.string().max(4000).optional() }).strict();
+const fromMessageBody = z
+  .object({ kind, text: z.string().max(4000).optional(), target: stage.nullish() })
+  .strict();
 const editBody = z
-  .object({ kind: kind.optional(), text: z.string().max(4000).optional() })
+  .object({
+    kind: kind.optional(),
+    text: z.string().max(4000).optional(),
+    // null moves it to the final output as a whole; absent leaves it where it is.
+    target: stage.nullable().optional(),
+  })
   .strict();
 const withdrawBody = z.object({ reason: z.string().trim().max(500).optional() }).strict();
 
@@ -65,6 +75,7 @@ export class OutputRequirementsController {
   @Post('projects/:projectId/output-requirements/check')
   @HttpCode(200)
   @ApiOperation({ summary: 'Check which requirements the output covers (costs a model call)' })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   async check(@Req() request: FastifyRequest, @Param('projectId') project: string) {
     return this.requirements.check(workspaceContext(request), id(project));

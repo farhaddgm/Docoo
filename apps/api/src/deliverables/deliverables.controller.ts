@@ -3,7 +3,7 @@ import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { DeliverablesService } from './deliverables.service.js';
@@ -70,6 +70,7 @@ export class DeliverablesController {
   @Post('projects/:projectId/deliverables/propose')
   @HttpCode(200)
   @ApiOperation({ summary: 'Ask the model to propose a plan (a new version; costs a model call)' })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   async propose(@Req() request: FastifyRequest, @Param('projectId') project: string) {
     return this.deliverables.propose(workspaceContext(request), id(project));

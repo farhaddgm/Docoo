@@ -4,7 +4,7 @@ import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { STAGES } from '@docoo/orchestration';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { WorkflowService } from './workflow.service.js';
@@ -70,6 +70,7 @@ export class WorkflowController {
   @Post('projects/:projectId/workflow/start')
   @HttpCode(202)
   @ApiOperation({ summary: 'Start the workflow of an active project (idempotent)' })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   async start(@Req() request: FastifyRequest, @Param('projectId') raw: string) {
     return { workflow: await this.workflow.start(workspaceContext(request), id(raw)) };
@@ -103,6 +104,7 @@ export class WorkflowController {
   @ApiOperation({
     summary: 'Redo a finished stage: a new run carries the earlier stages and runs this one again',
   })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   async redo(
     @Req() request: FastifyRequest,
@@ -129,6 +131,7 @@ export class WorkflowController {
   @Post('projects/:projectId/stages/:stageRunId/outputs/:outputId/approve')
   @HttpCode(200)
   @ApiOperation({ summary: 'Approve the current output; the workflow continues' })
+  @UsesAi()
   @RequireWorkspacePermission('workflow.approve')
   async approve(
     @Req() request: FastifyRequest,
@@ -156,6 +159,7 @@ export class WorkflowController {
   @Post('projects/:projectId/stages/:stageRunId/outputs/:outputId/reject')
   @HttpCode(200)
   @ApiOperation({ summary: 'Reject the current output with feedback; a new attempt follows' })
+  @UsesAi()
   @RequireWorkspacePermission('workflow.reject')
   async reject(
     @Req() request: FastifyRequest,

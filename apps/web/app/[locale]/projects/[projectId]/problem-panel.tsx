@@ -337,7 +337,7 @@ export function ProblemPanel({
                 min: formatNumber(locale, progress.minimum),
               })}
         </p>
-        <dl className="counts" aria-labelledby="progress-heading">
+        <dl className="counts counts-compact" aria-labelledby="progress-heading">
           {(['asked', 'answered', 'unanswered', 'irrelevant', 'later', 'open'] as const).map(
             (key) => (
               <div key={key}>

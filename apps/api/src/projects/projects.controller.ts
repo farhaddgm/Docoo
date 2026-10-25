@@ -17,7 +17,11 @@ import { projectStatuses, type ProjectCommand } from '@docoo/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission, roleHasPermission } from '../auth/auth.authorization.js';
+import {
+  RequireWorkspacePermission,
+  UsesAi,
+  roleHasPermission,
+} from '../auth/auth.authorization.js';
 import { requireIfMatch, setVersionHeader } from '../common/concurrency.js';
 import { pageQuerySchema } from '../common/pagination.js';
 import { badRequest } from '../common/problems.js';
@@ -265,6 +269,7 @@ export class ProjectsController {
   @Post(':projectId/activate')
   @HttpCode(200)
   @ApiOperation({ summary: 'draft → active; pins the effective config' })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   activate(@Req() request: FastifyRequest, @Param('projectId') id: string, @Body() body: unknown) {
     return this.command(request, id, 'activate', body);
@@ -281,6 +286,7 @@ export class ProjectsController {
   @Post(':projectId/resume')
   @HttpCode(200)
   @ApiOperation({ summary: 'paused → active; pins the effective config again' })
+  @UsesAi()
   @RequireWorkspacePermission('project.resume')
   resume(@Req() request: FastifyRequest, @Param('projectId') id: string, @Body() body: unknown) {
     return this.command(request, id, 'resume', body);
@@ -297,6 +303,7 @@ export class ProjectsController {
   @Post(':projectId/reopen')
   @HttpCode(200)
   @ApiOperation({ summary: 'completed → active (reason required)' })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   reopen(@Req() request: FastifyRequest, @Param('projectId') id: string, @Body() body: unknown) {
     return this.command(request, id, 'reopen', body);

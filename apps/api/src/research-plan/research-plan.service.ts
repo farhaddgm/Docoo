@@ -12,6 +12,7 @@ import {
   REQUIREMENT_GAP_RULES,
   REQUIREMENT_GAP_SCHEMA,
   REQUIREMENT_GAP_SCHEMA_NAME,
+  requirementReachesStage,
   RESEARCH_CHANNELS,
   RESEARCH_PLAN_LIMITS,
   RESEARCH_PLAN_PROPOSAL_RULES,
@@ -219,7 +220,7 @@ export class ResearchPlanService {
         throw conflict('RESEARCH_GAPS_NO_RESEARCH', 'The research has no output to check yet.');
       }
       const musts = (await activeRequirements(client, projectId)).filter(
-        (row) => row.kind === 'must',
+        (row) => row.kind === 'must' && requirementReachesStage(row.target, 'research'),
       );
       if (musts.length === 0) {
         throw conflict(
@@ -275,6 +276,7 @@ export class ResearchPlanService {
       const result = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId,
           stageRunId: prepared.research.stageRunId,
           attemptId: null,
@@ -408,7 +410,7 @@ export class ResearchPlanService {
         current,
         webEnabled: effective.values['research.web_enabled'] !== false,
         deliverables: await confirmedDeliverables(client, projectId),
-        requirements: await promptRequirements(client, projectId),
+        requirements: await promptRequirements(client, projectId, 'research'),
       };
     });
     const instructions = [
@@ -448,6 +450,7 @@ export class ResearchPlanService {
       const result = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId,
           stageRunId: null,
           attemptId: null,

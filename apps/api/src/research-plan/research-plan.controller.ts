@@ -3,7 +3,7 @@ import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { ResearchPlanService } from './research-plan.service.js';
@@ -96,6 +96,7 @@ export class ResearchPlanController {
   @Post('projects/:projectId/research-plan/propose')
   @HttpCode(200)
   @ApiOperation({ summary: 'Ask the model to propose a plan (a new version; costs a model call)' })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   async propose(@Req() request: FastifyRequest, @Param('projectId') project: string) {
     return this.plans.propose(workspaceContext(request), id(project));
@@ -119,6 +120,7 @@ export class ResearchPlanController {
     summary:
       'Start a follow-up research round for the open questions (a rejection: a new attempt that counts against the limit)',
   })
+  @UsesAi()
   @RequireWorkspacePermission('workflow.reject')
   async followup(
     @Req() request: FastifyRequest,
@@ -136,6 +138,7 @@ export class ResearchPlanController {
   @ApiOperation({
     summary: 'Check the research against the "must" output requirements (costs a model call)',
   })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   async requirementGaps(@Req() request: FastifyRequest, @Param('projectId') project: string) {
     return this.plans.requirementGaps(workspaceContext(request), id(project));

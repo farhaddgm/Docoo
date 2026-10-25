@@ -74,7 +74,7 @@ export class OutputRequirementsService {
       const outputs = await this.stageOutputs(client, projectId);
       const items = active.map((row) => ({
         ...row,
-        behindStages: stagesBehindRequirement(row.createdAt, outputs),
+        behindStages: stagesBehindRequirement(row.createdAt, outputs, row.target),
       }));
       const history = (
         await client.query<
@@ -102,10 +102,11 @@ export class OutputRequirementsService {
   async add(
     context: WorkspaceRequestContext,
     projectId: string,
-    input: { kind: unknown; text: unknown; stage?: unknown },
+    input: { kind: unknown; text: unknown; stage?: unknown; target?: unknown },
   ) {
     const { kind, text } = this.valid(input.kind, input.text);
     const stage = this.stageOf(input.stage);
+    const target = this.stageOf(input.target);
     return this.database.run(context, async (client) => {
       await this.project(client, projectId);
       const row = await this.insert(client, context, projectId, {
@@ -113,6 +114,7 @@ export class OutputRequirementsService {
         text,
         source: 'admin',
         stage,
+        target,
         messageId: null,
         supersedesId: null,
       });
@@ -129,8 +131,9 @@ export class OutputRequirementsService {
     projectId: string,
     stageRunId: string,
     messageId: string,
-    input: { kind: unknown; text?: unknown },
+    input: { kind: unknown; text?: unknown; target?: unknown },
   ) {
+    const target = this.stageOf(input.target);
     return this.database.run(context, async (client) => {
       await this.project(client, projectId);
       const message = (
@@ -155,6 +158,7 @@ export class OutputRequirementsService {
         text,
         source: 'chat',
         stage: this.stageOf(message.stage),
+        target,
         messageId,
         supersedesId: null,
       });
@@ -171,14 +175,21 @@ export class OutputRequirementsService {
     context: WorkspaceRequestContext,
     projectId: string,
     requirementId: string,
-    input: { kind?: unknown; text?: unknown },
+    input: { kind?: unknown; text?: unknown; target?: unknown },
   ) {
+    // `target: null` moves it to the final output as a whole; absent keeps it where it is.
+    const retarget = input.target !== undefined;
+    const requested = this.stageOf(input.target);
     return this.database.run(context, async (client) => {
       await this.project(client, projectId);
       const current = await this.activeOne(client, projectId, requirementId);
       const { kind, text } = this.valid(input.kind ?? current.kind, input.text ?? current.text);
-      if (kind === current.kind && text === current.text) {
-        throw badRequest('OUTPUT_REQUIREMENT_UNCHANGED', 'Change the kind or the text first.');
+      const target = retarget ? requested : current.target;
+      if (kind === current.kind && text === current.text && target === current.target) {
+        throw badRequest(
+          'OUTPUT_REQUIREMENT_UNCHANGED',
+          'Change the kind, the text or the stage it applies to first.',
+        );
       }
       await client.query(
         `insert into output_requirement_withdrawals
@@ -191,6 +202,7 @@ export class OutputRequirementsService {
         text,
         source: current.source,
         stage: current.stage,
+        target,
         messageId: current.messageId,
         supersedesId: current.id,
       });
@@ -296,6 +308,7 @@ export class OutputRequirementsService {
         requirementId: row.id,
         kind: row.kind,
         text: row.text,
+        ...(row.target ? { appliesTo: row.target } : {}),
       })),
       ...(prepared.deliverables && prepared.deliverables.length > 0
         ? { confirmedDeliverables: prepared.deliverables }
@@ -317,6 +330,7 @@ export class OutputRequirementsService {
       const result = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId,
           stageRunId: null,
           attemptId: null,
@@ -424,6 +438,7 @@ export class OutputRequirementsService {
               requirementId: requirement.id,
               kind: requirement.kind,
               text: requirement.text,
+              target: requirement.target,
               verdict: line.verdict,
               evidence: line.evidence,
               foundIn: line.foundIn,
@@ -505,6 +520,7 @@ export class OutputRequirementsService {
       text: string;
       source: 'admin' | 'chat';
       stage: RequirementStage | null;
+      target: RequirementStage | null;
       messageId: string | null;
       supersedesId: string | null;
     },
@@ -523,6 +539,7 @@ export class OutputRequirementsService {
         (row) =>
           row.id !== input.supersedesId &&
           row.kind === input.kind &&
+          row.target === input.target &&
           row.text.toLowerCase() === same,
       )
     ) {
@@ -532,8 +549,8 @@ export class OutputRequirementsService {
       await client.query<OutputRequirementRow>(
         `with r as (
            insert into output_requirements
-             (workspace_id, project_id, kind, body, source, stage, message_id, supersedes_id, created_by)
-           values ($1, $2, $3, $4, $5, $6::stage_kind, $7, $8, $9) returning *)
+             (workspace_id, project_id, kind, body, source, stage, target_stage, message_id, supersedes_id, created_by)
+           values ($1, $2, $3, $4, $5, $6::stage_kind, $7::stage_kind, $8, $9, $10) returning *)
          select ${OUTPUT_REQUIREMENT_COLUMNS} from r`,
         [
           context.workspaceId,
@@ -542,6 +559,7 @@ export class OutputRequirementsService {
           input.text,
           input.source,
           input.stage,
+          input.target,
           input.messageId,
           input.supersedesId,
           context.actorId,
@@ -587,7 +605,13 @@ export class OutputRequirementsService {
       targetType: 'project',
       targetId: projectId,
       projectId,
-      after: { requirementId: row.id, kind: row.kind, stage: row.stage, ...extra },
+      after: {
+        requirementId: row.id,
+        kind: row.kind,
+        stage: row.stage,
+        target: row.target,
+        ...extra,
+      },
     });
   }
 

@@ -23,7 +23,7 @@ import { STAGES } from '@docoo/orchestration';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { requireIfMatch, setVersionHeader } from '../common/concurrency.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
@@ -198,6 +198,7 @@ export class DocumentsController {
   @Post('projects/:projectId/solutions/generate')
   @HttpCode(201)
   @ApiOperation({ summary: 'Generate a scored set of solutions with the configured model' })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   async generate(
     @Req() request: FastifyRequest,
@@ -334,6 +335,7 @@ export class DocumentsController {
   @ApiOperation({
     summary: 'Have the documenter write the whole document as a new version (a durable run)',
   })
+  @UsesAi()
   @RequireWorkspacePermission('document.edit')
   async startWriting(
     @Req() request: FastifyRequest,
@@ -389,6 +391,7 @@ export class DocumentsController {
   @Post('documents/:documentId/writings/:writingId/resume')
   @HttpCode(200)
   @ApiOperation({ summary: 'Resume a paused writing' })
+  @UsesAi()
   @RequireWorkspacePermission('document.edit')
   async resumeWriting(
     @Req() request: FastifyRequest,
@@ -648,6 +651,7 @@ export class DocumentsController {
   @Post('documents/:documentId/evaluate')
   @HttpCode(201)
   @ApiOperation({ summary: 'Evaluate the current version against the rubric' })
+  @UsesAi()
   @RequireWorkspacePermission('document.approve')
   async evaluate(@Req() request: FastifyRequest, @Param('documentId') raw: string) {
     return { evaluation: await this.documents.evaluate(workspaceContext(request), id(raw)) };

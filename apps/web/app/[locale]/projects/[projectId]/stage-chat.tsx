@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
 import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
-import { formatNumber, type Locale, textDir } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { useReadOnlyAccess } from '../../resource-access';
+import type { Attachment } from './problem-types';
 import type { RequirementKind, RequirementsData } from './requirements-panel';
+import { ACCEPTED_EXTENSIONS, uploadProjectFile } from './upload-file';
 
 interface Message {
   id: string;
@@ -15,6 +17,8 @@ interface Message {
   status: 'done' | 'failed';
   outputId: string | null;
   replyTo: string | null;
+  createdAt: string;
+  attachments?: Attachment[];
   /** An active output requirement was taken from this message (ADR-0037). */
   savedAsRequirement?: boolean;
 }
@@ -65,10 +69,22 @@ const presets: Record<string, Record<Locale, string[]>> = {
 
 const copy = {
   fa: {
+    attach: 'پیوست فایل',
+    attachRemove: 'برداشتن {name}',
+    attachUploading: 'در حال بارگذاری فایل…',
+    attachLimit: 'حداکثر {n} فایل را می‌توان با یک پیام فرستاد.',
+    attachHint:
+      'ایجنت متن فایل‌های پیوست را هم می‌خواند؛ فایلی که هنوز پردازش نشده باشد را نمی‌بیند.',
+    copy: 'کپی',
+    copied: 'کپی شد',
+    copyFailed: 'کپی انجام نشد.',
     addRequirement: 'افزودن به الزامات خروجی',
     requirementSaved: 'در الزامات خروجی ثبت شد',
     requirementFrom: 'الزام خروجی از این پیام',
     requirementKind: 'نوع',
+    requirementScope: 'مربوط به',
+    requirementScopeStage: 'فقط همین مرحله',
+    requirementScopeFinal: 'کل خروجی نهایی',
     requirementKinds: { must: 'باید داشته باشد', must_not: 'نباید داشته باشد' },
     requirementText: 'متن الزام',
     requirementSave: 'ثبت الزام',
@@ -106,6 +122,10 @@ const copy = {
       AI_NOT_CONFIGURED: 'هوش مصنوعی هنوز تنظیم نشده است.',
       WORKFLOW_OUTPUT_SUPERSEDED: 'این نسخه از خروجی عوض شده است؛ صفحه را تازه کنید.',
       STAGE_CHAT_ALREADY_SENT: 'این درخواست قبلاً فرستاده شده است.',
+      ANALYSIS_UPLOAD_FAILED: 'بارگذاری فایل انجام نشد.',
+      SOURCE_INVALID_REQUEST: 'این نوع یا اندازهٔ فایل پذیرفته نمی‌شود.',
+      STAGE_CHAT_ATTACHMENT_UNUSABLE: 'یکی از فایل‌های پیوست رد شده یا پردازش نشده است.',
+      STAGE_CHAT_ATTACHMENT_NOT_READY: 'یکی از فایل‌های پیوست هنوز بارگذاری نشده است.',
       OUTPUT_REQUIREMENT_DUPLICATE: 'این الزام قبلاً ثبت شده است.',
       OUTPUT_REQUIREMENT_LIMIT:
         'به سقف الزام‌های فعال رسیده‌اید؛ در تب «الزامات خروجی» یکی را بردارید.',
@@ -115,10 +135,22 @@ const copy = {
   },
   en: {
     presetsLabel: 'Ready-made messages',
+    attach: 'Attach a file',
+    attachRemove: 'Remove {name}',
+    attachUploading: 'Uploading the file…',
+    attachLimit: 'At most {n} files can go with one message.',
+    attachHint:
+      'The agent also reads the text of attached files; it cannot see a file that is still being processed.',
+    copy: 'Copy',
+    copied: 'Copied',
+    copyFailed: 'Could not copy.',
     addRequirement: 'Add to output requirements',
     requirementSaved: 'Saved as an output requirement',
     requirementFrom: 'Output requirement from this message',
     requirementKind: 'Kind',
+    requirementScope: 'Applies to',
+    requirementScopeStage: 'This stage only',
+    requirementScopeFinal: 'The final output as a whole',
     requirementKinds: { must: 'Must have', must_not: 'Must not have' },
     requirementText: 'Requirement',
     requirementSave: 'Save requirement',
@@ -157,6 +189,10 @@ const copy = {
       AI_NOT_CONFIGURED: 'AI is not configured yet.',
       WORKFLOW_OUTPUT_SUPERSEDED: 'This output version was replaced; reload the page.',
       STAGE_CHAT_ALREADY_SENT: 'This request was already sent back.',
+      ANALYSIS_UPLOAD_FAILED: 'The file could not be uploaded.',
+      SOURCE_INVALID_REQUEST: 'This file type or size is not accepted.',
+      STAGE_CHAT_ATTACHMENT_UNUSABLE: 'An attached file was rejected or could not be processed.',
+      STAGE_CHAT_ATTACHMENT_NOT_READY: 'An attached file has not been uploaded yet.',
       OUTPUT_REQUIREMENT_DUPLICATE: 'This requirement already exists.',
       OUTPUT_REQUIREMENT_LIMIT:
         'You reached the limit of active requirements; withdraw one on the “Output requirements” tab.',
@@ -166,6 +202,47 @@ const copy = {
     generic: 'It did not work. Try again.',
   },
 } as const;
+
+/** Files that can go with one message; the same bound the API enforces. */
+const MAX_ATTACHMENTS = 5;
+
+const iconProps = {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  'aria-hidden': true,
+} as const;
+
+const CopyIcon = () => (
+  <svg {...iconProps}>
+    <rect x="9" y="9" width="12" height="12" rx="2" />
+    <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg {...iconProps}>
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+const PaperclipIcon = () => (
+  <svg {...iconProps}>
+    <path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5" />
+  </svg>
+);
+
+const AddRequirementIcon = () => (
+  <svg {...iconProps}>
+    <path d="M9 11l3 3L22 4" />
+    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+  </svg>
+);
 
 /** How many messages of a long conversation show at once; older ones are scrolled to. */
 const VISIBLE_MESSAGES = 4;
@@ -204,14 +281,22 @@ export function StageChat({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const thread = useRef<HTMLUListElement>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [files, setFiles] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
   const [requirements, setRequirements] = useState<RequirementsData | null>(null);
   const [saving, setSaving] = useState<{
     messageId: string;
     kind: RequirementKind;
     text: string;
+    /** `final`: the output as a whole; otherwise the stage of this conversation. */
+    scope: 'final' | 'stage';
   } | null>(null);
   /** `/workspaces/{id}/projects/{id}` */
   const projectBase = stageBase.replace(/\/stages\/[^/]+$/, '');
+  const [, workspaceBase = '', projectId = ''] =
+    /^(.*)\/projects\/([^/]+)$/.exec(projectBase) ?? [];
 
   const loadRequirements = useCallback(async () => {
     try {
@@ -248,13 +333,40 @@ export function StageChat({
     setBusy(true);
     setError('');
     try {
-      await apiSend('POST', `${stageBase}/messages`, { kind, content });
+      await apiSend('POST', `${stageBase}/messages`, {
+        kind,
+        content,
+        ...(files.length > 0
+          ? { attachments: files.map((file) => ({ sourceId: file.sourceId })) }
+          : {}),
+      });
       setInput('');
+      setFiles([]);
     } catch (caught) {
       setError(explain(caught));
     } finally {
       setBusy(false);
       await load();
+    }
+  }
+
+  async function attach(chosen: FileList | null) {
+    if (!chosen || chosen.length === 0 || uploading) return;
+    const room = MAX_ATTACHMENTS - files.length;
+    setError('');
+    if (chosen.length > room)
+      setError(fill(text.attachLimit, { n: formatNumber(locale, MAX_ATTACHMENTS) }));
+    setUploading(true);
+    try {
+      for (const file of Array.from(chosen).slice(0, room)) {
+        const uploaded = await uploadProjectFile(workspaceBase, projectId, file);
+        setFiles((current) => [...current, uploaded]);
+      }
+    } catch (caught) {
+      setError(explain(caught));
+    } finally {
+      setUploading(false);
+      if (picker.current) picker.current.value = '';
     }
   }
 
@@ -266,6 +378,7 @@ export function StageChat({
       await apiSend('POST', `${stageBase}/messages/${saving.messageId}/requirements`, {
         kind: saving.kind,
         text: saving.text,
+        ...(saving.scope === 'stage' && stage ? { target: stage } : {}),
       });
       setSaving(null);
     } catch (caught) {
@@ -293,6 +406,19 @@ export function StageChat({
     } finally {
       setBusy(false);
       await load();
+    }
+  }
+
+  async function copyMessage(message: Message) {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopiedId(message.id);
+      window.setTimeout(
+        () => setCopiedId((current) => (current === message.id ? null : current)),
+        1500,
+      );
+    } catch {
+      setError(text.copyFailed);
     }
   }
 
@@ -409,32 +535,56 @@ export function StageChat({
                       {message.content}
                     </p>
                   )}
-                  {message.status !== 'failed' &&
-                    (message.savedAsRequirement ? (
-                      <p className="chat-meta">
-                        <span className="badge tone-ok">{text.requirementSaved}</span>
-                      </p>
-                    ) : (
-                      !readOnly && (
-                        <p className="chat-meta">
-                          <button
-                            data-write-action
-                            className="secondary-button"
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              setSaving({
-                                messageId: message.id,
-                                kind: 'must',
-                                text: message.content.slice(0, 1000),
-                              })
-                            }
-                          >
-                            {text.addRequirement}
-                          </button>
-                        </p>
-                      )
-                    ))}
+                  {message.status !== 'failed' && message.savedAsRequirement && (
+                    <p className="chat-meta">
+                      <span className="badge tone-ok">{text.requirementSaved}</span>
+                    </p>
+                  )}
+                  {(message.attachments?.length ?? 0) > 0 && (
+                    <p className="chat-meta">
+                      {message.attachments!.map((file) => (
+                        <span key={file.sourceId} className="badge">
+                          <PaperclipIcon /> {file.title}
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                  <div className="chat-actions">
+                    <time className="chat-time" dateTime={message.createdAt}>
+                      {formatDateTime(locale, message.createdAt)}
+                    </time>
+                    {message.status !== 'failed' && (
+                      <button
+                        className="chat-icon-button"
+                        type="button"
+                        aria-label={copiedId === message.id ? text.copied : text.copy}
+                        title={copiedId === message.id ? text.copied : text.copy}
+                        onClick={() => void copyMessage(message)}
+                      >
+                        {copiedId === message.id ? <CheckIcon /> : <CopyIcon />}
+                      </button>
+                    )}
+                    {message.status !== 'failed' && !message.savedAsRequirement && !readOnly && (
+                      <button
+                        data-write-action
+                        className="chat-icon-button"
+                        type="button"
+                        aria-label={text.addRequirement}
+                        title={text.addRequirement}
+                        disabled={busy}
+                        onClick={() =>
+                          setSaving({
+                            messageId: message.id,
+                            kind: 'must',
+                            text: message.content.slice(0, 1000),
+                            scope: stage ? 'stage' : 'final',
+                          })
+                        }
+                      >
+                        <AddRequirementIcon />
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -460,6 +610,21 @@ export function StageChat({
                 <option value="must">{text.requirementKinds.must}</option>
                 <option value="must_not">{text.requirementKinds.must_not}</option>
               </select>
+              {stage && (
+                <>
+                  <label htmlFor={`${id}-req-scope`}>{text.requirementScope}</label>
+                  <select
+                    id={`${id}-req-scope`}
+                    value={saving.scope}
+                    onChange={(event) =>
+                      setSaving({ ...saving, scope: event.target.value as 'final' | 'stage' })
+                    }
+                  >
+                    <option value="stage">{text.requirementScopeStage}</option>
+                    <option value="final">{text.requirementScopeFinal}</option>
+                  </select>
+                </>
+              )}
               <label htmlFor={`${id}-req-text`}>{text.requirementText}</label>
               <textarea
                 id={`${id}-req-text`}
@@ -524,12 +689,57 @@ export function StageChat({
                 disabled={busy || full}
                 onChange={(event) => setInput(event.target.value)}
               />
+              {files.length > 0 && (
+                <ul className="plain-list chat-files">
+                  {files.map((file) => (
+                    <li key={file.sourceId}>
+                      <span className="badge">
+                        <PaperclipIcon /> {file.title}
+                      </span>
+                      <button
+                        className="chat-icon-button"
+                        type="button"
+                        aria-label={fill(text.attachRemove, { name: file.title })}
+                        title={fill(text.attachRemove, { name: file.title })}
+                        disabled={busy}
+                        onClick={() =>
+                          setFiles((current) =>
+                            current.filter((item) => item.sourceId !== file.sourceId),
+                          )
+                        }
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <input
+                ref={picker}
+                type="file"
+                multiple
+                hidden
+                accept={ACCEPTED_EXTENSIONS}
+                onChange={(event) => void attach(event.target.files)}
+              />
               <div className="toolbar">
+                <button
+                  data-write-action
+                  className="secondary-button"
+                  type="button"
+                  aria-label={text.attach}
+                  title={text.attach}
+                  aria-describedby={`${id}-attach-hint`}
+                  disabled={busy || full || uploading || files.length >= MAX_ATTACHMENTS}
+                  onClick={() => picker.current?.click()}
+                >
+                  <PaperclipIcon />
+                </button>
                 <button
                   data-write-action
                   className="primary-button"
                   type="button"
-                  disabled={busy || full || !input.trim()}
+                  disabled={busy || full || uploading || !input.trim()}
                   onClick={() => void post('ask')}
                 >
                   {text.ask}
@@ -539,7 +749,7 @@ export function StageChat({
                     data-write-action
                     className="secondary-button"
                     type="button"
-                    disabled={busy || full || !input.trim()}
+                    disabled={busy || full || uploading || !input.trim()}
                     onClick={() => void post('revision_request')}
                   >
                     {text.revise}
@@ -568,6 +778,14 @@ export function StageChat({
                     </button>
                   ))}
                 </div>
+              )}
+              <small id={`${id}-attach-hint`} className="muted">
+                {text.attachHint}
+              </small>
+              {uploading && (
+                <p className="muted" role="status">
+                  {text.attachUploading}
+                </p>
               )}
               {busy && (
                 <p className="muted" role="status">

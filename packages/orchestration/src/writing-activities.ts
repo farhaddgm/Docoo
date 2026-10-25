@@ -354,7 +354,7 @@ export function createWritingActivities(
       knowledge,
       business: business?.prompt,
       deliverables: (await confirmedDeliverables(client, row.project_id)) ?? undefined,
-      requirements: await promptRequirements(client, row.project_id),
+      requirements: await promptRequirements(client, row.project_id, 'documentation'),
     };
     return {
       material,

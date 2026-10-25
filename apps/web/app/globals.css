@@ -1511,6 +1511,25 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+/* Smaller tiles, three to a row, for the question progress of the analysis tab. */
+.counts-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.counts-compact > div {
+  padding: var(--space-1) var(--space-2);
+}
+
+.counts-compact dt {
+  font-size: var(--font-size-xs, 0.75rem);
+}
+
+.counts-compact dd {
+  font-size: 1.125rem;
+  line-height: 1.3;
+}
+
 .plain-list {
   display: grid;
   gap: var(--space-2);
@@ -1729,6 +1748,13 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.section-nav-divider {
+  align-self: stretch;
+  inline-size: 1px;
+  margin-block: var(--space-1);
+  background: var(--color-border);
 }
 
 .section-nav button {
@@ -4781,6 +4807,64 @@ button.link-button {
   white-space: pre-wrap;
 }
 
+/* Under each bubble; shown on hover or keyboard focus, always on touch screens. */
+.chat-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-1);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.chat-message:hover .chat-actions,
+.chat-message:focus-within .chat-actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .chat-actions {
+    opacity: 1;
+  }
+}
+
+.chat-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.chat-icon-button:hover:not(:disabled) {
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+}
+
+.chat-files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chat-files li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chat-meta .badge svg,
+.chat-files .badge svg {
+  vertical-align: text-bottom;
+}
+
 .chat-message .notice {
   margin: 0;
 }
@@ -4867,4 +4951,93 @@ button.link-button {
 }
 .project-table .col-updated {
   width: 10rem;
+}
+
+/* The owner's per-account settings dialog (ADR-0042). */
+.policy-dialog h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.policy-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.policy-group {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.policy-group legend {
+  padding-inline: var(--space-2);
+  font-weight: 700;
+}
+
+.policy-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.policy-limits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+
+.policy-sections {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.policy-sections li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.policy-owner-areas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.policy-owner-list {
+  margin: 0;
+  padding-inline-start: var(--space-6);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.policy-usage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.policy-meter {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  font-size: var(--font-size-sm);
+}
+
+.policy-meter meter {
+  inline-size: 100%;
 }

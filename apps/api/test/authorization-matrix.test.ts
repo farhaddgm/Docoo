@@ -17,6 +17,7 @@ import {
   WORKSPACE_PERMISSIONS,
   WorkspacePermissionGuard,
 } from '../src/auth/auth.authorization.js';
+import type { AccountPolicyService } from '../src/auth/account-policy.service.js';
 import type { AuthService } from '../src/auth/auth.service.js';
 import { DeliverablesController } from '../src/deliverables/deliverables.controller.js';
 import { ResearchPlanController } from '../src/research-plan/research-plan.controller.js';
@@ -372,7 +373,11 @@ describe('authorization matrix (AUTH-003, TC-AUTH-005)', () => {
       switchToHttp: () => ({ getRequest: () => request, getResponse: () => reply }),
     } as unknown as ExecutionContext;
 
-    const guard = new WorkspacePermissionGuard(authService, new Reflector());
+    const guard = new WorkspacePermissionGuard(
+      authService,
+      new Reflector(),
+      {} as unknown as AccountPolicyService,
+    );
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
