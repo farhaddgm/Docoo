@@ -35,11 +35,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+      - uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
         with:
           languages: javascript-typescript
-      - uses: github/codeql-action/autobuild@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
-      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+      - uses: github/codeql-action/autobuild@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+      - uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
 
   sast:
     # Free SAST that also works on private repositories without Code Security (SEC-001):
@@ -247,7 +247,7 @@ jobs:
           image=json.loads(subprocess.check_output(['docker','image','inspect',os.environ['TRACE_IMAGE']]))[0]
           (p/'provenance.json').write_text(json.dumps({'sourceCommit':os.environ['TRACE_SOURCE'],'workflowRunId':int(os.environ['TRACE_RUN']),'image':os.environ['TRACE_IMAGE'],'imageId':image['Id'],'labels':image['Config']['Labels'],'imageTarSha256':digest.hexdigest()},indent=2)+'\n')
           PYTHON
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: observability-image-${{ matrix.name }}-${{ github.sha }}
           path: trace-image

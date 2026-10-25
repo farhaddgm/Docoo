@@ -128,6 +128,7 @@ export class StageChatService {
       attachments?: readonly { sourceId: string }[] | undefined;
     },
   ) {
+    const startedAt = performance.now();
     const plan = await this.database.run(context, async (client) => {
       const stage = await this.stage(client, projectId, stageRunId);
       if (!stage.latestOutputId) {
@@ -327,7 +328,8 @@ export class StageChatService {
           instructions,
           messages: [{ role: 'user', content: message }],
           maxOutputTokens: 1500,
-          timeoutMs: MODEL_TIMEOUT_MS,
+          // File scanning and the model share the proxy-safe request budget.
+          timeoutMs: Math.max(1, Math.floor(MODEL_TIMEOUT_MS - (performance.now() - startedAt))),
         },
       );
       reply = result.response.text.trim().slice(0, REPLY_LIMIT);

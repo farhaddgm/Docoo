@@ -2,7 +2,7 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import { useCallback, useId, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 
 import { apiSend } from '../../api-client';
 import { formatNumber, type Locale, textDir } from '../../i18n';
@@ -35,6 +35,9 @@ export function RetrievalPanel({
     [text],
   );
   const { busy, notice, run } = useAction(explain);
+  // The server markup must not accept input before React can record change events.
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   const [question, setQuestion] = useState('');
   const [scope, setScope] = useState('workspace');
   const [role, setRole] = useState<ScopeRole | ''>('');
@@ -68,6 +71,7 @@ export function RetrievalPanel({
         <input
           id={`${id}-q`}
           dir={textDir(locale)}
+          disabled={!ready}
           value={question}
           maxLength={2000}
           onChange={(event) => setQuestion(event.target.value)}
@@ -75,7 +79,12 @@ export function RetrievalPanel({
         {!projectId && (
           <>
             <label htmlFor={`${id}-scope`}>{text.retrievalScope}</label>
-            <select id={`${id}-scope`} value={scope} onChange={(e) => setScope(e.target.value)}>
+            <select
+              id={`${id}-scope`}
+              disabled={!ready}
+              value={scope}
+              onChange={(e) => setScope(e.target.value)}
+            >
               <option value="workspace">{text.retrievalWorkspaceWide}</option>
               {options?.topics.map((topic) => (
                 <option key={topic.id} value={`topic:${topic.id}`}>
@@ -93,6 +102,7 @@ export function RetrievalPanel({
         <label htmlFor={`${id}-role`}>{text.retrievalRole}</label>
         <select
           id={`${id}-role`}
+          disabled={!ready}
           value={role}
           onChange={(event) => setRole(event.target.value as ScopeRole | '')}
         >
@@ -104,7 +114,11 @@ export function RetrievalPanel({
           ))}
         </select>
         <p>
-          <button type="submit" className="primary-button" disabled={busy || !question.trim()}>
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={!ready || busy || !question.trim()}
+          >
             {text.retrievalSubmit}
           </button>
         </p>

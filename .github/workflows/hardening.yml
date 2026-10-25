@@ -90,10 +90,10 @@ jobs:
         run: |
           mkdir -p reports/zap && chmod 777 reports/zap
           docker run --rm --network host -v "$GITHUB_WORKSPACE/reports/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \
-            zap-baseline.py -t http://127.0.0.1:3000/fa -I -J web.json -r web.html
+            zap-baseline.py -P 8091 -t http://127.0.0.1:3000/fa -I -J web.json -r web.html
           OPTIONS=$(node scripts/security/dast-prepare.mjs reports/zap/openapi.json)
           docker run --rm --network host -v "$GITHUB_WORKSPACE/reports/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \
-            zap-api-scan.py -t /zap/wrk/openapi.json -f openapi -I -J api.json -r api.html -z "$OPTIONS"
+            zap-api-scan.py -P 8092 -t /zap/wrk/openapi.json -f openapi -I -J api.json -r api.html -z "$OPTIONS"
           python3 scripts/security/zap-gate.py reports/zap/web.json reports/zap/api.json
       - name: Auth-path penetration test with production rate limits (SEC-002)
         run: |
@@ -127,7 +127,7 @@ jobs:
           IMAGE=docoo-postgres:ci infra/postgres/pitr-drill.sh 2>&1 | tail -5 | tee reports/pitr-drill.txt
       - name: Keep the evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: hardening-reports
           path: |

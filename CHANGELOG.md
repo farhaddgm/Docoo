@@ -4,6 +4,8 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.43.0] — 2026-10-25
+
 ### Added
 
 - **Attach files to a message in the stage conversation.** Next to the message box there is now an attach button (up to five files, the same types the knowledge base accepts). The files become sources of the project, show under your message, and the agent reads the start of their text when it answers; a file still being scanned is waited for up to ten seconds, and the agent is told when one could not be read. Migration 0061 (adds `attachments` to `stage_messages`); API `POST …/messages` takes `attachments: [{sourceId}]`.
@@ -12,6 +14,16 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - **Compact question counters in the Analysis tab.** The six counters (asked, answered, unanswered, irrelevant, later, waiting) are smaller and sit three to a row.
 - **Project tabs reordered.** The project's own tabs (Overview, Business, Knowledge, Agent, Settings, Workflow, Output requirements, Timeline) now come first, then a divider, then the stage tabs (Analysis, Research, Ideas, Documents, Evaluation).
 - **Message actions under each bubble.** In the stage conversation, hovering a message shows (under the bubble, hidden otherwise) when it was sent, a copy icon and an icon that adds it to the output requirements, replacing the old text button.
+
+### Fixed
+
+- Keep the retrieval-test inputs disabled until React is ready to handle changes, preventing fast typing from being lost during hydration (observed in WebKit).
+- Apply the security patches for fast-uri (preserving each major), ip-address, Vitest and the legacy Drizzle loader’s esbuild dependency. Keep the seven-day release-age policy, with exact-version exceptions for the reviewed URI security fixes.
+- Keep attachment scanning and the stage-chat model call inside one proxy-safe timeout budget so a slow scan does not add ten seconds on top of the model timeout.
+- Upgrade React and React DOM together to 19.3.1 so server rendering and browser startup use matching runtimes.
+- Apply Fastify 5.12.7 to both the API and Nest adapter through the workspace override; regenerate the frozen lockfile for Nodemailer 10.1.4 and the observability updates.
+- Upgrade all CodeQL steps together to 4.39.0 and upload-artifact to 7.0.2; group coupled Dependabot updates to prevent partial upgrades.
+- Give the two ZAP scans distinct proxy ports and measure provider concurrency using invocation intervals instead of arrival order across worker IPC channels.
 
 ## [0.42.0] — 2026-10-24
 
