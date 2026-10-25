@@ -1731,6 +1731,13 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   list-style: none;
 }
 
+.section-nav-divider {
+  align-self: stretch;
+  inline-size: 1px;
+  margin-block: var(--space-1);
+  background: var(--color-border);
+}
+
 .section-nav button {
   min-height: 2.25rem;
   padding: 0 var(--space-4);

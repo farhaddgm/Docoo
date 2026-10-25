@@ -42,13 +42,13 @@ const tabs = [
   'agents',
   'settings',
   'workflow',
+  'requirements',
+  'timeline',
   'problem',
   'research',
   'solutions',
   'documents',
   'evaluation',
-  'requirements',
-  'timeline',
 ] as const;
 type Tab = (typeof tabs)[number];
 
@@ -313,15 +313,19 @@ function ProjectView({
       <nav className="section-nav" aria-label={text.sections}>
         <ul>
           {tabs.map((item) => (
-            <li key={item}>
-              <button
-                type="button"
-                aria-current={tab === item ? 'page' : undefined}
-                onClick={() => choose(item)}
-              >
-                {text.tabs[item]}
-              </button>
-            </li>
+            <Fragment key={item}>
+              <li>
+                <button
+                  type="button"
+                  aria-current={tab === item ? 'page' : undefined}
+                  onClick={() => choose(item)}
+                >
+                  {text.tabs[item]}
+                </button>
+              </li>
+              {/* The project's own tabs end here; the stage tabs follow. */}
+              {item === 'timeline' && <li className="section-nav-divider" role="separator" />}
+            </Fragment>
           ))}
         </ul>
       </nav>
