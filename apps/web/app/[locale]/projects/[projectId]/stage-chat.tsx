@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
 import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
-import { formatNumber, type Locale, textDir } from '../../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { useReadOnlyAccess } from '../../resource-access';
 import type { RequirementKind, RequirementsData } from './requirements-panel';
 
@@ -15,6 +15,7 @@ interface Message {
   status: 'done' | 'failed';
   outputId: string | null;
   replyTo: string | null;
+  createdAt: string;
   /** An active output requirement was taken from this message (ADR-0037). */
   savedAsRequirement?: boolean;
 }
@@ -65,6 +66,9 @@ const presets: Record<string, Record<Locale, string[]>> = {
 
 const copy = {
   fa: {
+    copy: 'کپی',
+    copied: 'کپی شد',
+    copyFailed: 'کپی انجام نشد.',
     addRequirement: 'افزودن به الزامات خروجی',
     requirementSaved: 'در الزامات خروجی ثبت شد',
     requirementFrom: 'الزام خروجی از این پیام',
@@ -115,6 +119,9 @@ const copy = {
   },
   en: {
     presetsLabel: 'Ready-made messages',
+    copy: 'Copy',
+    copied: 'Copied',
+    copyFailed: 'Could not copy.',
     addRequirement: 'Add to output requirements',
     requirementSaved: 'Saved as an output requirement',
     requirementFrom: 'Output requirement from this message',
@@ -167,6 +174,38 @@ const copy = {
   },
 } as const;
 
+const iconProps = {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  'aria-hidden': true,
+} as const;
+
+const CopyIcon = () => (
+  <svg {...iconProps}>
+    <rect x="9" y="9" width="12" height="12" rx="2" />
+    <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg {...iconProps}>
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+const AddRequirementIcon = () => (
+  <svg {...iconProps}>
+    <path d="M9 11l3 3L22 4" />
+    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+  </svg>
+);
+
 /** How many messages of a long conversation show at once; older ones are scrolled to. */
 const VISIBLE_MESSAGES = 4;
 
@@ -204,6 +243,7 @@ export function StageChat({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const thread = useRef<HTMLUListElement>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [requirements, setRequirements] = useState<RequirementsData | null>(null);
   const [saving, setSaving] = useState<{
     messageId: string;
@@ -293,6 +333,19 @@ export function StageChat({
     } finally {
       setBusy(false);
       await load();
+    }
+  }
+
+  async function copyMessage(message: Message) {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopiedId(message.id);
+      window.setTimeout(
+        () => setCopiedId((current) => (current === message.id ? null : current)),
+        1500,
+      );
+    } catch {
+      setError(text.copyFailed);
     }
   }
 
@@ -409,32 +462,46 @@ export function StageChat({
                       {message.content}
                     </p>
                   )}
-                  {message.status !== 'failed' &&
-                    (message.savedAsRequirement ? (
-                      <p className="chat-meta">
-                        <span className="badge tone-ok">{text.requirementSaved}</span>
-                      </p>
-                    ) : (
-                      !readOnly && (
-                        <p className="chat-meta">
-                          <button
-                            data-write-action
-                            className="secondary-button"
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              setSaving({
-                                messageId: message.id,
-                                kind: 'must',
-                                text: message.content.slice(0, 1000),
-                              })
-                            }
-                          >
-                            {text.addRequirement}
-                          </button>
-                        </p>
-                      )
-                    ))}
+                  {message.status !== 'failed' && message.savedAsRequirement && (
+                    <p className="chat-meta">
+                      <span className="badge tone-ok">{text.requirementSaved}</span>
+                    </p>
+                  )}
+                  <div className="chat-actions">
+                    <time className="chat-time" dateTime={message.createdAt}>
+                      {formatDateTime(locale, message.createdAt)}
+                    </time>
+                    {message.status !== 'failed' && (
+                      <button
+                        className="chat-icon-button"
+                        type="button"
+                        aria-label={copiedId === message.id ? text.copied : text.copy}
+                        title={copiedId === message.id ? text.copied : text.copy}
+                        onClick={() => void copyMessage(message)}
+                      >
+                        {copiedId === message.id ? <CheckIcon /> : <CopyIcon />}
+                      </button>
+                    )}
+                    {message.status !== 'failed' && !message.savedAsRequirement && !readOnly && (
+                      <button
+                        data-write-action
+                        className="chat-icon-button"
+                        type="button"
+                        aria-label={text.addRequirement}
+                        title={text.addRequirement}
+                        disabled={busy}
+                        onClick={() =>
+                          setSaving({
+                            messageId: message.id,
+                            kind: 'must',
+                            text: message.content.slice(0, 1000),
+                          })
+                        }
+                      >
+                        <AddRequirementIcon />
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
