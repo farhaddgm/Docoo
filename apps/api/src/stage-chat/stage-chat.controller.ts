@@ -12,6 +12,10 @@ const messageBody = z
   .object({
     kind: z.enum(['ask', 'revision_request']),
     content: z.string().trim().min(1).max(4000),
+    attachments: z
+      .array(z.object({ sourceId: z.uuid() }).strict())
+      .max(5)
+      .optional(),
   })
   .strict();
 const sendBody = z

@@ -4821,6 +4821,24 @@ button.link-button {
   color: var(--color-ink);
 }
 
+.chat-files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chat-files li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chat-meta .badge svg,
+.chat-files .badge svg {
+  vertical-align: text-bottom;
+}
+
 .chat-message .notice {
   margin: 0;
 }

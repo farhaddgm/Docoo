@@ -1124,6 +1124,7 @@ export const stageMessages = pgTable(
     kind: text('kind').notNull(),
     content: text('content').notNull(),
     status: text('status').notNull().default('done'),
+    attachments: jsonb('attachments').notNull().default([]),
     replyTo: uuid('reply_to'),
     invocationId: uuid('invocation_id'),
     authorId: uuid('author_id'),

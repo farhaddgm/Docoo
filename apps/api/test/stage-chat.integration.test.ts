@@ -174,6 +174,23 @@ describe.skipIf(!adminUrl)('Stage conversation with the agent (ADR-0031 P1)', ()
     expect(again.json<{ code: string }>().code).toBe('STAGE_CHAT_ALREADY_SENT');
   });
 
+  it('refuses attachments that are not sources of the project', async () => {
+    const unknown = await post(chat(), {
+      kind: 'ask',
+      content: 'Read this file.',
+      attachments: [{ sourceId: '00000000-0000-4000-8000-000000000000' }],
+    });
+    expect(unknown.statusCode, unknown.body).toBe(404);
+    expect(unknown.json<{ code: string }>().code).toBe('STAGE_CHAT_ATTACHMENT_NOT_FOUND');
+    const malformed = await post(chat(), {
+      kind: 'ask',
+      content: 'Read this file.',
+      attachments: [{ sourceId: 'not-an-id' }],
+    });
+    expect(malformed.statusCode).toBe(400);
+    expect(malformed.json<{ code: string }>().code).toBe('STAGE_CHAT_INVALID_REQUEST');
+  });
+
   it('stops at the message limit', async () => {
     // Two messages were used above; the limit is five.
     for (let index = 0; index < 3; index += 1) {

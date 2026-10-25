@@ -2,6 +2,13 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [Unreleased]
+
+### Added
+
+- **Attach files to a message in the stage conversation.** Next to the message box there is now an attach button (up to five files, the same types the knowledge base accepts). The files become sources of the project, show under your message, and the agent reads the start of their text when it answers; a file still being scanned is waited for up to ten seconds, and the agent is told when one could not be read. Migration 0061 (adds `attachments` to `stage_messages`); API `POST …/messages` takes `attachments: [{sourceId}]`.
+- **Message actions under each bubble.** In the stage conversation, hovering a message shows (under the bubble, hidden otherwise) when it was sent, a copy icon and an icon that adds it to the output requirements, replacing the old text button.
+
 ## [0.42.0] — 2026-10-24
 
 ### Added

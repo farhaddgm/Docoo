@@ -5,7 +5,9 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { useReadOnlyAccess } from '../../resource-access';
+import type { Attachment } from './problem-types';
 import type { RequirementKind, RequirementsData } from './requirements-panel';
+import { ACCEPTED_EXTENSIONS, uploadProjectFile } from './upload-file';
 
 interface Message {
   id: string;
@@ -16,6 +18,7 @@ interface Message {
   outputId: string | null;
   replyTo: string | null;
   createdAt: string;
+  attachments?: Attachment[];
   /** An active output requirement was taken from this message (ADR-0037). */
   savedAsRequirement?: boolean;
 }
@@ -66,6 +69,12 @@ const presets: Record<string, Record<Locale, string[]>> = {
 
 const copy = {
   fa: {
+    attach: 'پیوست فایل',
+    attachRemove: 'برداشتن {name}',
+    attachUploading: 'در حال بارگذاری فایل…',
+    attachLimit: 'حداکثر {n} فایل را می‌توان با یک پیام فرستاد.',
+    attachHint:
+      'ایجنت متن فایل‌های پیوست را هم می‌خواند؛ فایلی که هنوز پردازش نشده باشد را نمی‌بیند.',
     copy: 'کپی',
     copied: 'کپی شد',
     copyFailed: 'کپی انجام نشد.',
@@ -110,6 +119,10 @@ const copy = {
       AI_NOT_CONFIGURED: 'هوش مصنوعی هنوز تنظیم نشده است.',
       WORKFLOW_OUTPUT_SUPERSEDED: 'این نسخه از خروجی عوض شده است؛ صفحه را تازه کنید.',
       STAGE_CHAT_ALREADY_SENT: 'این درخواست قبلاً فرستاده شده است.',
+      ANALYSIS_UPLOAD_FAILED: 'بارگذاری فایل انجام نشد.',
+      SOURCE_INVALID_REQUEST: 'این نوع یا اندازهٔ فایل پذیرفته نمی‌شود.',
+      STAGE_CHAT_ATTACHMENT_UNUSABLE: 'یکی از فایل‌های پیوست رد شده یا پردازش نشده است.',
+      STAGE_CHAT_ATTACHMENT_NOT_READY: 'یکی از فایل‌های پیوست هنوز بارگذاری نشده است.',
       OUTPUT_REQUIREMENT_DUPLICATE: 'این الزام قبلاً ثبت شده است.',
       OUTPUT_REQUIREMENT_LIMIT:
         'به سقف الزام‌های فعال رسیده‌اید؛ در تب «الزامات خروجی» یکی را بردارید.',
@@ -119,6 +132,12 @@ const copy = {
   },
   en: {
     presetsLabel: 'Ready-made messages',
+    attach: 'Attach a file',
+    attachRemove: 'Remove {name}',
+    attachUploading: 'Uploading the file…',
+    attachLimit: 'At most {n} files can go with one message.',
+    attachHint:
+      'The agent also reads the text of attached files; it cannot see a file that is still being processed.',
     copy: 'Copy',
     copied: 'Copied',
     copyFailed: 'Could not copy.',
@@ -164,6 +183,10 @@ const copy = {
       AI_NOT_CONFIGURED: 'AI is not configured yet.',
       WORKFLOW_OUTPUT_SUPERSEDED: 'This output version was replaced; reload the page.',
       STAGE_CHAT_ALREADY_SENT: 'This request was already sent back.',
+      ANALYSIS_UPLOAD_FAILED: 'The file could not be uploaded.',
+      SOURCE_INVALID_REQUEST: 'This file type or size is not accepted.',
+      STAGE_CHAT_ATTACHMENT_UNUSABLE: 'An attached file was rejected or could not be processed.',
+      STAGE_CHAT_ATTACHMENT_NOT_READY: 'An attached file has not been uploaded yet.',
       OUTPUT_REQUIREMENT_DUPLICATE: 'This requirement already exists.',
       OUTPUT_REQUIREMENT_LIMIT:
         'You reached the limit of active requirements; withdraw one on the “Output requirements” tab.',
@@ -173,6 +196,9 @@ const copy = {
     generic: 'It did not work. Try again.',
   },
 } as const;
+
+/** Files that can go with one message; the same bound the API enforces. */
+const MAX_ATTACHMENTS = 5;
 
 const iconProps = {
   width: 16,
@@ -196,6 +222,12 @@ const CopyIcon = () => (
 const CheckIcon = () => (
   <svg {...iconProps}>
     <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+const PaperclipIcon = () => (
+  <svg {...iconProps}>
+    <path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5" />
   </svg>
 );
 
@@ -244,6 +276,9 @@ export function StageChat({
   const [error, setError] = useState('');
   const thread = useRef<HTMLUListElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [files, setFiles] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
   const [requirements, setRequirements] = useState<RequirementsData | null>(null);
   const [saving, setSaving] = useState<{
     messageId: string;
@@ -252,6 +287,8 @@ export function StageChat({
   } | null>(null);
   /** `/workspaces/{id}/projects/{id}` */
   const projectBase = stageBase.replace(/\/stages\/[^/]+$/, '');
+  const [, workspaceBase = '', projectId = ''] =
+    /^(.*)\/projects\/([^/]+)$/.exec(projectBase) ?? [];
 
   const loadRequirements = useCallback(async () => {
     try {
@@ -288,13 +325,40 @@ export function StageChat({
     setBusy(true);
     setError('');
     try {
-      await apiSend('POST', `${stageBase}/messages`, { kind, content });
+      await apiSend('POST', `${stageBase}/messages`, {
+        kind,
+        content,
+        ...(files.length > 0
+          ? { attachments: files.map((file) => ({ sourceId: file.sourceId })) }
+          : {}),
+      });
       setInput('');
+      setFiles([]);
     } catch (caught) {
       setError(explain(caught));
     } finally {
       setBusy(false);
       await load();
+    }
+  }
+
+  async function attach(chosen: FileList | null) {
+    if (!chosen || chosen.length === 0 || uploading) return;
+    const room = MAX_ATTACHMENTS - files.length;
+    setError('');
+    if (chosen.length > room)
+      setError(fill(text.attachLimit, { n: formatNumber(locale, MAX_ATTACHMENTS) }));
+    setUploading(true);
+    try {
+      for (const file of Array.from(chosen).slice(0, room)) {
+        const uploaded = await uploadProjectFile(workspaceBase, projectId, file);
+        setFiles((current) => [...current, uploaded]);
+      }
+    } catch (caught) {
+      setError(explain(caught));
+    } finally {
+      setUploading(false);
+      if (picker.current) picker.current.value = '';
     }
   }
 
@@ -467,6 +531,15 @@ export function StageChat({
                       <span className="badge tone-ok">{text.requirementSaved}</span>
                     </p>
                   )}
+                  {(message.attachments?.length ?? 0) > 0 && (
+                    <p className="chat-meta">
+                      {message.attachments!.map((file) => (
+                        <span key={file.sourceId} className="badge">
+                          <PaperclipIcon /> {file.title}
+                        </span>
+                      ))}
+                    </p>
+                  )}
                   <div className="chat-actions">
                     <time className="chat-time" dateTime={message.createdAt}>
                       {formatDateTime(locale, message.createdAt)}
@@ -591,12 +664,57 @@ export function StageChat({
                 disabled={busy || full}
                 onChange={(event) => setInput(event.target.value)}
               />
+              {files.length > 0 && (
+                <ul className="plain-list chat-files">
+                  {files.map((file) => (
+                    <li key={file.sourceId}>
+                      <span className="badge">
+                        <PaperclipIcon /> {file.title}
+                      </span>
+                      <button
+                        className="chat-icon-button"
+                        type="button"
+                        aria-label={fill(text.attachRemove, { name: file.title })}
+                        title={fill(text.attachRemove, { name: file.title })}
+                        disabled={busy}
+                        onClick={() =>
+                          setFiles((current) =>
+                            current.filter((item) => item.sourceId !== file.sourceId),
+                          )
+                        }
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <input
+                ref={picker}
+                type="file"
+                multiple
+                hidden
+                accept={ACCEPTED_EXTENSIONS}
+                onChange={(event) => void attach(event.target.files)}
+              />
               <div className="toolbar">
+                <button
+                  data-write-action
+                  className="secondary-button"
+                  type="button"
+                  aria-label={text.attach}
+                  title={text.attach}
+                  aria-describedby={`${id}-attach-hint`}
+                  disabled={busy || full || uploading || files.length >= MAX_ATTACHMENTS}
+                  onClick={() => picker.current?.click()}
+                >
+                  <PaperclipIcon />
+                </button>
                 <button
                   data-write-action
                   className="primary-button"
                   type="button"
-                  disabled={busy || full || !input.trim()}
+                  disabled={busy || full || uploading || !input.trim()}
                   onClick={() => void post('ask')}
                 >
                   {text.ask}
@@ -606,7 +724,7 @@ export function StageChat({
                     data-write-action
                     className="secondary-button"
                     type="button"
-                    disabled={busy || full || !input.trim()}
+                    disabled={busy || full || uploading || !input.trim()}
                     onClick={() => void post('revision_request')}
                   >
                     {text.revise}
@@ -635,6 +753,14 @@ export function StageChat({
                     </button>
                   ))}
                 </div>
+              )}
+              <small id={`${id}-attach-hint`} className="muted">
+                {text.attachHint}
+              </small>
+              {uploading && (
+                <p className="muted" role="status">
+                  {text.attachUploading}
+                </p>
               )}
               {busy && (
                 <p className="muted" role="status">
