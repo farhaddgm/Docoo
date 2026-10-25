@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "e5d1b2d0b375f0a6905af185b6f67b01c0670c8f"
+    "source_commit": "b193d42927bdc8332597a4331343830fb30ee380"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,7 +62,7 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-24T22:45:21.960Z",
+    "synced_at": "2026-10-25T07:44:03.452Z",
     "created": 0,
     "updated": 2,
     "unchanged": 72,
@@ -165,13 +165,13 @@
       "version": "1.1.0",
       "status": "approved-baseline",
       "owner": "Product & Security",
-      "checksum_sha256": "04c8b70ae5246a035fb86a968d4d91668f2146c618fa7089e0242b2fd40d2399",
+      "checksum_sha256": "977db72189260994be362a27a11ad07d14e3a9bf5e770ee5d69d635e662cf843",
       "notion_page_id": "3e55a24a-6668-8160-9da6-ee87ac185418",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881609da6ee87ac185418?pvs=204",
       "index_row_page_id": "3e55a24a-6668-816f-960d-c30ff515b9ec",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a6668816f960dc30ff515b9ec",
-      "synced_commit": "7dffed3087223c3ca489c1f6d63e1c32a544835a",
-      "synced_at": "2026-10-13T05:48:00.078Z"
+      "synced_commit": "b193d42927bdc8332597a4331343830fb30ee380",
+      "synced_at": "2026-10-25T07:44:03.452Z"
     },
     "DOCOO-BACKOFFICE-UX": {
       "path": "docs/01-product/05-backoffice-ux.md",
@@ -333,13 +333,13 @@
       "version": "1.12.0",
       "status": "proposed",
       "owner": "API Architecture",
-      "checksum_sha256": "44404c8df402f7036f8e0538daf5ae27f273c2a00ff39ec9dade30e514e81db9",
+      "checksum_sha256": "1bdbfdb894b304973bb3ce063ac34147eb5d89fa22b0f582d2e26a9fc587260a",
       "notion_page_id": "3e55a24a-6668-812d-9f69-cd7fceb4fea8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812d9f69cd7fceb4fea8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a8-8910-fed8b8b362d3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a88910fed8b8b362d3",
-      "synced_commit": "e5d1b2d0b375f0a6905af185b6f67b01c0670c8f",
-      "synced_at": "2026-10-24T22:45:21.960Z"
+      "synced_commit": "b193d42927bdc8332597a4331343830fb30ee380",
+      "synced_at": "2026-10-25T07:44:03.452Z"
     },
     "DOCOO-WORKFLOWS-JOBS": {
       "path": "docs/04-architecture/04-workflows-and-jobs.md",
