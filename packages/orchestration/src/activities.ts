@@ -440,7 +440,7 @@ export function createOrchestrationActivities(
             stage.stage === 'evaluation'
               ? ((await confirmedDeliverables(client, ref.projectId)) ?? undefined)
               : undefined,
-          requirements: await promptRequirements(client, ref.projectId),
+          requirements: await promptRequirements(client, ref.projectId, stage.stage),
           researchPlan: researchPlan?.questions,
           earlierFindings: followup ? compactResearchForPrompt(followup.previous) : undefined,
         };

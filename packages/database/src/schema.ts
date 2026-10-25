@@ -1197,6 +1197,7 @@ export const outputRequirements = pgTable(
     body: text('body').notNull(),
     source: text('source').notNull(),
     stage: stageKind('stage'),
+    targetStage: stageKind('target_stage'),
     messageId: uuid('message_id').references(() => stageMessages.id),
     supersedesId: uuid('supersedes_id'),
     createdBy: uuid('created_by').notNull(),

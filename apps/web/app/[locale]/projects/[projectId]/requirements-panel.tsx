@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState } from 'react';
+import { Fragment, useCallback, useEffect, useId, useState } from 'react';
 
 import { ApiError, apiGet, apiSend } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
@@ -15,9 +15,24 @@ export interface Requirement {
   text: string;
   source: 'admin' | 'chat';
   stage: string | null;
+  /** The stage it binds; null: the final output as a whole. */
+  target: string | null;
   createdAt: string;
   behindStages: string[];
 }
+
+/** The scopes a requirement can be written for: the final output, then each stage in order. */
+export const REQUIREMENT_SCOPES = [
+  'final',
+  'analysis',
+  'research',
+  'ideation',
+  'documentation',
+  'evaluation',
+] as const;
+export type RequirementScope = (typeof REQUIREMENT_SCOPES)[number];
+const scopeOf = (item: { target: string | null }): RequirementScope =>
+  (item.target as RequirementScope | null) ?? 'final';
 
 interface HistoryItem extends Requirement {
   endedKind: 'withdrawn' | 'replaced';
@@ -29,6 +44,7 @@ interface CheckLine {
   requirementId: string;
   kind: RequirementKind;
   text: string;
+  target?: string | null;
   verdict: Verdict;
   evidence: string;
   foundIn: string;
@@ -54,7 +70,30 @@ export interface RequirementsData {
 const copy = {
   fa: {
     title: 'الزامات خروجی',
-    help: 'هر وقت به ذهنتان رسید که خروجی نهایی چه چیزهایی باید داشته باشد یا نباید داشته باشد، همین‌جا بنویسید. ایجنت همهٔ مرحله‌ها این فهرست را می‌خوانند و در پایان می‌توانید بسنجید خروجی کدام را پوشش داده است. می‌توانید هر پیام گفتگو با ایجنت را هم از همان‌جا به این فهرست اضافه کنید.',
+    help: 'هر وقت به ذهنتان رسید که خروجی چه چیزهایی باید داشته باشد یا نباید داشته باشد، همین‌جا بنویسید؛ یا برای کل خروجی نهایی، یا فقط برای یک مرحله (از تحلیل تا ارزیابی). در پایان می‌توانید بسنجید خروجی کدام را پوشش داده است. می‌توانید هر پیام گفتگو با ایجنت را هم از همان‌جا به این فهرست اضافه کنید.',
+    scopesLabel: 'الزامات به تفکیک مرحله',
+    scopes: {
+      final: 'کل خروجی',
+      analysis: 'تحلیل',
+      research: 'تحقیق',
+      ideation: 'ایده',
+      documentation: 'مستند',
+      evaluation: 'ارزیابی',
+    } as Record<string, string>,
+    scopeHelp: {
+      final:
+        'الزام‌هایی که برای خروجی نهایی پروژه‌اند. ایجنت همهٔ مرحله‌ها آن‌ها را می‌خوانند و هر کدام در حد کار خودش رعایتشان می‌کند.',
+      analysis: 'فقط ایجنت «تحلیل» این‌ها را می‌خواند؛ مثلاً پرسش‌هایی که حتماً باید پرسیده شود.',
+      research:
+        'فقط ایجنت «تحقیق» این‌ها را می‌خواند؛ مثلاً منبع‌هایی که باید یا نباید استفاده شود.',
+      ideation: 'فقط ایجنت «ایده» این‌ها را می‌خواند؛ مثلاً محدودیت بودجه یا نوع راه‌حل‌ها.',
+      documentation:
+        'فقط نگارندهٔ «مستند» و ارزیاب سند این‌ها را می‌خوانند؛ مثلاً بخش‌ها و لحن سند.',
+      evaluation: 'فقط ایجنت «ارزیابی» این‌ها را می‌خواند؛ مثلاً معیارهایی که حتماً سنجیده شود.',
+    } as Record<string, string>,
+    emptyScope: 'برای این بخش هنوز الزامی ثبت نشده است.',
+    appliesTo: 'مربوط به',
+    appliesToStage: 'مخصوص «{stage}»',
     kind: 'نوع',
     kinds: { must: 'باید داشته باشد', must_not: 'نباید داشته باشد' },
     text: 'متن الزام',
@@ -131,7 +170,32 @@ const copy = {
   },
   en: {
     title: 'Output requirements',
-    help: 'Whenever it occurs to you what the final output must or must not contain, write it here. The agents of every stage read this list, and at the end you can check which items the output covers. You can also add any message of a conversation with an agent to this list from there.',
+    help: 'Whenever it occurs to you what the output must or must not contain, write it here, either for the final output as a whole or for just one stage (from analysis to evaluation). At the end you can check which items the output covers. You can also add any message of a conversation with an agent to this list from there.',
+    scopesLabel: 'Requirements by stage',
+    scopes: {
+      final: 'Final output',
+      analysis: 'Analysis',
+      research: 'Research',
+      ideation: 'Ideas',
+      documentation: 'Documents',
+      evaluation: 'Evaluation',
+    } as Record<string, string>,
+    scopeHelp: {
+      final:
+        'Requirements for the final output of the project. The agents of every stage read them and each respects them within its own work.',
+      analysis: 'Only the Analysis agent reads these; for example questions that must be asked.',
+      research:
+        'Only the Research agent reads these; for example sources that must or must not be used.',
+      ideation:
+        'Only the Ideas agent reads these; for example a budget limit or the kind of solutions.',
+      documentation:
+        'Only the document writer and the document evaluator read these; for example sections and tone.',
+      evaluation:
+        'Only the Evaluation agent reads these; for example criteria that must be assessed.',
+    } as Record<string, string>,
+    emptyScope: 'No requirement for this part yet.',
+    appliesTo: 'Applies to',
+    appliesToStage: 'Only for “{stage}”',
     kind: 'Kind',
     kinds: { must: 'Must have', must_not: 'Must not have' },
     text: 'Requirement',
@@ -315,6 +379,16 @@ export function CoverageView({
                   {text.verdicts[line.kind][line.verdict]}
                 </span>{' '}
                 <span className="badge">{text.kinds[line.kind]}</span>
+                {line.target && (
+                  <>
+                    {' '}
+                    <span className="badge">
+                      {fill(text.appliesToStage, {
+                        stage: text.scopes[line.target] ?? line.target,
+                      })}
+                    </span>
+                  </>
+                )}
                 <p dir={textDir(locale)}>{line.text}</p>
                 {line.evidence && (
                   <p className="muted" dir={textDir(locale)}>
@@ -405,12 +479,14 @@ export function RequirementsPanel({
   const readOnly = useReadOnlyAccess();
   const id = useId();
   const { data, failed, busy, error, run } = useRequirements(base, locale, refreshKey);
+  const [scope, setScope] = useState<RequirementScope>('final');
   const [kind, setKind] = useState<RequirementKind>('must');
   const [draft, setDraft] = useState('');
   const [editing, setEditing] = useState<{
     id: string;
     kind: RequirementKind;
     text: string;
+    scope: RequirementScope;
   } | null>(null);
   const [withdrawing, setWithdrawing] = useState<{ id: string; reason: string } | null>(null);
 
@@ -428,6 +504,9 @@ export function RequirementsPanel({
 
   const stageName = (stage: string) => text.stagesNames[stage] ?? stage;
   const full = data.items.length >= data.limit;
+  const shown = data.items.filter((item) => scopeOf(item) === scope);
+  const countOf = (name: RequirementScope) =>
+    data.items.filter((item) => scopeOf(item) === name).length;
 
   return (
     <div className="stack">
@@ -435,13 +514,42 @@ export function RequirementsPanel({
         <h2 id={`${id}-title`}>{text.title}</h2>
         <p className="muted">{text.help}</p>
 
+        <nav className="section-nav" aria-label={text.scopesLabel}>
+          <ul>
+            {REQUIREMENT_SCOPES.map((name) => (
+              <Fragment key={name}>
+                <li>
+                  <button
+                    type="button"
+                    aria-current={scope === name ? 'page' : undefined}
+                    onClick={() => {
+                      setScope(name);
+                      setEditing(null);
+                      setWithdrawing(null);
+                    }}
+                  >
+                    {text.scopes[name]}{' '}
+                    <span className="badge">{formatNumber(locale, countOf(name))}</span>
+                  </button>
+                </li>
+                {name === 'final' && <li className="section-nav-divider" role="separator" />}
+              </Fragment>
+            ))}
+          </ul>
+        </nav>
+        <p className="muted">{text.scopeHelp[scope]}</p>
+
         {!readOnly && (
           <form
             className="field-stack"
             onSubmit={(event) => {
               event.preventDefault();
               void run('add', async () => {
-                await apiSend('POST', `${base}/output-requirements`, { kind, text: draft });
+                await apiSend('POST', `${base}/output-requirements`, {
+                  kind,
+                  text: draft,
+                  ...(scope === 'final' ? {} : { target: scope }),
+                });
                 setDraft('');
               });
             }}
@@ -493,9 +601,11 @@ export function RequirementsPanel({
 
         {data.items.length === 0 ? (
           <p className="muted">{text.empty}</p>
+        ) : shown.length === 0 ? (
+          <p className="muted">{text.emptyScope}</p>
         ) : (
           <ol className="plain-list">
-            {data.items.map((item) => (
+            {shown.map((item) => (
               <li key={item.id}>
                 {editing?.id === item.id ? (
                   <form
@@ -506,6 +616,7 @@ export function RequirementsPanel({
                         await apiSend('PATCH', `${base}/output-requirements/${item.id}`, {
                           kind: editing.kind,
                           text: editing.text,
+                          target: editing.scope === 'final' ? null : editing.scope,
                         });
                         setEditing(null);
                       });
@@ -521,6 +632,20 @@ export function RequirementsPanel({
                     >
                       <option value="must">{text.kinds.must}</option>
                       <option value="must_not">{text.kinds.must_not}</option>
+                    </select>
+                    <label htmlFor={`${id}-edit-scope`}>{text.appliesTo}</label>
+                    <select
+                      id={`${id}-edit-scope`}
+                      value={editing.scope}
+                      onChange={(event) =>
+                        setEditing({ ...editing, scope: event.target.value as RequirementScope })
+                      }
+                    >
+                      {REQUIREMENT_SCOPES.map((name) => (
+                        <option key={name} value={name}>
+                          {text.scopes[name]}
+                        </option>
+                      ))}
                     </select>
                     <label htmlFor={`${id}-edit-text`}>{text.text}</label>
                     <textarea
@@ -634,7 +759,12 @@ export function RequirementsPanel({
                             type="button"
                             disabled={busy !== null}
                             onClick={() =>
-                              setEditing({ id: item.id, kind: item.kind, text: item.text })
+                              setEditing({
+                                id: item.id,
+                                kind: item.kind,
+                                text: item.text,
+                                scope: scopeOf(item),
+                              })
                             }
                           >
                             {text.edit}

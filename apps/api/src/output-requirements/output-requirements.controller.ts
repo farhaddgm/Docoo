@@ -9,16 +9,26 @@ import { isUuid, workspaceContext } from '../common/request-context.js';
 import { OutputRequirementsService } from './output-requirements.service.js';
 
 const kind = z.enum(['must', 'must_not']);
+const stage = z.enum(['analysis', 'research', 'ideation', 'documentation', 'evaluation']);
 const createBody = z
   .object({
     kind,
     text: z.string().max(4000),
-    stage: z.enum(['analysis', 'research', 'ideation', 'documentation', 'evaluation']).optional(),
+    stage: stage.optional(),
+    // The stage the requirement binds; absent: the final output as a whole.
+    target: stage.nullish(),
   })
   .strict();
-const fromMessageBody = z.object({ kind, text: z.string().max(4000).optional() }).strict();
+const fromMessageBody = z
+  .object({ kind, text: z.string().max(4000).optional(), target: stage.nullish() })
+  .strict();
 const editBody = z
-  .object({ kind: kind.optional(), text: z.string().max(4000).optional() })
+  .object({
+    kind: kind.optional(),
+    text: z.string().max(4000).optional(),
+    // null moves it to the final output as a whole; absent leaves it where it is.
+    target: stage.nullable().optional(),
+  })
   .strict();
 const withdrawBody = z.object({ reason: z.string().trim().max(500).optional() }).strict();
 

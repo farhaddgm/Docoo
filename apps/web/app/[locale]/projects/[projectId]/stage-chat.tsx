@@ -82,6 +82,9 @@ const copy = {
     requirementSaved: 'در الزامات خروجی ثبت شد',
     requirementFrom: 'الزام خروجی از این پیام',
     requirementKind: 'نوع',
+    requirementScope: 'مربوط به',
+    requirementScopeStage: 'فقط همین مرحله',
+    requirementScopeFinal: 'کل خروجی نهایی',
     requirementKinds: { must: 'باید داشته باشد', must_not: 'نباید داشته باشد' },
     requirementText: 'متن الزام',
     requirementSave: 'ثبت الزام',
@@ -145,6 +148,9 @@ const copy = {
     requirementSaved: 'Saved as an output requirement',
     requirementFrom: 'Output requirement from this message',
     requirementKind: 'Kind',
+    requirementScope: 'Applies to',
+    requirementScopeStage: 'This stage only',
+    requirementScopeFinal: 'The final output as a whole',
     requirementKinds: { must: 'Must have', must_not: 'Must not have' },
     requirementText: 'Requirement',
     requirementSave: 'Save requirement',
@@ -284,6 +290,8 @@ export function StageChat({
     messageId: string;
     kind: RequirementKind;
     text: string;
+    /** `final`: the output as a whole; otherwise the stage of this conversation. */
+    scope: 'final' | 'stage';
   } | null>(null);
   /** `/workspaces/{id}/projects/{id}` */
   const projectBase = stageBase.replace(/\/stages\/[^/]+$/, '');
@@ -370,6 +378,7 @@ export function StageChat({
       await apiSend('POST', `${stageBase}/messages/${saving.messageId}/requirements`, {
         kind: saving.kind,
         text: saving.text,
+        ...(saving.scope === 'stage' && stage ? { target: stage } : {}),
       });
       setSaving(null);
     } catch (caught) {
@@ -568,6 +577,7 @@ export function StageChat({
                             messageId: message.id,
                             kind: 'must',
                             text: message.content.slice(0, 1000),
+                            scope: stage ? 'stage' : 'final',
                           })
                         }
                       >
@@ -600,6 +610,21 @@ export function StageChat({
                 <option value="must">{text.requirementKinds.must}</option>
                 <option value="must_not">{text.requirementKinds.must_not}</option>
               </select>
+              {stage && (
+                <>
+                  <label htmlFor={`${id}-req-scope`}>{text.requirementScope}</label>
+                  <select
+                    id={`${id}-req-scope`}
+                    value={saving.scope}
+                    onChange={(event) =>
+                      setSaving({ ...saving, scope: event.target.value as 'final' | 'stage' })
+                    }
+                  >
+                    <option value="stage">{text.requirementScopeStage}</option>
+                    <option value="final">{text.requirementScopeFinal}</option>
+                  </select>
+                </>
+              )}
               <label htmlFor={`${id}-req-text`}>{text.requirementText}</label>
               <textarea
                 id={`${id}-req-text`}

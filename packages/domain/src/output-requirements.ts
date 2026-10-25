@@ -52,11 +52,22 @@ export interface PromptRequirement {
   readonly id: string;
   readonly kind: OutputRequirementKind;
   readonly text: string;
+  /** The one stage the requirement binds; absent when it binds the final output as a whole. */
+  readonly appliesTo?: RequirementStage;
 }
+
+/**
+ * Whether a requirement reaches the agent of a stage: the ones that bind the final output as a
+ * whole (no target) reach every stage, and a targeted one reaches only the stage it names.
+ */
+export const requirementReachesStage = (
+  target: RequirementStage | null | undefined,
+  stage: string,
+): boolean => target === null || target === undefined || target === stage;
 
 /** Rules added to every stage, to the documenter and to the evaluators once a requirement exists. */
 export const OUTPUT_REQUIREMENT_RULES: readonly string[] = [
-  'outputRequirements lists what the administrator requires of the final output: "must" items have to be reflected in it, "must_not" items must not appear in it. Treat each as a binding constraint on the final output, within the scope of your own stage.',
+  'outputRequirements lists what the administrator requires of the final output: "must" items have to be reflected in it, "must_not" items must not appear in it. Treat each as a binding constraint on the final output, within the scope of your own stage. An item with appliesTo binds only the output of the stage it names.',
   'Never include content that a must_not item forbids. If a must item cannot be met from the approved material of the earlier stages, say so plainly in your output instead of dropping it silently or inventing support for it.',
   'If two requirements contradict each other, or a requirement contradicts the confirmed deliverables, report the contradiction instead of choosing one side silently.',
 ];
@@ -94,6 +105,7 @@ export const COVERAGE_SCHEMA: Readonly<Record<string, unknown>> = {
 };
 
 export const COVERAGE_RULES: readonly string[] = [
+  'A requirement with appliesTo binds only the output of that stage: judge it against that stage output (or, for documentation, the documents) and not against the others. One without appliesTo binds the final output as a whole.',
   'You check, for the administrator, whether the project output covers each requirement in outputRequirements. Judge only from the material in <data> (stage outputs and document texts); never assume content that is not there.',
   'For a "must" item: covered means the material states it concretely; partial means it is touched but incomplete or vague; not_covered means it is absent.',
   'For a "must_not" item the meaning is reversed: covered means the material respects the prohibition; not_covered means the forbidden content appears; partial means it appears in part or only in one place.',
@@ -180,9 +192,11 @@ export function summarizeCoverage(
 export function stagesBehindRequirement(
   requirementCreatedAt: string,
   outputs: readonly { readonly stage: string; readonly outputCreatedAt: string | null }[],
+  target: RequirementStage | null = null,
 ): string[] {
   const added = Date.parse(requirementCreatedAt);
   return outputs
+    .filter((item) => requirementReachesStage(target, item.stage))
     .filter((item) => item.outputCreatedAt !== null && Date.parse(item.outputCreatedAt) < added)
     .map((item) => item.stage);
 }

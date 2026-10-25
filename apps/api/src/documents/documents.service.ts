@@ -676,7 +676,7 @@ export class DocumentsService {
         // What the administrator confirmed as the expected outputs (ADR-0031), if anything.
         deliverables: await confirmedDeliverables(client, document.project_id),
         // What the administrator requires of the final output (ADR-0037).
-        requirements: await promptRequirements(client, document.project_id),
+        requirements: await promptRequirements(client, document.project_id, 'documentation'),
         // The evaluator also checks the document against what the business says about itself.
         company: await this.business.roleBusiness(
           client,

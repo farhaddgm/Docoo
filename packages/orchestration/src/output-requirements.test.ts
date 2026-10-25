@@ -1,6 +1,7 @@
 import { defaultDefinition, OUTPUT_REQUIREMENT_RULES } from '@docoo/domain';
 import { describe, expect, it } from 'vitest';
 
+import { toPromptRequirements } from './output-requirements.js';
 import { stagePrompt, STAGES, type StageContext } from './stages.js';
 
 const context = (
@@ -41,5 +42,30 @@ describe('output requirements in the stage prompt (ADR-0037)', () => {
       expect(prompt.instructions).not.toContain('outputRequirements');
       expect(data(prompt.message)).not.toHaveProperty('outputRequirements');
     }
+  });
+});
+
+describe('requirements aimed at one stage (ADR-0041)', () => {
+  it('tells the agent which stage a targeted requirement binds, and nothing for the others', () => {
+    const rows = [
+      { id: 'a', kind: 'must', text: 'Ask about budget', target: 'analysis' },
+      { id: 'b', kind: 'must', text: 'Include a risk register', target: null },
+    ] as const;
+    const prompts = toPromptRequirements(
+      rows.map((row) => ({
+        ...row,
+        source: 'admin',
+        stage: null,
+        messageId: null,
+        supersedesId: null,
+        createdBy: 'u',
+        createdAt: '',
+      })),
+    );
+    expect(prompts).toEqual([
+      { id: 'a', kind: 'must', text: 'Ask about budget', appliesTo: 'analysis' },
+      { id: 'b', kind: 'must', text: 'Include a risk register' },
+    ]);
+    expect(OUTPUT_REQUIREMENT_RULES.join(' ')).toContain('appliesTo');
   });
 });

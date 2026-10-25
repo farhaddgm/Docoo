@@ -5,6 +5,7 @@ import {
   normalizeCoverage,
   normalizeRequirementText,
   OUTPUT_REQUIREMENT_LIMITS,
+  requirementReachesStage,
   stagesBehindRequirement,
   summarizeCoverage,
 } from './output-requirements.js';
@@ -96,5 +97,28 @@ describe('stages behind a requirement', () => {
       { stage: 'ideation', outputCreatedAt: null },
     ]);
     expect(behind).toEqual(['analysis']);
+  });
+});
+
+describe('requirements aimed at one stage (ADR-0041)', () => {
+  it('reaches every stage when it has no target, and only its own stage when it has one', () => {
+    expect(requirementReachesStage(null, 'research')).toBe(true);
+    expect(requirementReachesStage(undefined, 'evaluation')).toBe(true);
+    expect(requirementReachesStage('research', 'research')).toBe(true);
+    expect(requirementReachesStage('research', 'ideation')).toBe(false);
+  });
+
+  it('counts only the targeted stage as behind', () => {
+    const outputs = [
+      { stage: 'analysis', outputCreatedAt: '2026-10-19T10:00:00.000Z' },
+      { stage: 'research', outputCreatedAt: '2026-10-19T11:00:00.000Z' },
+    ];
+    expect(stagesBehindRequirement('2026-10-20T10:00:00.000Z', outputs, 'research')).toEqual([
+      'research',
+    ]);
+    expect(stagesBehindRequirement('2026-10-20T10:00:00.000Z', outputs, null)).toEqual([
+      'analysis',
+      'research',
+    ]);
   });
 });

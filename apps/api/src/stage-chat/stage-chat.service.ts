@@ -3,6 +3,7 @@ import {
   BUSINESS_PROMPT_DEFAULT_CHARS,
   dataBlock,
   OUTPUT_REQUIREMENT_RULES,
+  requirementReachesStage,
   STAGE_ROLE,
 } from '@docoo/domain';
 import {
@@ -13,6 +14,7 @@ import {
   ProviderRuntime,
   resolveAgentProfile,
   STAGES,
+  toPromptRequirements,
   type Stage,
 } from '@docoo/orchestration';
 import { ProviderError } from '@docoo/providers';
@@ -202,11 +204,11 @@ export class StageChatService {
       if (!connectionId || !model) {
         throw conflict('AI_NOT_CONFIGURED', 'Set ai.connection_id and ai.model first.');
       }
-      const requirements = (await activeRequirements(client, projectId)).map((row) => ({
-        id: row.id,
-        kind: row.kind,
-        text: row.text,
-      }));
+      const requirements = toPromptRequirements(
+        (await activeRequirements(client, projectId)).filter((row) =>
+          requirementReachesStage(row.target, stage.stage),
+        ),
+      );
       const business = businessForRole(
         stage.runId ? await loadRunBusiness(client, stage.runId) : null,
         role,

@@ -20,6 +20,7 @@ interface Requirement {
   text: string;
   source: 'admin' | 'chat';
   stage: string | null;
+  target: string | null;
   messageId: string | null;
   supersedesId: string | null;
   behindStages: string[];
@@ -219,6 +220,43 @@ describe.skipIf(!adminUrl)('Output requirements (ADR-0037)', () => {
     expect(request.messages[0]!.content).toContain('a risk register');
     expect(request.instructions ?? '').toContain('binding constraint');
     invoke.mockRestore();
+  });
+
+  it('aims a requirement at one stage so only that stage reads it (ADR-0041)', async () => {
+    const added = await post(base(), {
+      kind: 'must',
+      text: 'Cite a primary source for every churn figure',
+      target: 'research',
+    });
+    expect(added.statusCode, added.body).toBe(201);
+    const requirement = added.json<{ requirement: Requirement }>().requirement;
+    expect(requirement.target).toBe('research');
+    expect(
+      (await list()).items.find((item) => item.id === requirement.id)!.behindStages,
+    ).not.toContain('analysis');
+    const unknown = await post(base(), { kind: 'must', text: 'Nothing here', target: 'finale' });
+    expect(unknown.statusCode).toBe(400);
+
+    const invoke = vi.spyOn(h.fake, 'invoke');
+    const asked = await post(api(`/projects/${projectId}/stages/${researchStageId}/messages`), {
+      kind: 'ask',
+      content: 'Which requirements bind you?',
+    });
+    expect(asked.statusCode, asked.body).toBe(200);
+    expect(invoke.mock.calls[0]![0].messages[0]!.content).toContain('primary source');
+    expect(invoke.mock.calls[0]![0].messages[0]!.content).toContain('"appliesTo":"research"');
+    invoke.mockRestore();
+
+    // Moving it to the final output as a whole is an edit: a new row, the old one in history.
+    const moved = await h.request('PATCH', `${base()}/${requirement.id}`, {
+      cookie: cookieA,
+      payload: { target: null },
+    });
+    expect(moved.statusCode, moved.body).toBe(200);
+    expect(moved.json<{ requirement: Requirement }>().requirement.target).toBeNull();
+    const after = await list();
+    expect(after.history.some((item) => item.id === requirement.id)).toBe(true);
+    await post(`${base()}/${moved.json<{ requirement: Requirement }>().requirement.id}/withdraw`);
   });
 
   it('replaces a requirement on edit and keeps the old one in the history', async () => {
