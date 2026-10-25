@@ -17,6 +17,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Fixed
 
+- Wait for the project’s document template default before accepting writing options, so a delayed response cannot replace an explicitly selected detailed template with the standard one.
 - Keep the retrieval-test inputs disabled until React is ready to handle changes, preventing fast typing from being lost during hydration (observed in WebKit).
 - Apply the security patches for fast-uri (preserving each major), ip-address, Vitest and the legacy Drizzle loader’s esbuild dependency. Keep the seven-day release-age policy, with exact-version exceptions for the reviewed URI security fixes.
 - Keep attachment scanning and the stage-chat model call inside one proxy-safe timeout budget so a slow scan does not add ten seconds on top of the model timeout.
