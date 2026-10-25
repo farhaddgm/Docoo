@@ -1511,6 +1511,25 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+/* Smaller tiles, three to a row, for the question progress of the analysis tab. */
+.counts-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.counts-compact > div {
+  padding: var(--space-1) var(--space-2);
+}
+
+.counts-compact dt {
+  font-size: var(--font-size-xs, 0.75rem);
+}
+
+.counts-compact dd {
+  font-size: 1.125rem;
+  line-height: 1.3;
+}
+
 .plain-list {
   display: grid;
   gap: var(--space-2);
