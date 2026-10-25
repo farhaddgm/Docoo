@@ -339,7 +339,7 @@ function ProjectView({
                 </button>
               </li>
               {/* The project's own tabs end here; the stage tabs follow. */}
-              {item === 'timeline' && <li className="section-nav-divider" role="separator" />}
+              {item === 'timeline' && <li className="section-nav-divider" aria-hidden="true" />}
             </Fragment>
           ))}
         </ul>

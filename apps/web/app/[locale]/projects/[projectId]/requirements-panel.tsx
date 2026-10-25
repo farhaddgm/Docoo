@@ -532,7 +532,7 @@ export function RequirementsPanel({
                     <span className="badge">{formatNumber(locale, countOf(name))}</span>
                   </button>
                 </li>
-                {name === 'final' && <li className="section-nav-divider" role="separator" />}
+                {name === 'final' && <li className="section-nav-divider" aria-hidden="true" />}
               </Fragment>
             ))}
           </ul>
