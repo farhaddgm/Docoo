@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  numeric,
   boolean,
   check,
   foreignKey,
@@ -1184,6 +1185,26 @@ export const deliverableConfirmations = pgTable(
   (table) => [uniqueIndex('deliverable_confirmations_plan_uq').on(table.planId)],
 );
 
+/** Per-account settings the owner sets on top of the role (ADR-0042); one optional row per user. */
+export const accountPolicies = pgTable('account_policies', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  canCreateProjects: boolean('can_create_projects').notNull().default(false),
+  canCreateTopics: boolean('can_create_topics').notNull().default(false),
+  maxProjects: integer('max_projects'),
+  sections: jsonb('sections').notNull().default({}),
+  canUploadFiles: boolean('can_upload_files').notNull().default(true),
+  aiEnabled: boolean('ai_enabled').notNull().default(true),
+  aiMonthlyTokens: bigint('ai_monthly_tokens', { mode: 'number' }),
+  aiMonthlyCostUsd: numeric('ai_monthly_cost_usd', { precision: 12, scale: 4 }),
+  aiDailyCalls: integer('ai_daily_calls'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  note: text('note').notNull().default(''),
+  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** What the administrator requires of the final output, one row per requirement (ADR-0037); append-only. */
 export const outputRequirements = pgTable(
   'output_requirements',
@@ -1436,6 +1457,8 @@ export const modelInvocations = pgTable(
     promptSha256: text('prompt_sha256'),
     /** The business snapshot whose profile was part of the prompt (ADR-0021); null when none was. */
     businessSnapshotId: uuid('business_snapshot_id'),
+    /** Whose account the call counts for (ADR-0042); null: the starter of the workflow run. */
+    actorId: uuid('actor_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import type { PolicySection } from '@docoo/contracts';
 
 import {
   direction,
@@ -18,6 +19,7 @@ import { apiGet } from '../api-client';
 import { SectionTitle } from '../info-tip';
 import { SmartRoot, SmartToggle } from '../smart/smart-root';
 import { NotificationBell } from './notification-bell';
+import { sectionOpen } from './access';
 import type { SessionIdentity } from './signed-in';
 import { sidebarStorageKey } from '../theme';
 import { ThemePicker } from '../theme-toggle';
@@ -45,6 +47,14 @@ const memberNavigation: readonly NavigationKey[] = [
   'knowledge',
   'businesses',
 ];
+
+/** The section of the owner's per-account settings a page belongs to (ADR-0042). */
+const navigationSection: Partial<Record<NavigationKey, PolicySection>> = {
+  knowledge: 'knowledge',
+  businesses: 'business',
+  topics: 'topics',
+  agents: 'agents',
+};
 
 /** Pages only the owner may open: they hold the platform's keys, settings and agents. */
 const ownerNavigation: readonly NavigationKey[] = ['providers', 'settings', 'agents'];
@@ -345,7 +355,9 @@ export function AppShell({
 
   const isOwner = !identity || identity.user.isOwner === true;
   const visible = (key: NavigationKey) =>
-    (isAdmin || memberNavigation.includes(key)) && (isOwner || !ownerNavigation.includes(key));
+    (isAdmin || memberNavigation.includes(key)) &&
+    (isOwner || !ownerNavigation.includes(key)) &&
+    (!navigationSection[key] || sectionOpen(identity, navigationSection[key]));
   // A page of an owner-only section (agents/analyst below agents, but not the users page).
   const ownerSection = ownerNavigation.some((key) => {
     const route = implemented[key];

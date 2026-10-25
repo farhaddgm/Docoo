@@ -8,8 +8,11 @@ import {
 } from '@nestjs/common';
 import { hash } from '@node-rs/argon2';
 import {
+  defaultPolicy,
   isGmail,
   normalizeGmail,
+  resolveAccess,
+  type AccountPolicy,
   type Account,
   type AccountInput,
   type AccountUpdate,
@@ -20,7 +23,14 @@ import {
 import type { Pool, PoolClient, QueryResultRow } from 'pg';
 import type { Environment } from '@docoo/config';
 import { API_CONFIG, DATABASE_POOL } from '../tokens.js';
-import { AuthService, type AuthRequestMetadata, type AuthUser } from './auth.service.js';
+import { AccountPolicyService } from './account-policy.service.js';
+import {
+  AuthService,
+  policyOfRow,
+  type PolicyColumns,
+  type AuthRequestMetadata,
+  type AuthUser,
+} from './auth.service.js';
 
 interface Row extends QueryResultRow {
   id: string;
@@ -40,6 +50,7 @@ export class AccountsService {
     @Inject(DATABASE_POOL) private readonly pool: Pool,
     @Inject(API_CONFIG) private readonly config: Environment,
     @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(AccountPolicyService) private readonly policies: AccountPolicyService,
   ) {}
   private public(row: Row): Account {
     return {
@@ -295,6 +306,12 @@ export class AccountsService {
             'update memberships set role=$3::membership_role where workspace_id=$1 and user_id=$2',
             [w.id, user.id, role],
           );
+          // A viewer only looks: grants that let it change something become view grants.
+          if (role === 'viewer')
+            await client.query(
+              "update resource_access set access='VIEW' where workspace_id=$1 and user_id=$2 and access='EDIT'",
+              [w.id, user.id],
+            );
         }
       }
       await this.audit(client, actor, user.id, target ? 'user.update' : 'user.create', {
@@ -378,7 +395,11 @@ export class AccountsService {
           effective:
             user.account_role === 'super_admin'
               ? 'EDIT'
-              : (r.access ?? (r.created_by === id ? 'EDIT' : null)),
+              : user.account_role === 'viewer'
+                ? r.access
+                  ? 'VIEW'
+                  : null
+                : (r.access ?? (r.created_by === id ? 'EDIT' : null)),
         }));
       };
       return { topics: await query('topic'), projects: await query('project') };
@@ -397,6 +418,8 @@ export class AccountsService {
       const user = await this.row(client, id);
       if (user.account_role === 'super_admin')
         throw new BadRequestException('Administrators have access to everything.');
+      if (user.account_role === 'viewer' && access === 'EDIT')
+        throw new BadRequestException('A viewer can only look; give it view access.');
       await client.query("select set_config('app.workspace_id',$1,true)", [workspaceId]);
       const member = await client.query(
         'select 1 from memberships where workspace_id=$1 and user_id=$2',
@@ -427,6 +450,95 @@ export class AccountsService {
         access,
       });
       return { access };
+    });
+  }
+
+  /** The owner's view of one account's settings with what it used so far. */
+  async policy(token: string | undefined, metadata: AuthRequestMetadata, id: string) {
+    return this.transaction(token, metadata, true, false, async (client) => {
+      const user = await this.row(client, id);
+      const stored = await client.query<PolicyColumns>(
+        `select p.user_id as policy_user_id, p.can_create_projects, p.can_create_topics, p.max_projects,
+                p.sections as policy_sections, p.can_upload_files, p.ai_enabled, p.ai_monthly_tokens,
+                p.ai_monthly_cost_usd, p.ai_daily_calls, p.expires_at, p.note as policy_note
+           from account_policies p where p.user_id = $1`,
+        [id],
+      );
+      const policy: AccountPolicy = stored.rows[0] ? policyOfRow(stored.rows[0]) : defaultPolicy();
+      const catalog = await client.query<{ id: string }>(
+        'select id from app.account_workspace_catalog()',
+      );
+      return {
+        role: user.account_role,
+        isOwner: this.auth.isOwner(user.email),
+        policy,
+        effective: resolveAccess(user.account_role, policy),
+        usage: await this.policies.usageIn(
+          client,
+          id,
+          catalog.rows.map((row) => row.id),
+        ),
+      };
+    });
+  }
+
+  async setPolicy(
+    token: string | undefined,
+    metadata: AuthRequestMetadata,
+    id: string,
+    policy: AccountPolicy,
+  ) {
+    return this.transaction(token, metadata, true, true, async (client, actor) => {
+      const user = await this.row(client, id);
+      if (this.auth.isOwner(user.email) || user.account_role === 'super_admin')
+        throw new BadRequestException('Administrators have access to everything.');
+      await client.query(
+        `insert into account_policies
+           (user_id, can_create_projects, can_create_topics, max_projects, sections, can_upload_files,
+            ai_enabled, ai_monthly_tokens, ai_monthly_cost_usd, ai_daily_calls, expires_at, note,
+            updated_by, updated_at)
+         values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12,$13,now())
+         on conflict (user_id) do update set
+           can_create_projects = excluded.can_create_projects,
+           can_create_topics = excluded.can_create_topics,
+           max_projects = excluded.max_projects,
+           sections = excluded.sections,
+           can_upload_files = excluded.can_upload_files,
+           ai_enabled = excluded.ai_enabled,
+           ai_monthly_tokens = excluded.ai_monthly_tokens,
+           ai_monthly_cost_usd = excluded.ai_monthly_cost_usd,
+           ai_daily_calls = excluded.ai_daily_calls,
+           expires_at = excluded.expires_at,
+           note = excluded.note,
+           updated_by = excluded.updated_by,
+           updated_at = now()`,
+        [
+          id,
+          policy.canCreateProjects,
+          policy.canCreateTopics,
+          policy.maxProjects,
+          JSON.stringify(policy.sections),
+          policy.canUploadFiles,
+          policy.ai.enabled,
+          policy.ai.monthlyTokens,
+          policy.ai.monthlyCostUsd,
+          policy.ai.dailyCalls,
+          policy.expiresAt,
+          policy.note,
+          actor.id,
+        ],
+      );
+      // The note is the owner's own text; the log keeps only what changed in kind.
+      await this.audit(client, actor, id, 'user.policy.set', {
+        canCreateProjects: policy.canCreateProjects,
+        canCreateTopics: policy.canCreateTopics,
+        maxProjects: policy.maxProjects,
+        sections: policy.sections,
+        canUploadFiles: policy.canUploadFiles,
+        ai: policy.ai,
+        expiresAt: policy.expiresAt,
+      });
+      return { saved: true };
     });
   }
 }

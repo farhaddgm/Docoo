@@ -276,6 +276,7 @@ export class ResearchPlanService {
       const result = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId,
           stageRunId: prepared.research.stageRunId,
           attemptId: null,
@@ -449,6 +450,7 @@ export class ResearchPlanService {
       const result = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId,
           stageRunId: null,
           attemptId: null,

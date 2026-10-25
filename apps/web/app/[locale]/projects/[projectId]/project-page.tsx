@@ -9,6 +9,8 @@ import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18
 import { reportMessagesFor } from '../../../report-messages';
 import { Notice, useAction } from '../../use-action';
 import { ProjectAccessBoundary, useReadOnlyAccess } from '../../resource-access';
+import type { PolicySection } from '@docoo/contracts';
+import { sectionOpen } from '../../access';
 import { useSessionIdentity } from '../../signed-in';
 import { WorkspacePage } from '../../workspace-page';
 import { explainProject } from '../explain';
@@ -51,6 +53,15 @@ const tabs = [
   'evaluation',
 ] as const;
 type Tab = (typeof tabs)[number];
+
+/** The section of the owner's per-account settings a tab belongs to (ADR-0042). */
+const TAB_SECTION: Partial<Record<Tab, PolicySection>> = {
+  business: 'business',
+  knowledge: 'knowledge',
+  agents: 'agents',
+  workflow: 'workflow',
+  documents: 'documents',
+};
 
 /** The tab that shows the output of each workflow stage. */
 const STAGE_TAB: Record<string, Tab> = {
@@ -95,6 +106,9 @@ function ProjectView({
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [load, setLoad] = useState<Load>('loading');
   const [tab, setTab] = useState<Tab>('overview');
+  const identity = useSessionIdentity();
+  // A tab the account's settings close is not offered, and a link to it falls back to the overview.
+  const open = (item: Tab) => !TAB_SECTION[item] || sectionOpen(identity, TAB_SECTION[item]);
   const [refreshKey, setRefreshKey] = useState(0);
   // The card's edit button opens the overview's edit form.
   const [editRequested, setEditRequested] = useState(false);
@@ -129,7 +143,8 @@ function ProjectView({
   // The requested section survives a reload and can be linked to (`?tab=workflow`).
   useEffect(() => {
     const requested = new URLSearchParams(location.search).get('tab');
-    if (isTab(requested)) setTab(requested);
+    if (isTab(requested) && open(requested)) setTab(requested);
+    // `open` only reads the identity at the moment the link is read.
   }, []);
 
   function choose(next: Tab) {
@@ -312,7 +327,7 @@ function ProjectView({
       </p>
       <nav className="section-nav" aria-label={text.sections}>
         <ul>
-          {tabs.map((item) => (
+          {tabs.filter(open).map((item) => (
             <Fragment key={item}>
               <li>
                 <button

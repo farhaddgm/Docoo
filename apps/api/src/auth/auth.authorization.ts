@@ -13,6 +13,9 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
+import { sectionAllows } from '@docoo/contracts';
+
+import { AccountPolicyService } from './account-policy.service.js';
 import { AuthService, type AuthUser, type AuthWorkspace } from './auth.service.js';
 
 export const WORKSPACE_PERMISSIONS = [
@@ -111,6 +114,17 @@ export function roleHasPermission(role: string, permission: WorkspacePermission)
 }
 
 export const permissionMetadataKey = Symbol('docoo.workspace_permission');
+export const usesAiMetadataKey = Symbol('docoo.uses_ai');
+export const uploadsFileMetadataKey = Symbol('docoo.uploads_file');
+
+/** Marks a route that takes a file from the user, which an account can be barred from (ADR-0042). */
+export const UploadsFile = () => SetMetadata(uploadsFileMetadataKey, true);
+
+/**
+ * Marks a route that starts a model call (ADR-0042): an account whose AI is off or whose
+ * allowance is used up is refused before anything runs. Put it above `RequireWorkspacePermission`.
+ */
+export const UsesAi = () => SetMetadata(usesAiMetadataKey, true);
 const knownPermissions: ReadonlySet<string> = new Set(WORKSPACE_PERMISSIONS);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -127,6 +141,7 @@ export class WorkspacePermissionGuard implements CanActivate {
   constructor(
     private readonly authService: AuthService,
     private readonly reflector: Reflector,
+    private readonly policies: AccountPolicyService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -199,6 +214,63 @@ export class WorkspacePermissionGuard implements CanActivate {
     }
 
     if (workspace.role !== 'super_admin') {
+      // The owner's per-account settings (ADR-0042): sections, creation and AI.
+      const effective = session.user.access;
+      const isRead =
+        ['GET', 'HEAD', 'OPTIONS'].includes(request.method) || permission.endsWith('.read');
+      if (workspace.role === 'viewer' && !isRead) {
+        throw new ForbiddenException({
+          status: 403,
+          title: 'Forbidden',
+          code: 'AUTH_PERMISSION_DENIED',
+          detail: 'Read-only access.',
+        });
+      }
+      if (effective && !sectionAllows(effective, permission, isRead)) {
+        throw new ForbiddenException({
+          status: 403,
+          title: 'Forbidden',
+          code: 'AUTH_SECTION_DENIED',
+          detail: 'This section is not open to the account.',
+        });
+      }
+      if (effective && permission === 'topic.create' && !effective.canCreateTopics) {
+        throw new ForbiddenException({
+          status: 403,
+          title: 'Forbidden',
+          code: 'AUTH_TOPIC_CREATE_DENIED',
+          detail: 'This account may not create topics.',
+        });
+      }
+      if (
+        effective &&
+        !effective.canUploadFiles &&
+        this.reflector.getAllAndOverride<boolean>(uploadsFileMetadataKey, [
+          context.getHandler(),
+          context.getClass(),
+        ])
+      ) {
+        throw new ForbiddenException({
+          status: 403,
+          title: 'Forbidden',
+          code: 'AUTH_UPLOAD_DENIED',
+          detail: 'This account may not upload files.',
+        });
+      }
+      if (permission === 'project.create') {
+        await this.policies.assertCanCreateProject(session.user, workspace.id);
+      }
+      if (
+        this.reflector.getAllAndOverride<boolean>(usesAiMetadataKey, [
+          context.getHandler(),
+          context.getClass(),
+        ])
+      ) {
+        await this.policies.assertAiAvailable(
+          session.user,
+          session.workspaces.map((item) => item.id),
+        );
+      }
       const params = (request.params ?? {}) as Record<string, unknown>;
       const body =
         request.body && typeof request.body === 'object'

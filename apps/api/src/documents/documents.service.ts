@@ -698,6 +698,7 @@ export class DocumentsService {
       const result = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId: prepared.document.project_id,
           stageRunId: null,
           attemptId: null,

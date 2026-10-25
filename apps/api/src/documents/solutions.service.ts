@@ -214,6 +214,7 @@ export class SolutionsService {
       ({ response, invocationId } = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId,
           stageRunId: null,
           attemptId: null,

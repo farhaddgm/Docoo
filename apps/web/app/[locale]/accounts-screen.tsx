@@ -12,6 +12,7 @@ import {
 
 import { FieldLabel } from '../info-tip';
 import { AppShell } from './app-shell';
+import { AccountPolicyDialog, OwnerCrown } from './account-policy-dialog';
 import { cachedSession } from './session-cache';
 import type { SessionIdentity } from './signed-in';
 
@@ -81,6 +82,7 @@ const labels = {
     view: 'فقط مشاهده',
     write: 'ویرایش',
     access: 'دسترسی به حوزه‌ها و پروژه‌ها',
+    policy: 'دسترسی و محدودیت‌ها',
     topic: 'حوزه‌ها',
     project: 'پروژه‌ها',
     creator: 'سازنده',
@@ -140,6 +142,7 @@ const labels = {
     view: 'View only',
     write: 'Edit',
     access: 'Topic and project access',
+    policy: 'Access and limits',
     topic: 'Topics',
     project: 'Projects',
     creator: 'Creator',
@@ -207,6 +210,7 @@ export function AccountsScreen({
   const [revision, setRevision] = useState(0);
   const [editing, setEditing] = useState<{ user: Account | null } | null>(null);
   const [accessFor, setAccessFor] = useState<Account | null>(null);
+  const [policyFor, setPolicyFor] = useState<Account | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     void fetch('/api/auth/session', { cache: 'no-store', signal: controller.signal })
@@ -424,6 +428,12 @@ export function AccountsScreen({
                               {t.access}
                             </button>
                           )}
+                          {identity.user.isOwner && user.role !== 'super_admin' && (
+                            <button className="secondary-button" onClick={() => setPolicyFor(user)}>
+                              {t.policy}
+                              <OwnerCrown label={t.owner} />
+                            </button>
+                          )}
                           <button
                             className="secondary-button"
                             disabled={
@@ -472,6 +482,17 @@ export function AccountsScreen({
               onClose={() => setEditing(null)}
               onSaved={() => {
                 setEditing(null);
+                reload();
+              }}
+            />
+          )}
+          {policyFor && (
+            <AccountPolicyDialog
+              locale={locale}
+              user={policyFor}
+              onClose={() => setPolicyFor(null)}
+              onSaved={() => {
+                setPolicyFor(null);
                 reload();
               }}
             />
@@ -613,7 +634,10 @@ function AccountForm({
             disabled={self}
             onChange={(e) => setRole(e.target.value as AccountRole)}
           >
-            {(['super_admin', 'editor', 'viewer'] as const).map((r) => (
+            {(user?.role === 'super_admin'
+              ? (['super_admin', 'editor', 'viewer'] as const)
+              : (['editor', 'viewer'] as const)
+            ).map((r) => (
               <option value={r} key={r}>
                 {t[r]}
               </option>
@@ -842,7 +866,7 @@ function AccessDialog({
                   >
                     {!row.isCreator && <option value="NONE">{t.none}</option>}
                     <option value="VIEW">{t.view}</option>
-                    <option value="EDIT">{t.write}</option>
+                    {user.role !== 'viewer' && <option value="EDIT">{t.write}</option>}
                   </select>
                 </li>
               ))}

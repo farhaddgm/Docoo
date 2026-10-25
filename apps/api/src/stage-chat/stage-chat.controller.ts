@@ -3,7 +3,7 @@ import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { StageChatService } from './stage-chat.service.js';
@@ -68,6 +68,7 @@ export class StageChatController {
   @ApiOperation({
     summary: 'Ask the agent of a stage or state a revision request (costs a model call)',
   })
+  @UsesAi()
   @RequireWorkspacePermission('project.update')
   async post(
     @Req() request: FastifyRequest,
@@ -88,6 +89,7 @@ export class StageChatController {
   @ApiOperation({
     summary: 'Send revision requests back as the rejection of the current output (a new attempt)',
   })
+  @UsesAi()
   @RequireWorkspacePermission('workflow.reject')
   async sendAsRejection(
     @Req() request: FastifyRequest,

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet, query } from '../../api-client';
 import { formatDateTime, type Locale, textDir } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
+import { canCreateProjects } from '../access';
 import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
 import { projectMessages } from './messages';
@@ -128,7 +129,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
         <div className="toolbar spread">
           <h2 id="project-list-title">{text.list}</h2>
           <div className="toolbar">
-            {identity?.user.role !== 'viewer' && (
+            {canCreateProjects(identity) && (
               <Link
                 className="primary-button link-button"
                 href={`/${locale}/projects/new` as Route}

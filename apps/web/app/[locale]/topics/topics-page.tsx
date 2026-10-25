@@ -8,6 +8,7 @@ import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { ReasonBar } from '../reason-bar';
+import { canCreateTopics } from '../access';
 import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
 import { topicMessages } from './messages';
@@ -59,7 +60,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
   const text = topicMessages(locale);
   const common = reportMessagesFor(locale);
   const identity = useSessionIdentity();
-  const canCreate = identity?.user.role !== 'viewer';
+  const canCreate = canCreateTopics(identity);
   const isAdmin = identity?.user.role === 'super_admin';
   const base = `/workspaces/${workspaceId}/topics`;
   const [view, setView] = useState<TopicStatus>('active');

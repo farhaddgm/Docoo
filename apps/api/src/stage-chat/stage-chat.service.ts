@@ -313,6 +313,7 @@ export class StageChatService {
       const result = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId,
           stageRunId,
           attemptId: null,

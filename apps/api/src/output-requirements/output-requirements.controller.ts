@@ -3,7 +3,7 @@ import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { OutputRequirementsService } from './output-requirements.service.js';
@@ -75,6 +75,7 @@ export class OutputRequirementsController {
   @Post('projects/:projectId/output-requirements/check')
   @HttpCode(200)
   @ApiOperation({ summary: 'Check which requirements the output covers (costs a model call)' })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   async check(@Req() request: FastifyRequest, @Param('projectId') project: string) {
     return this.requirements.check(workspaceContext(request), id(project));
