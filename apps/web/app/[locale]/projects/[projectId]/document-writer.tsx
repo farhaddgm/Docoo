@@ -100,6 +100,7 @@ export function DocumentWriter({
   const [latest, setLatest] = useState<WritingDetail | null>(null);
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const [template, setTemplate] = useState('standard');
+  const [defaultsReady, setDefaultsReady] = useState(false);
   const [chosenLevel, setChosenLevel] = useState(level);
   const [notes, setNotes] = useState('');
   const [cancelReason, setCancelReason] = useState<string | null>(null);
@@ -128,17 +129,27 @@ export function DocumentWriter({
   }, [load]);
 
   useEffect(() => {
+    let active = true;
+    setDefaultsReady(false);
     apiGet<{ templates: TemplateInfo[] }>(`/workspaces/${workspaceId}/document-templates`)
-      .then((result) => setTemplates(result.templates))
+      .then((result) => {
+        if (active) setTemplates(result.templates);
+      })
       .catch(() => undefined);
     apiGet<{ config: { values: Record<string, unknown> } }>(
       `/workspaces/${workspaceId}/settings/effective?scopeType=project&scopeId=${projectId}`,
     )
       .then((result) => {
         const value = result.config.values['document.default_template'];
-        if (typeof value === 'string') setTemplate(value);
+        if (active && typeof value === 'string') setTemplate(value);
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setDefaultsReady(true);
+      });
+    return () => {
+      active = false;
+    };
   }, [workspaceId, projectId]);
 
   const live = latest !== null && LIVE.includes(latest.status);
@@ -162,6 +173,7 @@ export function DocumentWriter({
 
   function start(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!defaultsReady || busy) return;
     void run(async () => {
       await apiSend('POST', `${base}/writings`, {
         level: chosenLevel,
@@ -202,13 +214,18 @@ export function DocumentWriter({
       )}
 
       {!live && !locked && (
-        <form data-write-action className="stack" onSubmit={start} aria-busy={busy}>
+        <form
+          data-write-action
+          className="stack"
+          onSubmit={start}
+          aria-busy={busy || !defaultsReady}
+        >
           <div className="filter-grid">
             <label htmlFor="writer-level">{text.writerLevel}</label>
             <select
               id="writer-level"
               value={chosenLevel}
-              disabled={busy}
+              disabled={busy || !defaultsReady}
               onChange={(event) => setChosenLevel(Number(event.target.value))}
             >
               {(quickDraft ? [1] : [1, 2, 3, 4, 5]).map((value) => (
@@ -221,7 +238,7 @@ export function DocumentWriter({
             <select
               id="writer-template"
               value={template}
-              disabled={busy}
+              disabled={busy || !defaultsReady}
               onChange={(event) => setTemplate(event.target.value)}
             >
               {['brief', 'standard', 'detailed'].map((key) => (
@@ -243,7 +260,7 @@ export function DocumentWriter({
               maxLength={2000}
               dir={textDir(locale)}
               value={notes}
-              disabled={busy}
+              disabled={busy || !defaultsReady}
               aria-describedby="writer-notes-help"
               onChange={(event) => setNotes(event.target.value)}
             />
@@ -255,7 +272,7 @@ export function DocumentWriter({
           )}
           <p className="muted">{text.writeWillReplace}</p>
           <div className="toolbar">
-            <button className="primary-button" type="submit" disabled={busy}>
+            <button className="primary-button" type="submit" disabled={busy || !defaultsReady}>
               {busy ? text.writeStarting : text.writeStart}
             </button>
           </div>

@@ -158,6 +158,18 @@ test.describe('the documenter writes and the structured editor changes a documen
     await page.locator('#add-type-0').selectOption('table');
     await page.getByRole('button', { name: editor.addBlock, exact: true }).click();
     await expect(page.getByText(editor.validStructure)).toBeVisible();
+    // Closing the editor remounts the writer and reloads its project defaults. Delay that
+    // response deliberately: it must not overwrite a template the user can already select.
+    let releaseDefaults = () => {};
+    const defaultsGate = new Promise<void>((resolve) => {
+      releaseDefaults = resolve;
+    });
+    const defaultsRoute = `**/settings/effective?scopeType=project&scopeId=${projectId}`;
+    await page.route(defaultsRoute, async (route) => {
+      const response = await route.fetch();
+      await defaultsGate;
+      await route.fulfill({ response });
+    });
     // Discarding asks first because there are unsaved changes.
     page.once('dialog', (dialog) => void dialog.accept());
     await page.getByRole('button', { name: editor.discard }).click();
@@ -165,9 +177,21 @@ test.describe('the documenter writes and the structured editor changes a documen
 
     // A detailed level-3 document through the same panel.
     const writer = page.locator('section[aria-labelledby="writer-title"]');
+    try {
+      await expect(writer.locator('#writer-level')).toBeDisabled();
+      await expect(writer.locator('#writer-template')).toBeDisabled();
+      await expect(writer.getByRole('button', { name: editor.writeStart })).toBeDisabled();
+    } finally {
+      releaseDefaults();
+    }
     await writer.locator('#writer-level').selectOption('3');
     await writer.locator('#writer-template').selectOption('detailed');
+    await page.unroute(defaultsRoute);
+    const requested = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/writings'),
+    );
     await writer.getByRole('button', { name: editor.writeStart }).click();
+    expect((await requested).postDataJSON()).toMatchObject({ level: 3, template: 'detailed' });
     const done = writer.locator('.badge').filter({ hasText: editor.writingStatuses['succeeded']! });
     await expect(done.first()).toBeVisible({ timeout: 90_000 });
     // The detailed template adds the score table and chart the code builds itself. Wait for that
