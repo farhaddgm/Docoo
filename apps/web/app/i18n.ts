@@ -55,6 +55,7 @@ export const navigation = [
   'topics',
   'knowledge',
   'businesses',
+  'patterns',
   'agents',
   'brain',
   'providers',
@@ -67,7 +68,10 @@ export type NavigationKey = (typeof navigation)[number];
 
 /** The sidebar sections, in the order they appear; every navigation key belongs to exactly one. */
 export const navigationGroups = [
-  { key: 'work', items: ['dashboard', 'projects', 'topics', 'knowledge', 'businesses'] },
+  {
+    key: 'work',
+    items: ['dashboard', 'projects', 'topics', 'knowledge', 'businesses', 'patterns'],
+  },
   { key: 'intelligence', items: ['agents', 'brain', 'smart'] },
   { key: 'setup', items: ['providers', 'costs', 'settings'] },
 ] as const satisfies readonly {
@@ -118,6 +122,7 @@ const messages = {
       knowledge: 'دانش و ممیزی',
       agents: 'ایجنت‌ها',
       businesses: 'کسب‌وکار',
+      patterns: 'الگوها',
       brain: 'گزارش Brain',
       providers: 'ارائه‌دهندگان AI',
       costs: 'هزینه و مصرف',
@@ -215,6 +220,7 @@ const messages = {
       knowledge: 'Knowledge & audit',
       agents: 'Agents',
       businesses: 'Businesses',
+      patterns: 'Patterns',
       brain: 'Brain report',
       providers: 'AI providers',
       costs: 'Cost & usage',

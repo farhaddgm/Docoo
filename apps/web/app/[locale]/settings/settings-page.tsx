@@ -1,7 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import type { Route } from 'next';
 import type { Locale } from '../../i18n';
 import { Integrations } from '../integrations/integrations-page';
 import { Templates } from '../templates/templates-page';
@@ -16,12 +14,6 @@ export function SettingsPage({ locale }: { locale: Locale }) {
     <WorkspacePage locale={locale} title={text.title} subtitle={text.subtitle}>
       {(workspaceId) => (
         <div className="stack">
-          <Link
-            className="button secondary"
-            href={`/${locale}/workspaces/${workspaceId}/problem-patterns` as Route}
-          >
-            {locale === 'fa' ? 'ساخت و مدیریت الگوها' : 'Create and manage patterns'}
-          </Link>
           <Templates locale={locale} workspaceId={workspaceId} showSettingsLink={false} />
           <ScopedSettings
             locale={locale}

@@ -348,8 +348,7 @@ export function ProblemPatternsScreen({
   }
 
   return (
-    <main className="patterns-page" dir={fa ? 'rtl' : 'ltr'}>
-      <h1>{t('الگوهای مسئله', 'Problem patterns')}</h1>
+    <div className="patterns-page" dir={fa ? 'rtl' : 'ltr'}>
       <p>
         {t(
           'با گفتگو یا ویرایش مستقیم، راهنمای اختیاری مسئله بسازید؛ ابتدا آزمایش و سپس منتشر کنید.',
@@ -783,6 +782,6 @@ export function ProblemPatternsScreen({
           </p>
         )}
       </div>
-    </main>
+    </div>
   );
 }

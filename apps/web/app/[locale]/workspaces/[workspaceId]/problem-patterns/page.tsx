@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { ProblemPatternsScreen } from './problem-patterns-screen';
+import { PatternsPage } from './patterns-page';
 
 export default async function ProblemPatternsPage({
   params,
@@ -12,5 +12,5 @@ export default async function ProblemPatternsPage({
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(workspaceId)
   )
     notFound();
-  return <ProblemPatternsScreen locale={locale} workspaceId={workspaceId} />;
+  return <PatternsPage locale={locale} workspaceId={workspaceId} />;
 }
