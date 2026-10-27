@@ -22,7 +22,7 @@
     "@docoo/contracts": "workspace:*"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
+    "@axe-core/playwright": "4.14.0",
     "@node-rs/argon2": "2.2.1",
     "@playwright/test": "1.63.0",
     "@types/pg": "8.15.6",
