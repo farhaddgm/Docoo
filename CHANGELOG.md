@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Fixed
+
+- Update the NestJS runtime together: `@nestjs/core`, `@nestjs/common`, `@nestjs/platform-fastify` and `@nestjs/testing` are now all 12.2.0. The Fastify adapter 12.2.0 needs the matching core (a lone adapter bump failed at startup with a missing `@nestjs/core/internal` export). Checked against the app's own use: the global `ValidationPipe`, the Smart exception filter that extends `BaseExceptionFilter`, and problem-details errors thrown as `HttpException` objects keep their responses; a request body that is an array for a validated class now gets a 400.
+
 ## [0.44.0] — 2026-10-27
 
 ### Added
