@@ -149,12 +149,8 @@ export function ProjectWizard({
     PublishedProblemPattern[]
   >([]);
   const [codeTouched, setCodeTouched] = useState(false);
-  // The newest values and code flag, also between two renders: a fast second keystroke must not
-  // be built on the values an earlier render saw.
-  const valuesRef = useRef(values);
-  valuesRef.current = values;
-  const codeTouchedRef = useRef(codeTouched);
-  codeTouchedRef.current = codeTouched;
+  // Event handlers own this flag; an unrelated concurrent render must not reset it.
+  const codeTouchedRef = useRef(false);
   const [opened, setOpened] = useState<Partial<Record<AdvancedSection, boolean>>>({});
   const [defaultCriteria, setDefaultCriteria] = useState<Criterion[] | null>(null);
   const [restored, setRestored] = useState(false);
@@ -175,7 +171,8 @@ export function ProjectWizard({
       // A draft of the eight-step wizard has no version; its step is mapped onto the new four.
       const restoredStep = draft.v === 2 ? draft.step : migrateDraftStep(draft.step);
       setStep(Math.min(Math.max(restoredStep, 0), STEP_COUNT - 1));
-      setCodeTouched(draft.codeTouched ?? draft.values.code.trim() !== '');
+      codeTouchedRef.current = draft.codeTouched ?? draft.values.code.trim() !== '';
+      setCodeTouched(codeTouchedRef.current);
       // Drafts saved before topic knowledge sharing existed have no such fields.
       setValues({
         ...draft.values,
@@ -430,36 +427,29 @@ export function ProjectWizard({
     setModel('');
     setCriteria(null);
     setBusiness(null);
+    codeTouchedRef.current = false;
     setCodeTouched(false);
     setOpened({});
     setStep(0);
     setRestored(false);
   }
 
-  /**
-   * The title suggests the code until the person writes the code themselves. The fields hand
-   * over a full copy of the values they were drawn with; only what they changed is taken from it
-   * and laid over the newest values, so two quick edits in a row never undo each other.
-   */
-  function changeBasics(next: ProjectValues) {
-    const patch: Partial<ProjectValues> = {};
-    for (const key of Object.keys(next) as (keyof ProjectValues)[]) {
-      if (next[key] !== values[key]) Object.assign(patch, { [key]: next[key] });
-    }
-    const current = valuesRef.current;
-    let merged: ProjectValues = { ...current, ...patch };
-    if (patch.code !== undefined) {
-      // Emptying the field hands the code back to the title.
-      codeTouchedRef.current = patch.code.trim() !== '';
+  /** Apply only the field that emitted the event, against the latest committed state. */
+  function changeBasics(next: ProjectValues, field: keyof ProjectValues) {
+    if (field === 'code') {
+      codeTouchedRef.current = next.code.trim() !== '';
       setCodeTouched(codeTouchedRef.current);
-    } else if (patch.title !== undefined && !codeTouchedRef.current) {
-      const suggestion = shouldSuggestCode(patch.title) ? suggestProjectCode(patch.title) : '';
-      // A stamped fallback code stays put while the title is typed, instead of changing at once.
-      const keep = suggestion.startsWith('PRJ-') && current.code.startsWith('PRJ-');
-      merged = { ...merged, code: keep ? current.code : suggestion };
     }
-    valuesRef.current = merged;
-    setValues(merged);
+    const manuallyChosen = codeTouchedRef.current;
+    setValues((current) => {
+      let merged: ProjectValues = { ...current, [field]: next[field] };
+      if (field === 'title' && !manuallyChosen) {
+        const suggestion = shouldSuggestCode(next.title) ? suggestProjectCode(next.title) : '';
+        const keep = suggestion.startsWith('PRJ-') && current.code.startsWith('PRJ-');
+        merged = { ...merged, code: keep ? current.code : suggestion };
+      }
+      return merged;
+    });
   }
 
   const stepName = text.steps[step]!;
