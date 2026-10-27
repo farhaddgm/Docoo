@@ -14,6 +14,7 @@ import {
   real,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -220,6 +221,8 @@ export const projects = pgTable(
     title: text('title').notNull(),
     description: text('description').notNull().default(''),
     initialProblem: text('initial_problem').notNull(),
+    problemTemplateSnapshot: jsonb('problem_template_snapshot'),
+    problemPatternSnapshot: jsonb('problem_pattern_snapshot'),
     outputLanguage: locale('output_language').notNull().default('fa'),
     status: projectStatus('status').notNull().default('draft'),
     previousStatus: projectStatus('previous_status'),
@@ -2617,6 +2620,218 @@ export const projectResearchIntelligenceReports = pgTable(
       table.workspaceId,
       table.projectId,
       table.idempotencyKey,
+    ),
+  ],
+);
+
+/** Optional execution guidance; separate from legacy project problem-template snapshots. */
+export const problemPatterns = pgTable(
+  'problem_patterns',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    patternKey: text('pattern_key').notNull(),
+    status: text('status').notNull().default('draft'),
+    revision: integer('revision').notNull().default(1),
+    definition: jsonb('definition').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    creationKey: uuid('creation_key').notNull(),
+    creationHash: text('creation_hash').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique().on(table.id, table.workspaceId),
+    unique().on(table.workspaceId, table.patternKey),
+    unique().on(table.workspaceId, table.createdBy, table.creationKey),
+    check(
+      'problem_patterns_pattern_key_check',
+      sql`${table.patternKey} ~ '^[a-z][a-z0-9-]{1,63}$'`,
+    ),
+    check(
+      'problem_patterns_status_check',
+      sql`${table.status} in ('draft','published','archived')`,
+    ),
+    check('problem_patterns_revision_check', sql`${table.revision} > 0`),
+    check('problem_patterns_definition_check', sql`jsonb_typeof(${table.definition}) = 'object'`),
+  ],
+);
+
+export const problemPatternAiRuns = pgTable(
+  'problem_pattern_ai_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    patternId: uuid('pattern_id').notNull(),
+    workspaceId: uuid('workspace_id').notNull(),
+    actorId: uuid('actor_id')
+      .notNull()
+      .references(() => users.id),
+    kind: text('kind').notNull(),
+    revision: integer('revision').notNull(),
+    definitionHash: text('definition_hash').notNull(),
+    idempotencyKey: uuid('idempotency_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    content: text('content').notNull(),
+    providerConsent: boolean('provider_consent').notNull(),
+    status: text('status').notNull().default('pending'),
+    result: jsonb('result'),
+    errorCode: text('error_code'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => [
+    unique().on(table.id, table.patternId, table.workspaceId),
+    unique().on(table.workspaceId, table.actorId, table.idempotencyKey),
+    foreignKey({
+      columns: [table.patternId, table.workspaceId],
+      foreignColumns: [problemPatterns.id, problemPatterns.workspaceId],
+    }),
+    index('problem_pattern_ai_runs_history_idx').on(
+      table.workspaceId,
+      table.patternId,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    check('problem_pattern_ai_runs_kind_check', sql`${table.kind} in ('chat','test')`),
+    check('problem_pattern_ai_runs_revision_check', sql`${table.revision} > 0`),
+    check(
+      'problem_pattern_ai_runs_content_check',
+      sql`char_length(${table.content}) between 1 and 4000`,
+    ),
+    check('problem_pattern_ai_runs_provider_consent_check', sql`${table.providerConsent}`),
+    check(
+      'problem_pattern_ai_runs_status_check',
+      sql`${table.status} in ('pending','complete','failed')`,
+    ),
+    check(
+      'problem_pattern_ai_runs_check',
+      sql`(${table.status} = 'pending' and ${table.completedAt} is null and ${table.result} is null) or (${table.status} = 'complete' and ${table.completedAt} is not null and ${table.result} is not null) or (${table.status} = 'failed' and ${table.completedAt} is not null and ${table.result} is null)`,
+    ),
+  ],
+);
+
+export const problemPatternVersions = pgTable(
+  'problem_pattern_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    patternId: uuid('pattern_id').notNull(),
+    workspaceId: uuid('workspace_id').notNull(),
+    version: integer('version').notNull(),
+    revision: integer('revision').notNull(),
+    definition: jsonb('definition').notNull(),
+    testRunId: uuid('test_run_id').notNull(),
+    publishedBy: uuid('published_by')
+      .notNull()
+      .references(() => users.id),
+    idempotencyKey: uuid('idempotency_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    publishedAt: timestamp('published_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique().on(table.patternId, table.version),
+    unique().on(table.patternId, table.revision),
+    unique().on(table.workspaceId, table.publishedBy, table.idempotencyKey),
+    foreignKey({
+      columns: [table.patternId, table.workspaceId],
+      foreignColumns: [problemPatterns.id, problemPatterns.workspaceId],
+    }),
+    foreignKey({
+      columns: [table.testRunId, table.patternId, table.workspaceId],
+      foreignColumns: [
+        problemPatternAiRuns.id,
+        problemPatternAiRuns.patternId,
+        problemPatternAiRuns.workspaceId,
+      ],
+    }),
+    check('problem_pattern_versions_version_check', sql`${table.version} > 0`),
+    check('problem_pattern_versions_revision_check', sql`${table.revision} > 0`),
+  ],
+);
+
+export const projectMeetingRevisions = pgTable(
+  'project_meeting_revisions',
+  {
+    projectId: uuid('project_id').notNull(),
+    workspaceId: uuid('workspace_id').notNull(),
+    revision: integer('revision').notNull(),
+    state: jsonb('state').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.projectId, table.workspaceId, table.revision] }),
+    foreignKey({
+      columns: [table.projectId, table.workspaceId],
+      foreignColumns: [projects.id, projects.workspaceId],
+    }).onDelete('cascade'),
+    check('project_meeting_revisions_revision_check', sql`${table.revision}>0`),
+    check(
+      'project_meeting_revisions_state_check',
+      sql`jsonb_typeof(${table.state})='object' and octet_length(${table.state}::text)<=100000`,
+    ),
+  ],
+);
+export const projectMeetingRuns = pgTable(
+  'project_meeting_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id').notNull(),
+    workspaceId: uuid('workspace_id').notNull(),
+    revision: integer('revision').notNull(),
+    actorId: uuid('actor_id')
+      .notNull()
+      .references(() => users.id),
+    mode: text('mode').notNull(),
+    difficulty: text('difficulty').notNull(),
+    content: text('content').notNull(),
+    providerConsent: boolean('provider_consent').notNull(),
+    idempotencyKey: uuid('idempotency_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    status: text('status').notNull().default('pending'),
+    result: jsonb('result'),
+    errorCode: text('error_code'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => [
+    unique().on(table.workspaceId, table.actorId, table.idempotencyKey),
+    foreignKey({
+      columns: [table.projectId, table.workspaceId, table.revision],
+      foreignColumns: [
+        projectMeetingRevisions.projectId,
+        projectMeetingRevisions.workspaceId,
+        projectMeetingRevisions.revision,
+      ],
+    }).onDelete('cascade'),
+    index('project_meeting_runs_history_idx').on(
+      table.workspaceId,
+      table.projectId,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    check('project_meeting_runs_mode_check', sql`${table.mode} in ('prepare','rehearse')`),
+    check(
+      'project_meeting_runs_difficulty_check',
+      sql`${table.difficulty} in ('supportive','hesitant','challenging')`,
+    ),
+    check(
+      'project_meeting_runs_content_check',
+      sql`char_length(${table.content}) between 1 and 4000`,
+    ),
+    check('project_meeting_runs_provider_consent_check', sql`${table.providerConsent}`),
+    check(
+      'project_meeting_runs_status_check',
+      sql`${table.status} in ('pending','complete','failed')`,
+    ),
+    check(
+      'project_meeting_runs_check',
+      sql`(${table.status}='pending' and ${table.result} is null and ${table.completedAt} is null) or (${table.status}='complete' and ${table.result} is not null and ${table.completedAt} is not null) or (${table.status}='failed' and ${table.result} is null and ${table.completedAt} is not null)`,
     ),
   ],
 );

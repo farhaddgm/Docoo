@@ -1,4 +1,5 @@
 'use client';
+import { PatternSelection } from './pattern-selection';
 import { useReadOnlyAccess } from '../../resource-access';
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
@@ -161,6 +162,14 @@ export function OverviewPanel({
 
   return (
     <div className="stack">
+      <PatternSelection
+        locale={locale}
+        workspaceId={workspaceId}
+        project={project}
+        readOnly={readOnly}
+        onChanged={onChanged}
+      />
+
       <Notice notice={notice} />
       {hasJourney(project.status) && (
         <JourneyCard

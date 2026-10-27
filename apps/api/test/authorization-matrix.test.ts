@@ -6,6 +6,8 @@ import { Reflector } from '@nestjs/core';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ProblemPatternsController } from '../src/problem-patterns/problem-patterns.controller.js';
+import { MeetingsController } from '../src/meetings/meetings.controller.js';
 import { AgentsController } from '../src/agents/agents.controller.js';
 import { AnalysisController } from '../src/analysis/analysis.controller.js';
 import { AuditController } from '../src/audit/audit.controller.js';
@@ -41,6 +43,23 @@ import { WorkspaceController } from '../src/workspaces/workspace.controller.js';
  * workspace route must appear here with exactly this permission.
  */
 const expectedMatrix: Record<string, string> = {
+  'GET workspaces/:workspaceId/projects/problem-pattern-versions': 'project.create',
+  'PUT workspaces/:workspaceId/projects/:projectId/problem-pattern': 'project.update',
+  'GET workspaces/:workspaceId/projects/:projectId/meeting': 'project.read',
+  'PUT workspaces/:workspaceId/projects/:projectId/meeting': 'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/meeting/messages': 'project.update',
+  'GET workspaces/:workspaceId/problem-patterns': 'workspace.configure',
+  'POST workspaces/:workspaceId/problem-patterns': 'workspace.configure',
+  'GET workspaces/:workspaceId/problem-patterns/published-versions': 'project.create',
+  'GET workspaces/:workspaceId/problem-patterns/:patternId': 'workspace.configure',
+  'GET workspaces/:workspaceId/problem-patterns/:patternId/versions/:versionId':
+    'workspace.configure',
+  'PUT workspaces/:workspaceId/problem-patterns/:patternId/draft': 'workspace.configure',
+  'POST workspaces/:workspaceId/problem-patterns/:patternId/archive': 'workspace.configure',
+  'POST workspaces/:workspaceId/problem-patterns/:patternId/versions': 'workspace.configure',
+  'POST workspaces/:workspaceId/problem-patterns/:patternId/messages': 'workspace.configure',
+  'POST workspaces/:workspaceId/problem-patterns/:patternId/tests': 'workspace.configure',
+
   'POST workspaces/:workspaceId/projects/:projectId/solutions/sensitivity': 'project.read',
   'GET workspaces/:workspaceId/projects/:projectId/solution-decisions': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/solution-decisions': 'workflow.approve',
@@ -275,6 +294,8 @@ const expectedMatrix: Record<string, string> = {
 };
 
 const controllers = [
+  ProblemPatternsController,
+  MeetingsController,
   WorkspaceController,
   TopicsController,
   ProjectsController,

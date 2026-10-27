@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -16,6 +17,7 @@ import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { projectStatuses, type ProjectCommand } from '@docoo/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { problemTemplateIdSchema } from '@docoo/contracts';
 
 import {
   RequireWorkspacePermission,
@@ -94,6 +96,8 @@ const createSchema = z
     title: titleSchema,
     description: descriptionSchema.default(''),
     initialProblem: problemSchema,
+    problemTemplateId: problemTemplateIdSchema.optional(),
+    problemPatternVersionId: z.uuid().optional(),
     outputLanguage: languageSchema.default('fa'),
     analysisProfile: z.enum(['full', 'quick']).default('full'),
     topics: topicsSchema.default([]),
@@ -195,6 +199,15 @@ export class ProjectsController {
     return this.projectsService.list(workspaceContext(request), parse(listQuerySchema, query));
   }
 
+  @Get('problem-pattern-versions')
+  @ApiOperation({ summary: 'List current published problem-pattern versions in this workspace' })
+  @RequireWorkspacePermission('project.create')
+  async listPublishedProblemPatterns(@Req() request: FastifyRequest) {
+    return {
+      items: await this.projectsService.listPublishedProblemPatterns(workspaceContext(request)),
+    };
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a draft project with prioritized topics' })
   @RequireWorkspacePermission('project.create')
@@ -228,6 +241,30 @@ export class ProjectsController {
       throw new ForbiddenException('Linking a business needs the permission to link businesses.');
     }
     const project = await this.projectsService.create(workspaceContext(request), input);
+    setVersionHeader(reply, project.version);
+    return { project };
+  }
+
+  @Put(':projectId/problem-pattern')
+  @RequireWorkspacePermission('project.update')
+  async setProblemPattern(
+    @Req() request: FastifyRequest,
+    @Param('projectId') projectId: string,
+    @Body() body: unknown,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    if (!isUuid(projectId)) throw badRequest('PROJECT_INVALID_ID', 'Invalid project id.');
+    const parsed = z
+      .object({ expectedVersion: z.number().int().positive(), versionId: z.uuid().nullable() })
+      .strict()
+      .safeParse(body);
+    if (!parsed.success) throw badRequest('PROJECT_PATTERN_INVALID', 'Invalid pattern selection.');
+    const project = await this.projectsService.setProblemPattern(
+      workspaceContext(request),
+      projectId,
+      parsed.data.expectedVersion,
+      parsed.data.versionId,
+    );
     setVersionHeader(reply, project.version);
     return { project };
   }

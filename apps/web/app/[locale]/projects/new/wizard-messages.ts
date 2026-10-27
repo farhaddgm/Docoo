@@ -77,6 +77,20 @@ const messages = {
     value: 'مقدار',
     source: 'منبع',
     summary: 'خلاصهٔ پروژه',
+    problemTemplate: 'قالب مسئله',
+    noProblemTemplate: 'بدون قالب',
+    problemTemplateCandidate: 'نامزد؛ ارزیابی‌نشده',
+    problemTemplateNote:
+      'این قالب فقط پرسش‌های راهنما را نشان می‌دهد و نسخهٔ آن برای ثبت سابقه ذخیره می‌شود؛ در تحلیل یا خروجی پروژه تغییری ایجاد نمی‌کند. کیفیتش هنوز ارزیابی نشده است.',
+    problemTemplatePrompts: 'پرسش‌های راهنمای قالب مسئله',
+    problemTemplateRubric: 'rubric پیشنهادی (فقط برای بازبینی)',
+    problemTemplateSuggestedSections: 'بخش‌های پیشنهادی سند',
+    problemPattern: 'الگوی روش حل مسئله',
+    noProblemPattern: 'بدون الگو؛ مسیر معمول پروژه',
+    problemPatternNote:
+      'نسخهٔ منتشرشدهٔ الگوی workspace به پروژه پیوست می‌شود. در این مرحله اجرای فعالیت‌ها به‌طور خودکار تغییر نمی‌کند.',
+    problemPatternExecutionNote:
+      'این نسخه فقط برای ردیابی روی پروژه ثبت می‌شود؛ اجرای مرحله‌های الگو تا اتصال و تأیید workflow فعال نیست.',
     overridesCount: '{n} تنظیم برای این پروژه تغییر کرده است.',
     noOverrides: 'هیچ تنظیمی تغییر نکرده؛ پروژه همهٔ مقدارها را از حوزه‌ها و workspace می‌گیرد.',
     modelInherited: 'مدل ارث‌برده از workspace',
@@ -172,6 +186,20 @@ const messages = {
     value: 'Value',
     source: 'Source',
     summary: 'Project summary',
+    problemTemplate: 'Problem template',
+    noProblemTemplate: 'No template',
+    problemTemplateCandidate: 'Candidate; not evaluated',
+    problemTemplateNote:
+      'This template only shows optional prompts and its version is saved for traceability; it does not change project analysis or output. Its quality has not been evaluated.',
+    problemTemplatePrompts: 'Problem-template prompts',
+    problemTemplateRubric: 'Proposed rubric (review only)',
+    problemTemplateSuggestedSections: 'Suggested document sections',
+    problemPattern: 'Problem-solving pattern',
+    noProblemPattern: 'No pattern; use the standard project path',
+    problemPatternNote:
+      'A published workspace pattern version is attached to the project. Execution does not change automatically at this stage.',
+    problemPatternExecutionNote:
+      'This version is recorded for traceability only; pattern-stage execution is not enabled until the workflow is connected and approved.',
     overridesCount: '{n} setting(s) are changed for this project.',
     noOverrides:
       'No setting is changed; the project takes every value from its topics and the workspace.',
