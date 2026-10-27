@@ -49,7 +49,7 @@
   },
   "devDependencies": {
     "@opentelemetry/api": "1.9.1",
-    "@opentelemetry/sdk-node": "0.222.0",
+    "@opentelemetry/sdk-node": "0.223.0",
     "@nestjs/testing": "12.1.2",
     "@temporalio/activity": "1.24.0",
     "@temporalio/worker": "1.24.0",
