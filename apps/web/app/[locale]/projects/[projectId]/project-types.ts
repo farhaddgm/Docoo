@@ -1,5 +1,8 @@
+import type { ProblemPatternSnapshot } from '@docoo/contracts';
+
 /** Project as the API returns it (docs/04-architecture/03-api-contracts.md §5). */
 export interface ProjectDetail {
+  problemPattern?: ProblemPatternSnapshot | null;
   id: string;
   code: string;
   title: string;

@@ -262,3 +262,7 @@ notion_sync: true
 | `POST /projects/{projectId}/solution-decisions`    | `workflow.approve` و grant EDIT    |
 
 ثبت تصمیم به مجموعهٔ راه‌حل و نسخهٔ معیارها سنجاق است؛ تغییر هم‌زمان با 409 رد می‌شود. دلیل تصمیم و همهٔ گزینه‌های ردشده اجباری است. snapshot و actor/زمان در audit فقط‌افزودنی ثبت می‌شوند؛ نگاشت شواهد ASVS این routeها نیازمند بررسی همان کنترل‌های دسترسی است.
+
+## Optional problem patterns and meeting preparation
+
+Pattern drafts, AI authoring, tests, publishing, history and archiving require `workspace.configure` (administrator). Published catalogs require `project.create` and reveal only immutable published definitions. Setting or clearing a project pattern requires `project.update`, an optimistic version, a draft project and no previous workflow/preparation. Meeting GET requires `project.read`; saves and messages require `project.update` and project EDIT access. Authoring messages/tests and meeting messages carry `UsesAi` and account AI limits. Existing project grants and workspace isolation apply.

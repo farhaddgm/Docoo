@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { resolveProblemPatternSnapshot } from '@docoo/contracts';
 import { STAGE_ROLE } from '@docoo/domain';
 import { checkCostLimit, ProviderError, retryDelaySeconds } from '@docoo/providers';
 import type { Pool, PoolClient } from 'pg';
@@ -232,12 +233,17 @@ export function createOrchestrationActivities(
             project_title: string;
             problem: string;
             language: 'fa' | 'en';
+            problem_pattern_snapshot: unknown;
           }>(
-            `select s.stage, p.title as project_title, p.initial_problem as problem, p.output_language as language
+            `select s.stage, p.title as project_title, p.initial_problem as problem, p.output_language as language, p.problem_pattern_snapshot
                from stage_runs s join projects p on p.id = s.project_id where s.id = $1`,
             [ref.stageRunId],
           )
         ).rows[0]!;
+        const problemPattern = resolveProblemPatternSnapshot(
+          stage.problem_pattern_snapshot,
+          ref.workspaceId,
+        )?.definition;
         // A retry of an attempt keeps the definition it started with; a new attempt takes the
         // version its project is pinned to (FR-AGT-003).
         const pinned = existing?.agent_definition_version_id
@@ -275,7 +281,7 @@ export function createOrchestrationActivities(
         );
         const analysis =
           stage.stage === 'analysis'
-            ? await loadDefinitionContext(client, ref.stageRunId, ref.projectId)
+            ? await loadDefinitionContext(client, ref.stageRunId, ref.projectId, ref.workspaceId)
             : null;
         let attemptId = existing?.id;
         if (!attemptId) {
@@ -392,9 +398,13 @@ export function createOrchestrationActivities(
           : stage.stage === 'research'
             ? await confirmedResearchPlan(client, ref.projectId)
             : null;
+        const patternResearchBlocked =
+          stage.stage === 'research' &&
+          !!problemPattern &&
+          (problemPattern.research.mode === 'never' || !researchPlan?.questions.length);
         const offsets = followup ? refOffsetsOf(followup.previous) : { knowledge: 0, web: 0 };
         const research: ResearchRun | null =
-          stage.stage === 'research'
+          stage.stage === 'research' && !patternResearchBlocked
             ? await prepareResearch(client, {
                 plan: researchPlan?.questions,
                 refOffset: offsets.knowledge,
@@ -415,6 +425,8 @@ export function createOrchestrationActivities(
         );
         const promptInput: StageContext = {
           stage: stage.stage,
+          problemPattern,
+          patternResearchBlocked,
           definition,
           language: stage.language,
           projectTitle: stage.project_title,
@@ -447,7 +459,10 @@ export function createOrchestrationActivities(
         const prompt = stagePrompt(promptInput);
         // Tools the model itself may call (ADR-0023): off unless the setting is on, and only those
         // the pinned definition allows. The ledger and the allowlist apply to every call.
-        const tools = config.agentToolCalling ? callableTools(toolScope, config) : [];
+        const tools =
+          config.agentToolCalling && !patternResearchBlocked
+            ? callableTools(toolScope, config)
+            : [];
         return {
           attemptId,
           config: { ...config, connectionId, model },

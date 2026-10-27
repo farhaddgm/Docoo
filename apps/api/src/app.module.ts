@@ -1,3 +1,5 @@
+import { ProblemPatternsModule } from './problem-patterns/problem-patterns.module.js';
+import { MeetingsModule } from './meetings/meetings.module.js';
 import { Module } from '@nestjs/common';
 import { AgentsModule } from './agents/agents.module.js';
 import { AnalysisModule } from './analysis/analysis.module.js';
@@ -28,6 +30,8 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
 @Module({
   imports: [
     CoreModule,
+    ProblemPatternsModule,
+    MeetingsModule,
     AuthModule,
     WorkspaceModule,
     TopicsModule,

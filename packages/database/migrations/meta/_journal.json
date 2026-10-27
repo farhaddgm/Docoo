@@ -449,6 +449,48 @@
       "when": 1793808756910,
       "tag": "0063_account_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1793808756911,
+      "tag": "0064_project_problem_template_snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1793808756912,
+      "tag": "0065_problem_patterns",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1793808756913,
+      "tag": "0066_project_problem_pattern_snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1793808756914,
+      "tag": "0067_project_meeting_preparation",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1793808756915,
+      "tag": "0068_published_pattern_selection_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1793808757915,
+      "tag": "0069_project_pattern_before_execution",
+      "breakpoints": true
     }
   ]
 }

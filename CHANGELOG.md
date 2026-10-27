@@ -4,6 +4,15 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.44.0] — 2026-10-27
+
+### Added
+
+- Optional, versioned problem patterns: administrators can create guidance by conversation or structured editing, review AI proposals, test a sample, explicitly publish immutable versions and archive patterns. Existing projects continue without a pattern.
+- Published pattern selection during project creation and draft editing, with a pinned workspace snapshot that freezes when preparation or workflow execution starts. Workflow stages use relevant guidance without changing existing schemas or approval gates; research respects the selected pattern and confirmed questions.
+- Persian and English meeting preparation: clarify goals and boundaries, review counterpart hypotheses, rehearse real user responses with feedback, accept an editable preparation brief and record post-meeting reflection. Rehearsal remains optional and AI suggestions require explicit acceptance.
+- Production integration uses existing encrypted provider connections, account AI limits and invocation accounting. Migrations 0064–0069 add optional snapshots, catalog/history and preparation records with tenant isolation and immutable history.
+
 ## [0.43.0] — 2026-10-25
 
 ### Added
