@@ -4,6 +4,12 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.44.1] — 2026-10-27
+
+### Fixed
+
+- Move pattern management from System Settings into the Workspace sidebar in Persian and English. Keep the shared application shell, sidebar and active navigation visible throughout pattern authoring.
+
 ## [0.44.0] — 2026-10-27
 
 ### Added

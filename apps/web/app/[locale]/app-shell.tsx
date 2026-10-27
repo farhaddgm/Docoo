@@ -67,6 +67,7 @@ const icons: Record<IconName, string> = {
   dashboard: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
   projects: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   topics: 'M4 5h16M4 12h16M4 19h10',
+  patterns: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
   knowledge: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 0 2 2h13',
   agents:
     'M12 3v3M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM9 13v1M15 13v1',
@@ -393,7 +394,12 @@ export function AppShell({
                   <p className="nav-group-label">{content.navGroups[group.key]}</p>
                   <ul className="nav-list">
                     {keys.map((key) => {
-                      const route = implemented[key];
+                      const route =
+                        key === 'patterns'
+                          ? workspaceId
+                            ? `/workspaces/${workspaceId}/problem-patterns`
+                            : undefined
+                          : implemented[key];
                       if (route === undefined) {
                         return (
                           <li key={key}>

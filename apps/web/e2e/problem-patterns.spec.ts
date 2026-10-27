@@ -145,6 +145,20 @@ for (const locale of ['fa', 'en'] as const) {
       return send({ items: [] });
     });
     await page.goto(`/${locale}/workspaces/${workspaceId}/problem-patterns`);
+    const sidebar = page.locator('#app-sidebar');
+    const patternsLink = sidebar.getByRole('link', {
+      name: locale === 'fa' ? 'الگوها' : 'Patterns',
+      exact: true,
+    });
+    await expect(sidebar).toBeVisible();
+    await expect(patternsLink).toHaveAttribute('aria-current', 'page');
+    await expect(
+      patternsLink.locator('xpath=ancestor::div[contains(@class,"nav-group")]'),
+    ).toContainText(locale === 'fa' ? 'فضای کار' : 'Workspace');
+    await patternsLink.click();
+    await expect(sidebar).toBeVisible();
+    await expect(page.getByRole('main')).toHaveCount(1);
+
     await page
       .getByLabel(locale === 'fa' ? 'نقطهٔ شروع' : 'Starting point')
       .selectOption('meeting');
