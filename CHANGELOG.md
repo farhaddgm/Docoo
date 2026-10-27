@@ -13,6 +13,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - Persian and English meeting preparation: clarify goals and boundaries, review counterpart hypotheses, rehearse real user responses with feedback, accept an editable preparation brief and record post-meeting reflection. Rehearsal remains optional and AI suggestions require explicit acceptance.
 - Production integration uses existing encrypted provider connections, account AI limits and invocation accounting. Migrations 0064–0069 add optional snapshots, catalog/history and preparation records with tenant isolation and immutable history.
 
+### Fixed
+
+- Preserve manually entered project codes during rapid title edits, late catalog loading and draft restoration. Field events update only the edited value and cannot reset the manual-code flag through an unrelated render.
+
 ## [0.43.0] — 2026-10-25
 
 ### Added
