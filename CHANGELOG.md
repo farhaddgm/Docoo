@@ -6,6 +6,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Fixed
 
+- Reconcile the open dependency updates in one change: `@axe-core/playwright` 4.14.0, `nodemailer` 10.1.7, the OpenTelemetry packages (`sdk-node`, `instrumentation`, `exporter-metrics-otlp-http` to 0.223.0, `auto-instrumentations-node` 0.81.2, `resources` and `sdk-metrics` 2.12.0, which also removes a mix of 2.11 and 2.12 core packages), CodeQL 4.39.1, and the refreshed digests of the Go (alpine and bookworm) and Caddy base images (including the Caddy image used by the deploy smoke test). The Node base image stays on 24 and Dependabot now ignores its major updates, since the repository requires Node `>=24 <25`.
 - Update the NestJS runtime together: `@nestjs/core`, `@nestjs/common`, `@nestjs/platform-fastify` and `@nestjs/testing` are now all 12.2.0. The Fastify adapter 12.2.0 needs the matching core (a lone adapter bump failed at startup with a missing `@nestjs/core/internal` export). Checked against the app's own use: the global `ValidationPipe`, the Smart exception filter that extends `BaseExceptionFilter`, and problem-details errors thrown as `HttpException` objects keep their responses; a request body that is an array for a validated class now gets a 400.
 
 ## [0.44.0] — 2026-10-27

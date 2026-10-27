@@ -41,7 +41,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/edge"
           printf 'other.localhost {\n\trespond "other site"\n}\n' > "$RUNNER_TEMP/edge/Caddyfile"
           docker run -d --name existing-proxy -p 80:80 -p 443:443 \
-            -v "$RUNNER_TEMP/edge/Caddyfile:/etc/caddy/Caddyfile" caddy:2@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772
+            -v "$RUNNER_TEMP/edge/Caddyfile:/etc/caddy/Caddyfile" caddy:2@sha256:504a44d7d74bd2bc28a66afc4774912fc21223ca8a67734af1c54ab2f999b489
       - name: Install the production stack (unattended)
         env:
           DOCOO_UNATTENDED: '1'

@@ -31,4 +31,9 @@ updates:
       - /
     schedule:
       interval: weekly
+    # The repository requires Node >=24 <25 (package.json engines) and CI runs on Node 24, so the
+    # Node base image stays on 24 until that range moves.
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
     open-pull-requests-limit: 5
