@@ -13,6 +13,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 ### Fixed
 
 - Patch `go-jose` to 4.1.6 (CVE-2026-116587, a denial of service when parsing JWKs with RSA keys) in the rebuilt PostgreSQL (WAL-G), Caddy, object-store, Tempo and Temporal images, as the builder stages already do for `golang.org/x/net` and gRPC.
+- Make the deploy smoke test pass the installer's unattended answers to `sudo` by name. `sudo -E` is ignored by sudo-rs, the default on newer GitHub runner images, so the installer stopped silently at its first question and every install check failed, on `main` too.
 - Make the research follow-up integration test use the plan and requester of its own project, so it no longer fails on a database that other suites have already filled.
 
 ## [0.44.1] — 2026-10-27
