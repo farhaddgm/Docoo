@@ -102,6 +102,44 @@ suite('problem patterns on isolated PostgreSQL', () => {
     const rejected = result.find((item) => item.status === 'rejected');
     expect(rejected?.status === 'rejected' && rejected.reason).toMatchObject({ status: 409 });
   });
+  it('renames the editable key, rejects duplicates and preserves published definitions', async () => {
+    const original = await create();
+    const testRun = await run(original.id);
+    await service.publish(context, original.id, {
+      expectedRevision: 1,
+      testRunId: testRun.id,
+      idempotencyKey: randomUUID(),
+    });
+    const other = await create();
+    await expect(
+      service.update(context, original.id, {
+        expectedRevision: 1,
+        definition: { ...original.definition, key: other.definition.key },
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    const key = `renamed-${randomUUID()}`;
+    const renamed = await service.update(context, original.id, {
+      expectedRevision: 1,
+      definition: { ...original.definition, key },
+    });
+    expect(renamed.id).toBe(original.id);
+    expect(renamed.definition.key).toBe(key);
+    expect(renamed.revision).toBe(2);
+    const detail = await service.get(context, original.id);
+    const version = await service.getVersion(
+      context,
+      original.id,
+      String(detail.versions[0]!['id']),
+    );
+    expect((version['definition'] as { key: string }).key).toBe(original.definition.key);
+    await expect(
+      service.publish(context, original.id, {
+        expectedRevision: 2,
+        testRunId: testRun.id,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
   it('serializes concurrent edits and rejects stale revisions', async () => {
     const row = await create();
     const updates = await Promise.allSettled(

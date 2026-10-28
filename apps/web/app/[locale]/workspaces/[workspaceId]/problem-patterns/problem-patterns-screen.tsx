@@ -12,6 +12,15 @@ import { PatternEditor } from './pattern-editor';
 import './patterns.css';
 
 type Definition = ProblemPatternDefinition;
+const suggestKey = () => `pattern-${crypto.randomUUID()}`;
+class PatternRequestError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
 interface Summary {
   id: string;
   title: string;
@@ -68,6 +77,9 @@ export function ProblemPatternsScreen({
     null,
   );
   const controller = useRef<AbortController | null>(null);
+  const creation = useRef<{ body: string; id: string } | null>(null);
+  const aiRequest = useRef<{ body: string; id: string } | null>(null);
+  useEffect(() => setKey((current) => current || suggestKey()), []);
   const dirty = !!(
     detail &&
     draft &&
@@ -113,7 +125,7 @@ export function ProblemPatternsScreen({
                   ? fa
                     ? 'یک درخواست در حال اجراست؛ کمی بعد تازه‌سازی کنید.'
                     : 'A request is running. Refresh shortly.'
-                  : code === 'PATTERN_KEY_EXISTS'
+                  : code === 'PATTERN_KEY_EXISTS' || code === 'PATTERN_DUPLICATE'
                     ? fa
                       ? 'این شناسه قبلاً استفاده شده است.'
                       : 'This key is already in use.'
@@ -128,7 +140,7 @@ export function ProblemPatternsScreen({
                         : fa
                           ? 'درخواست کامل نشد. پیش‌نویس ذخیره‌شده محفوظ است؛ تاریخچه را تازه‌سازی کنید.'
                           : 'The request did not complete. The saved draft is preserved; refresh the history.';
-        throw new Error(message);
+        throw new PatternRequestError(message, code);
       }
       return (await response.json()) as T;
     },
@@ -219,11 +231,11 @@ export function ProblemPatternsScreen({
     return Array.isArray(content) ? content.join('\n') : String(content);
   }
 
-  async function create() {
+  async function create(fromConversation = false) {
     const chosen =
-      seed === 'meeting'
+      !fromConversation && seed === 'meeting'
         ? meetingProblemPattern
-        : seed === 'marketing'
+        : !fromConversation && seed === 'marketing'
           ? marketingExperimentProblemPattern
           : {
               schemaVersion: 1 as const,
@@ -265,15 +277,28 @@ export function ProblemPatternsScreen({
               qualityCriteria: [t('خروجی با هدف سازگار است', 'The output fits the goal')],
               boundaries: [t('اطلاعات نامعلوم جعل نمی‌شود', 'Unknown information is not invented')],
             };
-    const result = await api<Pattern>('', 'POST', {
-      definition: validation({ ...structuredClone(chosen), key: key.trim(), title: title.trim() }),
-      idempotencyKey: crypto.randomUUID(),
+    const definition = validation({
+      ...structuredClone(chosen),
+      key: key.trim(),
+      title: title.trim() || t('الگوی تازه', 'New pattern'),
     });
+    const body = JSON.stringify(definition);
+    if (creation.current?.body !== body) creation.current = { body, id: crypto.randomUUID() };
+    const result = await api<Pattern>('', 'POST', {
+      definition,
+      idempotencyKey: creation.current.id,
+    });
+    creation.current = null;
+    setDetail({ pattern: result, runs: [], versions: [] });
+    setDraft(result.definition);
+    setPublished(null);
     await list();
     await open(result.id);
-    setKey('');
+    setKey(suggestKey());
     setTitle('');
+    return result;
   }
+
   async function save(value = draft) {
     if (!detail || !value) return;
     await api(`/${detail.pattern.id}/draft`, 'PUT', {
@@ -289,32 +314,48 @@ export function ProblemPatternsScreen({
       ),
     );
   }
-  async function run(kind: 'chat' | 'test') {
-    if (!detail || !consent || dirty) return;
+  async function run(kind: 'chat' | 'test', target = detail?.pattern) {
+    if (!target || !consent || dirty) return;
     const abort = new AbortController();
     controller.current = abort;
-    const result = await api<Run>(
-      `/${detail.pattern.id}/${kind === 'chat' ? 'messages' : 'tests'}`,
-      'POST',
-      {
-        content: kind === 'chat' ? question : sample,
-        expectedRevision: detail.pattern.revision,
-        providerConsent: true,
-        idempotencyKey: crypto.randomUUID(),
-      },
-      abort.signal,
-    );
-    await open(detail.pattern.id);
-    if (result.status !== 'complete')
-      throw new Error(
-        t(
-          'درخواست هنوز کامل نشده است؛ تاریخچه را تازه‌سازی کنید.',
-          'The request is not complete; refresh the history.',
-        ),
+    const request = {
+      content: kind === 'chat' ? question : sample,
+      expectedRevision: target.revision,
+      providerConsent: true,
+    };
+    const body = JSON.stringify({ id: target.id, kind, ...request });
+    if (aiRequest.current?.body !== body) aiRequest.current = { body, id: crypto.randomUUID() };
+    try {
+      const result = await api<Run>(
+        `/${target.id}/${kind === 'chat' ? 'messages' : 'tests'}`,
+        'POST',
+        { ...request, idempotencyKey: aiRequest.current.id },
+        abort.signal,
       );
-    if (kind === 'chat') setQuestion('');
-    setConsent(false);
-    controller.current = null;
+      aiRequest.current = null;
+      await open(target.id);
+      if (result.status !== 'complete')
+        throw new Error(
+          t(
+            'درخواست هنوز کامل نشده است؛ تاریخچه را تازه‌سازی کنید.',
+            'The request is not complete; refresh the history.',
+          ),
+        );
+      if (kind === 'chat') setQuestion('');
+      setConsent(false);
+    } catch (cause) {
+      // Transport failures may already have completed remotely; replay their request key.
+      // Explicitly failed/cancelled runs are terminal and need a fresh key on retry.
+      if (
+        cause instanceof PatternRequestError &&
+        (cause.code === 'PATTERN_AI_FAILED' || cause.code === 'PATTERN_AI_CANCELLED')
+      ) {
+        aiRequest.current = null;
+      }
+      throw cause;
+    } finally {
+      controller.current = null;
+    }
   }
   async function publish() {
     if (!detail || !currentTest) return;
@@ -327,8 +368,8 @@ export function ProblemPatternsScreen({
     await list();
     setNotice(
       t(
-        'نسخه منتشر شد. اتصال انتخاب الگو به پروژه در مرحلهٔ بعد انجام می‌شود.',
-        'Version published. Project selection will be connected in the next stage.',
+        'نسخه منتشر شد؛ اکنون می‌توانید آن را برای پروژه انتخاب کنید.',
+        'Version published. You can now select it for a project.',
       ),
     );
   }
@@ -351,8 +392,8 @@ export function ProblemPatternsScreen({
     <div className="patterns-page" dir={fa ? 'rtl' : 'ltr'}>
       <p>
         {t(
-          'با گفتگو یا ویرایش مستقیم، راهنمای اختیاری مسئله بسازید؛ ابتدا آزمایش و سپس منتشر کنید.',
-          'Create optional problem guidance through conversation or direct editing; preview before publishing.',
+          'خواسته‌تان را برای AI توضیح دهید تا اصول الگو را بسازد. با انتخاب این الگو در پروژه، Docoo بر اساس همین اصول کار می‌کند.',
+          'Tell AI what you need so it can build the pattern’s principles. Selecting the pattern in a project guides how Docoo works on that project.',
         )}
       </p>
       {error && (
@@ -385,35 +426,62 @@ export function ProblemPatternsScreen({
               </li>
             ))}
           </ul>
-          <fieldset disabled={busy || dirty}>
-            <legend>{t('الگوی تازه', 'New pattern')}</legend>
-            <label>
-              {t('نقطهٔ شروع', 'Starting point')}
-              <select value={seed} onChange={(event) => setSeed(event.target.value)}>
-                <option value="blank">{t('ایدهٔ تازه', 'New idea')}</option>
-                <option value="meeting">{t('نمونهٔ جلسه', 'Meeting example')}</option>
-                <option value="marketing">
-                  {t('نمونهٔ آزمایش مارکتینگ', 'Marketing experiment example')}
-                </option>
-              </select>
-            </label>
-            <label>
-              {t('شناسهٔ انگلیسی ثابت', 'Stable English key')}
-              <input
-                dir="ltr"
-                placeholder="my-pattern"
-                value={key}
-                onChange={(event) => setKey(event.target.value)}
-              />
-            </label>
-            <label>
-              {t('عنوان الگو', 'Pattern title')}
-              <input value={title} onChange={(event) => setTitle(event.target.value)} />
-            </label>
-            <button disabled={!key.trim() || !title.trim()} onClick={() => void action(create)}>
-              {t('ساخت پیش‌نویس', 'Create draft')}
-            </button>
-          </fieldset>
+          <button
+            disabled={busy || dirty}
+            onClick={() => {
+              setDetail(null);
+              setDraft(null);
+              setPublished(null);
+              setQuestion('');
+              setKey(suggestKey());
+              setTitle('');
+              setSeed('blank');
+              setConsent(false);
+              creation.current = null;
+              aiRequest.current = null;
+            }}
+          >
+            {t('الگوی تازه با گفتگو', 'New pattern conversation')}
+          </button>
+          <details>
+            <summary>{t('ساخت دستی یا شروع از نمونه', 'Manual creation or examples')}</summary>
+            <fieldset disabled={busy || dirty}>
+              <legend>{t('الگوی تازه', 'New pattern')}</legend>
+              <label>
+                {t('نقطهٔ شروع', 'Starting point')}
+                <select value={seed} onChange={(event) => setSeed(event.target.value)}>
+                  <option value="blank">{t('ایدهٔ تازه', 'New idea')}</option>
+                  <option value="meeting">{t('نمونهٔ جلسه', 'Meeting example')}</option>
+                  <option value="marketing">
+                    {t('نمونهٔ آزمایش مارکتینگ', 'Marketing experiment example')}
+                  </option>
+                </select>
+              </label>
+              <label>
+                {t('شناسهٔ الگو برای ساخت دستی', 'Pattern identifier for manual creation')}
+                <input
+                  dir="ltr"
+                  placeholder="my-pattern"
+                  value={key}
+                  onChange={(event) => setKey(event.target.value)}
+                />
+              </label>
+              <label>
+                {t('عنوان الگو', 'Pattern title')}
+                <input value={title} onChange={(event) => setTitle(event.target.value)} />
+              </label>
+              <button
+                disabled={!key.trim() || !title.trim()}
+                onClick={() =>
+                  void action(async () => {
+                    await create();
+                  })
+                }
+              >
+                {t('ساخت پیش‌نویس', 'Create draft')}
+              </button>
+            </fieldset>
+          </details>
         </aside>
         {detail && draft ? (
           <section>
@@ -563,17 +631,16 @@ export function ProblemPatternsScreen({
                                   archived ||
                                   item.revision !== detail.pattern.revision
                                 }
-                                onClick={() => {
-                                  setDraft(item.result!.definition);
-                                  setNotice(
-                                    t(
-                                      'پیشنهاد برای بازبینی وارد ویرایشگر شد؛ برای پذیرش، ذخیره کنید.',
-                                      'Proposal loaded for review. Save to accept it.',
-                                    ),
-                                  );
-                                }}
+                                onClick={() =>
+                                  void action(() =>
+                                    save({
+                                      ...item.result!.definition!,
+                                      key: detail.pattern.definition.key,
+                                    }),
+                                  )
+                                }
                               >
-                                {t('بازبینی پیشنهاد در ویرایشگر', 'Review proposal in editor')}
+                                {t('پذیرش و ذخیرهٔ الگو', 'Accept and save pattern')}
                               </button>
                             </div>
                           )}
@@ -742,23 +809,52 @@ export function ProblemPatternsScreen({
                 </p>
               </div>
               <div>
-                <PatternEditor
-                  value={draft}
-                  onChange={setDraft}
-                  disabled={busy || archived}
-                  fa={fa}
-                />
+                <details>
+                  <summary>{t('ویرایش جزئیات الگو', 'Edit pattern details')}</summary>
+                  <PatternEditor
+                    value={draft}
+                    onChange={setDraft}
+                    disabled={busy || archived}
+                    fa={fa}
+                  />
+                </details>
                 <section
                   className="pattern-box"
                   aria-label={t('پیش‌نمایش الگو', 'Pattern preview')}
                 >
                   <h3>{draft.title}</h3>
                   <p>{draft.purpose}</p>
+                  <h4>{t('موارد کاربرد', 'Applicability')}</h4>
+                  <ul>
+                    {draft.applicability.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                  <h4>{t('اصول Docoo و AI', 'Principles for Docoo and AI')}</h4>
                   <ol>
                     {draft.stages.map((stage, index) => (
-                      <li key={index}>{stage.title}</li>
+                      <li key={index}>
+                        {stage.title}
+                        <ul>
+                          {stage.guidance.map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
+                      </li>
                     ))}
                   </ol>
+                  <h4>{t('معیارهای کیفیت', 'Quality criteria')}</h4>
+                  <ul>
+                    {draft.qualityCriteria.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                  <h4>{t('مرزها', 'Boundaries')}</h4>
+                  <ul>
+                    {draft.boundaries.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
                   {draft.outputs.map((output, index) => (
                     <div key={index}>
                       <h4>{output.title}</h4>
@@ -774,12 +870,63 @@ export function ProblemPatternsScreen({
             </div>
           </section>
         ) : (
-          <p>
-            {t(
-              'یک الگو انتخاب کنید یا پیش‌نویس تازه بسازید.',
-              'Select a pattern or create a draft.',
-            )}
-          </p>
+          <section className="pattern-box">
+            <h2>{t('با گفتگو الگو بسازید', 'Build a pattern through conversation')}</h2>
+            <p>
+              {t(
+                'لازم نیست عنوان، مراحل یا اصول را از قبل بنویسید. AI از توضیح شما شروع می‌کند و فقط سؤال‌های لازم را می‌پرسد.',
+                'You do not need to write a title, stages or principles first. AI starts from your explanation and asks only necessary questions.',
+              )}
+            </p>
+            <fieldset disabled={busy}>
+              <label>
+                {t('از الگو چه می‌خواهید؟', 'What should this pattern do?')}
+                <textarea
+                  rows={6}
+                  maxLength={4000}
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                />
+              </label>
+              <label>
+                {t('شناسهٔ پیشنهادی الگو', 'Suggested pattern identifier')}
+                <input
+                  dir="ltr"
+                  value={key}
+                  maxLength={64}
+                  onChange={(event) => setKey(event.target.value)}
+                />
+              </label>
+              <p>
+                {t(
+                  'شناسه به‌صورت تصادفی پیشنهاد شده است؛ می‌توانید آن را تغییر دهید.',
+                  'The identifier is randomly suggested. You can edit it.',
+                )}
+              </p>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(event) => setConsent(event.target.checked)}
+                />
+                {t(
+                  'اجازه می‌دهم توضیح و گفتگوی الگو برای پاسخ‌گویی به سرویس AI تنظیم‌شده ارسال شود.',
+                  'I consent to sending the pattern description and conversation to the configured AI provider.',
+                )}
+              </label>
+              <button
+                disabled={!consent || !question.trim() || !key.trim()}
+                onClick={() =>
+                  void action(async () => {
+                    const pattern = await create(true);
+                    await run('chat', pattern);
+                  })
+                }
+              >
+                {t('شروع گفتگو با AI', 'Start conversation with AI')}
+              </button>
+            </fieldset>
+          </section>
         )}
       </div>
     </div>
