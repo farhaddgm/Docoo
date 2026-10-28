@@ -136,7 +136,7 @@ for (const locale of ['fa', 'en'] as const) {
     await expect(start).toBeDisabled();
     await page.getByLabel(locale === 'fa' ? 'اجازه می‌دهم' : 'I consent', { exact: false }).check();
     await start.click();
-    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.locator('.patterns-page').getByRole('alert')).toBeVisible();
     expect(created).toBe(1);
     await expect(
       page.getByLabel(
@@ -150,7 +150,7 @@ for (const locale of ['fa', 'en'] as const) {
     await page
       .getByRole('button', { name: locale === 'fa' ? 'ارسال پیام' : 'Send message', exact: true })
       .click();
-    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.locator('.patterns-page').getByRole('alert')).toBeVisible();
     await page
       .getByRole('button', { name: locale === 'fa' ? 'ارسال پیام' : 'Send message', exact: true })
       .click();
