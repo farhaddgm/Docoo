@@ -4,6 +4,8 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.46.0] — 2026-10-28
+
 ### Changed
 
 - Start pattern creation with an AI conversation and an editable random identifier. AI proposes reusable project principles and a title; administrators accept and save the proposal without filling out a structural form. Keep manual editing and examples as secondary options.
