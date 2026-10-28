@@ -4,6 +4,17 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.45.0] — 2026-10-28
+
+### Added
+
+- A three-dot menu at the end of every row of the project list for administrators. It offers archive and delete for the commands the project accepts in its status, asks for the same confirmation and optional reason as the project page, and reads the list again afterwards. Available in Persian and English and usable with the keyboard.
+
+### Fixed
+
+- Patch `go-jose` to 4.1.6 (CVE-2026-116587, a denial of service when parsing JWKs with RSA keys) in the rebuilt PostgreSQL (WAL-G), Caddy, object-store, Tempo and Temporal images, as the builder stages already do for `golang.org/x/net` and gRPC.
+- Make the research follow-up integration test use the plan and requester of its own project, so it no longer fails on a database that other suites have already filled.
+
 ## [0.44.1] — 2026-10-27
 
 ### Fixed
