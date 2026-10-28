@@ -9,6 +9,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 ### Changed
 
 - Start pattern creation with an AI conversation and an editable random identifier. AI proposes reusable project principles and a title; administrators accept and save the proposal without filling out a structural form. Keep manual editing and examples as secondary options.
+- Treat a selected pattern’s applicable principles as project requirements throughout analyst rounds and workflow stages; projects without a pattern retain their existing path.
 - Allow administrators to rename pattern catalog identifiers while preserving published versions and pinned project snapshots (migration 0070).
 
 ## [0.45.0] — 2026-10-28
