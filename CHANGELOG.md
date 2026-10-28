@@ -12,6 +12,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - Treat a selected pattern’s applicable principles as project requirements throughout analyst rounds and workflow stages; projects without a pattern retain their existing path.
 - Allow administrators to rename pattern catalog identifiers while preserving published versions and pinned project snapshots (migration 0070).
 
+### Fixed
+
+- Reconcile the open Dependabot updates in one change so the shared lockfile does not conflict: `@fastify/rate-limit` 11.2.1, `turbo` 2.11.10, `vitest` 5.0.5, `pdfjs-dist` 6.4.299 (documents and ingestion) and `eslint` 10.13.0. The seven-day release-age policy is unchanged and needs no new exception.
+
 ## [0.45.0] — 2026-10-28
 
 ### Added
