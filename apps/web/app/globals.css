@@ -4952,6 +4952,45 @@ button.link-button {
 .project-table .col-updated {
   width: 10rem;
 }
+.project-table .col-actions {
+  width: 3.25rem;
+}
+
+.project-table .row-actions-cell {
+  text-align: end;
+}
+
+.row-menu-button {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.row-menu-button:hover:not(:disabled),
+.row-menu-button[aria-expanded='true'] {
+  background: var(--color-primary-soft);
+}
+
+.row-menu-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.row-menu-button svg {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+.row-menu {
+  inline-size: min(11rem, calc(100vw - 1rem));
+}
 
 /* The owner's per-account settings dialog (ADR-0042). */
 .policy-dialog h2 {
