@@ -250,14 +250,18 @@ describe.skipIf(!adminUrl)('Research follow-up round and requirement gaps (ADR-0
 
   it('does not let a round without its rejection start, or any ordinary rejection', async () => {
     const before = await activeResearchFollowup(asClient(), stageRunId, projectId);
-    const planId = (await h.admin.query<{ id: string }>('select id from research_plans limit 1'))
-      .rows[0]!.id;
+    const planId = (
+      await h.admin.query<{ id: string }>(
+        'select id from research_plans where workspace_id = $1 and project_id = $2 limit 1',
+        [h.ids.workspaceA, projectId],
+      )
+    ).rows[0]!.id;
     // A later round whose rejection never happened (for example the review failed): dormant.
     await h.admin.query(
       `insert into research_followups
          (workspace_id,project_id,stage_run_id,output_id,plan_id,token,questions,requested_by)
        values ($1,$2,$3,$4,$5,'deadbeef','[{"id":"Q3","question":"x","why":"","channel":"web"}]'::jsonb,
-               (select id from users limit 1))`,
+               (select requested_by from research_followups where stage_run_id = $3 limit 1))`,
       [h.ids.workspaceA, projectId, stageRunId, outputId, planId],
     );
     await h.admin.query(

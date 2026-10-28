@@ -2,15 +2,20 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { apiGet, query } from '../../api-client';
+import { apiGet, apiSend, query } from '../../api-client';
 import { formatDateTime, type Locale, textDir } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { canCreateProjects } from '../access';
 import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
+import { Notice, useAction } from '../use-action';
+import { ReasonBar } from '../reason-bar';
+import { explainProject } from './explain';
 import { projectMessages } from './messages';
+import { projectPageMessages } from './[projectId]/messages';
+import { ProjectRowMenu, type RowCommand } from './project-row-menu';
 import { PagedRows } from '../../table-pager';
 
 export interface ProjectSummary {
@@ -18,6 +23,8 @@ export interface ProjectSummary {
   code: string;
   title: string;
   status: string;
+  version: number;
+  availableCommands: string[];
   currentStage: string;
   outputLanguage: 'fa' | 'en';
   updatedAt: string;
@@ -80,6 +87,17 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
   const [items, setItems] = useState<ProjectSummary[] | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const pageText = projectPageMessages(locale);
+  const [pending, setPending] = useState<{
+    project: ProjectSummary;
+    command: RowCommand;
+    reason: string;
+  } | null>(null);
+  const explain = useCallback((error: unknown) => explainProject(error, text), [text]);
+  const { busy, notice, setNotice, run } = useAction(explain);
+  const confirmHeading = useRef<HTMLHeadingElement>(null);
+  // Delete is the platform administrator's; archive is offered with it, as on the project page.
+  const isAdmin = identity?.user.role === 'super_admin';
 
   const load = useCallback(
     async (status: View, filter: Filters, cursor?: string) => {
@@ -120,6 +138,23 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
     const handle = setTimeout(() => setApplied(filters), filters.q === applied.q ? 0 : 400);
     return () => clearTimeout(handle);
   }, [filters, applied.q]);
+
+  useEffect(() => {
+    if (pending) confirmHeading.current?.focus();
+  }, [pending?.project.id, pending?.command]);
+
+  function execute(target: NonNullable<typeof pending>) {
+    const reason = target.reason.trim();
+    const body = { expectedVersion: target.project.version, ...(reason ? { reason } : {}) };
+    const base = `/workspaces/${workspaceId}/projects/${target.project.id}`;
+    void run(async () => {
+      if (target.command === 'delete') await apiSend('DELETE', base, body);
+      else await apiSend('POST', `${base}/${target.command}`, body);
+      setPending(null);
+      // The row leaves or changes in this view; the list is read again from its first page.
+      await load(view, applied);
+    }, pageText.done[target.command] ?? text.saved);
+  }
 
   const filtered = JSON.stringify(applied) !== JSON.stringify(noFilters);
 
@@ -232,6 +267,45 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
             </>
           )}
         </form>
+        <Notice notice={notice} />
+        {pending && (
+          <form
+            data-write-action
+            className="card confirm-panel filter-form"
+            aria-labelledby="row-command-title"
+            aria-busy={busy}
+            onSubmit={(event) => {
+              event.preventDefault();
+              execute(pending);
+            }}
+          >
+            <h3 id="row-command-title" tabIndex={-1} ref={confirmHeading}>
+              {pageText.commandTitle
+                .replace('{command}', pageText.commands[pending.command] ?? pending.command)
+                .replace('{title}', pending.project.title)}
+            </h3>
+            <p>{pageText.effects[pending.command] ?? ''}</p>
+            <ReasonBar
+              locale={locale}
+              id="row-command-reason"
+              label={pageText.reasonOptional}
+              value={pending.reason}
+              onChange={(reason) => setPending({ ...pending, reason })}
+            >
+              <button className="primary-button" type="submit" disabled={busy}>
+                {busy ? pageText.working : pageText.confirm}
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={busy}
+                onClick={() => setPending(null)}
+              >
+                {pageText.cancel}
+              </button>
+            </ReasonBar>
+          </form>
+        )}
         {failed ? (
           <p className="notice error" role="alert">
             {common.loadFailed}
@@ -261,6 +335,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                     <col className="col-stage" />
                     <col className="col-owner" />
                     <col className="col-updated" />
+                    {isAdmin && <col className="col-actions" />}
                   </colgroup>
                   <thead>
                     <tr>
@@ -271,6 +346,11 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                       <th scope="col">{text.stage}</th>
                       <th scope="col">{text.owner}</th>
                       <th scope="col">{text.updated}</th>
+                      {isAdmin && (
+                        <th scope="col">
+                          <span className="sr-only">{text.rowActions}</span>
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -294,6 +374,23 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                           value={project.owner?.displayName ?? '—'}
                         />
                         <ClippedCell value={formatDateTime(locale, project.updatedAt)} />
+                        {isAdmin && (
+                          <td className="row-actions-cell">
+                            <ProjectRowMenu
+                              locale={locale}
+                              label={text.rowActionsFor.replace('{code}', project.code)}
+                              labels={pageText.commands}
+                              disabled={busy}
+                              commands={(['archive', 'delete'] as const).filter((command) =>
+                                project.availableCommands.includes(command),
+                              )}
+                              onChoose={(command) => {
+                                setNotice(null);
+                                setPending({ project, command, reason: '' });
+                              }}
+                            />
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
