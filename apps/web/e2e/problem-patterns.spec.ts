@@ -160,10 +160,17 @@ for (const locale of ['fa', 'en'] as const) {
     await expect(page.getByRole('main')).toHaveCount(1);
 
     await page
+      .getByText(locale === 'fa' ? 'ساخت دستی یا شروع از نمونه' : 'Manual creation or examples', {
+        exact: true,
+      })
+      .click();
+    await page
       .getByLabel(locale === 'fa' ? 'نقطهٔ شروع' : 'Starting point')
       .selectOption('meeting');
     await page
-      .getByLabel(locale === 'fa' ? 'شناسهٔ انگلیسی ثابت' : 'Stable English key')
+      .getByLabel(
+        locale === 'fa' ? 'شناسهٔ الگو برای ساخت دستی' : 'Pattern identifier for manual creation',
+      )
       .fill('meeting-test');
     await page
       .getByLabel(locale === 'fa' ? 'عنوان الگو' : 'Pattern title', { exact: true })
@@ -197,17 +204,12 @@ for (const locale of ['fa', 'en'] as const) {
     expect(pattern!.definition.purpose).toBe(meetingProblemPattern.purpose);
     await page
       .getByRole('button', {
-        name: locale === 'fa' ? 'بازبینی پیشنهاد در ویرایشگر' : 'Review proposal in editor',
+        name: locale === 'fa' ? 'پذیرش و ذخیرهٔ الگو' : 'Accept and save pattern',
         exact: true,
       })
       .click();
     await expect(publish).toBeDisabled();
-    await page
-      .getByRole('button', {
-        name: locale === 'fa' ? 'ذخیرهٔ تغییرات' : 'Save changes',
-        exact: true,
-      })
-      .click();
+    expect(pattern!.definition.purpose).toBe('A clearer preparation goal');
     await page
       .getByLabel(locale === 'fa' ? 'مسئلهٔ نمونه برای آزمایش' : 'Sample problem for preview', {
         exact: false,

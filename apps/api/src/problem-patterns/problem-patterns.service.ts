@@ -175,11 +175,9 @@ export class ProblemPatternsService {
     return this.tx(context, async (client) => {
       const row = await this.read(client, context, id, true);
       this.editable(row, input.expectedRevision);
-      if (input.definition.key !== row.definition.key)
-        throw new UnprocessableEntityException({ code: 'PATTERN_KEY_IMMUTABLE' });
       const result = await client.query<PatternRow>(
-        `update problem_patterns set definition=$3::jsonb, revision=revision+1,updated_at=clock_timestamp() where workspace_id=$1 and id=$2 returning *`,
-        [context.workspaceId, id, JSON.stringify(input.definition)],
+        `update problem_patterns set definition=$3::jsonb, pattern_key=$4, revision=revision+1,updated_at=clock_timestamp() where workspace_id=$1 and id=$2 returning *`,
+        [context.workspaceId, id, JSON.stringify(input.definition), input.definition.key],
       );
       await this.audit(client, context, id, 'draft_updated', { revision: row.revision + 1 });
       return result.rows[0]!;
@@ -467,7 +465,13 @@ export class ProblemPatternsService {
     } catch (error) {
       await client.query<Record<string, unknown>>('rollback').catch(() => undefined);
       if (error !== null && typeof error === 'object' && 'code' in error && error.code === '23505')
-        throw new ConflictException({ code: 'PATTERN_DUPLICATE' });
+        throw new ConflictException({
+          code:
+            'constraint' in error &&
+            error.constraint === 'problem_patterns_workspace_pattern_key_uq'
+              ? 'PATTERN_KEY_EXISTS'
+              : 'PATTERN_DUPLICATE',
+        });
       throw error;
     } finally {
       client.release();

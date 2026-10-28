@@ -491,6 +491,13 @@
       "when": 1793808757915,
       "tag": "0069_project_pattern_before_execution",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1793808757916,
+      "tag": "0070_editable_pattern_keys",
+      "breakpoints": true
     }
   ]
 }

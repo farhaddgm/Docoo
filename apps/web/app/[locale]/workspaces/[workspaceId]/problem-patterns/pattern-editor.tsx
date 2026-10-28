@@ -29,8 +29,13 @@ export function PatternEditor({
     <fieldset disabled={disabled} className="pattern-editor">
       <legend>{label('ویرایش پیش‌نویس', 'Edit draft')}</legend>
       <label>
-        {label('شناسهٔ ثابت', 'Stable key')}
-        <input value={value.key} readOnly dir="ltr" />
+        {label('شناسهٔ الگو', 'Pattern identifier')}
+        <input
+          value={value.key}
+          onChange={(event) => patch({ key: event.target.value })}
+          maxLength={64}
+          dir="ltr"
+        />
       </label>
       <label>
         {label('عنوان', 'Title')}
