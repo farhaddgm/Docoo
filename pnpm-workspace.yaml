@@ -34,3 +34,6 @@ overrides:
   sharp: 0.35.5
   # GHSA-587h-7wmj-h5pm: launch-editor bypass in vite 8.3.0-8.3.2 (pulled in by vitest).
   vite: '>=8.3.3'
+  # GHSA-3f7j-7jwc-fxfj: Windows command injection in systeminformation < 5.33.16 (pulled in by the
+  # OpenTelemetry host-metrics instrumentation). 5.33.16 is past the release-age gate; 5.33.17 is not yet.
+  systeminformation: 5.33.16

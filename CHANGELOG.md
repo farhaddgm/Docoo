@@ -4,8 +4,11 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.46.1] — 2026-10-29
+
 ### Fixed
 
+- Patch `systeminformation` to 5.33.16 (GHSA-3f7j-7jwc-fxfj, a Windows command injection in `services()`), which the OpenTelemetry host-metrics instrumentation pulls in, so the dependency audit passes again. 5.33.16 is past the seven-day release-age gate, so no exception is added; 5.33.17 is not yet and stays out.
 - Make the Firefox and WebKit end-to-end jobs less fragile. They wait up to 10 seconds (Chromium keeps 5) for a page to settle and retry a failed test once; a test that passes on the retry is reported as flaky instead of failing the release gate. Every failed attempt, including one that passes on retry, now prints the page's accessibility tree in the job log so the cause can be read without downloading the artifact.
 
 ## [0.46.0] — 2026-10-28
