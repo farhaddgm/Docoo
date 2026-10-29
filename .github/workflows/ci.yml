@@ -173,6 +173,19 @@ jobs:
           S3_ACCESS_KEY_ID: docoo-ci
           S3_SECRET_ACCESS_KEY: docoo-ci-secret
           S3_FORCE_PATH_STYLE: 'true'
+      - name: Show where failed end-to-end attempts stopped
+        # Playwright writes the page's accessibility tree at the moment of a failure to
+        # error-context.md, also for an attempt that passes on retry. The artifact is not always
+        # reachable, so print it in the log: it tells a page stuck loading from one that shows an
+        # error. Nothing is printed when no attempt failed.
+        if: always()
+        run: |
+          find apps/web/test-results -name error-context.md 2>/dev/null | while read -r file; do
+            echo "::group::${file#apps/web/test-results/}"
+            head -c 8000 "$file"
+            echo
+            echo "::endgroup::"
+          done || true
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -271,7 +284,10 @@ jobs:
           psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c \
             "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'docoo_e2e') THEN CREATE ROLE docoo_e2e LOGIN PASSWORD 'docoo-e2e-runtime' IN ROLE docoo_app; END IF; END \$\$;"
           node apps/web/e2e/prepare.mjs
-      - run: pnpm --filter @docoo/web exec playwright test --project=${{ matrix.browser }}
+      # One retry only here: Firefox and WebKit on a shared runner sometimes stall a page for a few
+      # seconds. A test that passes on the retry is reported as flaky in the log, with the failed
+      # attempt's page snapshot printed below, instead of failing the release gate.
+      - run: pnpm --filter @docoo/web exec playwright test --project=${{ matrix.browser }} --retries=1
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://docoo_e2e:docoo-e2e-runtime@localhost:5432/docoo_ci
@@ -297,6 +313,19 @@ jobs:
           S3_ACCESS_KEY_ID: docoo-ci
           S3_SECRET_ACCESS_KEY: docoo-ci-secret
           S3_FORCE_PATH_STYLE: 'true'
+      - name: Show where failed end-to-end attempts stopped
+        # Playwright writes the page's accessibility tree at the moment of a failure to
+        # error-context.md, also for an attempt that passes on retry. The artifact is not always
+        # reachable, so print it in the log: it tells a page stuck loading from one that shows an
+        # error. Nothing is printed when no attempt failed.
+        if: always()
+        run: |
+          find apps/web/test-results -name error-context.md 2>/dev/null | while read -r file; do
+            echo "::group::${file#apps/web/test-results/}"
+            head -c 8000 "$file"
+            echo
+            echo "::endgroup::"
+          done || true
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

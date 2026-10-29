@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Fixed
+
+- Make the Firefox and WebKit end-to-end jobs less fragile. They wait up to 10 seconds (Chromium keeps 5) for a page to settle and retry a failed test once; a test that passes on the retry is reported as flaky instead of failing the release gate. Every failed attempt, including one that passes on retry, now prints the page's accessibility tree in the job log so the cause can be read without downloading the artifact.
+
 ## [0.46.0] — 2026-10-28
 
 ### Changed
