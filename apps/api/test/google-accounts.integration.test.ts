@@ -100,7 +100,10 @@ describe.skipIf(!adminUrl)('Google accounts on the deployed database schema', ()
     expect((await app.inject({ method: 'GET', url: '/v1/auth/providers' })).json()).toEqual({
       google: true,
     });
-  });
+    // GET /v1/admin/users asks once per user and workspace whether the user is a member, so it
+    // slows down as the shared test database fills with workspaces (about 7 s with 500 here):
+    // the default 5 s is not enough.
+  }, 30000);
   it('rejects unapproved, unverified and organizational accounts', async () => {
     await expect(
       auth.loginWithGoogle(googleIdentity(`unknown.${suffix}@gmail.com`), {
