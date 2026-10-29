@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Fixed
+
+- Patch `systeminformation` to 5.33.16 (GHSA-3f7j-7jwc-fxfj, a Windows command injection in `services()`), which the OpenTelemetry host-metrics instrumentation pulls in, so the dependency audit passes again. 5.33.16 is past the seven-day release-age gate, so no exception is added; 5.33.17 is not yet and stays out.
+
 ## [0.46.0] — 2026-10-28
 
 ### Changed
