@@ -9,6 +9,8 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 ### Fixed
 
 - Patch `systeminformation` to 5.33.16 (GHSA-3f7j-7jwc-fxfj, a Windows command injection in `services()`), which the OpenTelemetry host-metrics instrumentation pulls in, so the dependency audit passes again. 5.33.16 is past the seven-day release-age gate, so no exception is added; 5.33.17 is not yet and stays out.
+- Give the Google-accounts bootstrap integration test a 30 second limit. It waits on `GET /v1/admin/users`, which makes one membership query per user and workspace and so slows down as the shared test database fills with workspaces (about 7 s with 500); alone, with such a database, it failed at the default 5 s every time.
+- Give the mail-retry integration test (NTF-007) a 30 second limit. It takes about 3 s on a fast machine (two workflows and six mail ticks that each scan every workspace), so the default 5 s failed on a slower CI runner.
 - Make the Firefox and WebKit end-to-end jobs less fragile. They wait up to 10 seconds (Chromium keeps 5) for a page to settle and retry a failed test once; a test that passes on the retry is reported as flaky instead of failing the release gate. Every failed attempt, including one that passes on retry, now prints the page's accessibility tree in the job log so the cause can be read without downloading the artifact.
 
 ## [0.46.0] — 2026-10-28
