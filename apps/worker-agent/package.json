@@ -16,8 +16,8 @@
     "@docoo/observability": "workspace:*",
     "@docoo/orchestration": "workspace:*",
     "@docoo/providers": "workspace:*",
-    "@temporalio/worker": "1.24.0",
-    "@temporalio/activity": "1.24.0",
+    "@temporalio/worker": "1.25.0",
+    "@temporalio/activity": "1.25.0",
     "pg": "8.23.0"
   },
   "devDependencies": {
