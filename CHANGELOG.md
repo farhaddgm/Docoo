@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Fixed
+
+- Make the administrator's account list (`GET /v1/admin/users`) fast on a database with many workspaces. It asked once per listed account and workspace whether the account is a member (about 7.5 s with 500 workspaces and 20 accounts); it now asks once per workspace for all listed accounts (about 0.5 s). The result is unchanged, and a test now checks which workspaces the list names for an account.
+
 ## [0.46.1] — 2026-10-29
 
 ### Fixed
