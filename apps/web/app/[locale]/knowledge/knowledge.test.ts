@@ -24,7 +24,9 @@ describe('knowledge messages', () => {
       const texts = Object.fromEntries(
         paths(knowledgeHelp(locale)).map((path) => [
           path,
-          path.split('.').reduce<unknown>((node, key) => (node as never)[key], knowledgeHelp(locale)),
+          path
+            .split('.')
+            .reduce<unknown>((node, key) => (node as never)[key], knowledgeHelp(locale)),
         ]),
       );
       for (const [path, value] of Object.entries(texts)) {

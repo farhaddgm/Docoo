@@ -158,27 +158,27 @@ function Detail({
           {version && (
             <div>
               <dt>
-              {text.factVersion}
-              <InfoTip text={help.detail.facts.version} />
-            </dt>
+                {text.factVersion}
+                <InfoTip text={help.detail.facts.version} />
+              </dt>
               <dd>{fill(text.versionLabel, { n: formatNumber(locale, version.versionNo) })}</dd>
             </div>
           )}
           {version?.validFrom && (
             <div>
               <dt>
-              {text.factValidFrom}
-              <InfoTip text={help.detail.facts.validFrom} />
-            </dt>
+                {text.factValidFrom}
+                <InfoTip text={help.detail.facts.validFrom} />
+              </dt>
               <dd>{formatDate(locale, version.validFrom)}</dd>
             </div>
           )}
           {version?.validUntil && (
             <div>
               <dt>
-              {text.factValidUntil}
-              <InfoTip text={help.detail.facts.validUntil} />
-            </dt>
+                {text.factValidUntil}
+                <InfoTip text={help.detail.facts.validUntil} />
+              </dt>
               <dd>{formatDate(locale, version.validUntil)}</dd>
             </div>
           )}

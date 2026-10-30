@@ -283,10 +283,12 @@ export function QueuePanel({
                       {text.columns.title}
                       <InfoTip text={help.columns.title} />
                     </th>
-                    {!scoped && <th scope="col">
-                      {text.columns.scope}
-                      <InfoTip text={help.columns.scope} />
-                    </th>}
+                    {!scoped && (
+                      <th scope="col">
+                        {text.columns.scope}
+                        <InfoTip text={help.columns.scope} />
+                      </th>
+                    )}
                     <th scope="col">
                       {text.columns.status}
                       <InfoTip text={help.columns.status} />
