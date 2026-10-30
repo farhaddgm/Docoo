@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Security
+
+- Upgrade the Temporal TypeScript SDK to 1.25.0, whose native core bridge bundles `zip` 9.0.5 and clears CVE-2026-115905, CVE-2026-115907, CVE-2026-115908 and CVE-2026-115909 that failed the worker image scans on 1.24.0. 1.25.0 is younger than the seven-day release-age gate, so it is listed in `minimumReleaseAgeExclude` (exact versions only) with a reminder to remove the entries once the gate passes.
+
 ## [0.46.1] — 2026-10-29
 
 ### Fixed
