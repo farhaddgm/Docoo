@@ -143,7 +143,7 @@ export async function fillReason(page: Page, target: Locator, value: string) {
     const dialog = input.locator('xpath=ancestor::dialog[1]');
     await dialog.locator('xpath=preceding-sibling::button[1]').click();
     await input.fill(value);
-    await dialog.locator('.reason-dialog-head button').click();
+    await dialog.locator('.reason-dialog-head .secondary-button').click();
     return;
   }
   await input.fill(value);
