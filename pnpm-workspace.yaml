@@ -9,6 +9,16 @@ minimumReleaseAgeExclude:
   # Reviewed URI parser security fixes (GHSA-w74x-v6f9-j3xg and related advisories).
   - fast-uri@3.1.9
   - fast-uri@4.2.3
+  # Temporal 1.25.0 bundles zip 9.0.5, which fixes CVE-2026-115905/-115907/-115908/-115909
+  # reported by the container scans against zip 8.5.1 in @temporalio/core-bridge 1.24.0.
+  - '@temporalio/activity@1.25.0'
+  - '@temporalio/client@1.25.0'
+  - '@temporalio/common@1.25.0'
+  - '@temporalio/core-bridge@1.25.0'
+  - '@temporalio/nexus@1.25.0'
+  - '@temporalio/proto@1.25.0'
+  - '@temporalio/worker@1.25.0'
+  - '@temporalio/workflow@1.25.0'
 
 allowBuilds:
   '@scarf/scarf': false
