@@ -246,7 +246,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     ).toBeVisible();
     const section = (index: number) => page.locator('details.wizard-section').nth(index);
     const open = async (index: number) => {
-      await section(index).locator('summary').click();
+      await section(index).locator('summary .wizard-section-title').click();
       return section(index);
     };
     const flow = await open(0);
