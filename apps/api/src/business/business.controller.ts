@@ -35,6 +35,14 @@ const linkSchema = z
     reason: z.string().trim().max(1000).optional(),
   })
   .strict();
+// A Contenter id is passed in the address of the request to Contenter, so it is kept to the
+// characters ids are made of.
+const contenterIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .regex(/^[A-Za-z0-9_-]+$/u);
 const reasonSchema = z.object({ reason: z.string().trim().max(1000).optional() }).strict();
 const browseQuery = z
   .object({
@@ -112,6 +120,15 @@ export class BusinessController {
   @RequireWorkspacePermission('business.read')
   async browse(@Req() request: FastifyRequest, @Query() query: unknown) {
     return this.business.browse(workspaceContext(request), parse(browseQuery, query));
+  }
+
+  @Get('contenter-businesses/:businessId')
+  @ApiOperation({ summary: 'The whole content of one business of Contenter, read live' })
+  @RequireWorkspacePermission('business.read')
+  async browseOne(@Req() request: FastifyRequest, @Param('businessId') raw: string) {
+    const parsed = contenterIdSchema.safeParse(raw);
+    if (!parsed.success) throw invalid();
+    return this.business.preview(workspaceContext(request), parsed.data);
   }
 
   // ---- the business of a project ---------------------------------------------------------------

@@ -71,7 +71,7 @@ export function BasicsFields({
 }: {
   locale: Locale;
   values: ProjectValues;
-  onChange: (next: ProjectValues) => void;
+  onChange: (next: ProjectValues, field: keyof ProjectValues) => void;
   problemLocked?: boolean;
 }) {
   const text = projectMessages(locale);
@@ -86,7 +86,7 @@ export function BasicsFields({
             id="project-title"
             dir={textDir(locale)}
             value={values.title}
-            onChange={(event) => setValues({ ...values, title: event.target.value })}
+            onChange={(event) => setValues({ ...values, title: event.target.value }, 'title')}
             maxLength={200}
             autoComplete="off"
             required
@@ -98,7 +98,7 @@ export function BasicsFields({
             id="project-code"
             dir="ltr"
             value={values.code}
-            onChange={(event) => setValues({ ...values, code: event.target.value })}
+            onInput={(event) => setValues({ ...values, code: event.currentTarget.value }, 'code')}
             pattern="[a-zA-Z0-9][a-zA-Z0-9_\-]{0,63}"
             aria-describedby="project-code-help"
             autoComplete="off"
@@ -110,7 +110,9 @@ export function BasicsFields({
             dir={textDir(locale)}
             rows={2}
             value={values.description}
-            onChange={(event) => setValues({ ...values, description: event.target.value })}
+            onChange={(event) =>
+              setValues({ ...values, description: event.target.value }, 'description')
+            }
             maxLength={10000}
           />
           <FieldLabel
@@ -125,7 +127,9 @@ export function BasicsFields({
             dir={textDir(locale)}
             rows={8}
             value={values.initialProblem}
-            onChange={(event) => setValues({ ...values, initialProblem: event.target.value })}
+            onChange={(event) =>
+              setValues({ ...values, initialProblem: event.target.value }, 'initialProblem')
+            }
             maxLength={50000}
             aria-describedby="project-problem-help"
             disabled={problemLocked}
@@ -136,7 +140,10 @@ export function BasicsFields({
             id="project-language"
             value={values.outputLanguage}
             onChange={(event) =>
-              setValues({ ...values, outputLanguage: event.target.value as 'fa' | 'en' })
+              setValues(
+                { ...values, outputLanguage: event.target.value as 'fa' | 'en' },
+                'outputLanguage',
+              )
             }
           >
             <option value="fa">{text.languages.fa}</option>

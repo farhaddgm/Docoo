@@ -75,12 +75,8 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
   });
 
   test('the connection page keeps the token write-only and shows the health of the connection', async () => {
-    await page.goto('/fa');
-    await page
-      .getByRole('navigation', { name: 'ناوبری اصلی' })
-      .getByRole('link', { name: 'اتصال‌ها' })
-      .click();
-    await expect(page.getByRole('heading', { level: 1, name: integ.title })).toBeVisible();
+    // The connection lives at the end of the system settings.
+    await page.goto('/fa/settings');
     await expect(page.getByText(integ.notConfigured)).toBeVisible();
 
     await page.getByLabel(integ.apiUrl, { exact: true }).fill(`${contenter}/api`);
@@ -156,15 +152,12 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
     await expect(header).toContainText(FIRST);
     first = num(await page.getByTestId('business-version').innerText());
     expect(first).toBeGreaterThanOrEqual(1);
-    await expect(header.getByText(biz.panel.readOnlyNote)).toBeVisible();
 
     // Profile: grouped sections, who wrote them, empty ones listed.
     await expect(page.getByTestId('business-section-OVERVIEW')).toContainText(
       'شعبهٔ دیجیتال یک بانک',
     );
     await expect(page.getByTestId('business-group-AUDIENCE')).toContainText('کارمندان حقوق‌بگیر');
-    await expect(page.getByTestId('business-section-PERSONAS')).toContainText(biz.profile.aiDraft);
-    await expect(page.getByTestId('business-section-OVERVIEW')).toContainText(biz.profile.admin);
     await expect(page.getByRole('heading', { name: biz.profile.emptySections })).toBeVisible();
     await expect(page.getByRole('list', { name: biz.profile.emptySections })).toContainText(
       biz.profile.sections['CALENDAR']!,
@@ -329,7 +322,6 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
 
     // English page.
     await page.goto(`${projectUrl.replace('/fa/', '/en/')}?tab=business`);
-    await expect(page.getByTestId('business-header')).toContainText(bizEn.panel.readOnlyNote);
     await expect(page.getByRole('button', { name: bizEn.panel.sync })).toBeVisible();
     await expect(page.getByTestId('business-section-OVERVIEW')).toContainText('کافه');
     await expectNoSeriousA11yViolations(page);

@@ -1511,6 +1511,25 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+/* Smaller tiles, three to a row, for the question progress of the analysis tab. */
+.counts-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.counts-compact > div {
+  padding: var(--space-1) var(--space-2);
+}
+
+.counts-compact dt {
+  font-size: var(--font-size-xs, 0.75rem);
+}
+
+.counts-compact dd {
+  font-size: 1.125rem;
+  line-height: 1.3;
+}
+
 .plain-list {
   display: grid;
   gap: var(--space-2);
@@ -1735,6 +1754,13 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+.section-nav-divider {
+  align-self: stretch;
+  inline-size: 1px;
+  margin-block: var(--space-1);
+  background: var(--color-border);
 }
 
 .section-nav button {
@@ -2560,12 +2586,45 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
 
 .rule-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   grid-template-areas:
-    'label label'
-    'field actions';
+    'handle label label'
+    'field field actions';
   gap: var(--space-2);
   align-items: start;
+  position: relative;
+}
+
+.rule-row .drag-handle {
+  grid-area: handle;
+  cursor: grab;
+  user-select: none;
+  color: var(--color-muted);
+  line-height: 1.5;
+  touch-action: none;
+}
+
+.rule-row.dragging {
+  opacity: 0.45;
+}
+
+.rule-row.drop-before::before,
+.rule-row.drop-after::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  pointer-events: none;
+}
+
+.rule-row.drop-before::before {
+  inset-block-start: calc(var(--space-3) / -2 - 1px);
+}
+
+.rule-row.drop-after::after {
+  inset-block-end: calc(var(--space-3) / -2 - 1px);
 }
 
 .rule-row > label {
@@ -3528,7 +3587,6 @@ button.link-button {
 .rich {
   display: grid;
   gap: var(--space-3);
-  max-inline-size: 70ch;
   line-height: 1.85;
   overflow-wrap: anywhere;
 }
@@ -3697,7 +3755,7 @@ button.link-button {
 }
 
 .biz-tabs {
-  margin-block-start: var(--space-2);
+  margin-block: var(--space-2) var(--space-5);
 }
 
 .biz-profile {
@@ -4124,21 +4182,6 @@ button.link-button {
   min-height: var(--control-height);
 }
 
-.setting-edit {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: var(--space-2) var(--space-3);
-}
-
-.setting-edit .filter-grid {
-  flex: 1 1 11rem;
-}
-
-.setting-edit .toolbar {
-  flex: none;
-}
-
 .setting-row .link-like {
   justify-self: start;
   font-size: 0.8125rem;
@@ -4503,11 +4546,35 @@ button.link-button {
 }
 
 .topbar-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.topbar-title h1 {
+  margin: 0;
+  font-size: inherit;
   font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   min-width: 0;
+}
+
+.topbar-title .owner-crown {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.topbar-title .owner-crown svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .topbar-title + .topbar-context {
@@ -4694,4 +4761,328 @@ button.link-button {
 
 .journey-upcoming .journey-head {
   color: var(--color-muted);
+}
+
+/* Conversations with an agent: bubbles, mine and the agent's a shade apart; four show at once. */
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  list-style: none;
+  overflow-y: auto;
+  max-block-size: 28rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.chat-message {
+  max-inline-size: min(40rem, 88%);
+  padding: var(--space-2) var(--space-3);
+  border-radius: 1rem;
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+
+.chat-message-mine {
+  align-self: flex-start;
+  border-end-start-radius: 0.3rem;
+  background: var(--color-primary-soft);
+}
+
+.chat-message-agent {
+  align-self: flex-end;
+  border-end-end-radius: 0.3rem;
+  background: var(--color-surface-2);
+}
+
+.chat-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.chat-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Under each bubble; shown on hover or keyboard focus, always on touch screens. */
+.chat-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-1);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.chat-message:hover .chat-actions,
+.chat-message:focus-within .chat-actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .chat-actions {
+    opacity: 1;
+  }
+}
+
+.chat-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.chat-icon-button:hover:not(:disabled) {
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+}
+
+.chat-files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chat-files li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chat-meta .badge svg,
+.chat-files .badge svg {
+  vertical-align: text-bottom;
+}
+
+.chat-message .notice {
+  margin: 0;
+}
+
+/* The reason for a change: label, field and buttons on one line (wrapping when narrow). */
+.reason-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0;
+}
+
+.reason-bar > .field-label {
+  flex: none;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.reason-bar .reason-input {
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+  inline-size: auto;
+  max-inline-size: 100%;
+}
+
+.reason-actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* The business dialog shows a whole business, so it is wide and its content scrolls inside it. */
+.business-dialog-wide {
+  inline-size: min(64rem, calc(100vw - 2rem));
+  max-block-size: calc(100vh - 3rem);
+}
+
+.business-dialog-wide .business-dialog-head {
+  align-items: flex-start;
+  margin-block-end: var(--space-3);
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Project list: equal, stable columns; long text ends in an ellipsis (full text in the title). */
+.table-scroll .project-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.project-table .clipped-cell,
+.project-table th[scope='row'] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-table .col-code {
+  width: 6.5rem;
+}
+.project-table .col-title {
+  width: 13rem;
+}
+.project-table .col-business {
+  width: 10rem;
+}
+.project-table .col-status {
+  width: 6.5rem;
+}
+.project-table .col-stage {
+  width: 7rem;
+}
+.project-table .col-owner {
+  width: 8rem;
+}
+.project-table .col-updated {
+  width: 10rem;
+}
+.project-table .col-actions {
+  width: 3.25rem;
+}
+
+.project-table .row-actions-cell {
+  text-align: end;
+}
+
+.row-menu-button {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.row-menu-button:hover:not(:disabled),
+.row-menu-button[aria-expanded='true'] {
+  background: var(--color-primary-soft);
+}
+
+.row-menu-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.row-menu-button svg {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+.row-menu {
+  inline-size: min(11rem, calc(100vw - 1rem));
+}
+
+/* The owner's per-account settings dialog (ADR-0042). */
+.policy-dialog h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.policy-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.policy-group {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.policy-group legend {
+  padding-inline: var(--space-2);
+  font-weight: 700;
+}
+
+.policy-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.policy-limits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+
+.policy-sections {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.policy-sections li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.policy-owner-areas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.policy-owner-list {
+  margin: 0;
+  padding-inline-start: var(--space-6);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.policy-usage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.policy-meter {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  font-size: var(--font-size-sm);
+}
+
+.policy-meter meter {
+  inline-size: 100%;
 }

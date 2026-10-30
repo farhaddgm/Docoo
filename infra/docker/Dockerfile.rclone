@@ -1,5 +1,5 @@
 # Rebuild the reviewed release with the patched gRPC dependency and current Go runtime.
-FROM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS builder
+FROM golang:1.27.3-alpine@sha256:b8c9b82affbbb82a020bbcf998dad2ba9516944ac7e883524642a481a9505e9c AS builder
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOPROXY="https://proxy.golang.org|direct" GOFLAGS=-mod=mod GOMAXPROCS=2
 RUN apk add --no-cache git
 ADD --checksum=sha256:7c2ceafb4e4204c04469bee42f8c852a4ffd0019090d0095261225ce403c4845 https://codeload.github.com/rclone/rclone/tar.gz/687d264b689b8c49a67e2e52a8a5e0caa01c04ce /tmp/source.tgz

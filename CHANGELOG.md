@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Security
+
+- Upgrade the Temporal TypeScript SDK to 1.25.0, whose native core bridge bundles `zip` 9.0.5 and clears CVE-2026-115905, CVE-2026-115907, CVE-2026-115908 and CVE-2026-115909 that failed the worker image scans on 1.24.0. 1.25.0 is younger than the seven-day release-age gate, so it is listed in `minimumReleaseAgeExclude` (exact versions only) with a reminder to remove the entries once the gate passes.
+
 ### Added
 
 - **Every control in Knowledge and audit explains itself.** Sections, tabs, filters, table columns, fields, citation fields and actions have an "i" button; hovering it, focusing it with the keyboard or tapping it shows what the control does (Persian and English). The words live in `knowledge-help.ts`, and a test fails if a control has no text in either language.
@@ -11,6 +15,122 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 ### Changed
 
 - **Building knowledge from a source is step by step.** The form now has four steps — **Basics**, **Where it applies**, **Source declaration** and **Review and build** — with a step bar, a message saying what each step still needs, and a final review that lists your choices and what happens after the draft is made (it stays invisible to agents until audited).
+
+## [0.46.1] — 2026-10-29
+
+### Fixed
+
+- Patch `systeminformation` to 5.33.16 (GHSA-3f7j-7jwc-fxfj, a Windows command injection in `services()`), which the OpenTelemetry host-metrics instrumentation pulls in, so the dependency audit passes again. 5.33.16 is past the seven-day release-age gate, so no exception is added; 5.33.17 is not yet and stays out.
+- Give the Google-accounts bootstrap integration test a 30 second limit. It waits on `GET /v1/admin/users`, which makes one membership query per user and workspace and so slows down as the shared test database fills with workspaces (about 7 s with 500); alone, with such a database, it failed at the default 5 s every time.
+- Give the mail-retry integration test (NTF-007) a 30 second limit. It takes about 3 s on a fast machine (two workflows and six mail ticks that each scan every workspace), so the default 5 s failed on a slower CI runner.
+- Make the Firefox and WebKit end-to-end jobs less fragile. They wait up to 10 seconds (Chromium keeps 5) for a page to settle and retry a failed test once; a test that passes on the retry is reported as flaky instead of failing the release gate. Every failed attempt, including one that passes on retry, now prints the page's accessibility tree in the job log so the cause can be read without downloading the artifact.
+
+## [0.46.0] — 2026-10-28
+
+### Changed
+
+- Start pattern creation with an AI conversation and an editable random identifier. AI proposes reusable project principles and a title; administrators accept and save the proposal without filling out a structural form. Keep manual editing and examples as secondary options.
+- Treat a selected pattern’s applicable principles as project requirements throughout analyst rounds and workflow stages; projects without a pattern retain their existing path.
+- Allow administrators to rename pattern catalog identifiers while preserving published versions and pinned project snapshots (migration 0070).
+
+### Fixed
+
+- Reconcile the open Dependabot updates in one change so the shared lockfile does not conflict: `@fastify/rate-limit` 11.2.1, `turbo` 2.11.10, `vitest` 5.0.5, `pdfjs-dist` 6.4.299 (documents and ingestion) and `eslint` 10.13.0. The seven-day release-age policy is unchanged and needs no new exception.
+
+## [0.45.0] — 2026-10-28
+
+### Added
+
+- A three-dot menu at the end of every row of the project list for administrators. It offers archive and delete for the commands the project accepts in its status, asks for the same confirmation and optional reason as the project page, and reads the list again afterwards. Available in Persian and English and usable with the keyboard.
+
+### Fixed
+
+- Patch `go-jose` to 4.1.6 (CVE-2026-116587, a denial of service when parsing JWKs with RSA keys) in the rebuilt PostgreSQL (WAL-G), Caddy, object-store, Tempo and Temporal images, as the builder stages already do for `golang.org/x/net` and gRPC.
+- Make the deploy smoke test pass the installer's unattended answers to `sudo` by name. `sudo -E` is ignored by sudo-rs, the default on newer GitHub runner images, so the installer stopped silently at its first question and every install check failed, on `main` too.
+- Make the research follow-up integration test use the plan and requester of its own project, so it no longer fails on a database that other suites have already filled.
+
+## [0.44.1] — 2026-10-27
+
+### Fixed
+
+- Move pattern management from System Settings into the Workspace sidebar in Persian and English. Keep the shared application shell, sidebar and active navigation visible throughout pattern authoring.
+- Reconcile the open dependency updates in one change: `@axe-core/playwright` 4.14.0, `nodemailer` 10.1.7, the OpenTelemetry packages (`sdk-node`, `instrumentation`, `exporter-metrics-otlp-http` to 0.223.0, `auto-instrumentations-node` 0.81.2, `resources` and `sdk-metrics` 2.12.0, which also removes a mix of 2.11 and 2.12 core packages), CodeQL 4.39.1, and the refreshed digests of the Go (alpine and bookworm) and Caddy base images (including the Caddy image used by the deploy smoke test). The Node base image stays on 24 and Dependabot now ignores its major updates, since the repository requires Node `>=24 <25`.
+- Update the NestJS runtime together: `@nestjs/core`, `@nestjs/common`, `@nestjs/platform-fastify` and `@nestjs/testing` are now all 12.2.0. The Fastify adapter 12.2.0 needs the matching core (a lone adapter bump failed at startup with a missing `@nestjs/core/internal` export). Checked against the app's own use: the global `ValidationPipe`, the Smart exception filter that extends `BaseExceptionFilter`, and problem-details errors thrown as `HttpException` objects keep their responses; a request body that is an array for a validated class now gets a 400.
+
+## [0.44.0] — 2026-10-27
+
+### Added
+
+- Optional, versioned problem patterns: administrators can create guidance by conversation or structured editing, review AI proposals, test a sample, explicitly publish immutable versions and archive patterns. Existing projects continue without a pattern.
+- Published pattern selection during project creation and draft editing, with a pinned workspace snapshot that freezes when preparation or workflow execution starts. Workflow stages use relevant guidance without changing existing schemas or approval gates; research respects the selected pattern and confirmed questions.
+- Persian and English meeting preparation: clarify goals and boundaries, review counterpart hypotheses, rehearse real user responses with feedback, accept an editable preparation brief and record post-meeting reflection. Rehearsal remains optional and AI suggestions require explicit acceptance.
+- Production integration uses existing encrypted provider connections, account AI limits and invocation accounting. Migrations 0064–0069 add optional snapshots, catalog/history and preparation records with tenant isolation and immutable history.
+
+### Fixed
+
+- Preserve manually entered project codes during rapid title edits, late catalog loading and draft restoration. Field events update only the edited value and cannot reset the manual-code flag through an unrelated render.
+
+## [0.43.0] — 2026-10-25
+
+### Added
+
+- **Attach files to a message in the stage conversation.** Next to the message box there is now an attach button (up to five files, the same types the knowledge base accepts). The files become sources of the project, show under your message, and the agent reads the start of their text when it answers; a file still being scanned is waited for up to ten seconds, and the agent is told when one could not be read. Migration 0061 (adds `attachments` to `stage_messages`); API `POST …/messages` takes `attachments: [{sourceId}]`.
+- **Access and limits per account** ([ADR-0042](docs/adr/0042-account-policies.md)). On the **Users** page the owner now has an **Access and limits** button (marked with the owner-only crown) for every editor and viewer: which sections the account reaches (**knowledge, business, agents, workflow, documents, topics, event log**, each _No access / View / Edit_), whether it may **create projects** (with a cap) and **topics**, whether it may **upload files**, how much **AI** it may use (on/off, **tokens per month, spend per month in USD, model calls per day**, with this month's use next to each limit), the date its access **ends**, and a note; three ready-made settings fill the form. The menu, the project tabs and the "new" buttons hide what an account cannot reach, and the API refuses it on its own. Roles are now owner, editor and viewer: a **viewer only looks** (an _Edit_ grant is no longer given to it and old ones become _View_), and an **editor can create projects and topics only when the owner allows it** (existing editors keep it). Limits are checked when a piece of work starts; the model calls of an interactive request count for the person who asked and a workflow's for the person who started it. Migration 0063 (`account_policies`, `model_invocations.actor_id`); API `GET|PUT /owner/users/{id}/policy`.
+- **Output requirements per stage** ([ADR-0041](docs/adr/0041-stage-targeted-requirements.md)). The **Output requirements** tab now has sub-tabs — **Final output**, then **Analysis, Research, Ideas, Documents, Evaluation**, each with the number of active requirements — and a requirement can be written for the final output as a whole (every agent reads it, as before) or for just one stage (only that stage's agent reads it, and the coverage check judges it against that stage's output). Edit a requirement to move it to another part; saving a message of a stage conversation as a requirement asks whether it is for **this stage only** (default) or the **final output**. Only the stage a requirement is aimed at is told it is "behind" when it is written after that stage's output. Projects with no stage-aimed requirement give the agents exactly the same prompts as before. Migration 0062 (adds `target_stage`, existing rows stay "final output"); API `target` on `POST|PATCH …/output-requirements` and `POST …/messages/{messageId}/requirements`.
+- **Compact question counters in the Analysis tab.** The six counters (asked, answered, unanswered, irrelevant, later, waiting) are smaller and sit three to a row.
+- **Project tabs reordered.** The project's own tabs (Overview, Business, Knowledge, Agent, Settings, Workflow, Output requirements, Timeline) now come first, then a divider, then the stage tabs (Analysis, Research, Ideas, Documents, Evaluation).
+- **Message actions under each bubble.** In the stage conversation, hovering a message shows (under the bubble, hidden otherwise) when it was sent, a copy icon and an icon that adds it to the output requirements, replacing the old text button.
+
+### Fixed
+
+- Wait for the project’s document template default before accepting writing options, so a delayed response cannot replace an explicitly selected detailed template with the standard one.
+- Keep the retrieval-test inputs disabled until React is ready to handle changes, preventing fast typing from being lost during hydration (observed in WebKit).
+- Apply the security patches for fast-uri (preserving each major), ip-address, Vitest and the legacy Drizzle loader’s esbuild dependency. Keep the seven-day release-age policy, with exact-version exceptions for the reviewed URI security fixes.
+- Keep attachment scanning and the stage-chat model call inside one proxy-safe timeout budget so a slow scan does not add ten seconds on top of the model timeout.
+- Upgrade React and React DOM together to 19.3.1 so server rendering and browser startup use matching runtimes.
+- Apply Fastify 5.12.7 to both the API and Nest adapter through the workspace override; regenerate the frozen lockfile for Nodemailer 10.1.4 and the observability updates.
+- Upgrade all CodeQL steps together to 4.39.0 and upload-artifact to 7.0.2; group coupled Dependabot updates to prevent partial upgrades.
+- Give the two ZAP scans distinct proxy ports and measure provider concurrency using invocation intervals instead of arrival order across worker IPC channels.
+
+## [0.42.0] — 2026-10-24
+
+### Added
+
+- **Ready-made messages in the stage conversation.** Under the message box and the Ask / Revision request buttons, the Analysis, Research and Ideas tabs show touch-to-fill messages ("Explain more", "Say it in plain words", a summary of the stage, and, for Research and Ideas, "What other research would help" and "What are the important differences between the ideas"). A touch only fills the box; nothing is sent until you press send.
+- **Research plan and a clearer research result** ([ADR-0038](docs/adr/0038-research-plan.md)). Before the research stage runs, the **Research** tab asks you to confirm the questions it must answer: write them, or press **Propose with AI** (the proposal comes from the approved analysis, the confirmed deliverables and your output requirements) and edit it; each question says whether to look in internal knowledge, on the web or both. Confirming a plan with no question (**Go on without a plan**) researches as before. The confirmed questions become the knowledge queries and the web-search targets, the researcher files every finding under the question it answers, and the result shows, at the top, how many findings are **strong** (approved knowledge), **limited** (web only), **without evidence** or **disputed** (a reported conflict names their source), which questions are answered, weak or unanswered, and then the findings grouped by question. Later stages are told which questions stayed open. Migration 0058 (append-only, tenant-scoped, setting `workflow.require_research_plan_confirmation`, default on); API `GET|PUT /projects/{id}/research-plan`, `POST …/propose`, `POST …/confirm`. The structured answer of the research stage gained `questionId` on every finding.
+- **Fill the research gaps** ([ADR-0039](docs/adr/0039-research-followup-rounds.md)). When the research output waits for your review, the **Research** tab lists its open questions (weakly answered, unanswered, or added to the plan since) and **Run a follow-up round** works on the ones you tick. The round searches only for those, shows the earlier findings to the researcher so it does not repeat them, and is **joined onto the same output**: the findings of the other questions stay exactly as they were (citations included), the new references continue after the old ones, and the grades, question coverage and summary are counted again. It is an ordinary rejection for the attempt limit. A second card, **Do the output requirements have research behind them?**, compares the "must have" requirements with the research (one model call) and, for each one without support, proposes a question you can add to the research plan with one touch. Migration 0059 (append-only); API `POST /projects/{id}/research-plan/followup` (`workflow.reject`) and `POST …/requirement-gaps` (`project.run`).
+- **Fix:** confirming the research plan while the research output waits for review no longer sends a stray "go on" signal to that stage.
+- **Source trust and conflict decisions in research** ([ADR-0040](docs/adr/0040-research-source-trust.md)). Every web page the research uses is now **official** (government, university, standards or international body, or a domain you list in the new setting `research.official_domains`) or **public**, decided by code from its address; findings show what backs them (**approved knowledge**, **official web**, **public web**) and a **single source** badge when only one verified source stands behind them, and the research summary counts official and public pages and single-source findings. The researcher is told each page's class and to say so when a claim rests only on public pages or one source. A new **Research conflicts** card lists the conflicts the research reported with their sources: you can **trust** one source or **dismiss** the conflict (with a note), and your decision is binding for the ideas, documents and evaluation (and the documenter) and survives a follow-up round. Migration 0060 (append-only); API `GET /projects/{id}/research-conflicts` and `POST …/research-conflicts/{fingerprint}/decision` (`project.update`).
+- **Output requirements** ([ADR-0037](docs/adr/0037-output-requirements.md)). A new **Output requirements** tab where the administrator writes, at any moment of a project, what the final output **must** contain or **must not** contain; each item can be edited (the old text stays in the history) or withdrawn. The same list can be fed from a conversation: every message in a stage conversation has **Add to output requirements** (kind and text can be adjusted first) and shows when it has been saved. The agents of every stage, the documenter, the stage conversation and the document evaluator read the active requirements as data with fixed rules. A requirement added after a stage wrote its output marks that stage as "behind": the requirements tab and the stage's tab say so and, where the stage waits at a gate, suggest a ready revision-request text. **Check coverage** (Output requirements and Evaluation tabs, one model call) gives a checklist — covered, partial, not covered — with evidence for each requirement, and calls the result out of date when requirements or outputs change afterwards. Migration 0057 (append-only, tenant-scoped); API `GET|POST /projects/{id}/output-requirements`, `PATCH …/{requirementId}`, `POST …/{requirementId}/withdraw`, `POST …/check`, `POST /projects/{id}/stages/{stageRunId}/messages/{messageId}/requirements`.
+
+## [0.41.0] — 2026-10-24
+
+### Added
+
+- **Evaluation tab.** A project has an **Evaluation** tab between Documents and Timeline with the evaluation stage's output, its settings (approval type and attempts), links to the project settings and the agent-quality comparison, and the conversation with its agent.
+- **Run again for every stage.** Every stage in the Workflow tab has a **Run again** button; it is enabled for a completed stage when no run is live, as the API requires.
+
+### Changed
+
+- **The conversation with a stage's agent moved to the stage's own tab** (Analysis, Research, Ideas, Documents, Evaluation) and leaves the Workflow tab. The Workflow tab no longer repeats the output; it links to the tab that shows it. Your messages are now on the right and the agent's on the left; the comment field is smaller and the spacing around it is fixed. Persian tab names are now **ایجنت**, **ایده** and **مستند**.
+- **Connections moved into System settings.** The **Integrations** page is no longer a separate menu item; its settings are the last section of System settings (the old address redirects there).
+- **The business views are simpler.** In the business dialog and the project's Business tab, the "Open in Contenter" button, the written-by/confirmed/AI-draft badges, the profile coverage card, the read-only note and the tagline are gone, and the view tabs are spaced from the section list.
+- **The project list no longer scrolls sideways.** The topics, language and "waiting for a decision" columns are removed.
+
+## [0.40.0] — 2026-10-24
+
+### Added
+
+- **Redo a finished stage** ([ADR-0036](docs/adr/0036-redo-stage.md)). In a project's **Workflow** tab every completed stage has a **Redo** button (with a reason). It starts a new run that keeps the stages before it as they were and does that stage and the ones after it again from the start; the earlier run and its outputs stay in the history. New `POST /projects/{id}/workflow/redo` (`project.run`).
+
+### Changed
+
+- **Project tabs are reordered and renamed.** The tabs are now Overview, Business, Knowledge, Agents, Settings, Workflow, Analysis, Research, Ideas, Documents and Timeline ("Problem" became **Analysis**, "Solutions" became **Ideas**; in Persian "Documents" is now **مستندات**). A new **Research** tab shows the research stage's latest output, with a shortcut to the Workflow tab when it waits for approval. Also: drag to reorder an agent role's principles and duties, fixed equal columns in the project list, and the project card shows topics and one edit button.
+
+- **The business dialog shows the business itself.** Clicking a card on **Businesses** opens a dialog with what Contenter holds now (read live, nothing stored): the profile, facts and terms, sources and assets and quality, in the same views as a project's Business tab, with a link to open it in Contenter. If Contenter cannot be read, the dialog says so and shows what the list knows. New `GET /contenter-businesses/{businessId}` (`business.read`).
+- **Topics no longer ask for a language.** The new-topic form, the edit form and the topics table lose the "Language" field, which changed nothing a person could see (a topic starts from the interface language; sources and projects have their own language).
+- **"Reason for the change" is one line everywhere.** Settings, templates and levels, agent roles, knowledge edits, document edits, project and topic edits, business link changes, stage decisions and the confirm panels (pause, complete, cancel and so on) now put the label, the field and the buttons on one line (wrapping on a phone), instead of three stacked rows. Nothing about what is asked or recorded changed.
+- **Conversations with an agent are bubbles.** In the chat under a stage's output, your messages and the agent's are rounded bubbles in two close shades, on opposite sides. At most four messages show at once; older ones are scrolled to, and the thread opens on the newest.
 
 ## [0.39.0] — 2026-10-24
 

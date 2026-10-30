@@ -2,8 +2,9 @@ import { Body, Controller, Get, HttpCode, Param, Post, Query, Req } from '@nestj
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { STAGES } from '@docoo/orchestration';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { WorkflowService } from './workflow.service.js';
@@ -21,6 +22,9 @@ const decisionSchema = z
   .object({ decision: z.enum(['extend', 'pass']), reason: z.string().trim().min(10).max(1000) })
   .strict();
 const answerSchema = z.object({ answer: z.string().trim().min(1).max(4000).nullable() }).strict();
+const redoSchema = z
+  .object({ stage: z.enum(STAGES), reason: z.string().trim().min(3).max(1000) })
+  .strict();
 const cancelSchema = z.object({ reason: z.string().trim().min(3).max(1000) }).strict();
 const tasksQuery = z
   .object({ status: z.enum(['pending', 'resolved', 'cancelled']).default('pending') })
@@ -66,6 +70,7 @@ export class WorkflowController {
   @Post('projects/:projectId/workflow/start')
   @HttpCode(202)
   @ApiOperation({ summary: 'Start the workflow of an active project (idempotent)' })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   async start(@Req() request: FastifyRequest, @Param('projectId') raw: string) {
     return { workflow: await this.workflow.start(workspaceContext(request), id(raw)) };
@@ -94,6 +99,24 @@ export class WorkflowController {
     return { workflow: await this.workflow.cancel(workspaceContext(request), id(raw), reason) };
   }
 
+  @Post('projects/:projectId/workflow/redo')
+  @HttpCode(202)
+  @ApiOperation({
+    summary: 'Redo a finished stage: a new run carries the earlier stages and runs this one again',
+  })
+  @UsesAi()
+  @RequireWorkspacePermission('project.run')
+  async redo(
+    @Req() request: FastifyRequest,
+    @Param('projectId') raw: string,
+    @Body() body: unknown,
+  ) {
+    const { stage, reason } = parse(redoSchema, body);
+    return {
+      workflow: await this.workflow.redo(workspaceContext(request), id(raw), stage, reason),
+    };
+  }
+
   @Get('projects/:projectId/stages/:stageRunId')
   @ApiOperation({ summary: 'Stage outputs (all versions), reviews, gates and attempts' })
   @RequireWorkspacePermission('project.read')
@@ -108,6 +131,7 @@ export class WorkflowController {
   @Post('projects/:projectId/stages/:stageRunId/outputs/:outputId/approve')
   @HttpCode(200)
   @ApiOperation({ summary: 'Approve the current output; the workflow continues' })
+  @UsesAi()
   @RequireWorkspacePermission('workflow.approve')
   async approve(
     @Req() request: FastifyRequest,
@@ -135,6 +159,7 @@ export class WorkflowController {
   @Post('projects/:projectId/stages/:stageRunId/outputs/:outputId/reject')
   @HttpCode(200)
   @ApiOperation({ summary: 'Reject the current output with feedback; a new attempt follows' })
+  @UsesAi()
   @RequireWorkspacePermission('workflow.reject')
   async reject(
     @Req() request: FastifyRequest,

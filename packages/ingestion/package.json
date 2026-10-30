@@ -27,7 +27,7 @@
     "fast-xml-parser": "5.11.2",
     "fflate": "0.7.5",
     "htmlparser2": "12.0.0",
-    "pdfjs-dist": "6.3.289",
+    "pdfjs-dist": "6.4.299",
     "pg": "8.23.0"
   },
   "devDependencies": {

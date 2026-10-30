@@ -6,7 +6,16 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { isGmail, normalizeGmail, type AccountRole, type LoginMethod } from '@docoo/contracts';
+import {
+  isGmail,
+  normalizeGmail,
+  resolveAccess,
+  type AccountPolicy,
+  type AccountRole,
+  type EffectiveAccess,
+  type LoginMethod,
+  type SectionLevel,
+} from '@docoo/contracts';
 import { GoogleAuthError, type GoogleIdentity } from './google-oauth.service.js';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient, QueryResultRow } from 'pg';
@@ -39,6 +48,10 @@ export interface AuthUser {
   readonly hasPassword?: boolean;
   readonly isOwner?: boolean;
   readonly lastLoginAt?: string | null;
+  /** The per-account settings the owner set (ADR-0042); null: the defaults of the role. */
+  readonly policy?: AccountPolicy | null;
+  /** The policy cut down to what the role allows; set on every request session. */
+  readonly access?: EffectiveAccess;
 }
 
 export interface AuthWorkspace {
@@ -63,7 +76,24 @@ type AuthEventAction =
   | 'password.reset_completed'
   | 'sessions.revoked';
 
-interface UserRow extends QueryResultRow {
+/** Columns of `account_policies` as the session query returns them (ADR-0042). */
+export interface PolicyColumns {
+  /** Policy columns of the session query; null when the account has no policy row. */
+  policy_user_id?: string | null;
+  can_create_projects?: boolean | null;
+  can_create_topics?: boolean | null;
+  max_projects?: number | null;
+  policy_sections?: Partial<Record<string, SectionLevel>> | null;
+  can_upload_files?: boolean | null;
+  ai_enabled?: boolean | null;
+  ai_monthly_tokens?: string | number | null;
+  ai_monthly_cost_usd?: string | number | null;
+  ai_daily_calls?: number | null;
+  expires_at?: Date | null;
+  policy_note?: string | null;
+}
+
+interface UserRow extends QueryResultRow, PolicyColumns {
   id: string;
   email: string;
   password_hash: string | null;
@@ -75,6 +105,7 @@ interface UserRow extends QueryResultRow {
   deleted_at?: Date | null;
   google_sub?: string | null;
   last_login_at?: Date | null;
+  expired?: boolean;
 }
 
 interface WorkspaceRow extends QueryResultRow {
@@ -166,7 +197,9 @@ export class AuthService {
       await client.query('begin');
       const currentUserResult = await client.query<UserRow>(
         `select id, email, password_hash, display_name, status, account_role, login_method, deleted_at, google_sub, last_login_at,
-                coalesce(locked_until > now(), false) as locked
+                coalesce(locked_until > now(), false) as locked,
+                account_role <> 'super_admin' and exists (select 1 from account_policies p
+                  where p.user_id = users.id and p.expires_at <= now()) as expired
            from users
           where id = $1
           for update`,
@@ -177,6 +210,7 @@ export class AuthService {
         !currentUser ||
         currentUser.status !== 'active' ||
         currentUser.locked ||
+        currentUser.expired ||
         currentUser.deleted_at ||
         currentUser.login_method === 'GOOGLE' ||
         currentUser.password_hash !== user.password_hash
@@ -247,15 +281,22 @@ export class AuthService {
             and exists (
               select 1 from users active_user
                where active_user.id = sessions.user_id and active_user.status = 'active' and active_user.deleted_at IS NULL
+                 and (active_user.account_role = 'super_admin' or not exists (
+                   select 1 from account_policies gone
+                    where gone.user_id = active_user.id and gone.expires_at <= now()))
             )
           returning user_id, absolute_expires_at,
                     least($2::integer, ceil(extract(epoch from absolute_expires_at - now()))::integer)
                       as cookie_max_age_seconds
        )
        select u.id, u.email, u.display_name, u.status, u.password_hash, u.account_role, u.login_method, u.last_login_at, r.absolute_expires_at,
-              r.cookie_max_age_seconds
+              r.cookie_max_age_seconds,
+              p.user_id as policy_user_id, p.can_create_projects, p.can_create_topics, p.max_projects,
+              p.sections as policy_sections, p.can_upload_files, p.ai_enabled, p.ai_monthly_tokens,
+              p.ai_monthly_cost_usd, p.ai_daily_calls, p.expires_at, p.note as policy_note
          from refreshed r
-         join users u on u.id = r.user_id`,
+         join users u on u.id = r.user_id
+         left join account_policies p on p.user_id = u.id`,
       [this.tokenDigest(token), this.config.SESSION_IDLE_TTL_SECONDS],
     );
     const user = result.rows[0];
@@ -275,8 +316,10 @@ export class AuthService {
     }
     if (workspaces.length === 0) throw this.invalidSession();
 
+    const base = this.toAuthUser(user);
+    const policy = user.policy_user_id ? policyOfRow(user) : null;
     return {
-      user: this.toAuthUser(user),
+      user: { ...base, policy, access: resolveAccess(base.role, policy) },
       workspaces,
       maxAgeSeconds: user.cookie_max_age_seconds,
     };
@@ -514,6 +557,17 @@ export class AuthService {
       if (!user || (!owner && user.login_method === 'PASSWORD'))
         throw new GoogleAuthError('not_allowed');
       if (!owner && user.status !== 'active') throw new GoogleAuthError('inactive');
+      if (
+        !owner &&
+        user.account_role !== 'super_admin' &&
+        (
+          await client.query(
+            'select 1 from account_policies where user_id=$1 and expires_at <= now()',
+            [user.id],
+          )
+        ).rowCount
+      )
+        throw new GoogleAuthError('inactive');
       await client.query(
         `update users set google_sub=$2,last_login_at=now(), status=CASE WHEN $3 THEN 'active'::user_status ELSE status END,account_role=CASE WHEN $3 THEN 'super_admin' ELSE account_role END where id=$1`,
         [user.id, identity.sub, owner],
@@ -885,4 +939,29 @@ export class AuthService {
   private isUuid(value: string): boolean {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   }
+}
+
+/** The policy of a session row; the owner's note and expiry travel with it. */
+export function policyOfRow(row: PolicyColumns): AccountPolicy {
+  return {
+    canCreateProjects: row.can_create_projects ?? false,
+    canCreateTopics: row.can_create_topics ?? false,
+    maxProjects: row.max_projects ?? null,
+    sections: row.policy_sections ?? {},
+    canUploadFiles: row.can_upload_files ?? true,
+    ai: {
+      enabled: row.ai_enabled ?? true,
+      monthlyTokens:
+        row.ai_monthly_tokens === null || row.ai_monthly_tokens === undefined
+          ? null
+          : Number(row.ai_monthly_tokens),
+      monthlyCostUsd:
+        row.ai_monthly_cost_usd === null || row.ai_monthly_cost_usd === undefined
+          ? null
+          : Number(row.ai_monthly_cost_usd),
+      dailyCalls: row.ai_daily_calls ?? null,
+    },
+    expiresAt: row.expires_at?.toISOString() ?? null,
+    note: row.policy_note ?? '',
+  };
 }

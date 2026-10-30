@@ -1,11 +1,11 @@
 # Tempo 2.10.8 retains the single-server architecture; patched Go/dependencies, built in CI.
-FROM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS builder
+FROM golang:1.27.3-alpine@sha256:b8c9b82affbbb82a020bbcf998dad2ba9516944ac7e883524642a481a9505e9c AS builder
 RUN apk add --no-cache git
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOPROXY="https://proxy.golang.org|direct" GOMAXPROCS=2
 ADD --checksum=sha256:c354a7495843161a41ad75d96dd4e8f17aabc9a5f439060cf974a57b4ef2ff85 https://codeload.github.com/grafana/tempo/tar.gz/f0f3ed59197bfe9f54f3b0f8015ccca112f9e544 /tmp/source.tgz
 WORKDIR /source
 RUN tar -xzf /tmp/source.tgz --strip-components=1 -C /source && rm /tmp/source.tgz && rm -rf vendor
-RUN go get golang.org/x/net@v0.60.0 golang.org/x/crypto@v0.57.0 golang.org/x/text@v0.42.0 google.golang.org/grpc@v1.83.2 github.com/apache/thrift@v0.24.0 && \
+RUN go get golang.org/x/net@v0.60.0 golang.org/x/crypto@v0.57.0 golang.org/x/text@v0.42.0 google.golang.org/grpc@v1.83.2 github.com/apache/thrift@v0.24.0 github.com/go-jose/go-jose/v4@v4.1.6 && \
     go mod tidy && go build -p 2 -trimpath -buildvcs=false -ldflags '-s -w' -o /out/tempo ./cmd/tempo
 RUN mkdir -p /out/tempo-data
 FROM scratch

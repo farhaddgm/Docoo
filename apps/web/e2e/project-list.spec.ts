@@ -40,9 +40,8 @@ test.describe('the project list filters and extra columns (UX §4)', () => {
     const filters = page.getByRole('form', { name: text.filters });
     await revealRow(page, page.getByRole('rowheader', { name: `plf-${stamp}` }));
     await revealRow(page, page.getByRole('rowheader', { name: `ple-${stamp}` }));
-    // The owner is the administrator who created them; the language column shows the output language.
-    await expect(rows.filter({ hasText: `plf-${stamp}` })).toContainText(text.languages.fa);
-    await expect(rows.filter({ hasText: `ple-${stamp}` })).toContainText(text.languages.en);
+    // The owner is the administrator who created them.
+    await expect(rows.filter({ hasText: `plf-${stamp}` })).toContainText('E2E Admin');
     await expectNoSeriousA11yViolations(page);
 
     await filters.getByLabel(text.topicFilter).selectOption({ label: `حوزهٔ ب ${stamp}` });

@@ -167,6 +167,7 @@ export class DeliverablesService {
       const result = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId,
           stageRunId: null,
           attemptId: null,

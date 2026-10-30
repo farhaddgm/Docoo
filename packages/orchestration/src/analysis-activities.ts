@@ -1,3 +1,4 @@
+import { resolveProblemPatternSnapshot, type ProblemPatternDefinition } from '@docoo/contracts';
 import {
   analysisProgress,
   batchCapacity,
@@ -238,7 +239,13 @@ export async function loadRequiredCategories(
 /** Everything the analyst or the definition writer is shown about the analysis so far. */
 export async function loadAnalysisContext(
   client: PoolClient,
-  input: { sessionId: string; projectId: string; round: number; capacity: number },
+  input: {
+    sessionId: string;
+    projectId: string;
+    workspaceId: string;
+    round: number;
+    capacity: number;
+  },
   preloaded?: TranscriptQuestion[],
 ): Promise<AnalysisContext> {
   const session = await analysisSession(client, input.sessionId);
@@ -258,10 +265,7 @@ export async function loadAnalysisContext(
       order by round_no desc limit 6`,
     [input.sessionId],
   );
-  const prior = await client.query<{ content: unknown }>(
-    `select o.content from projects p join stage_outputs o on o.id = p.approved_problem_version_id where p.id = $1`,
-    [input.projectId],
-  );
+  const project = await loadAnalysisProjectSnapshot(client, input.projectId, input.workspaceId);
   return {
     profile: session.profile,
     limits: session.limits,
@@ -278,7 +282,36 @@ export async function loadAnalysisContext(
     summaries: summaries.rows
       .reverse()
       .map((row) => ({ round: row.round, understood: row.understood, nextAmbiguity: row.next })),
-    priorDefinition: prior.rows[0]?.content ?? null,
+    priorDefinition: project.priorDefinition,
+    problemPattern: project.problemPattern,
+  };
+}
+
+/** Reads only the project snapshot belonging to the activity's trusted workspace. */
+export async function loadAnalysisProjectSnapshot(
+  client: Pick<PoolClient, 'query'>,
+  projectId: string,
+  workspaceId: string,
+): Promise<{ priorDefinition: unknown; problemPattern: ProblemPatternDefinition | null }> {
+  const result = await client.query<{
+    content: unknown;
+    problem_pattern_snapshot: unknown;
+  }>(
+    `select o.content, p.problem_pattern_snapshot
+       from projects p
+       left join stage_outputs o on o.id = p.approved_problem_version_id
+      where p.id = $1 and p.workspace_id = $2`,
+    [projectId, workspaceId],
+  );
+  const project = result.rows[0];
+  if (!project) throw new Error('Analysis project is unavailable.');
+  const problemPattern = resolveProblemPatternSnapshot(
+    project.problem_pattern_snapshot,
+    workspaceId,
+  );
+  return {
+    priorDefinition: project.content,
+    problemPattern: problemPattern?.definition ?? null,
   };
 }
 
@@ -287,6 +320,7 @@ export async function loadDefinitionContext(
   client: PoolClient,
   stageRunId: string,
   projectId: string,
+  workspaceId: string,
 ): Promise<AnalysisContext | null> {
   const session = (
     await client.query<{ id: string }>('select id from analysis_sessions where stage_run_id = $1', [
@@ -294,7 +328,13 @@ export async function loadDefinitionContext(
     ])
   ).rows[0];
   if (!session) return null;
-  return loadAnalysisContext(client, { sessionId: session.id, projectId, round: 0, capacity: 0 });
+  return loadAnalysisContext(client, {
+    sessionId: session.id,
+    projectId,
+    workspaceId,
+    round: 0,
+    capacity: 0,
+  });
 }
 
 export function createAnalysisActivities(
@@ -409,6 +449,7 @@ export function createAnalysisActivities(
           {
             sessionId: session.id,
             projectId: ref.projectId,
+            workspaceId: ref.workspaceId,
             round: ref.roundNo,
             capacity: batchCapacity(asked, (await analysisSession(client, session.id)).limits),
           },

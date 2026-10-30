@@ -294,6 +294,8 @@ describe.skipIf(!adminUrl || !temporalAddress)('notifications (ADR-0025)', () =>
       h.mailbox.sent.length = 0;
       await h.mailer.dispatch();
       expect(h.mailbox.sent).toEqual([]);
-    });
+      // Two workflows and six mail ticks, each tick scanning every workspace of the shared
+      // database: about 3 s on a fast machine, so the default 5 s is too tight for a CI runner.
+    }, 30_000);
   });
 });

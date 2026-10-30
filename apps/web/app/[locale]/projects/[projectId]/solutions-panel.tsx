@@ -8,9 +8,11 @@ import { apiGet, apiSend } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
+import { ReasonBar } from '../../reason-bar';
 import { solutionMessages } from './solution-messages';
 import { SensitivityPanel } from './sensitivity-panel';
-import { FieldLabel, SectionTitle } from '../../../info-tip';
+import { FieldLabel, InfoTip, SectionTitle } from '../../../info-tip';
+import { higherScoredLeftOut, rebalanceWeights } from './criteria-weights';
 
 interface Criterion {
   key: string;
@@ -76,6 +78,7 @@ export function SolutionsPanel({
   const [criteriaReason, setCriteriaReason] = useState('');
   const [chosen, setChosen] = useState<string[]>([]);
   const [selectionReason, setSelectionReason] = useState('');
+  const [rejectedAll, setRejectedAll] = useState('');
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
   const [decisions, setDecisions] = useState<
     {
@@ -125,6 +128,10 @@ export function SolutionsPanel({
   const total = sum(draft);
   const criteriaChanged = JSON.stringify(draft) !== JSON.stringify(set.criteria.criteria);
   const byId = new Map(set.items.map((item) => [item.id, item]));
+  const leftOut = higherScoredLeftOut(
+    set.items.map((item) => ({ id: item.id, title: item.title, total: item.score.total })),
+    chosen,
+  );
 
   function generate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -162,10 +169,14 @@ export function SolutionsPanel({
         reason,
         rejected: set?.items
           .filter((s) => !chosen.includes(s.id))
-          .map((s) => ({ solutionId: s.id, reason: (rejectionReasons[s.id] ?? '').trim() })),
+          .map((s) => ({
+            solutionId: s.id,
+            reason: (rejectionReasons[s.id]?.trim() || rejectedAll.trim()).trim(),
+          })),
       });
       setSelectionReason('');
       setRejectionReasons({});
+      setRejectedAll('');
       await load();
       onChanged();
     }, text.done.selected);
@@ -179,6 +190,9 @@ export function SolutionsPanel({
     if (item) next.splice(target, 0, item);
     setChosen(next);
   }
+
+  const setBalanced = (key: string, weight: number) =>
+    setDraft((items) => rebalanceWeights(items, key, weight));
 
   const patch = (key: string, change: Partial<Criterion>) =>
     setDraft((items) => items.map((item) => (item.key === key ? { ...item, ...change } : item)));
@@ -224,100 +238,112 @@ export function SolutionsPanel({
         </form>
       )}
 
-      <form
-        data-write-action
-        className="card filter-form"
-        onSubmit={saveCriteria}
-        aria-labelledby="criteria-title"
-        aria-busy={busy}
-      >
-        <SectionTitle id="criteria-title" help={text.criteriaHelp}>
-          {text.criteriaTitle}
-        </SectionTitle>
-        <p className="muted">
-          {text.criteriaVersion.replace('{n}', formatNumber(locale, set.criteria.versionNo))}
-        </p>
-        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="criteria-title">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">{text.enabled}</th>
-                <th scope="col">{text.criterion}</th>
-                <th scope="col">{text.weight}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {draft.map((item) => (
-                <tr key={item.key}>
+      <details className="card">
+        <summary>
+          <strong id="criteria-title">{text.criteriaTitle}</strong>{' '}
+          <span className="muted">
+            {text.criteriaSummary
+              .replace('{n}', formatNumber(locale, draft.filter((item) => item.enabled).length))
+              .replace('{v}', formatNumber(locale, set.criteria.versionNo))}
+          </span>
+        </summary>
+        <form
+          data-write-action
+          className="filter-form"
+          onSubmit={saveCriteria}
+          aria-labelledby="criteria-title"
+          aria-busy={busy}
+        >
+          <p>
+            {text.criteriaIntro} <InfoTip text={text.criteriaHelp} />
+          </p>
+          <p className="muted">{text.criteriaExample}</p>
+          <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="criteria-title">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{text.enabled}</th>
+                  <th scope="col">{text.criterion}</th>
+                  <th scope="col">{text.weight}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {draft.map((item) => (
+                  <tr key={item.key}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={item.enabled}
+                        disabled={readOnly}
+                        aria-label={`${text.enabled}: ${item.label}`}
+                        onChange={(event) => patch(item.key, { enabled: event.target.checked })}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="inline-input"
+                        dir={textDir(locale)}
+                        value={item.label}
+                        maxLength={200}
+                        disabled={readOnly}
+                        aria-label={`${text.criterion} (${item.key})`}
+                        onChange={(event) => patch(item.key, { label: event.target.value })}
+                        required
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="inline-input narrow"
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={item.weight}
+                        disabled={readOnly}
+                        aria-label={`${text.weight}: ${item.label}`}
+                        onChange={(event) =>
+                          patch(item.key, { weight: Math.round(Number(event.target.value)) })
+                        }
+                      />
+                      <input
+                        type="range"
+                        min={draft.filter((c) => c.enabled).length === 1 ? 100 : 0}
+                        max={100}
+                        step={1}
+                        value={item.weight}
+                        disabled={readOnly || !item.enabled}
+                        aria-label={`${text.slider}: ${item.label}`}
+                        onChange={(event) => setBalanced(item.key, Number(event.target.value))}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row" colSpan={2}>
+                    {text.total}
+                  </th>
                   <td>
-                    <input
-                      type="checkbox"
-                      checked={item.enabled}
-                      disabled={readOnly}
-                      aria-label={`${text.enabled}: ${item.label}`}
-                      onChange={(event) => patch(item.key, { enabled: event.target.checked })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="inline-input"
-                      dir={textDir(locale)}
-                      value={item.label}
-                      maxLength={200}
-                      disabled={readOnly}
-                      aria-label={`${text.criterion} (${item.key})`}
-                      onChange={(event) => patch(item.key, { label: event.target.value })}
-                      required
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="inline-input narrow"
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={item.weight}
-                      disabled={readOnly}
-                      aria-label={`${text.weight}: ${item.label}`}
-                      onChange={(event) =>
-                        patch(item.key, { weight: Math.round(Number(event.target.value)) })
-                      }
-                    />
+                    <span className={`badge ${total === 100 ? 'state-passed' : 'state-failed'}`}>
+                      {formatNumber(locale, total)}
+                    </span>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <th scope="row" colSpan={2}>
-                  {text.total}
-                </th>
-                <td>
-                  <span className={`badge ${total === 100 ? 'state-passed' : 'state-failed'}`}>
-                    {formatNumber(locale, total)}
-                  </span>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        {!readOnly && (
-          <>
-            <div className="filter-grid">
-              <label htmlFor="criteria-reason">{text.criteriaReason}</label>
-              <input
-                id="criteria-reason"
-                value={criteriaReason}
-                minLength={3}
-                maxLength={1000}
-                onChange={(event) => setCriteriaReason(event.target.value)}
-                autoComplete="off"
-                required={criteriaChanged}
-              />
-            </div>
-            <div className="toolbar">
+              </tfoot>
+            </table>
+          </div>
+          {!readOnly && (
+            <ReasonBar
+              locale={locale}
+              id="criteria-reason"
+              label={text.criteriaReason}
+              value={criteriaReason}
+              minLength={3}
+              required={criteriaChanged}
+              onChange={setCriteriaReason}
+            >
               <button
                 className="primary-button"
                 type="submit"
@@ -325,10 +351,10 @@ export function SolutionsPanel({
               >
                 {text.saveCriteria}
               </button>
-            </div>
-          </>
-        )}
-      </form>
+            </ReasonBar>
+          )}
+        </form>
+      </details>
 
       <section className="stack" aria-labelledby="solutions-title">
         <div className="card">
@@ -446,18 +472,6 @@ export function SolutionsPanel({
         ))}
       </section>
 
-      {set.setId && set.items.length >= 2 && (
-        <SensitivityPanel
-          key={`${set.setId}-${set.criteria.versionId ?? 'default'}`}
-          locale={locale}
-          base={base}
-          setId={set.setId}
-          criteriaVersionId={set.criteria.versionId}
-          criteria={set.criteria.criteria}
-          alternatives={set.items}
-        />
-      )}
-
       {set.items.length > 0 && !readOnly && (
         <form
           data-write-action
@@ -507,38 +521,58 @@ export function SolutionsPanel({
               })}
             </ol>
           )}
-          <div className="filter-grid">
-            <label htmlFor="selection-reason">{text.selectionReason}</label>
-            <input
-              id="selection-reason"
-              value={selectionReason}
-              minLength={3}
-              maxLength={1000}
-              onChange={(event) => setSelectionReason(event.target.value)}
-              autoComplete="off"
-              required
-            />
-          </div>
-          {set.items
-            .filter((s) => !chosen.includes(s.id))
-            .map((s) => (
-              <div className="filter-grid" key={s.id}>
-                <label htmlFor={`reject-${s.id}`}>
-                  {locale === 'fa' ? 'دلیل رد گزینه' : 'Reason for rejecting'}: {s.title}
-                </label>
-                <input
-                  id={`reject-${s.id}`}
-                  value={rejectionReasons[s.id] ?? ''}
-                  required
-                  minLength={3}
-                  maxLength={1000}
-                  dir={textDir(locale)}
-                  onChange={(event) =>
-                    setRejectionReasons((previous) => ({ ...previous, [s.id]: event.target.value }))
-                  }
-                />
-              </div>
-            ))}
+          {leftOut.length > 0 && (
+            <p className="notice warn" role="status">
+              {text.higherScoreWarning.replace('{titles}', leftOut.map((s) => s.title).join('، '))}
+            </p>
+          )}
+          <ReasonBar
+            locale={locale}
+            id="selection-reason"
+            label={text.selectionReason}
+            value={selectionReason}
+            minLength={3}
+            required
+            onChange={setSelectionReason}
+          />
+          {set.items.length > chosen.length && (
+            <>
+              <ReasonBar
+                locale={locale}
+                id="rejected-reason"
+                label={text.rejectedReason}
+                help={text.rejectedReasonHelp}
+                value={rejectedAll}
+                onChange={setRejectedAll}
+              />
+              <details className="compact-details">
+                <summary>{text.rejectedEach}</summary>
+                <div className="stack">
+                  {set.items
+                    .filter((s) => !chosen.includes(s.id))
+                    .map((s) => (
+                      <div className="filter-grid" key={s.id}>
+                        <label htmlFor={`reject-${s.id}`}>
+                          {text.rejectedOne}: {s.title}
+                        </label>
+                        <input
+                          id={`reject-${s.id}`}
+                          value={rejectionReasons[s.id] ?? ''}
+                          maxLength={1000}
+                          dir={textDir(locale)}
+                          onChange={(event) =>
+                            setRejectionReasons((previous) => ({
+                              ...previous,
+                              [s.id]: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    ))}
+                </div>
+              </details>
+            </>
+          )}
           <div className="toolbar">
             <button className="primary-button" type="submit" disabled={busy || chosen.length === 0}>
               {busy ? text.working : text.select}
@@ -571,14 +605,30 @@ export function SolutionsPanel({
             <ul>
               {d.snapshot.rejected.map((r) => (
                 <li key={r.solutionId} dir={textDir(locale)}>
-                  {locale === 'fa' ? 'گزینه' : 'Alternative'} {formatNumber(locale, r.ordinal)}:{' '}
-                  {r.reason}
+                  {locale === 'fa' ? 'گزینه' : 'Alternative'} {formatNumber(locale, r.ordinal)}
+                  {r.reason
+                    ? `: ${r.reason}`
+                    : locale === 'fa'
+                      ? ' (بدون دلیل ثبت‌شده)'
+                      : ' (no reason recorded)'}
                 </li>
               ))}
             </ul>
           </article>
         ))}
       </section>
+
+      {set.setId && set.items.length >= 2 && (
+        <SensitivityPanel
+          key={`${set.setId}-${set.criteria.versionId ?? 'default'}`}
+          locale={locale}
+          base={base}
+          setId={set.setId}
+          criteriaVersionId={set.criteria.versionId}
+          criteria={set.criteria.criteria}
+          alternatives={set.items}
+        />
+      )}
     </div>
   );
 }

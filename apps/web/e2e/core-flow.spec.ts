@@ -86,7 +86,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: topicText.save }).click();
     await expect(page.getByRole('status').filter({ hasText: topicText.updatedDone })).toBeVisible();
     await expect(row).toContainText(titles.marketEdited);
-    await expect(row.getByRole('cell').nth(2)).toHaveText('۲'); // version 2, in Persian digits
+    await expect(row.getByRole('cell').nth(1)).toHaveText('۲'); // version 2, in Persian digits
 
     // Archive shows its effect first and moves the topic to the archived view.
     await row.getByRole('button', { name: topicText.archive }).click();
@@ -279,7 +279,10 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: flow.editSave }).click();
     await expect(page.getByRole('status').filter({ hasText: flow.done.edited })).toBeVisible();
     await expect(page.getByText(flow.outputVersion.replace('{n}', '۳'))).toBeVisible(waiting);
+    // The output itself is read in the Analysis tab, not repeated in the workflow.
+    await page.getByRole('button', { name: detail.tabs.problem, exact: true }).click();
     await expect(page.getByText('بیان مسئلهٔ اصلاح‌شده توسط ادمین').first()).toBeVisible();
+    await page.getByRole('button', { name: detail.tabs.workflow, exact: true }).click();
 
     // Approve every stage in order until the run completes.
     for (const stage of ['analysis', 'research', 'ideation', 'documentation', 'evaluation']) {
@@ -603,6 +606,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(articles).toHaveCount(3);
     await expectNoSeriousA11yViolations(page);
 
+    await page.locator('details:has(#criteria-title) > summary').click();
     const impact = page.getByLabel(`${solutionText.weight}: Impact on the problem`);
     const cost = page.getByLabel(`${solutionText.weight}: Cost and resources`);
     const save = page.getByRole('button', { name: solutionText.saveCriteria });
@@ -619,6 +623,8 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     ).toBeVisible();
     await expect(articles.first().getByText(solutionText.outOf)).toBeVisible();
 
+    await expect(page.locator('#sensitivity-title')).toBeVisible();
+    await page.getByText('پیشرفته: آزمایش دستی وزن‌ها').click();
     await page.locator('#sensitivity-weight').focus();
     await page.locator('#sensitivity-weight').press('Home');
     await page.getByRole('button', { name: 'محاسبهٔ رتبه‌ها' }).click();
@@ -635,7 +641,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       .getByRole('button', { name: new RegExp(solutionText.moveUp, 'u') })
       .click();
     await page.locator('#selection-reason').fill('دو گزینهٔ برتر');
-    await page.locator('input[id^="reject-"]').fill('این گزینه ریسک بیشتری دارد');
+    await page.locator('#rejected-reason').fill('این گزینه ریسک بیشتری دارد');
     await page.getByRole('button', { name: solutionText.select }).click();
     await expect(
       page.getByRole('status').filter({ hasText: solutionText.done.selected }),

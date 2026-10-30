@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { ApiError, apiGet, apiSend } from '../../../api-client';
+import {
+  candidateProblemTemplates,
+  type ProblemPatternDefinition,
+  type ProblemTemplateId,
+} from '@docoo/contracts';
 import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { ModelPicker } from '../../settings/model-picker';
@@ -68,6 +73,17 @@ interface Draft {
   criteria?: Criterion[] | null;
   /** The business of Contenter the project is linked to (ADR-0021). */
   business?: ContenterBusinessItem | null;
+  problemTemplateId?: ProblemTemplateId | '';
+  problemPatternVersionId?: string;
+}
+
+interface PublishedProblemPattern {
+  id: string;
+  patternId: string;
+  key: string;
+  version: number;
+  definition: ProblemPatternDefinition;
+  publishedAt: string;
 }
 
 const draftKey = (workspaceId: string) => `docoo:new-project:${workspaceId}`;
@@ -127,13 +143,14 @@ export function ProjectWizard({
   const [model, setModel] = useState('');
   const [criteria, setCriteria] = useState<Criterion[] | null>(null);
   const [business, setBusiness] = useState<ContenterBusinessItem | null>(null);
+  const [problemTemplateId, setProblemTemplateId] = useState<ProblemTemplateId | ''>('');
+  const [problemPatternVersionId, setProblemPatternVersionId] = useState('');
+  const [publishedProblemPatterns, setPublishedProblemPatterns] = useState<
+    PublishedProblemPattern[]
+  >([]);
   const [codeTouched, setCodeTouched] = useState(false);
-  // The newest values and code flag, also between two renders: a fast second keystroke must not
-  // be built on the values an earlier render saw.
-  const valuesRef = useRef(values);
-  valuesRef.current = values;
-  const codeTouchedRef = useRef(codeTouched);
-  codeTouchedRef.current = codeTouched;
+  // Event handlers own this flag; an unrelated concurrent render must not reset it.
+  const codeTouchedRef = useRef(false);
   const [opened, setOpened] = useState<Partial<Record<AdvancedSection, boolean>>>({});
   const [defaultCriteria, setDefaultCriteria] = useState<Criterion[] | null>(null);
   const [restored, setRestored] = useState(false);
@@ -154,7 +171,8 @@ export function ProjectWizard({
       // A draft of the eight-step wizard has no version; its step is mapped onto the new four.
       const restoredStep = draft.v === 2 ? draft.step : migrateDraftStep(draft.step);
       setStep(Math.min(Math.max(restoredStep, 0), STEP_COUNT - 1));
-      setCodeTouched(draft.codeTouched ?? draft.values.code.trim() !== '');
+      codeTouchedRef.current = draft.codeTouched ?? draft.values.code.trim() !== '';
+      setCodeTouched(codeTouchedRef.current);
       // Drafts saved before topic knowledge sharing existed have no such fields.
       setValues({
         ...draft.values,
@@ -169,6 +187,8 @@ export function ProjectWizard({
       setModel(draft.model ?? '');
       setCriteria(draft.criteria ?? null);
       setBusiness(draft.business ?? null);
+      setProblemTemplateId(draft.problemTemplateId ?? '');
+      setProblemPatternVersionId(draft.problemPatternVersionId ?? '');
       setRestored(true);
     }
     setReady(true);
@@ -186,6 +206,8 @@ export function ProjectWizard({
       model,
       criteria,
       business,
+      problemTemplateId,
+      problemPatternVersionId,
     });
   }, [
     ready,
@@ -198,6 +220,8 @@ export function ProjectWizard({
     model,
     criteria,
     business,
+    problemTemplateId,
+    problemPatternVersionId,
   ]);
 
   useEffect(() => {
@@ -210,6 +234,12 @@ export function ProjectWizard({
     apiGet<{ criteria: Criterion[] }>(`${base}/solution-criteria/defaults`)
       .then((result) => setDefaultCriteria(result.criteria))
       .catch(() => undefined);
+  }, [base]);
+
+  useEffect(() => {
+    apiGet<{ items: PublishedProblemPattern[] }>(`${base}/projects/problem-pattern-versions`)
+      .then((result) => setPublishedProblemPatterns(result.items))
+      .catch(() => setPublishedProblemPatterns([]));
   }, [base]);
 
   const topicIds = useMemo(() => values.topics.map((topic) => topic.topicId), [values.topics]);
@@ -303,6 +333,11 @@ export function ProjectWizard({
     title: values.title.trim(),
     problem: values.initialProblem.trim(),
   };
+  const selectedProblemTemplate =
+    candidateProblemTemplates.find(({ id: templateId }) => templateId === problemTemplateId) ??
+    null;
+  const selectedProblemPattern =
+    publishedProblemPatterns.find(({ id }) => id === problemPatternVersionId) ?? null;
   const basicsOk =
     PROJECT_CODE_PATTERN.test(trimmed.code) &&
     trimmed.code.length <= MAX_CODE &&
@@ -354,6 +389,8 @@ export function ProjectWizard({
           title: trimmed.title,
           description: values.description.trim(),
           initialProblem: trimmed.problem,
+          ...(problemTemplateId ? { problemTemplateId } : {}),
+          ...(problemPatternVersionId ? { problemPatternVersionId } : {}),
           outputLanguage: values.outputLanguage,
           analysisProfile: values.analysisProfile ?? 'full',
           topics: values.topics.map((topic) => ({
@@ -383,41 +420,36 @@ export function ProjectWizard({
   function discard() {
     writeDraft(workspaceId, null);
     setValues(emptyProject(locale));
+    setProblemTemplateId('');
+    setProblemPatternVersionId('');
     setTouched({});
     setConnectionId('');
     setModel('');
     setCriteria(null);
     setBusiness(null);
+    codeTouchedRef.current = false;
     setCodeTouched(false);
     setOpened({});
     setStep(0);
     setRestored(false);
   }
 
-  /**
-   * The title suggests the code until the person writes the code themselves. The fields hand
-   * over a full copy of the values they were drawn with; only what they changed is taken from it
-   * and laid over the newest values, so two quick edits in a row never undo each other.
-   */
-  function changeBasics(next: ProjectValues) {
-    const patch: Partial<ProjectValues> = {};
-    for (const key of Object.keys(next) as (keyof ProjectValues)[]) {
-      if (next[key] !== values[key]) Object.assign(patch, { [key]: next[key] });
-    }
-    const current = valuesRef.current;
-    let merged: ProjectValues = { ...current, ...patch };
-    if (patch.code !== undefined) {
-      // Emptying the field hands the code back to the title.
-      codeTouchedRef.current = patch.code.trim() !== '';
+  /** Apply only the field that emitted the event, against the latest committed state. */
+  function changeBasics(next: ProjectValues, field: keyof ProjectValues) {
+    if (field === 'code') {
+      codeTouchedRef.current = next.code.trim() !== '';
       setCodeTouched(codeTouchedRef.current);
-    } else if (patch.title !== undefined && !codeTouchedRef.current) {
-      const suggestion = shouldSuggestCode(patch.title) ? suggestProjectCode(patch.title) : '';
-      // A stamped fallback code stays put while the title is typed, instead of changing at once.
-      const keep = suggestion.startsWith('PRJ-') && current.code.startsWith('PRJ-');
-      merged = { ...merged, code: keep ? current.code : suggestion };
     }
-    valuesRef.current = merged;
-    setValues(merged);
+    const manuallyChosen = codeTouchedRef.current;
+    setValues((current) => {
+      let merged: ProjectValues = { ...current, [field]: next[field] };
+      if (field === 'title' && !manuallyChosen) {
+        const suggestion = shouldSuggestCode(next.title) ? suggestProjectCode(next.title) : '';
+        const keep = suggestion.startsWith('PRJ-') && current.code.startsWith('PRJ-');
+        merged = { ...merged, code: keep ? current.code : suggestion };
+      }
+      return merged;
+    });
   }
 
   const stepName = text.steps[step]!;
@@ -561,6 +593,92 @@ export function ProjectWizard({
         {step === PROBLEM_STEP && (
           <>
             <BasicsFields locale={locale} values={values} onChange={changeBasics} />
+            <div className="filter-grid">
+              <label htmlFor="problem-template">{text.problemTemplate}</label>
+              <select
+                id="problem-template"
+                value={problemTemplateId}
+                onChange={(event) =>
+                  setProblemTemplateId(event.target.value as ProblemTemplateId | '')
+                }
+                aria-describedby="problem-template-note"
+              >
+                <option value="">{text.noProblemTemplate}</option>
+                {candidateProblemTemplates.map((template) => (
+                  <option key={`${template.id}@${template.version}`} value={template.id}>
+                    {template.name[locale]} · v{template.version}
+                  </option>
+                ))}
+              </select>
+              <p id="problem-template-note" className="muted">
+                {text.problemTemplateNote}
+              </p>
+              {problemTemplateId && (
+                <>
+                  {(() => {
+                    const selectedTemplate = candidateProblemTemplates.find(
+                      ({ id: templateId }) => templateId === problemTemplateId,
+                    );
+                    if (!selectedTemplate) return null;
+                    return (
+                      <>
+                        <ul aria-label={text.problemTemplatePrompts}>
+                          {selectedTemplate.prompts.map((prompt) => (
+                            <li key={prompt.id}>
+                              <strong>{prompt.label[locale]}:</strong> {prompt.guidance[locale]}
+                            </li>
+                          ))}
+                        </ul>
+                        <h3>{text.problemTemplateRubric}</h3>
+                        <ul>
+                          {selectedTemplate.rubric.criteria.map((criterion) => (
+                            <li key={criterion.key}>
+                              {criterion.label[locale]} · {formatNumber(locale, criterion.weight)}٪
+                            </li>
+                          ))}
+                        </ul>
+                        <h3>{text.problemTemplateSuggestedSections}</h3>
+                        <ul>
+                          {selectedTemplate.suggestedSections.map((section) => (
+                            <li key={section.en}>{section[locale]}</li>
+                          ))}
+                        </ul>
+                      </>
+                    );
+                  })()}
+                </>
+              )}
+              <label htmlFor="problem-pattern">{text.problemPattern}</label>
+              <select
+                id="problem-pattern"
+                value={problemPatternVersionId}
+                onChange={(event) => setProblemPatternVersionId(event.target.value)}
+                aria-describedby="problem-pattern-note"
+              >
+                <option value="">{text.noProblemPattern}</option>
+                {publishedProblemPatterns.map((pattern) => (
+                  <option key={pattern.id} value={pattern.id}>
+                    {pattern.definition.title} · v{pattern.version}
+                  </option>
+                ))}
+              </select>
+              <p id="problem-pattern-note" className="muted">
+                {text.problemPatternNote}
+              </p>
+              {selectedProblemPattern && (
+                <div className="notice">
+                  <p>{selectedProblemPattern.definition.purpose}</p>
+                  <ul>
+                    {selectedProblemPattern.definition.stages.map((stage) => (
+                      <li key={stage.key}>
+                        {stage.title} · {stage.activity}
+                      </li>
+                    ))}
+                  </ul>
+                  <p>{text.problemPatternExecutionNote}</p>
+                </div>
+              )}
+            </div>
             {!codeTouched && values.code !== '' && (
               <p className="muted" role="status">
                 {text.codeSuggested}
@@ -713,6 +831,8 @@ export function ProjectWizard({
             failed={reviewFailed}
             overrides={choices.overrides.length}
             values={values}
+            problemTemplate={selectedProblemTemplate}
+            problemPattern={selectedProblemPattern}
             connectionId={connectionId}
             business={business}
             criteriaCount={
@@ -774,6 +894,8 @@ function Review({
   failed,
   overrides,
   values,
+  problemTemplate,
+  problemPattern,
   connectionId,
   business,
   criteriaCount,
@@ -785,6 +907,8 @@ function Review({
   failed: boolean;
   overrides: number;
   values: ProjectValues;
+  problemTemplate: (typeof candidateProblemTemplates)[number] | null;
+  problemPattern: PublishedProblemPattern | null;
   connectionId: string;
   business: ContenterBusinessItem | null;
   criteriaCount: number | null;
@@ -819,6 +943,22 @@ function Review({
         <div>
           <dt>{project.codeLabel}</dt>
           <dd dir="ltr">{values.code.trim()}</dd>
+        </div>
+        <div>
+          <dt>{text.problemTemplate}</dt>
+          <dd>
+            {problemTemplate
+              ? `${problemTemplate.name[locale]} · v${problemTemplate.version} · ${text.problemTemplateCandidate}`
+              : text.noProblemTemplate}
+          </dd>
+        </div>
+        <div>
+          <dt>{text.problemPattern}</dt>
+          <dd>
+            {problemPattern
+              ? `${problemPattern.definition.title} · v${problemPattern.version}`
+              : text.noProblemPattern}
+          </dd>
         </div>
         <div>
           <dt>{project.outputLanguage}</dt>

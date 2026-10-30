@@ -14,7 +14,7 @@ import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UploadsFile } from '../auth/auth.authorization.js';
 import { requireIfMatch, setVersionHeader } from '../common/concurrency.js';
 import { pageQuerySchema } from '../common/pagination.js';
 import { badRequest } from '../common/problems.js';
@@ -122,6 +122,7 @@ export class SourcesController {
 
   @Post('uploads')
   @ApiOperation({ summary: 'Declare a file and get a presigned direct upload URL (quarantine)' })
+  @UploadsFile()
   @RequireWorkspacePermission('knowledge.create')
   async upload(
     @Req() request: FastifyRequest,
@@ -183,6 +184,7 @@ export class SourcesController {
   @ApiOperation({
     summary: 'Declare a new file version; requires If-Match with the source version',
   })
+  @UploadsFile()
   @RequireWorkspacePermission('knowledge.update')
   async newVersion(
     @Req() request: FastifyRequest,

@@ -15,6 +15,7 @@ import {
   type Definition,
 } from '../settings/settings-model';
 import { Notice, useAction, explainError } from '../use-action';
+import { ReasonBar } from '../reason-bar';
 import { templatesMessages } from './templates-messages';
 import { FieldLabel, SectionTitle } from '../../info-tip';
 
@@ -291,20 +292,15 @@ function LevelsSection({
             </option>
           ))}
         </select>
-        <FieldLabel htmlFor={`${id}-reason`} help={text.reasonHelp} helpId={`${id}-reason-help`}>
-          {text.reasonLabel}
-        </FieldLabel>
-        <input
-          id={`${id}-reason`}
-          dir={textDir(locale)}
-          value={reason}
-          maxLength={1000}
-          onChange={(event) => setReason(event.target.value)}
-          aria-describedby={`${id}-reason-help`}
-          autoComplete="off"
-        />
       </div>
-      <div className="toolbar">
+      <ReasonBar
+        locale={locale}
+        id={`${id}-reason`}
+        label={text.reasonLabel}
+        help={text.reasonHelp}
+        value={reason}
+        onChange={setReason}
+      >
         <button
           type="button"
           className="primary-button"
@@ -319,7 +315,7 @@ function LevelsSection({
         >
           {action.busy ? text.saving : text.saveLevels}
         </button>
-      </div>
+      </ReasonBar>
     </section>
   );
 }
@@ -387,18 +383,13 @@ function TemplatesSection({
           </div>
         ))}
       </fieldset>
-      <div className="filter-grid">
-        <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
-        <input
-          id={`${id}-reason`}
-          dir={textDir(locale)}
-          value={reason}
-          maxLength={1000}
-          onChange={(event) => setReason(event.target.value)}
-          autoComplete="off"
-        />
-      </div>
-      <div className="toolbar">
+      <ReasonBar
+        locale={locale}
+        id={`${id}-reason`}
+        label={text.reasonLabel}
+        value={reason}
+        onChange={setReason}
+      >
         <button
           type="button"
           className="primary-button"
@@ -419,7 +410,7 @@ function TemplatesSection({
         >
           {action.busy ? text.saving : text.saveTemplate}
         </button>
-      </div>
+      </ReasonBar>
     </section>
   );
 }

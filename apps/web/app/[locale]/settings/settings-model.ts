@@ -73,6 +73,7 @@ export const SETTING_GROUPS = [
       'research.knowledge_limit',
       'research.allow_restricted_knowledge',
       'research.max_sources',
+      'research.official_domains',
       'knowledge.min_audit_score',
     ],
   },

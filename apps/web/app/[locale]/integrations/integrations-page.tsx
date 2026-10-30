@@ -5,7 +5,6 @@ import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { apiGet, apiSend } from '../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { Notice, explainError, useAction } from '../use-action';
-import { WorkspacePage } from '../workspace-page';
 import { integrationMessages } from './messages';
 import { FieldLabel, SectionTitle } from '../../info-tip';
 
@@ -19,17 +18,8 @@ interface Connection {
   lastError: string | null;
 }
 
-export function IntegrationsPage({ locale }: { locale: Locale }) {
-  const text = integrationMessages(locale);
-  return (
-    <WorkspacePage locale={locale} title={text.title} subtitle={text.subtitle}>
-      {(workspaceId) => <Integrations locale={locale} workspaceId={workspaceId} />}
-    </WorkspacePage>
-  );
-}
-
 /** The connection to Contenter (ADR-0021): address, write-only token, status and a test. */
-function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
+export function Integrations({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
   const text = integrationMessages(locale);
   const id = useId();
   const base = `/workspaces/${workspaceId}/integrations/contenter`;

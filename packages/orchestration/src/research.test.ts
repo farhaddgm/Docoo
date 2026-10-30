@@ -319,7 +319,15 @@ describe('research output for later stages', () => {
     });
     expect(compactResearchForPrompt(content)).toEqual({
       findings: [
-        { claim: 'c', source: 's', support: 'knowledge', approvedKnowledge: ['Title a (v1)'] },
+        {
+          claim: 'c',
+          source: 's',
+          support: 'knowledge',
+          level: 'solid',
+          sourceKinds: ['knowledge'],
+          singleSource: true,
+          approvedKnowledge: ['Title a (v1)'],
+        },
       ],
       gaps: ['g'],
     });
@@ -461,6 +469,7 @@ describe('web pages in the research (ADR-0026)', () => {
       ref: 'W1',
       title: 'Page 0',
       url: 'https://example.org/0',
+      sourceClass: 'public',
       text: 'text',
     });
   });
@@ -517,7 +526,15 @@ describe('web pages in the research (ADR-0026)', () => {
       status: 'used',
       code: null,
       queries: ['churn month four'],
-      sources: [{ ref: 'W1', url: 'https://example.org/a', title: 'A study', cited: true }],
+      sources: [
+        {
+          ref: 'W1',
+          url: 'https://example.org/a',
+          title: 'A study',
+          cited: true,
+          sourceClass: 'public',
+        },
+      ],
     });
     expect(content.verification).toMatchObject({ findings: 3, supported: 2, unverified: 1 });
   });

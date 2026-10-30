@@ -93,21 +93,23 @@ test.describe('knowledge-backed research and role evaluation (RSC-001, EVL-002)'
     await expect(page.getByRole('status').filter({ hasText: flow.done.approved })).toBeVisible();
     await expect(review('research')).toBeVisible(wait);
 
-    // The research output tells supported findings from unverified ones, and why.
+    // The research output tells supported findings from unverified ones, and why. It is read in
+    // the Research tab; the workflow only decides on it.
+    await page.getByRole('button', { name: detail.tabs.research, exact: true }).click();
     const output = page.locator('.output-view').filter({ hasText: flow.out.knowledgeHeading });
     await expect(output).toBeVisible();
-    await expect(output.getByText(flow.out.supportKnowledge, { exact: true })).toHaveCount(1);
-    await expect(output.getByText(flow.out.supportUnverified, { exact: true })).toHaveCount(1);
+    await expect(output.getByText(flow.out.levels['solid']!, { exact: true })).toHaveCount(1);
+    await expect(output.getByText(flow.out.levels['unverified']!, { exact: true })).toHaveCount(1);
     await expect(output.getByText(flow.out.citationVerified)).toHaveCount(1);
     await expect(output.locator('blockquote')).toHaveCount(1);
     await expect(
       output.getByText(
-        flow.out.verificationSummary
+        flow.out.overviewFindings
           .replace('{findings}', '۲')
-          .replace('{supported}', '۱')
+          .replace('{solid}', '۱')
+          .replace('{limited}', '۰')
           .replace('{unverified}', '۱')
-          .replace('{verified}', '۱')
-          .replace('{citations}', '۱'),
+          .replace('{disputed}', '۰'),
       ),
     ).toBeVisible();
     const link = output.getByRole('link', { name: knowledgeTitle }).first();

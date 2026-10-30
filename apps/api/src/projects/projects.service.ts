@@ -30,6 +30,11 @@ import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { BusinessService, type FetchedBusiness } from '../business/business.service.js';
 import { ConfigService } from '../config/config.service.js';
+import {
+  candidateProblemTemplates,
+  type ProblemPatternSnapshot,
+  type ProblemTemplate,
+} from '@docoo/contracts';
 
 export type OutputLanguage = 'fa' | 'en';
 
@@ -73,6 +78,8 @@ export interface Project {
   readonly sharedKnowledgeIds: readonly string[];
   /** The business of Contenter the project belongs to (ADR-0021); null when it has none. */
   readonly business: ProjectBusiness | null;
+  readonly problemTemplate: ProblemTemplate | null;
+  readonly problemPattern: ProblemPatternSnapshot | null;
   readonly configSnapshotId: string | null;
   readonly clonedFromId: string | null;
   /** `copy`, `continuation` or `pivot` when the project was built on another one. */
@@ -111,6 +118,9 @@ export interface CreateProjectInput {
   readonly solutionCriteria?: readonly Criterion[] | undefined;
   /** The business of Contenter to link the project to; fetched first, linked in the same transaction. */
   readonly businessId?: string | undefined;
+  readonly problemTemplateId?: string | undefined;
+  /** Selects one immutable published problem-pattern version for this new project. */
+  readonly problemPatternVersionId?: string | undefined;
 }
 
 export interface UpdateProjectInput {
@@ -193,6 +203,8 @@ interface ProjectRow extends QueryResultRow {
   cloned_from_id: string | null;
   origin_kind: ProjectOriginKind | null;
   approved_problem_version_id: string | null;
+  problem_template_snapshot: ProblemTemplate | null;
+  problem_pattern_snapshot: ProblemPatternSnapshot | null;
   version: number;
   deleted_at: string | null;
   purge_after: string | null;
@@ -223,7 +235,7 @@ interface LinkRow extends QueryResultRow {
 const projectColumns = `
   id, workspace_id, code, title, description, initial_problem, output_language, status,analysis_profile,analysis_continuation_session_id,
   previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id, origin_kind,
-  approved_problem_version_id, version,
+  approved_problem_version_id, problem_template_snapshot, problem_pattern_snapshot, version,
   ${isoColumn('deleted_at', 'deleted_at')},
   ${isoColumn('purge_after', 'purge_after')},
   coalesce(purge_after <= now(), false) as purge_expired,
@@ -357,10 +369,107 @@ export class ProjectsService {
     return this.database.run(context, async (client) => this.read(client, context, projectId));
   }
 
+  async listPublishedProblemPatterns(context: WorkspaceRequestContext) {
+    return this.database.run(context, async (client) => {
+      const result = await client.query<{
+        id: string;
+        pattern_id: string;
+        pattern_key: string;
+        version: number;
+        definition: ProblemPatternSnapshot['definition'];
+        published_at: string;
+      }>(
+        `select distinct on (v.pattern_id)
+                v.id, v.pattern_id, v.definition->>'key' as pattern_key, v.version, v.definition, v.published_at
+           from problem_pattern_versions v
+          where v.workspace_id = $1 and app.problem_pattern_is_selectable(v.pattern_id, v.workspace_id, false)
+          order by v.pattern_id, v.version desc`,
+        [context.workspaceId],
+      );
+      return result.rows.map((row) => ({
+        id: row.id,
+        patternId: row.pattern_id,
+        key: row.pattern_key,
+        version: row.version,
+        definition: row.definition,
+        publishedAt: new Date(row.published_at).toISOString(),
+      }));
+    });
+  }
+
+  async setProblemPattern(
+    context: WorkspaceRequestContext,
+    projectId: string,
+    expectedVersion: number,
+    versionId: string | null,
+  ): Promise<Project> {
+    return this.database.run(context, async (client) => {
+      const current = await this.load(client, context, projectId, true);
+      this.assertVersion(current, expectedVersion);
+      const started = await client.query(
+        `select 1 from workflow_runs where project_id = $1 union all select 1 from project_meeting_revisions where project_id = $1 limit 1`,
+        [projectId],
+      );
+      if (current.status !== 'draft' || started.rows.length)
+        throw conflict(
+          'PROJECT_PATTERN_LOCKED',
+          'The pattern cannot change after preparation or execution starts.',
+        );
+      let snapshot: ProblemPatternSnapshot | null = null;
+      if (versionId) {
+        const result = await client.query<{
+          pattern_id: string;
+          workspace_id: string;
+          version: number;
+          definition: ProblemPatternSnapshot['definition'];
+          published_at: string;
+        }>(
+          `select pattern_id,workspace_id,version,definition,to_char(published_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as published_at from problem_pattern_versions where id=$1 and workspace_id=$2 and app.problem_pattern_is_selectable(pattern_id,workspace_id,true)`,
+          [versionId, context.workspaceId],
+        );
+        const row = result.rows[0];
+        if (!row)
+          throw badRequest(
+            'PROBLEM_PATTERN_VERSION_UNAVAILABLE',
+            'The published pattern is unavailable.',
+          );
+        snapshot = {
+          patternId: row.pattern_id,
+          workspaceId: row.workspace_id,
+          version: row.version,
+          lifecycle: 'published',
+          publishedAt: row.published_at,
+          definition: row.definition,
+        };
+      }
+      await client.query(
+        `update projects set problem_pattern_snapshot=$3::jsonb, version=version+1 where id=$1 and workspace_id=$2`,
+        [projectId, context.workspaceId, snapshot ? JSON.stringify(snapshot) : null],
+      );
+      await writeAudit(client, context, {
+        action: 'project.pattern.update',
+        targetType: 'project',
+        targetId: projectId,
+        projectId,
+        after: {
+          patternId: snapshot?.patternId ?? null,
+          patternVersion: snapshot?.version ?? null,
+        },
+      });
+      return this.read(client, context, projectId);
+    });
+  }
+
   async create(context: WorkspaceRequestContext, input: CreateProjectInput): Promise<Project> {
     const criteria = input.solutionCriteria;
     const criteriaIssue = criteria ? criteriaProblem(criteria) : null;
     if (criteriaIssue) throw badRequest('SOLUTION_CRITERIA_INVALID', criteriaIssue);
+    const problemTemplate = input.problemTemplateId
+      ? candidateProblemTemplates.find(({ id }) => id === input.problemTemplateId)
+      : null;
+    if (input.problemTemplateId && !problemTemplate) {
+      throw badRequest('PROBLEM_TEMPLATE_UNKNOWN', 'Unknown candidate problem template.');
+    }
     // Contenter is asked before the transaction opens, so a slow answer holds no database connection;
     // if it cannot answer, no project is created and the form can be sent again.
     const business: FetchedBusiness | null = input.businessId
@@ -368,13 +477,48 @@ export class ProjectsService {
       : null;
     return this.database.run(context, async (client) => {
       await this.assertTopicsUsable(client, context, input.topics);
+      const problemPattern = input.problemPatternVersionId
+        ? (
+            await client.query<{
+              pattern_id: string;
+              workspace_id: string;
+              version: number;
+              definition: ProblemPatternSnapshot['definition'];
+              published_at: string;
+            }>(
+              `select v.pattern_id, v.workspace_id, v.version, v.definition,
+                      to_char(v.published_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as published_at
+                 from problem_pattern_versions v
+                      where v.id = $1 and v.workspace_id = $2 and app.problem_pattern_is_selectable(v.pattern_id, v.workspace_id, true)`,
+              [input.problemPatternVersionId, context.workspaceId],
+            )
+          ).rows[0]
+        : null;
+      if (input.problemPatternVersionId && !problemPattern) {
+        throw badRequest(
+          'PROBLEM_PATTERN_VERSION_UNAVAILABLE',
+          'The selected published problem pattern is not available in this workspace.',
+        );
+      }
+      const patternSnapshot: ProblemPatternSnapshot | null = problemPattern
+        ? {
+            patternId: problemPattern.pattern_id,
+            workspaceId: problemPattern.workspace_id,
+            version: problemPattern.version,
+            lifecycle: 'published',
+            publishedAt: problemPattern.published_at,
+            definition: problemPattern.definition,
+          }
+        : null;
       let row: ProjectRow | undefined;
       try {
         const result = await client.query<ProjectRow>(
           `with inserted as (
              insert into projects (
-               workspace_id, code, title, description, initial_problem, output_language, created_by,analysis_profile
-             ) values ($1, $2, $3, $4, $5, $6, $7,$8)
+               workspace_id, code, title, description, initial_problem, problem_template_snapshot,
+               problem_pattern_snapshot,
+               output_language, created_by, analysis_profile
+             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -384,6 +528,8 @@ export class ProjectsService {
             input.title,
             input.description,
             input.initialProblem,
+            problemTemplate ? JSON.stringify(problemTemplate) : null,
+            patternSnapshot ? JSON.stringify(patternSnapshot) : null,
             input.outputLanguage,
             context.actorId,
             input.analysisProfile ?? 'full',
@@ -450,6 +596,17 @@ export class ProjectsService {
           settings: settings.map((setting) => setting.key),
           ...(criteria ? { solutionCriteria: true } : {}),
           ...(business ? { businessId: business.content.business.externalId } : {}),
+          ...(problemTemplate
+            ? { problemTemplate: { id: problemTemplate.id, version: problemTemplate.version } }
+            : {}),
+          ...(patternSnapshot
+            ? {
+                problemPattern: {
+                  patternId: patternSnapshot.patternId,
+                  version: patternSnapshot.version,
+                },
+              }
+            : {}),
         },
       });
       return this.read(client, context, row.id);
@@ -721,8 +878,9 @@ export class ProjectsService {
           `with inserted as (
              insert into projects (
                workspace_id, code, title, description, initial_problem, output_language,
-               created_by, cloned_from_id, origin_kind
-             ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+               created_by, cloned_from_id, origin_kind, problem_template_snapshot,
+               problem_pattern_snapshot
+             ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -736,6 +894,12 @@ export class ProjectsService {
             context.actorId,
             sourceId,
             kind,
+            source.problem_template_snapshot
+              ? JSON.stringify(source.problem_template_snapshot)
+              : null,
+            source.problem_pattern_snapshot
+              ? JSON.stringify(source.problem_pattern_snapshot)
+              : null,
           ],
         );
         row = result.rows[0];
@@ -1124,6 +1288,8 @@ export class ProjectsService {
       topics,
       sharedKnowledgeIds,
       business,
+      problemTemplate: row.problem_template_snapshot,
+      problemPattern: row.problem_pattern_snapshot,
       configSnapshotId: row.config_snapshot_id,
       approvedProblemVersionId: row.approved_problem_version_id,
       clonedFromId: row.cloned_from_id,

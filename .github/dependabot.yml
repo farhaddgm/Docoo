@@ -6,6 +6,13 @@ updates:
       interval: weekly
     # Match pnpm's existing 10080-minute release-age policy for version updates.
     # Dependabot security updates do not use this cooldown.
+    groups:
+      react-runtime:
+        applies-to: version-updates
+        patterns: [react, react-dom]
+      opentelemetry:
+        applies-to: version-updates
+        patterns: ['@opentelemetry/*']
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
@@ -13,6 +20,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      codeql:
+        patterns: [github/codeql-action/*]
   - package-ecosystem: docker
     directories:
       - /infra/docker
@@ -21,4 +31,9 @@ updates:
       - /
     schedule:
       interval: weekly
+    # The repository requires Node >=24 <25 (package.json engines) and CI runs on Node 24, so the
+    # Node base image stays on 24 until that range moves.
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
     open-pull-requests-limit: 5

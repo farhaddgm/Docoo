@@ -5,8 +5,15 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 
 import { ApiError, apiGet, query } from '../../api-client';
-import { formatDate, formatNumber, type Locale } from '../../i18n';
-import type { ContenterBusinessItem } from '../projects/business-types';
+import { formatDate, formatNumber, textDir, type Locale } from '../../i18n';
+import { businessMessages } from '../projects/business-messages';
+import type { BusinessContent, ContenterBusinessItem } from '../projects/business-types';
+import {
+  KnowledgeView,
+  ProfileView,
+  QualityView,
+  SourcesView,
+} from '../projects/[projectId]/business-content';
 import { WorkspacePage } from '../workspace-page';
 import { businessesMessages } from './businesses-messages';
 
@@ -82,7 +89,7 @@ function Businesses({ locale, workspaceId }: { locale: Locale; workspaceId: stri
       <section className="card stack">
         <p className="notice">{text.notConfigured}</p>
         <div className="toolbar">
-          <Link className="secondary-button link-button" href={`/${locale}/integrations` as Route}>
+          <Link className="secondary-button link-button" href={`/${locale}/settings` as Route}>
             {text.openIntegrations}
           </Link>
         </div>
@@ -105,7 +112,14 @@ function Businesses({ locale, workspaceId }: { locale: Locale; workspaceId: stri
           {text.searchButton}
         </button>
       </form>
-      {opened && <BusinessDialog locale={locale} item={opened} onClose={() => setOpened(null)} />}
+      {opened && (
+        <BusinessDialog
+          locale={locale}
+          workspaceId={workspaceId}
+          item={opened}
+          onClose={() => setOpened(null)}
+        />
+      )}
       {state.kind === 'loading' && <p role="status">{text.loading}</p>}
       {state.kind === 'failed' && (
         <p className="notice error" role="alert">
@@ -185,7 +199,6 @@ function BusinessCard({
               {item.name || text.unnamed}
             </button>
           </h2>
-          {item.tagline && <p className="muted">{item.tagline}</p>}
         </div>
         {item.status && <span className="badge">{item.status}</span>}
       </div>
@@ -236,33 +249,129 @@ function BusinessCard({
   );
 }
 
-/** A modal with everything the list knows about one business, grouped into categories. */
+type Detail =
+  | { kind: 'loading' }
+  | { kind: 'ready'; content: BusinessContent; contenterUrl: string | null }
+  | { kind: 'failed' };
+
+const DIALOG_VIEWS = ['profile', 'knowledge', 'sources', 'quality'] as const;
+type DialogView = (typeof DIALOG_VIEWS)[number];
+
+/**
+ * A modal with the content of one business as Contenter holds it now (read live, nothing stored):
+ * the profile, the facts and terms, the sources and assets and the quality, in the same views the
+ * project's Business tab uses. If Contenter cannot be read, what the list knows is shown instead.
+ */
 function BusinessDialog({
   locale,
+  workspaceId,
   item,
   onClose,
 }: {
   locale: Locale;
+  workspaceId: string;
   item: ContenterBusinessItem;
   onClose: () => void;
 }) {
   const text = businessesMessages(locale);
+  const panel = businessMessages(locale);
   const dialog = useRef<HTMLDialogElement>(null);
+  const [detail, setDetail] = useState<Detail>({ kind: 'loading' });
+  const [view, setView] = useState<DialogView>('profile');
+  const [now] = useState(() => Date.now());
   useEffect(() => {
     const element = dialog.current;
     if (element && !element.open) element.showModal();
   }, []);
+  useEffect(() => {
+    let active = true;
+    setDetail({ kind: 'loading' });
+    apiGet<{ content: BusinessContent; contenterUrl: string | null }>(
+      `/workspaces/${workspaceId}/contenter-businesses/${encodeURIComponent(item.id)}`,
+    )
+      .then((result) => {
+        if (active)
+          setDetail({ kind: 'ready', content: result.content, contenterUrl: result.contenterUrl });
+      })
+      .catch(() => {
+        if (active) setDetail({ kind: 'failed' });
+      });
+    return () => {
+      active = false;
+    };
+  }, [workspaceId, item.id]);
+
+  return (
+    <dialog
+      ref={dialog}
+      className="business-dialog business-dialog-wide"
+      aria-labelledby="business-dialog-title"
+      onClose={onClose}
+      onClick={(event) => {
+        if (event.target === dialog.current) dialog.current?.close();
+      }}
+    >
+      <div className="business-dialog-head">
+        <div className="business-card-title">
+          <h2 id="business-dialog-title" dir={textDir(locale)}>
+            {item.name || text.unnamed}
+          </h2>
+        </div>
+        <div className="toolbar">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => dialog.current?.close()}
+          >
+            {text.close}
+          </button>
+        </div>
+      </div>
+      {detail.kind === 'loading' && <p role="status">{text.detailLoading}</p>}
+      {detail.kind === 'failed' && (
+        <>
+          <p className="notice error" role="alert">
+            {text.detailFailed}
+          </p>
+          <ListSummary locale={locale} item={item} />
+        </>
+      )}
+      {detail.kind === 'ready' && (
+        <>
+          <nav className="section-nav biz-tabs" aria-label={panel.panel.views}>
+            <ul>
+              {DIALOG_VIEWS.map((name) => (
+                <li key={name}>
+                  <button
+                    type="button"
+                    aria-current={view === name ? 'page' : undefined}
+                    onClick={() => setView(name)}
+                  >
+                    {panel.panel.viewNames[name]}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          {view === 'profile' && <ProfileView locale={locale} content={detail.content} />}
+          {view === 'knowledge' && (
+            <KnowledgeView locale={locale} content={detail.content} now={now} />
+          )}
+          {view === 'sources' && <SourcesView locale={locale} content={detail.content} />}
+          {view === 'quality' && <QualityView locale={locale} content={detail.content} />}
+        </>
+      )}
+    </dialog>
+  );
+}
+
+/** What the list itself knows about a business, in three groups (used if Contenter is unreadable). */
+function ListSummary({ locale, item }: { locale: Locale; item: ContenterBusinessItem }) {
+  const text = businessesMessages(locale);
   const percent =
     item.totalSections > 0 ? Math.round((item.filledSections / item.totalSections) * 100) : 0;
   const isLink = /^https?:\/\//iu.test(item.website);
   const groups: { title: string; rows: [string, ReactNode][] }[] = [
-    {
-      title: text.groupIntro,
-      rows: [
-        [text.name, item.name || text.unnamed],
-        [text.tagline, item.tagline],
-      ],
-    },
     {
       title: text.groupProfile,
       rows: [
@@ -295,21 +404,7 @@ function BusinessDialog({
     },
   ];
   return (
-    <dialog
-      ref={dialog}
-      className="business-dialog"
-      aria-labelledby="business-dialog-title"
-      onClose={onClose}
-      onClick={(event) => {
-        if (event.target === dialog.current) dialog.current?.close();
-      }}
-    >
-      <div className="business-dialog-head">
-        <h2 id="business-dialog-title">{item.name || text.unnamed}</h2>
-        <button type="button" className="secondary-button" onClick={() => dialog.current?.close()}>
-          {text.close}
-        </button>
-      </div>
+    <>
       {groups.map((group) => (
         <section key={group.title} className="business-dialog-group">
           <h3>{group.title}</h3>
@@ -323,6 +418,6 @@ function BusinessDialog({
           </dl>
         </section>
       ))}
-    </dialog>
+    </>
   );
 }

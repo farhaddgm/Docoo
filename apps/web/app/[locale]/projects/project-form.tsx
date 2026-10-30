@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 
 import type { Locale } from '../../i18n';
 import { projectMessages } from './messages';
+import { ReasonBar } from '../reason-bar';
 import {
   BasicsFields,
   SharedKnowledgeSection,
@@ -114,31 +115,37 @@ export function ProjectForm({
         onChange={setValues}
       />
 
-      {mode === 'edit' && (
+      {mode === 'edit' ? (
         <section className="card filter-form">
-          <div className="filter-grid">
-            <label htmlFor="project-reason">{text.reason}</label>
-            <input
-              id="project-reason"
-              value={reason}
-              maxLength={1000}
-              onChange={(event) => setReason(event.target.value)}
-              autoComplete="off"
-            />
-          </div>
+          <ReasonBar
+            locale={locale}
+            id="project-reason"
+            label={text.reason}
+            value={reason}
+            onChange={setReason}
+          >
+            <button className="primary-button" type="submit" disabled={busy}>
+              {text.saveChanges}
+            </button>
+            {onCancel && (
+              <button className="secondary-button" type="button" disabled={busy} onClick={onCancel}>
+                {text.cancel}
+              </button>
+            )}
+          </ReasonBar>
         </section>
-      )}
-
-      <div className="toolbar">
-        <button className="primary-button" type="submit" disabled={busy}>
-          {mode === 'create' ? (busy ? text.creating : text.createSubmit) : text.saveChanges}
-        </button>
-        {onCancel && (
-          <button className="secondary-button" type="button" disabled={busy} onClick={onCancel}>
-            {text.cancel}
+      ) : (
+        <div className="toolbar">
+          <button className="primary-button" type="submit" disabled={busy}>
+            {busy ? text.creating : text.createSubmit}
           </button>
-        )}
-      </div>
+          {onCancel && (
+            <button className="secondary-button" type="button" disabled={busy} onClick={onCancel}>
+              {text.cancel}
+            </button>
+          )}
+        </div>
+      )}
     </form>
   );
 }

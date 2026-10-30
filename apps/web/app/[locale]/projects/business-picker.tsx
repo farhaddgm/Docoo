@@ -137,7 +137,7 @@ export function BusinessPicker({
       {state.kind === 'not_configured' ? (
         <p className="notice error" role="status">
           {picker.notConfigured}{' '}
-          <Link href={`/${locale}/integrations` as Route}>{picker.goToIntegrations}</Link>
+          <Link href={`/${locale}/settings` as Route}>{picker.goToIntegrations}</Link>
         </p>
       ) : state.kind === 'failed' ? (
         <div className="stack">

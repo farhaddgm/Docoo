@@ -7,6 +7,8 @@ import { FieldLabel } from '../../info-tip';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { reportMessagesFor } from '../../report-messages';
 import { explainError, Notice, useAction } from '../use-action';
+import { ReasonBar } from '../reason-bar';
+import { canCreateTopics } from '../access';
 import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
 import { topicMessages } from './messages';
@@ -58,7 +60,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
   const text = topicMessages(locale);
   const common = reportMessagesFor(locale);
   const identity = useSessionIdentity();
-  const canCreate = identity?.user.role !== 'viewer';
+  const canCreate = canCreateTopics(identity);
   const isAdmin = identity?.user.role === 'super_admin';
   const base = `/workspaces/${workspaceId}/topics`;
   const [view, setView] = useState<TopicStatus>('active');
@@ -99,7 +101,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
     if (editing) editHeading.current?.focus();
   }, [editing?.id]);
 
-  const [form, setForm] = useState({ code: '', title: '', description: '', language: locale });
+  const [form, setForm] = useState({ code: '', title: '', description: '' });
 
   function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -108,9 +110,10 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
         code: form.code.trim(),
         title: form.title.trim(),
         description: form.description.trim(),
-        language: form.language,
+        // The topic has no language of its own to choose; it starts from the interface language.
+        language: locale,
       });
-      setForm({ code: '', title: '', description: '', language: locale });
+      setForm({ code: '', title: '', description: '' });
       if (view === 'active') await load('active');
       else setView('active');
     }, text.created);
@@ -207,7 +210,6 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                     <tr>
                       <th scope="col">{text.code}</th>
                       <th scope="col">{text.topicTitle}</th>
-                      <th scope="col">{text.language}</th>
                       <th scope="col">{text.version}</th>
                       <th scope="col">{view === 'deleted' ? text.purgeAfter : text.updated}</th>
                       <th scope="col">
@@ -222,7 +224,6 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                           {topic.code}
                         </th>
                         <td dir={textDir(locale)}>{topic.title}</td>
-                        <td>{text.languages[topic.language]}</td>
                         <td>{formatNumber(locale, topic.version)}</td>
                         <td>
                           {formatDateTime(
@@ -330,17 +331,13 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
               ))}
             </ul>
           )}
-          <div className="filter-grid">
-            <label htmlFor="confirm-reason">{text.reason}</label>
-            <input
-              id="confirm-reason"
-              value={confirming.reason}
-              maxLength={1000}
-              onChange={(event) => setConfirming({ ...confirming, reason: event.target.value })}
-              autoComplete="off"
-            />
-          </div>
-          <div className="toolbar">
+          <ReasonBar
+            locale={locale}
+            id="confirm-reason"
+            label={text.reason}
+            value={confirming.reason}
+            onChange={(reason) => setConfirming({ ...confirming, reason })}
+          >
             <button
               className="primary-button"
               type="button"
@@ -357,7 +354,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
             >
               {text.cancel}
             </button>
-          </div>
+          </ReasonBar>
         </section>
       )}
 
@@ -426,15 +423,6 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
               onChange={(event) => setForm({ ...form, description: event.target.value })}
               maxLength={10000}
             />
-            <label htmlFor="topic-language">{text.language}</label>
-            <select
-              id="topic-language"
-              value={form.language}
-              onChange={(event) => setForm({ ...form, language: event.target.value as Locale })}
-            >
-              <option value="fa">{text.languages.fa}</option>
-              <option value="en">{text.languages.en}</option>
-            </select>
           </div>
           <div className="toolbar">
             <button className="primary-button" type="submit" disabled={busy}>
@@ -462,7 +450,7 @@ function EditTopic({
   heading: RefObject<HTMLHeadingElement | null>;
   onCancel: () => void;
   onSave: (
-    changes: Partial<Pick<Topic, 'code' | 'title' | 'description' | 'language'>>,
+    changes: Partial<Pick<Topic, 'code' | 'title' | 'description'>>,
     reason: string,
   ) => Promise<boolean>;
   onUnchanged: () => void;
@@ -472,7 +460,6 @@ function EditTopic({
     code: topic.code,
     title: topic.title,
     description: topic.description,
-    language: topic.language,
   });
   const [reason, setReason] = useState('');
 
@@ -482,13 +469,11 @@ function EditTopic({
       code: fields.code.trim(),
       title: fields.title.trim(),
       description: fields.description.trim(),
-      language: fields.language,
     };
     const changes: Partial<typeof trimmed> = {};
     if (trimmed.code !== topic.code) changes.code = trimmed.code;
     if (trimmed.title !== topic.title) changes.title = trimmed.title;
     if (trimmed.description !== topic.description) changes.description = trimmed.description;
-    if (trimmed.language !== topic.language) changes.language = trimmed.language;
     if (Object.keys(changes).length === 0) {
       onUnchanged();
       return;
@@ -536,34 +521,21 @@ function EditTopic({
           onChange={(event) => setFields({ ...fields, description: event.target.value })}
           maxLength={10000}
         />
-        <label htmlFor="edit-language">{text.language}</label>
-        <select
-          id="edit-language"
-          value={fields.language}
-          onChange={(event) =>
-            setFields({ ...fields, language: event.target.value as TopicLanguage })
-          }
-        >
-          <option value="fa">{text.languages.fa}</option>
-          <option value="en">{text.languages.en}</option>
-        </select>
-        <label htmlFor="edit-reason">{text.reason}</label>
-        <input
-          id="edit-reason"
-          value={reason}
-          maxLength={1000}
-          onChange={(event) => setReason(event.target.value)}
-          autoComplete="off"
-        />
       </div>
-      <div className="toolbar">
+      <ReasonBar
+        locale={locale}
+        id="edit-reason"
+        label={text.reason}
+        value={reason}
+        onChange={setReason}
+      >
         <button className="primary-button" type="submit" disabled={busy}>
           {busy ? text.working : text.save}
         </button>
         <button className="secondary-button" type="button" disabled={busy} onClick={onCancel}>
           {text.cancel}
         </button>
-      </div>
+      </ReasonBar>
     </form>
   );
 }

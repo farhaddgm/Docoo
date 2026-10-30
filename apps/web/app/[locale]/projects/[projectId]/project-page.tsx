@@ -2,28 +2,35 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 
 import { apiGet, apiSend, ApiError } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { Notice, useAction } from '../../use-action';
 import { ProjectAccessBoundary, useReadOnlyAccess } from '../../resource-access';
+import type { PolicySection } from '@docoo/contracts';
+import { sectionOpen } from '../../access';
 import { useSessionIdentity } from '../../signed-in';
 import { WorkspacePage } from '../../workspace-page';
 import { explainProject } from '../explain';
 import { quickDraftMessages } from '../quick-draft-messages';
 import { projectMessages } from '../messages';
+import { ReasonBar } from '../../reason-bar';
 import { projectPageMessages } from './messages';
 import { healthMessages } from './health-messages';
 import { HealthBadge, HealthReasons, MilestoneCard } from './health-view';
 import { projectHealth, projectMilestone, type WorkflowFacts } from './project-health';
 import { AgentsPanel } from './agents-panel';
 import { BusinessPanel } from './business-panel';
+import { EvaluationPanel } from './evaluation-panel';
+import { StageAgentChat } from './stage-chat';
 import { DocumentsPanel } from './documents-panel';
 import { KnowledgePanel } from './knowledge-panel';
 import { OverviewPanel } from './overview-panel';
 import { ProblemPanel } from './problem-panel';
+import { RequirementsPanel } from './requirements-panel';
+import { ResearchPanel } from './research-panel';
 import type { ProjectDetail } from './project-types';
 import { SolutionsPanel } from './solutions-panel';
 import { TimelinePanel } from './timeline-panel';
@@ -33,16 +40,37 @@ import { ProjectSettingsPanel } from './settings-panel';
 const tabs = [
   'overview',
   'business',
-  'problem',
-  'workflow',
-  'solutions',
-  'documents',
   'knowledge',
   'agents',
   'settings',
+  'workflow',
+  'requirements',
   'timeline',
+  'problem',
+  'research',
+  'solutions',
+  'documents',
+  'evaluation',
 ] as const;
 type Tab = (typeof tabs)[number];
+
+/** The section of the owner's per-account settings a tab belongs to (ADR-0042). */
+const TAB_SECTION: Partial<Record<Tab, PolicySection>> = {
+  business: 'business',
+  knowledge: 'knowledge',
+  agents: 'agents',
+  workflow: 'workflow',
+  documents: 'documents',
+};
+
+/** The tab that shows the output of each workflow stage. */
+const STAGE_TAB: Record<string, Tab> = {
+  analysis: 'problem',
+  research: 'research',
+  ideation: 'solutions',
+  documentation: 'documents',
+  evaluation: 'evaluation',
+};
 
 const isTab = (value: string | null): value is Tab => tabs.some((tab) => tab === value);
 
@@ -78,7 +106,12 @@ function ProjectView({
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [load, setLoad] = useState<Load>('loading');
   const [tab, setTab] = useState<Tab>('overview');
+  const identity = useSessionIdentity();
+  // A tab the account's settings close is not offered, and a link to it falls back to the overview.
+  const open = (item: Tab) => !TAB_SECTION[item] || sectionOpen(identity, TAB_SECTION[item]);
   const [refreshKey, setRefreshKey] = useState(0);
+  // The card's edit button opens the overview's edit form.
+  const [editRequested, setEditRequested] = useState(false);
   // What the header's health and the overview's milestone are drawn from; null if unreadable.
   const [facts, setFacts] = useState<WorkflowFacts | null>(null);
 
@@ -110,7 +143,8 @@ function ProjectView({
   // The requested section survives a reload and can be linked to (`?tab=workflow`).
   useEffect(() => {
     const requested = new URLSearchParams(location.search).get('tab');
-    if (isTab(requested)) setTab(requested);
+    if (isTab(requested) && open(requested)) setTab(requested);
+    // `open` only reads the identity at the moment the link is read.
   }, []);
 
   function choose(next: Tab) {
@@ -118,6 +152,11 @@ function ProjectView({
     const url = new URL(location.href);
     url.searchParams.set('tab', next);
     history.replaceState(null, '', url);
+  }
+
+  function startEdit() {
+    setEditRequested(true);
+    choose('overview');
   }
 
   /** The journey card presses one of the lifecycle buttons, so its confirmation stays the same. */
@@ -162,6 +201,7 @@ function ProjectView({
       {locale === 'fa' ? 'شواهد و تصمیم' : 'Evidence and decisions'}
     </Link>
   );
+  const canEdit = !accessReadOnly && project.status !== 'archived' && project.status !== 'deleted';
   const health = projectHealth(project, facts);
   const milestone = projectMilestone(project.status, facts);
 
@@ -173,7 +213,6 @@ function ProjectView({
         </Link>
       </p>
 
-      {intelligenceLink}
       <section className="card" aria-labelledby="project-heading">
         <h2 id="project-heading" dir={textDir(locale)}>
           <span dir="ltr">{project.code}</span> — {project.title}
@@ -211,6 +250,22 @@ function ProjectView({
             </dd>
           </div>
           <div>
+            <dt>{text.topicsShort}</dt>
+            <dd dir={textDir(locale)}>
+              {project.topics.length > 0 ? (
+                <ul className="chip-list">
+                  {project.topics.map((topic) => (
+                    <li key={topic.topicId}>
+                      <span className="badge">{topic.title}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                text.noTopicsShort
+              )}
+            </dd>
+          </div>
+          <div>
             <dt>{text.stage}</dt>
             <dd>{text.stages[project.currentStage] ?? project.currentStage}</dd>
           </div>
@@ -233,9 +288,6 @@ function ProjectView({
             </div>
           )}
         </dl>
-        <p>
-          <strong>{text.nextAction}:</strong> {text.nextActions[project.nextAction] ?? ''}
-        </p>
         {project.pauseReason && (
           <p className="notice error" role="status">
             <strong>{text.pauseReason}:</strong>{' '}
@@ -250,11 +302,12 @@ function ProjectView({
               // The pause itself is already written out above, with its reason.
               reasons: health.reasons.filter((reason) => reason.code !== 'paused'),
             }}
-            onOpenWorkflow={() => choose('workflow')}
+            onOpenWorkflow={project.status === 'active' ? undefined : () => choose('workflow')}
           />
         )}
         {!accessReadOnly && (
           <Lifecycle
+            onEdit={canEdit ? startEdit : undefined}
             locale={locale}
             base={base}
             project={project}
@@ -266,23 +319,28 @@ function ProjectView({
         )}
       </section>
 
-      <p>
+      <p className="toolbar">
+        {intelligenceLink}
         <a href={`/${locale}/projects/${projectId}/evaluation-lab?workspaceId=${workspaceId}`}>
           {locale === 'fa' ? 'مقایسهٔ کیفیت ایجنت‌ها' : 'Compare agent quality'}
         </a>
       </p>
       <nav className="section-nav" aria-label={text.sections}>
         <ul>
-          {tabs.map((item) => (
-            <li key={item}>
-              <button
-                type="button"
-                aria-current={tab === item ? 'page' : undefined}
-                onClick={() => choose(item)}
-              >
-                {text.tabs[item]}
-              </button>
-            </li>
+          {tabs.filter(open).map((item) => (
+            <Fragment key={item}>
+              <li>
+                <button
+                  type="button"
+                  aria-current={tab === item ? 'page' : undefined}
+                  onClick={() => choose(item)}
+                >
+                  {text.tabs[item]}
+                </button>
+              </li>
+              {/* The project's own tabs end here; the stage tabs follow. */}
+              {item === 'timeline' && <li className="section-nav-divider" aria-hidden="true" />}
+            </Fragment>
           ))}
         </ul>
       </nav>
@@ -300,6 +358,8 @@ function ProjectView({
             setProject(next);
             setRefreshKey((key) => key + 1);
           }}
+          startEditing={editRequested}
+          onEditStarted={() => setEditRequested(false)}
           onOpenTab={choose}
           onCommand={runCommand}
         />
@@ -324,6 +384,15 @@ function ProjectView({
           onChanged={changed}
         />
       )}
+      {tab === 'problem' && (
+        <StageAgentChat
+          locale={locale}
+          base={base}
+          stage="analysis"
+          refreshKey={refreshKey}
+          onChanged={changed}
+        />
+      )}
       {tab === 'workflow' && (
         <WorkflowPanel
           locale={locale}
@@ -332,6 +401,26 @@ function ProjectView({
           projectStatus={project.status}
           refreshKey={refreshKey}
           onProjectRefresh={reload}
+          onOpenStage={(stage) => choose(STAGE_TAB[stage] ?? 'workflow')}
+        />
+      )}
+      {tab === 'research' && (
+        <ResearchPanel
+          locale={locale}
+          workspaceId={workspaceId}
+          projectId={projectId}
+          refreshKey={refreshKey}
+          onOpenWorkflow={() => choose('workflow')}
+          onChanged={changed}
+        />
+      )}
+      {tab === 'research' && (
+        <StageAgentChat
+          locale={locale}
+          base={base}
+          stage="research"
+          refreshKey={refreshKey}
+          onChanged={changed}
         />
       )}
       {tab === 'solutions' && (
@@ -343,12 +432,49 @@ function ProjectView({
           onChanged={changed}
         />
       )}
+      {tab === 'solutions' && (
+        <StageAgentChat
+          locale={locale}
+          base={base}
+          stage="ideation"
+          refreshKey={refreshKey}
+          onChanged={changed}
+        />
+      )}
       {tab === 'documents' && (
         <DocumentsPanel
           locale={locale}
           workspaceId={workspaceId}
           projectId={projectId}
           refreshKey={refreshKey}
+        />
+      )}
+      {tab === 'documents' && (
+        <StageAgentChat
+          locale={locale}
+          base={base}
+          stage="documentation"
+          refreshKey={refreshKey}
+          onChanged={changed}
+        />
+      )}
+      {tab === 'evaluation' && (
+        <EvaluationPanel
+          locale={locale}
+          workspaceId={workspaceId}
+          projectId={projectId}
+          refreshKey={refreshKey}
+          onOpenWorkflow={() => choose('workflow')}
+          onOpenSettings={() => choose('settings')}
+          onChanged={changed}
+        />
+      )}
+      {tab === 'requirements' && (
+        <RequirementsPanel
+          locale={locale}
+          base={base}
+          refreshKey={refreshKey}
+          onOpenStage={(stage) => choose(STAGE_TAB[stage] ?? 'workflow')}
         />
       )}
       {tab === 'knowledge' && (
@@ -405,11 +531,13 @@ function Lifecycle({
   base,
   project,
   onChanged,
+  onEdit,
 }: {
   locale: Locale;
   base: string;
   project: ProjectDetail;
   onChanged: (project: ProjectDetail) => void;
+  onEdit?: (() => void) | undefined;
 }) {
   const text = projectPageMessages(locale);
   const formText = projectMessages(locale);
@@ -454,32 +582,41 @@ function Lifecycle({
   );
   if (project.analysisProfile === 'quick' && project.status === 'completed')
     commands.unshift('analysis/continue');
-  if (commands.length === 0) return <Notice notice={notice} />;
+  if (commands.length === 0 && !onEdit) return <Notice notice={notice} />;
+
+  const editButton = onEdit ? (
+    <button type="button" data-write-action className="secondary-button" onClick={onEdit}>
+      {text.edit}
+    </button>
+  ) : null;
 
   return (
     <div className="stack">
       <Notice notice={notice} />
       <div className="toolbar" role="group" aria-label={text.lifecycle}>
+        {onEdit && !commands.includes('pause') && editButton}
         {commands.map((command) => (
-          <button
-            key={command}
-            className={
-              command === 'activate' || command === 'resume' || command === 'restore'
-                ? 'primary-button'
-                : destructive.has(command)
-                  ? 'secondary-button danger'
-                  : 'secondary-button'
-            }
-            type="button"
-            data-command={command}
-            disabled={busy}
-            aria-expanded={
-              needsConfirmation.has(command) ? pending?.command === command : undefined
-            }
-            onClick={() => choose(command)}
-          >
-            {labels[command] ?? command}
-          </button>
+          <Fragment key={command}>
+            {command === 'pause' && editButton}
+            <button
+              className={
+                command === 'activate' || command === 'resume' || command === 'restore'
+                  ? 'primary-button'
+                  : destructive.has(command)
+                    ? 'secondary-button danger'
+                    : 'secondary-button'
+              }
+              type="button"
+              data-command={command}
+              disabled={busy}
+              aria-expanded={
+                needsConfirmation.has(command) ? pending?.command === command : undefined
+              }
+              onClick={() => choose(command)}
+            >
+              {labels[command] ?? command}
+            </button>
+          </Fragment>
         ))}
       </div>
       {pending && (
@@ -503,20 +640,14 @@ function Lifecycle({
               ? quick.effect
               : (text.effects[pending.command] ?? '')}
           </p>
-          <div className="filter-grid">
-            <label htmlFor="command-reason">
-              {reasonRequired.has(pending.command) ? text.reasonRequired : text.reasonOptional}
-            </label>
-            <input
-              id="command-reason"
-              value={pending.reason}
-              maxLength={1000}
-              onChange={(event) => setPending({ ...pending, reason: event.target.value })}
-              required={reasonRequired.has(pending.command)}
-              autoComplete="off"
-            />
-          </div>
-          <div className="toolbar">
+          <ReasonBar
+            locale={locale}
+            id="command-reason"
+            label={reasonRequired.has(pending.command) ? text.reasonRequired : text.reasonOptional}
+            value={pending.reason}
+            required={reasonRequired.has(pending.command)}
+            onChange={(reason) => setPending({ ...pending, reason })}
+          >
             <button className="primary-button" type="submit" disabled={busy}>
               {busy ? text.working : text.confirm}
             </button>
@@ -529,7 +660,7 @@ function Lifecycle({
             >
               {text.cancel}
             </button>
-          </div>
+          </ReasonBar>
         </form>
       )}
     </div>

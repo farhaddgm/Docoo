@@ -25,6 +25,11 @@ export interface InvocationScope {
   readonly workspaceId: string;
   /** Opt-in user context for evaluations; old workflow calls retain their service context. */
   readonly actorId?: string;
+  /**
+   * Whose account the call is counted for (ADR-0042), without any access check. Interactive calls
+   * name the person who asked; a workflow's calls leave it empty and count for the run's starter.
+   */
+  readonly onBehalfOf?: string;
   readonly correlationId?: string;
   readonly expectedProvider?: ProviderKind;
   readonly projectId: string | null;
@@ -367,8 +372,8 @@ export class ProviderRuntime {
                                       purpose, status, input_tokens, output_tokens, reasoning_tokens, cached_input_tokens,
                                       latency_ms, finish_reason, raw_finish_reason, cost_usd, price_id, provider_request_id,
                                       error_code, retry_no, agent_definition_version_id, prompt_sha256, writing_id, error_detail,
-                                      business_snapshot_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
+                                      business_snapshot_id, actor_id)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
        returning id`,
       [
         scope.workspaceId,
@@ -397,6 +402,7 @@ export class ProviderRuntime {
         scope.writingId ?? null,
         result.errorDetail ?? null,
         scope.businessSnapshotId ?? null,
+        scope.actorId ?? scope.onBehalfOf ?? null,
       ],
     );
     return inserted.rows[0]!.id;

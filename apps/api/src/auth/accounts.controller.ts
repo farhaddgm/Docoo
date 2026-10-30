@@ -16,7 +16,7 @@ import {
 } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { accountInputSchema, accountUpdateSchema } from '@docoo/contracts';
+import { accountInputSchema, accountPolicySchema, accountUpdateSchema } from '@docoo/contracts';
 import { AccountsService } from './accounts.service.js';
 import type { AuthRequestMetadata } from './auth.service.js';
 export function requestMetadata(request: FastifyRequest): AuthRequestMetadata {
@@ -194,6 +194,30 @@ export class ResourceAccessController {
       parse(z.enum(['topic', 'project']), kind),
       parse(idSchema, resourceId),
       p.access,
+    );
+  }
+  @Get('policy') policy(
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+    @Param('id') id: string,
+  ) {
+    return this.accounts.policy(
+      session(request, reply),
+      requestMetadata(request),
+      parse(idSchema, id),
+    );
+  }
+  @Put('policy') setPolicy(
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    return this.accounts.setPolicy(
+      session(request, reply),
+      requestMetadata(request),
+      parse(idSchema, id),
+      parse(accountPolicySchema, body),
     );
   }
 }

@@ -14,7 +14,7 @@ import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { requireIfMatch, setVersionHeader } from '../common/concurrency.js';
 import { pageQuerySchema } from '../common/pagination.js';
 import { badRequest } from '../common/problems.js';
@@ -367,6 +367,7 @@ export class KnowledgeController {
   @Post('knowledge/:knowledgeId/submit-audit')
   @HttpCode(200)
   @ApiOperation({ summary: 'Run Brain audit (rubric v1) on the current version' })
+  @UsesAi()
   @RequireWorkspacePermission('knowledge.audit')
   async submitAudit(@Req() request: FastifyRequest, @Param('knowledgeId') raw: string) {
     return this.knowledge.submitAudit(workspaceContext(request), id(raw));

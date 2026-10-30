@@ -7,6 +7,7 @@ import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
+import { ReasonBar } from '../../reason-bar';
 import { DefinitionCard } from './problem-definition';
 import { QuestionQuality } from './question-quality';
 import { quickDraftMessages } from '../quick-draft-messages';
@@ -336,7 +337,7 @@ export function ProblemPanel({
                 min: formatNumber(locale, progress.minimum),
               })}
         </p>
-        <dl className="counts" aria-labelledby="progress-heading">
+        <dl className="counts counts-compact" aria-labelledby="progress-heading">
           {(['asked', 'answered', 'unanswered', 'irrelevant', 'later', 'open'] as const).map(
             (key) => (
               <div key={key}>
@@ -580,17 +581,15 @@ export function ProblemPanel({
               aria-busy={busy}
               onSubmit={requestFinish}
             >
-              <label htmlFor="finish-reason">{text.finishReason}</label>
-              <input
+              <ReasonBar
+                locale={locale}
                 id="finish-reason"
+                label={text.finishReason}
                 value={finishing}
                 minLength={3}
-                maxLength={1000}
                 required
-                autoComplete="off"
-                onChange={(event) => setFinishing(event.target.value)}
-              />
-              <div className="toolbar">
+                onChange={setFinishing}
+              >
                 <button className="primary-button" type="submit" disabled={busy}>
                   {busy ? text.working : text.finishConfirm}
                 </button>
@@ -602,7 +601,7 @@ export function ProblemPanel({
                 >
                   {text.cancel}
                 </button>
-              </div>
+              </ReasonBar>
             </form>
           )}
         </section>

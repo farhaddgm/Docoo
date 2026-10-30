@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import type { PolicySection } from '@docoo/contracts';
 
 import {
   direction,
@@ -18,6 +19,7 @@ import { apiGet } from '../api-client';
 import { SectionTitle } from '../info-tip';
 import { SmartRoot, SmartToggle } from '../smart/smart-root';
 import { NotificationBell } from './notification-bell';
+import { sectionOpen } from './access';
 import type { SessionIdentity } from './signed-in';
 import { sidebarStorageKey } from '../theme';
 import { ThemePicker } from '../theme-toggle';
@@ -32,7 +34,6 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   agents: '/agents',
   brain: '/brain',
   providers: '/providers',
-  integrations: '/integrations',
   costs: '/costs',
   smart: '/smart/errors',
   settings: '/settings',
@@ -47,13 +48,16 @@ const memberNavigation: readonly NavigationKey[] = [
   'businesses',
 ];
 
+/** The section of the owner's per-account settings a page belongs to (ADR-0042). */
+const navigationSection: Partial<Record<NavigationKey, PolicySection>> = {
+  knowledge: 'knowledge',
+  businesses: 'business',
+  topics: 'topics',
+  agents: 'agents',
+};
+
 /** Pages only the owner may open: they hold the platform's keys, settings and agents. */
-const ownerNavigation: readonly NavigationKey[] = [
-  'providers',
-  'integrations',
-  'settings',
-  'agents',
-];
+const ownerNavigation: readonly NavigationKey[] = ['providers', 'settings', 'agents'];
 
 type IconName =
   NavigationKey | 'users' | 'mail' | 'logout' | 'menu' | 'close' | 'workspace' | 'owner';
@@ -63,6 +67,7 @@ const icons: Record<IconName, string> = {
   dashboard: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
   projects: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   topics: 'M4 5h16M4 12h16M4 19h10',
+  patterns: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
   knowledge: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 0 2 2h13',
   agents:
     'M12 3v3M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM9 13v1M15 13v1',
@@ -70,8 +75,6 @@ const icons: Record<IconName, string> = {
   brain:
     'M12 3a4 4 0 0 0-4 4v1a3 3 0 0 0-2 5 3 3 0 0 0 2 5 4 4 0 0 0 8 0 3 3 0 0 0 2-5 3 3 0 0 0-2-5V7a4 4 0 0 0-4-4zM12 3v18',
   providers: 'M12 2l9 5v10l-9 5-9-5V7zM12 12l9-5M12 12v10M12 12L3 7',
-  integrations:
-    'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   costs:
     'M12 2v20M17 6.5C16 5 14.2 4.5 12 4.5c-2.8 0-4.5 1.3-4.5 3.2 0 4.6 9 2.2 9 7 0 2-1.8 3.3-4.5 3.3-2.3 0-4.2-.7-5.2-2.3',
   smart:
@@ -317,19 +320,13 @@ export function AppShell({
     </div>
   );
 
-  const pageHeadFor = (ownerPage: boolean) => (
+  const pageHead = (
     <div className="page-head">
       <SectionTitle as="h1" id="page-title" focusable help={subtitle}>
         {title}
       </SectionTitle>
-      {ownerPage && (
-        <span className="owner-crown" role="img" aria-label={content.ownerOnlyBadge}>
-          <Icon name="owner" className="" />
-        </span>
-      )}
     </div>
   );
-  const pageHead = pageHeadFor(false);
 
   const skipLink = (
     <a className="skip-link" href="#main-content">
@@ -359,7 +356,9 @@ export function AppShell({
 
   const isOwner = !identity || identity.user.isOwner === true;
   const visible = (key: NavigationKey) =>
-    (isAdmin || memberNavigation.includes(key)) && (isOwner || !ownerNavigation.includes(key));
+    (isAdmin || memberNavigation.includes(key)) &&
+    (isOwner || !ownerNavigation.includes(key)) &&
+    (!navigationSection[key] || sectionOpen(identity, navigationSection[key]));
   // A page of an owner-only section (agents/analyst below agents, but not the users page).
   const ownerSection = ownerNavigation.some((key) => {
     const route = implemented[key];
@@ -395,7 +394,12 @@ export function AppShell({
                   <p className="nav-group-label">{content.navGroups[group.key]}</p>
                   <ul className="nav-list">
                     {keys.map((key) => {
-                      const route = implemented[key];
+                      const route =
+                        key === 'patterns'
+                          ? workspaceId
+                            ? `/workspaces/${workspaceId}/problem-patterns`
+                            : undefined
+                          : implemented[key];
                       if (route === undefined) {
                         return (
                           <li key={key}>
@@ -523,9 +527,16 @@ export function AppShell({
             >
               <Icon name="menu" className="" />
             </button>
-            <span className="topbar-title" aria-hidden="true">
-              {title}
-            </span>
+            <div className="topbar-title">
+              <SectionTitle as="h1" id="page-title" focusable help={subtitle}>
+                {title}
+              </SectionTitle>
+              {ownerSection && isOwner && (
+                <span className="owner-crown" role="img" aria-label={content.ownerOnlyBadge}>
+                  <Icon name="owner" className="" />
+                </span>
+              )}
+            </div>
             {projectName && (
               <div className="topbar-context">
                 <span className="workspace-chip" title={projectName}>
@@ -537,7 +548,6 @@ export function AppShell({
             {topbarActions}
           </header>
           <div className="content">
-            {pageHeadFor(ownerSection && isOwner)}
             <main id="main-content" tabIndex={-1}>
               {ownerSection && !isOwner ? (
                 <p className="notice error" role="alert">
