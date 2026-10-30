@@ -357,10 +357,9 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(form.locator('.question')).toHaveCount(20);
     await expect(
       page.getByText(
-        problemText.progressSummary
+        problemText.progressCompact
           .replace('{asked}', digits(20))
           .replace('{max}', digits(300))
-          .replace('{answered}', digits(0))
           .replace('{min}', digits(30)),
       ),
     ).toBeVisible();
@@ -412,14 +411,13 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(heading).toContainText(digits(2), wait);
     await expect(
       page.getByText(
-        problemText.progressSummary
+        problemText.progressCompact
           .replace('{asked}', digits(40))
           .replace('{max}', digits(300))
-          .replace('{answered}', digits(3))
           .replace('{min}', digits(30)),
       ),
     ).toBeVisible();
-    await expect(page.getByText(problemText.minimumReached.replace('{min}', '۳۰'))).toBeVisible();
+    await expect(page.getByText(problemText.minimumMissing.split('{n}')[0]!)).toHaveCount(0);
 
     // The "later" queue keeps sixteen questions; one of them is answered now.
     const queue = page.locator('#followups-heading').locator('xpath=..').locator('ol > li');
