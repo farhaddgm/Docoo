@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Fixed
+
+- Make the installer's `update` independent of `/tmp`. `docker compose` writes its build metadata into `$TMPDIR`, and on a server whose `/tmp` is a small tmpfs that is full, the update stopped with "no space left on device" although the main disk had room (and rolled back). The installer now works from `/var/tmp/docoo-install` (or `DOCOO_TMPDIR`); if that cannot be created, `TMPDIR` stays as it was.
+
 ## [0.46.1] — 2026-10-29
 
 ### Fixed
