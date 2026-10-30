@@ -8,8 +8,9 @@ import { apiGet } from '../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
-import { SectionTitle } from '../../info-tip';
+import { InfoTip, SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
 
 interface Use {
@@ -48,6 +49,7 @@ export function UsesPanel({
   refreshKey: string;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const [uses, setUses] = useState<Uses | null>(null);
   const [failed, setFailed] = useState(false);
@@ -97,12 +99,30 @@ export function UsesPanel({
                 <table>
                   <thead>
                     <tr>
-                      <th scope="col">{text.usesProject}</th>
-                      <th scope="col">{text.usesStage}</th>
-                      <th scope="col">{text.usesQuery}</th>
-                      <th scope="col">{text.usesVersion}</th>
-                      <th scope="col">{text.usesWhen}</th>
-                      <th scope="col">{text.usesResult}</th>
+                      <th scope="col">
+                        {text.usesProject}
+                        <InfoTip text={help.detail.uses.project} />
+                      </th>
+                      <th scope="col">
+                        {text.usesStage}
+                        <InfoTip text={help.detail.uses.stage} />
+                      </th>
+                      <th scope="col">
+                        {text.usesQuery}
+                        <InfoTip text={help.detail.uses.query} />
+                      </th>
+                      <th scope="col">
+                        {text.usesVersion}
+                        <InfoTip text={help.detail.uses.version} />
+                      </th>
+                      <th scope="col">
+                        {text.usesWhen}
+                        <InfoTip text={help.detail.uses.when} />
+                      </th>
+                      <th scope="col">
+                        {text.usesResult}
+                        <InfoTip text={help.detail.uses.result} />
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

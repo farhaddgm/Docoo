@@ -9,9 +9,10 @@ import { formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, useAction } from '../use-action';
 import { isoToLocal, localToIso } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
 import type { BrainDecision, KnowledgeDetail, SourceStatus } from './knowledge-types';
-import { FieldLabel, SectionTitle } from '../../info-tip';
+import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
 
 /** Statuses the API lets an audit start from (KNO-003). */
 const auditable = new Set(['draft', 'pending', 'in_review', 'needs_revision', 'rejected']);
@@ -45,6 +46,7 @@ interface SectionProps {
 /** Sending the item to the Brain, and renewing it when its source file changed. */
 export function AuditSection({ locale, workspaceId, knowledge, onChanged, action }: SectionProps) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const base = `/workspaces/${workspaceId}/knowledge/${knowledge.id}`;
   const version = knowledge.currentVersion;
@@ -73,7 +75,9 @@ export function AuditSection({ locale, workspaceId, knowledge, onChanged, action
   if (!version) return null;
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.actionsHeading}</h2>
+      <SectionTitle id={`${id}-heading`} help={help.detail.actions}>
+        {text.actionsHeading}
+      </SectionTitle>
       {version && !stale && (
         <div className="stack">
           {canAudit ? (
@@ -89,7 +93,8 @@ export function AuditSection({ locale, workspaceId, knowledge, onChanged, action
                   {version.status === 'draft' || version.status === 'pending'
                     ? text.submitAudit
                     : text.reaudit}
-                </button>
+                </button>{' '}
+                <InfoTip text={help.detail.audit} />
               </p>
             </>
           ) : (
@@ -117,6 +122,7 @@ export function AuditSection({ locale, workspaceId, knowledge, onChanged, action
 /** Writing a new version of the text, and deleting the item. */
 export function EditSection({ locale, workspaceId, knowledge, onChanged, action }: SectionProps) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const router = useRouter();
   const base = `/workspaces/${workspaceId}/knowledge/${knowledge.id}`;
@@ -188,13 +194,17 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.editHeading}</h2>
+      <SectionTitle id={`${id}-heading`} help={help.detail.edit}>
+        {text.editHeading}
+      </SectionTitle>
       {version && (
         <form className="field-stack" onSubmit={saveVersion}>
           <SectionTitle as="h3" help={text.newVersionHelp}>
             {text.newVersionHeading}
           </SectionTitle>
-          <label htmlFor={`${id}-content`}>{text.contentLabel}</label>
+          <FieldLabel htmlFor={`${id}-content`} help={help.detail.content}>
+            {text.contentLabel}
+          </FieldLabel>
           <textarea
             id={`${id}-content`}
             dir={textDir(locale)}
@@ -203,7 +213,9 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
             maxLength={2_000_000}
             onChange={(event) => setContent(event.target.value)}
           />
-          <label htmlFor={`${id}-from`}>{text.validFromLabel}</label>
+          <FieldLabel htmlFor={`${id}-from`} help={help.detail.validFrom}>
+            {text.validFromLabel}
+          </FieldLabel>
           <input
             id={`${id}-from`}
             type="datetime-local"
@@ -249,7 +261,9 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
       )}
 
       <div className="stack">
-        <h3>{text.deleteHeading}</h3>
+        <SectionTitle as="h3" help={help.detail.deleteSection}>
+          {text.deleteHeading}
+        </SectionTitle>
         {!deleting ? (
           <p>
             <button
@@ -267,7 +281,9 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
               {text.deleteHeading}
             </h4>
             <p>{text.deleteHelp}</p>
-            <label htmlFor={`${id}-delete-reason`}>{text.deleteReason}</label>
+            <FieldLabel htmlFor={`${id}-delete-reason`} help={help.detail.deleteReason}>
+              {text.deleteReason}
+            </FieldLabel>
             <input
               id={`${id}-delete-reason`}
               dir={textDir(locale)}
@@ -316,6 +332,7 @@ function RenewFromSource({
   setNotice: (notice: { ok: boolean; text: string } | null) => void;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const sourceId = knowledge.currentVersion?.provenance['sourceId'];
   const workspaceBase = `/workspaces/${workspaceId}`;
@@ -394,9 +411,12 @@ function RenewFromSource({
                 onChange={(event) => setAcceptPartial(event.target.checked)}
               />{' '}
               {text.renewAcceptPartial}
+              <InfoTip text={help.detail.renewAcceptPartial} />
             </label>
           )}
-          <label htmlFor={`${id}-reason`}>{text.reasonLabel}</label>
+          <FieldLabel htmlFor={`${id}-reason`} help={help.detail.renewReason}>
+            {text.reasonLabel}
+          </FieldLabel>
           <input
             id={`${id}-reason`}
             dir={textDir(locale)}

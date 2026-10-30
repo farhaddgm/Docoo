@@ -1731,6 +1731,12 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   list-style: none;
 }
 
+.section-nav li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .section-nav button {
   min-height: 2.25rem;
   padding: 0 var(--space-4);

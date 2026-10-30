@@ -8,6 +8,7 @@ import { apiGet, query } from '../../api-client';
 import { formatDate, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge, decisionTone, ScopeList, statusTone } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
 import {
   claimKinds,
@@ -16,7 +17,7 @@ import {
   type ClaimRow,
   type KnowledgeRow,
 } from './knowledge-types';
-import { SectionTitle } from '../../info-tip';
+import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
 
 type View = 'documents' | 'claims';
@@ -44,6 +45,7 @@ export function QueuePanel({
 }) {
   const scoped = scopeType !== undefined && scopeId !== undefined;
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const base = `/workspaces/${workspaceId}`;
   const [view, setView] = useState<View>('documents');
@@ -151,6 +153,7 @@ export function QueuePanel({
               {item === 'documents' ? text.documentView : text.claimView}
             </button>
           ))}
+          <InfoTip text={view === 'documents' ? help.view.documents : help.view.claims} />
         </div>
       )}
 
@@ -160,7 +163,9 @@ export function QueuePanel({
         onSubmit={(e) => e.preventDefault()}
       >
         <div className="field">
-          <label htmlFor={`${id}-status`}>{text.status}</label>
+          <FieldLabel htmlFor={`${id}-status`} help={help.filters.status}>
+            {text.status}
+          </FieldLabel>
           <select id={`${id}-status`} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">{text.allStatuses}</option>
             {knowledgeStatuses.map((item) => (
@@ -173,7 +178,9 @@ export function QueuePanel({
         {view === 'documents' ? (
           <>
             <div className="field">
-              <label htmlFor={`${id}-source`}>{text.sourceTypeFilter}</label>
+              <FieldLabel htmlFor={`${id}-source`} help={help.filters.sourceType}>
+                {text.sourceTypeFilter}
+              </FieldLabel>
               <select
                 id={`${id}-source`}
                 value={sourceType}
@@ -188,7 +195,9 @@ export function QueuePanel({
               </select>
             </div>
             <div className="field">
-              <label htmlFor={`${id}-search`}>{text.search}</label>
+              <FieldLabel htmlFor={`${id}-search`} help={help.filters.search}>
+                {text.search}
+              </FieldLabel>
               <input
                 id={`${id}-search`}
                 type="search"
@@ -202,7 +211,9 @@ export function QueuePanel({
         ) : (
           <>
             <div className="field">
-              <label htmlFor={`${id}-support`}>{text.supportFilter}</label>
+              <FieldLabel htmlFor={`${id}-support`} help={help.filters.support}>
+                {text.supportFilter}
+              </FieldLabel>
               <select
                 id={`${id}-support`}
                 value={support}
@@ -217,7 +228,9 @@ export function QueuePanel({
               </select>
             </div>
             <div className="field">
-              <label htmlFor={`${id}-kind`}>{text.kindFilter}</label>
+              <FieldLabel htmlFor={`${id}-kind`} help={help.filters.kind}>
+                {text.kindFilter}
+              </FieldLabel>
               <select id={`${id}-kind`} value={kind} onChange={(e) => setKind(e.target.value)}>
                 <option value="">{text.allKinds}</option>
                 {claimKinds.map((item) => (
@@ -236,6 +249,7 @@ export function QueuePanel({
                 onChange={(e) => setConflictedOnly(e.target.checked)}
               />
               {text.conflictedOnly}
+              <InfoTip text={help.filters.conflicted} />
             </label>
           </>
         )}
@@ -265,12 +279,30 @@ export function QueuePanel({
                 <caption className="visually-hidden">{text.queueCaption}</caption>
                 <thead>
                   <tr>
-                    <th scope="col">{text.columns.title}</th>
-                    {!scoped && <th scope="col">{text.columns.scope}</th>}
-                    <th scope="col">{text.columns.status}</th>
-                    <th scope="col">{text.columns.score}</th>
-                    <th scope="col">{text.columns.claims}</th>
-                    <th scope="col">{text.columns.validUntil}</th>
+                    <th scope="col">
+                      {text.columns.title}
+                      <InfoTip text={help.columns.title} />
+                    </th>
+                    {!scoped && <th scope="col">
+                      {text.columns.scope}
+                      <InfoTip text={help.columns.scope} />
+                    </th>}
+                    <th scope="col">
+                      {text.columns.status}
+                      <InfoTip text={help.columns.status} />
+                    </th>
+                    <th scope="col">
+                      {text.columns.score}
+                      <InfoTip text={help.columns.score} />
+                    </th>
+                    <th scope="col">
+                      {text.columns.claims}
+                      <InfoTip text={help.columns.claims} />
+                    </th>
+                    <th scope="col">
+                      {text.columns.validUntil}
+                      <InfoTip text={help.columns.validUntil} />
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -345,13 +377,34 @@ export function QueuePanel({
                 <caption className="visually-hidden">{text.claimCaption}</caption>
                 <thead>
                   <tr>
-                    <th scope="col">{text.columns.claim}</th>
-                    <th scope="col">{text.columns.kind}</th>
-                    <th scope="col">{text.columns.document}</th>
-                    <th scope="col">{text.columns.support}</th>
-                    <th scope="col">{text.columns.citations}</th>
-                    <th scope="col">{text.columns.conflicts}</th>
-                    <th scope="col">{text.columns.decision}</th>
+                    <th scope="col">
+                      {text.columns.claim}
+                      <InfoTip text={help.columns.claim} />
+                    </th>
+                    <th scope="col">
+                      {text.columns.kind}
+                      <InfoTip text={help.columns.kind} />
+                    </th>
+                    <th scope="col">
+                      {text.columns.document}
+                      <InfoTip text={help.columns.document} />
+                    </th>
+                    <th scope="col">
+                      {text.columns.support}
+                      <InfoTip text={help.columns.support} />
+                    </th>
+                    <th scope="col">
+                      {text.columns.citations}
+                      <InfoTip text={help.columns.citations} />
+                    </th>
+                    <th scope="col">
+                      {text.columns.conflicts}
+                      <InfoTip text={help.columns.conflicts} />
+                    </th>
+                    <th scope="col">
+                      {text.columns.decision}
+                      <InfoTip text={help.columns.decision} />
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

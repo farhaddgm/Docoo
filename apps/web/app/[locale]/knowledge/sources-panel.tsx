@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
 import { apiGet, apiSend, query } from '../../api-client';
-import { formatDateTime, type Locale, textDir } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import {
@@ -22,6 +22,7 @@ import {
   type ScopeOptions,
   type ScopeRow,
 } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages, type KnowledgeText } from './knowledge-messages';
 import {
   confidentialities,
@@ -33,7 +34,7 @@ import {
   type SourceRow,
 } from './knowledge-types';
 import { ACCEPTED_EXTENSIONS, uploadSourceFile } from './source-upload';
-import { FieldLabel, SectionTitle } from '../../info-tip';
+import { FieldLabel, GroupLabel, InfoTip, SectionTitle } from '../../info-tip';
 
 type Mode = 'file' | 'text' | 'url';
 
@@ -69,6 +70,7 @@ export function SourcesPanel({
   onChanged?: () => void;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const base = `/workspaces/${workspaceId}`;
   const scoped = scopeType !== undefined && scopeId !== undefined;
@@ -232,7 +234,8 @@ export function SourcesPanel({
         <p>
           <button type="button" className="primary-button" onClick={() => setAdding(true)}>
             {text.addSource}
-          </button>
+          </button>{' '}
+          <InfoTip text={help.sources.addSource} />
         </p>
       ) : (
         <AddSource
@@ -251,7 +254,9 @@ export function SourcesPanel({
       )}
 
       <form className="filter-grid" onSubmit={(event) => event.preventDefault()}>
-        <label htmlFor={`${id}-search`}>{text.sourceSearch}</label>
+        <FieldLabel htmlFor={`${id}-search`} help={help.sources.search}>
+          {text.sourceSearch}
+        </FieldLabel>
         <input
           id={`${id}-search`}
           type="search"
@@ -260,7 +265,9 @@ export function SourcesPanel({
           maxLength={100}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <label htmlFor={`${id}-status`}>{text.sourceStatusFilter}</label>
+        <FieldLabel htmlFor={`${id}-status`} help={help.sources.status}>
+          {text.sourceStatusFilter}
+        </FieldLabel>
         <select id={`${id}-status`} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">{text.allSourceStatuses}</option>
           {sourceStatuses.map((item) => (
@@ -349,6 +356,7 @@ export function SourcesPanel({
 
                 <div>
                   <strong>{text.sourceColumns.knowledge}</strong>
+                  <InfoTip text={help.sources.derived} />
                   {row.knowledge.length === 0 ? (
                     <p className="muted">{text.noDerived}</p>
                   ) : (
@@ -380,6 +388,7 @@ export function SourcesPanel({
                       {text.makeKnowledge}
                     </button>
                   )}
+                  {canBuild && <InfoTip text={help.sources.makeKnowledge} />}
                   {canRetry && (
                     <button
                       type="button"
@@ -391,6 +400,7 @@ export function SourcesPanel({
                       {text.retry}
                     </button>
                   )}
+                  {canRetry && <InfoTip text={help.sources.retry} />}
                   {!readOnly && (
                     <button
                       type="button"
@@ -402,6 +412,7 @@ export function SourcesPanel({
                       {text.deleteSource}
                     </button>
                   )}
+                  {!readOnly && <InfoTip text={help.sources.delete} />}
                   {canVersion && (
                     <button
                       type="button"
@@ -413,6 +424,7 @@ export function SourcesPanel({
                       {text.newSourceVersion}
                     </button>
                   )}
+                  {canVersion && <InfoTip text={help.sources.newVersion} />}
                 </p>
 
                 {deleting === row.id && (
@@ -492,6 +504,7 @@ function AddSource({
   onFailed: () => Promise<void>;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const base = `/workspaces/${workspaceId}`;
   const explain = useCallback(
@@ -562,7 +575,9 @@ function AddSource({
       <h3 id={`${id}-heading`}>{text.addSource}</h3>
       <Notice notice={notice} />
       <fieldset className="mode-choice">
-        <legend>{text.addMode}</legend>
+        <legend>
+          <GroupLabel help={help.add.mode}>{text.addMode}</GroupLabel>
+        </legend>
         {(['file', 'text', 'url'] as const).map((item) => (
           <label key={item} className="mode">
             <input
@@ -577,7 +592,9 @@ function AddSource({
         ))}
       </fieldset>
 
-      <label htmlFor={`${id}-title`}>{text.sourceTitle}</label>
+      <FieldLabel htmlFor={`${id}-title`} help={help.add.title}>
+        {text.sourceTitle}
+      </FieldLabel>
       <input
         id={`${id}-title`}
         dir={textDir(locale)}
@@ -650,7 +667,9 @@ function AddSource({
       )}
       {mode !== 'file' && (
         <>
-          <label htmlFor={`${id}-language`}>{text.languageLabel}</label>
+          <FieldLabel htmlFor={`${id}-language`} help={help.add.language}>
+            {text.languageLabel}
+          </FieldLabel>
           <select
             id={`${id}-language`}
             value={language}
@@ -679,8 +698,14 @@ function AddSource({
   );
 }
 
-/** Builds a knowledge draft from an extracted source (ING-008). */
-function CreateKnowledgeForm({
+const CREATE_STEPS = ['basics', 'scope', 'provenance', 'review'] as const;
+type CreateStep = (typeof CREATE_STEPS)[number];
+
+/**
+ * Builds a knowledge draft from an extracted source (ING-008), one short step at a time: the
+ * basics, where it applies, where it came from, and a last look before the draft is made.
+ */
+export function CreateKnowledgeForm({
   locale,
   workspaceId,
   source,
@@ -696,6 +721,7 @@ function CreateKnowledgeForm({
   onDone: (knowledgeId: string) => Promise<void>;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const base = `/workspaces/${workspaceId}`;
   const explain = useCallback(
@@ -704,6 +730,8 @@ function CreateKnowledgeForm({
   );
   const { busy, notice, run } = useAction(explain);
   const partial = source.currentVersion?.status === 'partial';
+  const [step, setStep] = useState(0);
+  const [reached, setReached] = useState(0);
   const [title, setTitle] = useState(source.title);
   const [confidentiality, setConfidentiality] = useState<Confidentiality>('internal');
   const [rows, setRows] = useState<ScopeRow[]>([
@@ -711,15 +739,56 @@ function CreateKnowledgeForm({
   ]);
   const [declaration, setDeclaration] = useState('');
   const [acceptPartial, setAcceptPartial] = useState(false);
-  const ready =
-    title.trim().length > 0 &&
-    declaration.trim().length >= 3 &&
-    rows.length > 0 &&
-    (!partial || acceptPartial);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const moved = useRef(false);
+
+  // What each step still lacks; an empty string means the step is complete.
+  const missing: Record<CreateStep, string> = {
+    basics: title.trim().length > 0 ? '' : text.createNeeds.basics,
+    scope: rows.length > 0 ? '' : text.createNeeds.scope,
+    provenance:
+      declaration.trim().length < 3
+        ? text.createNeeds.provenance
+        : partial && !acceptPartial
+          ? text.createNeeds.partial
+          : '',
+    review: '',
+  };
+  const complete = (index: number) => missing[CREATE_STEPS[index]!] === '';
+  const allReady = CREATE_STEPS.every((_, index) => complete(index));
+  const last = step === CREATE_STEPS.length - 1;
+  const current = CREATE_STEPS[step]!;
+
+  // Moving between steps puts the reader at the top of the new step.
+  useEffect(() => {
+    if (moved.current) heading.current?.focus();
+    moved.current = true;
+  }, [step]);
+
+  function goTo(index: number) {
+    setStep(index);
+    setReached((value) => Math.max(value, index));
+  }
+
+  function scopeName(row: ScopeRow): string {
+    const title =
+      row.type === 'topic'
+        ? options?.topics.find((topic) => topic.id === row.id)?.title
+        : row.type === 'project'
+          ? options?.projects.find((project) => project.id === row.id)?.title
+          : null;
+    return scopeText(text, { type: row.type, title: title ?? null, role: row.role || null });
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!ready || busy || !source.currentVersionId) return;
+    if (busy) return;
+    // Enter in a field moves on; only the last step makes the draft.
+    if (!last) {
+      if (complete(step)) goTo(step + 1);
+      return;
+    }
+    if (!allReady || !source.currentVersionId) return;
     let knowledgeId = '';
     const done = await run(async () => {
       const result = await apiSend<{ knowledge: { id: string } }>(
@@ -745,65 +814,197 @@ function CreateKnowledgeForm({
       <SectionTitle as="h4" id={`${id}-heading`} help={text.createHelp}>
         {text.createHeading}
       </SectionTitle>
+      <p className="muted">{text.createFlow}</p>
+      <nav aria-label={text.createStepsLabel}>
+        <ol className="stepper">
+          {CREATE_STEPS.map((name, index) => {
+            const done = index < step && complete(index);
+            return (
+              <li
+                key={name}
+                className={done ? 'step-done' : undefined}
+                aria-current={index === step ? 'step' : undefined}
+              >
+                <button
+                  type="button"
+                  className="step-button"
+                  disabled={busy || index > reached || index === step}
+                  onClick={() => goTo(index)}
+                >
+                  <span className="step-number" aria-hidden="true">
+                    {done ? '✓' : formatNumber(locale, index + 1)}
+                  </span>
+                  <span className="step-name">
+                    <span className="visually-hidden">{formatNumber(locale, index + 1)}. </span>
+                    {text.createSteps[name]}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
       <Notice notice={notice} />
-      <label htmlFor={`${id}-title`}>{text.knowledgeTitle}</label>
-      <input
-        id={`${id}-title`}
-        dir={textDir(locale)}
-        value={title}
-        maxLength={300}
-        onChange={(event) => setTitle(event.target.value)}
-      />
-      <label htmlFor={`${id}-conf`}>{text.confidentialityLabel}</label>
-      <select
-        id={`${id}-conf`}
-        value={confidentiality}
-        onChange={(event) => setConfidentiality(event.target.value as Confidentiality)}
-      >
-        {confidentialities.map((item) => (
-          <option key={item} value={item}>
-            {text.confidentiality[item]}
-          </option>
-        ))}
-      </select>
-      <ScopeEditor
-        rows={rows}
-        onChange={setRows}
-        workspaceId={workspaceId}
-        options={options}
-        text={text}
-        disabled={busy}
-      />
-      <FieldLabel
-        htmlFor={`${id}-declaration`}
-        help={text.declarationHelp}
-        helpId={`${id}-declaration-help`}
-      >
-        {text.declarationLabel}
-      </FieldLabel>
-      <textarea
-        id={`${id}-declaration`}
-        dir={textDir(locale)}
-        rows={3}
-        value={declaration}
-        maxLength={2000}
-        aria-describedby={`${id}-declaration-help`}
-        onChange={(event) => setDeclaration(event.target.value)}
-      />
-      {partial && (
-        <label className="mode">
+
+      <div className="heading-with-tip">
+        <h5 ref={heading} tabIndex={-1}>
+          {fill(text.createStepOf, {
+            n: formatNumber(locale, step + 1),
+            total: formatNumber(locale, CREATE_STEPS.length),
+            name: text.createSteps[current],
+          })}
+        </h5>
+        <InfoTip text={help.create.steps[current]} />
+      </div>
+
+      {current === 'basics' && (
+        <>
+          <FieldLabel htmlFor={`${id}-title`} help={help.create.title}>
+            {text.knowledgeTitle}
+          </FieldLabel>
           <input
-            type="checkbox"
-            checked={acceptPartial}
-            onChange={(event) => setAcceptPartial(event.target.checked)}
-          />{' '}
-          {text.partialAccept}
-        </label>
+            id={`${id}-title`}
+            dir={textDir(locale)}
+            value={title}
+            maxLength={300}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+          <FieldLabel htmlFor={`${id}-conf`} help={help.create.confidentiality}>
+            {text.confidentialityLabel}
+          </FieldLabel>
+          <select
+            id={`${id}-conf`}
+            value={confidentiality}
+            onChange={(event) => setConfidentiality(event.target.value as Confidentiality)}
+          >
+            {confidentialities.map((item) => (
+              <option key={item} value={item}>
+                {text.confidentiality[item]}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
+
+      {current === 'scope' && (
+        <ScopeEditor
+          rows={rows}
+          onChange={setRows}
+          workspaceId={workspaceId}
+          options={options}
+          text={text}
+          help={{ role: help.create.role, add: help.create.addScope }}
+          disabled={busy}
+        />
+      )}
+
+      {current === 'provenance' && (
+        <>
+          <FieldLabel
+            htmlFor={`${id}-declaration`}
+            help={text.declarationHelp}
+            helpId={`${id}-declaration-help`}
+          >
+            {text.declarationLabel}
+          </FieldLabel>
+          <textarea
+            id={`${id}-declaration`}
+            dir={textDir(locale)}
+            rows={3}
+            value={declaration}
+            maxLength={2000}
+            aria-describedby={`${id}-declaration-help`}
+            onChange={(event) => setDeclaration(event.target.value)}
+          />
+          {partial && (
+            <label className="mode">
+              <input
+                type="checkbox"
+                checked={acceptPartial}
+                onChange={(event) => setAcceptPartial(event.target.checked)}
+              />{' '}
+              {text.partialAccept}
+              <InfoTip text={help.create.acceptPartial} />
+            </label>
+          )}
+        </>
+      )}
+
+      {current === 'review' && (
+        <div className="stack">
+          <p>{text.createReviewIntro}</p>
+          <dl className="facts">
+            <div>
+              <dt>{text.createSummary.source}</dt>
+              <dd dir={textDir(locale)}>{source.title}</dd>
+            </div>
+            <div>
+              <dt>{text.knowledgeTitle}</dt>
+              <dd dir={textDir(locale)}>{title.trim()}</dd>
+            </div>
+            <div>
+              <dt>{text.confidentialityLabel}</dt>
+              <dd>{text.confidentiality[confidentiality]}</dd>
+            </div>
+            <div>
+              <dt>{text.scopeHeading}</dt>
+              <dd>
+                <ul className="plain-list">
+                  {rows.map((row, index) => (
+                    <li key={`${row.type}:${row.id}:${row.role}:${index}`} dir={textDir(locale)}>
+                      {scopeName(row)}
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+            <div>
+              <dt>{text.declarationLabel}</dt>
+              <dd dir={textDir(locale)}>{declaration.trim()}</dd>
+            </div>
+            {partial && (
+              <div>
+                <dt>{text.createSummary.partial}</dt>
+                <dd>{acceptPartial ? text.yes : text.none}</dd>
+              </div>
+            )}
+          </dl>
+          <div>
+            <strong>{text.createNextHeading}</strong>
+            <ol className="output-list">
+              {text.createNextSteps.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      )}
+
+      {!last && missing[current] !== '' && (
+        <p className="muted" role="status">
+          {missing[current]}
+        </p>
       )}
       <p className="toolbar">
-        <button type="submit" className="primary-button" disabled={busy || !ready}>
-          {text.createSubmit}
-        </button>
+        {step > 0 && (
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={busy}
+            onClick={() => goTo(step - 1)}
+          >
+            {text.createBack}
+          </button>
+        )}
+        {last ? (
+          <button type="submit" className="primary-button" disabled={busy || !allReady}>
+            {text.createSubmit}
+          </button>
+        ) : (
+          <button type="submit" className="primary-button" disabled={busy || !complete(step)}>
+            {text.createNext}
+          </button>
+        )}
         <button type="button" className="secondary-button" disabled={busy} onClick={onCancel}>
           {text.cancel}
         </button>
@@ -873,14 +1074,18 @@ function NewSourceVersionForm({
         {text.newSourceVersion}
       </SectionTitle>
       <Notice notice={notice} />
-      <label htmlFor={`${id}-file`}>{text.file}</label>
+      <FieldLabel htmlFor={`${id}-file`} help={text.fileHelp}>
+        {text.file}
+      </FieldLabel>
       <input
         id={`${id}-file`}
         type="file"
         accept={ACCEPTED_EXTENSIONS}
         onChange={(event) => setFile(event.target.files?.[0] ?? null)}
       />
-      <label htmlFor={`${id}-reason`}>{text.newSourceVersionReason}</label>
+      <FieldLabel htmlFor={`${id}-reason`} help={text.reasonHelp}>
+        {text.newSourceVersionReason}
+      </FieldLabel>
       <input
         id={`${id}-reason`}
         dir={textDir(locale)}
@@ -920,6 +1125,7 @@ function DeleteSourceForm({
   onDelete: (withKnowledge: boolean, reason: string) => void;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const [withKnowledge, setWithKnowledge] = useState(false);
   const [reason, setReason] = useState('');
@@ -954,7 +1160,10 @@ function DeleteSourceForm({
         </p>
       )}
       <label>
-        <span>{text.deleteReason}</span>
+        <span className="field-label">
+          {text.deleteReason}
+          <InfoTip text={help.detail.deleteReason} />
+        </span>
         <input
           value={reason}
           maxLength={1000}

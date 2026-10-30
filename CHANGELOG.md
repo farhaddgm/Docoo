@@ -2,6 +2,16 @@
 
 All notable changes to Docoo are recorded here. Versions follow [SemVer](https://semver.org/) and are published as `vX.Y.Z` tags with a matching GitHub Release.
 
+## [Unreleased]
+
+### Added
+
+- **Every control in Knowledge and audit explains itself.** Sections, tabs, filters, table columns, fields, citation fields and actions have an "i" button; hovering it, focusing it with the keyboard or tapping it shows what the control does (Persian and English). The words live in `knowledge-help.ts`, and a test fails if a control has no text in either language.
+
+### Changed
+
+- **Building knowledge from a source is step by step.** The form now has four steps — **Basics**, **Where it applies**, **Source declaration** and **Review and build** — with a step bar, a message saying what each step still needs, and a final review that lists your choices and what happens after the draft is made (it stays invisible to agents until audited).
+
 ## [0.39.0] — 2026-10-24
 
 ### Changed

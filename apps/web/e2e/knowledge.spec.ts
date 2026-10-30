@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { fill } from '../app/[locale]/agents/agent-messages';
+import { knowledgeHelp } from '../app/[locale]/knowledge/knowledge-help';
 import { knowledgeMessages } from '../app/[locale]/knowledge/knowledge-messages';
 import { manualMessages } from '../app/[locale]/knowledge/manual-messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
@@ -12,6 +13,7 @@ import {
 } from './support';
 
 const text = knowledgeMessages('fa');
+const help = knowledgeHelp('fa');
 const english = knowledgeMessages('en');
 const manual = manualMessages('fa');
 const project = projectPageMessages('fa');
@@ -87,6 +89,18 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('every section explains itself behind an "i" that opens on hover', async () => {
+    await page.goto('/fa/knowledge?tab=queue');
+    const tip = page.locator('#docoo-info-tooltip');
+    const tabHelp = sections(page).getByRole('button', { name: 'راهنما' });
+    await tabHelp.first().hover();
+    await expect(tip).toHaveText(help.tabs.queue);
+    await tabHelp.nth(1).hover();
+    await expect(tip).toHaveText(help.tabs.sources);
+    await page.getByRole('button', { name: 'راهنما' }).nth(6).hover();
+    await expect(tip).not.toBeEmpty();
+  });
+
   test('a pasted text goes through the pipeline, becomes a draft and opens its page', async () => {
     await page.goto('/fa/knowledge?tab=sources');
     await expect(tab(page, text.tabs.sources)).toHaveAttribute('aria-current', 'page');
@@ -115,9 +129,17 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
       .click();
     const create = card.getByRole('form', { name: text.createHeading });
     await expect(create.getByLabel(text.knowledgeTitle)).toHaveValue(sourceTitle);
-    // A declaration is required before the draft can be made.
-    await expect(create.getByRole('button', { name: text.createSubmit })).toBeDisabled();
+    // The draft is made in four steps: basics, scope, source declaration, review.
+    const next = create.getByRole('button', { name: text.createNext });
+    await next.click();
+    await expect(create.getByRole('heading', { level: 5 })).toContainText(text.createSteps.scope);
+    await next.click();
+    // A declaration is required before the last step opens.
+    await expect(next).toBeDisabled();
     await create.getByLabel(text.declarationLabel).fill('سیاست مصوب کمیتهٔ فروش');
+    await next.click();
+    await expect(create.getByText('سیاست مصوب کمیتهٔ فروش')).toBeVisible();
+    await expect(create.getByText(text.createNextHeading)).toBeVisible();
     await expectNoSeriousA11yViolations(page);
     await create.getByRole('button', { name: text.createSubmit }).click();
     await expect(page.getByRole('status').filter({ hasText: text.created })).toBeVisible();
