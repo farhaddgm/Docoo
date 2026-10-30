@@ -17,6 +17,7 @@ import {
   signInWithKeyboard,
   useFakeProvider,
   revealRow,
+  fillReason,
 } from './support';
 
 // Texts come from the same message modules the pages use, so a wording change cannot break
@@ -82,7 +83,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       page.getByRole('heading', { level: 2, name: topicText.editTitle.replace('{code}', code) }),
     ).toBeFocused();
     await page.locator('#edit-title').fill(titles.marketEdited);
-    await page.locator('#edit-reason').fill('اصلاح عنوان');
+    await fillReason(page, page.locator('#edit-reason'), 'اصلاح عنوان');
     await page.getByRole('button', { name: topicText.save }).click();
     await expect(page.getByRole('status').filter({ hasText: topicText.updatedDone })).toBeVisible();
     await expect(row).toContainText(titles.marketEdited);
@@ -172,7 +173,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: detail.confirm }).click();
     await expect(page.locator('#command-reason:invalid')).toHaveCount(1);
     await expect(statusBadge(page)).toHaveText(detail.statuses['active']!);
-    await page.locator('#command-reason').fill('نیاز به بازبینی دستی');
+    await fillReason(page, page.locator('#command-reason'), 'نیاز به بازبینی دستی');
     await page.getByRole('button', { name: detail.confirm }).click();
     await expect(statusBadge(page)).toHaveText(detail.statuses['paused']!);
     await expect(page.getByText('نیاز به بازبینی دستی')).toBeVisible();
@@ -275,7 +276,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     const edited = JSON.parse(await editor.inputValue()) as Record<string, unknown>;
     edited['problemStatement'] = 'بیان مسئلهٔ اصلاح‌شده توسط ادمین';
     await editor.fill(JSON.stringify(edited, null, 2));
-    await page.locator('#edit-reason-analysis').fill('اصلاح بیان مسئله');
+    await fillReason(page, page.locator('#edit-reason-analysis'), 'اصلاح بیان مسئله');
     await page.getByRole('button', { name: flow.editSave }).click();
     await expect(page.getByRole('status').filter({ hasText: flow.done.edited })).toBeVisible();
     await expect(page.getByText(flow.outputVersion.replace('{n}', '۳'))).toBeVisible(waiting);
@@ -614,7 +615,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(save).toBeEnabled();
     await save.click(); // a reason is required: the browser stops the empty form
     await expect(page.locator('#criteria-reason:invalid')).toHaveCount(1);
-    await page.locator('#criteria-reason').fill('اهمیت تأثیر بیشتر از هزینه است');
+    await fillReason(page, page.locator('#criteria-reason'), 'اهمیت تأثیر بیشتر از هزینه است');
     await save.click();
     await expect(
       page.getByRole('status').filter({ hasText: solutionText.done.criteria }),
@@ -638,8 +639,8 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       .nth(1)
       .getByRole('button', { name: new RegExp(solutionText.moveUp, 'u') })
       .click();
-    await page.locator('#selection-reason').fill('دو گزینهٔ برتر');
-    await page.locator('#rejected-reason').fill('این گزینه ریسک بیشتری دارد');
+    await fillReason(page, page.locator('#selection-reason'), 'دو گزینهٔ برتر');
+    await fillReason(page, page.locator('#rejected-reason'), 'این گزینه ریسک بیشتری دارد');
     await page.getByRole('button', { name: solutionText.select }).click();
     await expect(
       page.getByRole('status').filter({ hasText: solutionText.done.selected }),
@@ -681,7 +682,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
 
     // An exception is visible everywhere and is never confused with a normal approval.
     await page.getByRole('button', { name: documentText.acceptException }).click();
-    await page.locator('#document-reason').fill('مدیر عامل نتیجه را پذیرفت');
+    await fillReason(page, page.locator('#document-reason'), 'مدیر عامل نتیجه را پذیرفت');
     await page.getByRole('button', { name: documentText.confirm, exact: true }).click();
     await expect(
       page.getByRole('status').filter({ hasText: documentText.done['exception']! }),
@@ -701,7 +702,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(badge).toHaveText(documentText.statuses['locked']!);
     await expect(page.getByRole('button', { name: documentText.submit })).toHaveCount(0);
     await page.getByRole('button', { name: documentText.supersede }).click();
-    await page.locator('#document-reason').fill('بازنگری فصلی');
+    await fillReason(page, page.locator('#document-reason'), 'بازنگری فصلی');
     await page.getByRole('button', { name: documentText.confirm, exact: true }).click();
     await expect(badge).toHaveText(documentText.statuses['draft']!);
 
@@ -713,7 +714,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: documentText.showDiff }).click();
     await expect(page.locator('.output-view')).toBeVisible();
     await versionRows.last().getByRole('button', { name: documentText.restore }).click();
-    await page.locator('#document-reason').fill('بازگشت به متن اول');
+    await fillReason(page, page.locator('#document-reason'), 'بازگشت به متن اول');
     await page.getByRole('button', { name: documentText.confirm, exact: true }).click();
     await expect(
       page.getByRole('status').filter({ hasText: documentText.done['restore']! }),

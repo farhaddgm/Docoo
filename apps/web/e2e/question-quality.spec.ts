@@ -9,6 +9,7 @@ import {
   expectNoSeriousA11yViolations,
   signInWithKeyboard,
   useFakeProvider,
+  fillReason,
 } from './support';
 
 const detail = projectPageMessages('fa');
@@ -54,6 +55,8 @@ test.describe('question quality (QQ-001)', () => {
       timeout: 60_000,
     });
     await expect(section.getByText('امتیاز: ۴ از ۵')).toBeVisible();
+    // The full report opens in a dialog; the box itself keeps only the date and score.
+    await section.getByRole('button', { name: quality.viewReport }).click();
     await expect(
       section.getByRole('heading', { level: 5, name: quality.weaknesses }),
     ).toBeVisible();
@@ -71,6 +74,7 @@ test.describe('question quality (QQ-001)', () => {
       await expect(section.getByText(criterion).first()).toBeVisible();
     }
     await expectNoSeriousA11yViolations(page);
+    await section.getByRole('button', { name: quality.close }).click();
 
     // Only the chosen aspects are judged: pick "tone" alone in the settings and evaluate again.
     await page.goto('/fa/settings');
@@ -83,7 +87,7 @@ test.describe('question quality (QQ-001)', () => {
         .getByRole('checkbox', { name: settings.enumLabels['analysis.quality_criteria']![key]! })
         .uncheck();
     }
-    await criteria.getByLabel(settings.reasonLabel).fill('فقط لحن');
+    await fillReason(page, criteria.getByLabel(settings.reasonLabel), 'فقط لحن');
     await criteria.getByRole('button', { name: settings.save, exact: true }).click();
     await expect(
       page.getByRole('status').filter({ hasText: 'analysis.quality_criteria' }),
@@ -97,6 +101,7 @@ test.describe('question quality (QQ-001)', () => {
     await expect(page.getByRole('status').filter({ hasText: quality.done })).toBeVisible({
       timeout: 60_000,
     });
+    await again.getByRole('button', { name: quality.viewReport }).click();
     await expect(
       again.getByText(`${quality.criteriaHeading}: ${quality.criteria['tone']}`),
     ).toBeVisible();
@@ -104,10 +109,11 @@ test.describe('question quality (QQ-001)', () => {
     // The earlier judgement stays as history.
     await again.getByText(quality.earlier).click();
     await expect(again.locator('details li')).toHaveCount(1);
+    await again.getByRole('button', { name: quality.close }).click();
 
     // Leave the workspace as it was.
     await page.goto('/fa/settings');
-    await criteria.getByLabel(settings.reasonLabel).fill('بازگشت');
+    await fillReason(page, criteria.getByLabel(settings.reasonLabel), 'بازگشت');
     await criteria.getByRole('button', { name: settings.resetWorkspace }).click();
     await expect(criteria.getByRole('checkbox', { checked: true })).toHaveCount(5);
   });
