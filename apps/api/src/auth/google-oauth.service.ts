@@ -7,8 +7,8 @@ import {
   randomBytes,
   timingSafeEqual,
   verify,
-  type JsonWebKey,
   type KeyObject,
+  webcrypto,
 } from 'node:crypto';
 import { API_CONFIG } from '../tokens.js';
 
@@ -143,7 +143,9 @@ export class GoogleOAuthService {
           signal: AbortSignal.timeout(10_000),
         });
         if (!keysResponse.ok) throw new Error();
-        const jwks = (await keysResponse.json()) as { keys: (JsonWebKey & { kid: string })[] };
+        const jwks = (await keysResponse.json()) as {
+          keys: (webcrypto.JsonWebKey & { kid: string })[];
+        };
         this.keys = new Map(
           jwks.keys.map((key) => [key.kid, createPublicKey({ key, format: 'jwk' })]),
         );
