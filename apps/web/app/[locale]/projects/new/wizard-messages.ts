@@ -40,7 +40,6 @@ const messages = {
     continueDefaults: 'ادامه با پیش‌فرض‌ها',
     noTopicsNote:
       'هنوز حوزه‌ای انتخاب نکرده‌اید. پروژه ساخته می‌شود ولی تا دست‌کم یک حوزه نداشته باشد نمی‌توان آن را فعال کرد.',
-    codeSuggested: 'کد از عنوان پیشنهاد شد؛ می‌توانید عوضش کنید.',
     reviewEdit: 'ویرایش',
     reviewEditProblem: 'ویرایش مسئله',
     reviewEditContext: 'ویرایش زمینه و روش',
@@ -149,7 +148,6 @@ const messages = {
     continueDefaults: 'Continue with the defaults',
     noTopicsNote:
       'You have not chosen a topic yet. The project can be created but cannot be activated until it has at least one topic.',
-    codeSuggested: 'The code was suggested from the title; you can change it.',
     reviewEdit: 'Edit',
     reviewEditProblem: 'Edit the problem',
     reviewEditContext: 'Edit context and method',

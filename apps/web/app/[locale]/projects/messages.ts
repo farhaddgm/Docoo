@@ -92,6 +92,7 @@ const messages = {
     moveDown: 'پایین',
     removeTopic: 'حذف از پروژه',
     priority: 'اولویت',
+    topicDetails: 'تنظیمات این حوزه',
     conflictInstruction: 'دستور رفع تعارض (اختیاری)',
     sharing: 'دانش این پروژه برای پروژه‌های دیگر این حوزه',
     sharingHelp:
@@ -226,6 +227,7 @@ const messages = {
     moveDown: 'Move down',
     removeTopic: 'Remove from project',
     priority: 'Priority',
+    topicDetails: 'Settings for this topic',
     conflictInstruction: 'Conflict instruction (optional)',
     sharing: "This project's knowledge for other projects on this topic",
     sharingHelp:

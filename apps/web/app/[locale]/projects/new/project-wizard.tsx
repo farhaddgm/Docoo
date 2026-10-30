@@ -54,7 +54,7 @@ import {
   suggestProjectCode,
   type AdvancedSection,
 } from './wizard-model';
-import { FieldLabel } from '../../../info-tip';
+import { FieldLabel, InfoTip, SectionTitle } from '../../../info-tip';
 
 const MAX_CODE = 64;
 
@@ -580,21 +580,34 @@ export function ProjectWizard({
       <Notice notice={action.notice} />
 
       <section className="card stack" aria-labelledby={`${id}-step`}>
-        <h2 id={`${id}-step`} tabIndex={-1} ref={heading}>
+        <SectionTitle
+          id={`${id}-step`}
+          focusable
+          help={
+            step === ADVANCED_STEP
+              ? `${text.stepHelp[step]} ${text.advancedIntro}`
+              : text.stepHelp[step]
+          }
+        >
           {fill(text.stepOf, {
             n: formatNumber(locale, step + 1),
             total: formatNumber(locale, STEP_COUNT),
           })}
           {' — '}
           {stepName}
-        </h2>
-        <p className="muted">{text.stepHelp[step]}</p>
+        </SectionTitle>
 
         {step === PROBLEM_STEP && (
           <>
             <BasicsFields locale={locale} values={values} onChange={changeBasics} />
             <div className="filter-grid">
-              <label htmlFor="problem-template">{text.problemTemplate}</label>
+              <FieldLabel
+                htmlFor="problem-template"
+                help={text.problemTemplateNote}
+                helpId="problem-template-note"
+              >
+                {text.problemTemplate}
+              </FieldLabel>
               <select
                 id="problem-template"
                 value={problemTemplateId}
@@ -610,9 +623,6 @@ export function ProjectWizard({
                   </option>
                 ))}
               </select>
-              <p id="problem-template-note" className="muted">
-                {text.problemTemplateNote}
-              </p>
               {problemTemplateId && (
                 <>
                   {(() => {
@@ -648,7 +658,13 @@ export function ProjectWizard({
                   })()}
                 </>
               )}
-              <label htmlFor="problem-pattern">{text.problemPattern}</label>
+              <FieldLabel
+                htmlFor="problem-pattern"
+                help={text.problemPatternNote}
+                helpId="problem-pattern-note"
+              >
+                {text.problemPattern}
+              </FieldLabel>
               <select
                 id="problem-pattern"
                 value={problemPatternVersionId}
@@ -662,9 +678,6 @@ export function ProjectWizard({
                   </option>
                 ))}
               </select>
-              <p id="problem-pattern-note" className="muted">
-                {text.problemPatternNote}
-              </p>
               {selectedProblemPattern && (
                 <div className="notice">
                   <p>{selectedProblemPattern.definition.purpose}</p>
@@ -679,11 +692,6 @@ export function ProjectWizard({
                 </div>
               )}
             </div>
-            {!codeTouched && values.code !== '' && (
-              <p className="muted" role="status">
-                {text.codeSuggested}
-              </p>
-            )}
           </>
         )}
         {step === CONTEXT_STEP && (
@@ -735,7 +743,6 @@ export function ProjectWizard({
         )}
         {step === ADVANCED_STEP && (
           <>
-            <p className="muted">{text.advancedIntro}</p>
             {baselineFailed && (
               <div className="stack" role="alert">
                 <p className="notice error">{text.baselineFailed}</p>
@@ -769,6 +776,7 @@ export function ProjectWizard({
                   >
                     <summary>
                       <span className="wizard-section-title">{text.sectionTitles[section.id]}</span>
+                      <InfoTip text={text.sectionHelp[section.id]} />
                       <span className={`badge ${count > 0 ? 'tone-ok' : 'tone-neutral'}`}>
                         {count > 0
                           ? fill(text.sectionChanged, { n: formatNumber(locale, count) })
@@ -776,7 +784,6 @@ export function ProjectWizard({
                       </span>
                     </summary>
                     <div className="stack wizard-section-body">
-                      <p className="muted">{text.sectionHelp[section.id]}</p>
                       {section.id === 'model' && (
                         <ModelPicker
                           locale={locale}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { apiGet, apiSend } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
@@ -52,6 +52,7 @@ export function QuestionQuality({
     [text],
   );
   const { busy, notice, run } = useAction(explain);
+  const reportDialog = useRef<HTMLDialogElement>(null);
 
   const load = useCallback(async () => {
     const { reviews: items } = await apiGet<{ reviews: Review[] }>(
@@ -160,39 +161,71 @@ export function QuestionQuality({
                   · {fill(text.questionsJudged, { n: formatNumber(locale, latest.questionCount) })}
                 </span>
               </p>
-              <p dir={textDir(locale)}>{latest.summary}</p>
-              <p className="muted">
-                {text.criteriaHeading}:{' '}
-                {latest.criteria
-                  .map((criterion) => text.criteria[criterion] ?? criterion)
-                  .join('، ')}
-              </p>
-              {list(weaknesses, text.weaknesses, 'quality-weaknesses')}
-              {list(strengths, text.strengths, 'quality-strengths')}
-              {latest.findings.length === 0 && <p className="muted">{text.noFindings}</p>}
-              {latest.discarded > 0 && (
-                <p className="muted">
-                  {fill(text.discarded, { n: formatNumber(locale, latest.discarded) })}
-                </p>
-              )}
+              <div className="toolbar">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => reportDialog.current?.showModal()}
+                >
+                  {text.viewReport}
+                </button>
+              </div>
+              <dialog
+                ref={reportDialog}
+                className="business-dialog business-dialog-wide"
+                aria-labelledby="quality-report-title"
+                onClick={(event) => {
+                  if (event.target === reportDialog.current) reportDialog.current?.close();
+                }}
+              >
+                <div className="business-dialog-head">
+                  <h2 id="quality-report-title">
+                    {text.title} · {formatDateTime(locale, latest.createdAt)}
+                  </h2>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => reportDialog.current?.close()}
+                  >
+                    {text.close}
+                  </button>
+                </div>
+                <div className="stack">
+                  <p dir={textDir(locale)}>{latest.summary}</p>
+                  <p className="muted">
+                    {text.criteriaHeading}:{' '}
+                    {latest.criteria
+                      .map((criterion) => text.criteria[criterion] ?? criterion)
+                      .join('، ')}
+                  </p>
+                  {list(weaknesses, text.weaknesses, 'quality-weaknesses')}
+                  {list(strengths, text.strengths, 'quality-strengths')}
+                  {latest.findings.length === 0 && <p className="muted">{text.noFindings}</p>}
+                  {latest.discarded > 0 && (
+                    <p className="muted">
+                      {fill(text.discarded, { n: formatNumber(locale, latest.discarded) })}
+                    </p>
+                  )}
+                  {earlier.length > 0 && (
+                    <details>
+                      <summary>{text.earlier}</summary>
+                      <ul className="plain-list">
+                        {earlier.map((review) => (
+                          <li key={review.id}>
+                            {formatDateTime(locale, review.createdAt)} ·{' '}
+                            {review.status === 'completed'
+                              ? fill(text.scoreOf, { n: formatNumber(locale, review.score ?? 0) })
+                              : (text.failed[review.reason ?? ''] ?? text.generic)}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+              </dialog>
             </>
           )}
         </div>
-      )}
-      {earlier.length > 0 && (
-        <details>
-          <summary>{text.earlier}</summary>
-          <ul className="plain-list">
-            {earlier.map((review) => (
-              <li key={review.id}>
-                {formatDateTime(locale, review.createdAt)} ·{' '}
-                {review.status === 'completed'
-                  ? fill(text.scoreOf, { n: formatNumber(locale, review.score ?? 0) })
-                  : (text.failed[review.reason ?? ''] ?? text.generic)}
-              </li>
-            ))}
-          </ul>
-        </details>
       )}
     </section>
   );

@@ -92,9 +92,9 @@ export function PatternSelection({
       )}
       {!readOnly && project.status === 'draft' && (
         <>
-          <label>
-            {fa ? 'الگو' : 'Pattern'}
+          <div className="pattern-select-row">
             <select
+              aria-label={fa ? 'الگوی اختیاری' : 'Optional pattern'}
               value={selected}
               disabled={busy || !loaded}
               onChange={(event) => setSelected(event.target.value)}
@@ -106,10 +106,15 @@ export function PatternSelection({
                 </option>
               ))}
             </select>
-          </label>
-          <button type="button" disabled={busy || !loaded} onClick={() => void save()}>
-            {fa ? 'ذخیرهٔ انتخاب الگو' : 'Save pattern selection'}
-          </button>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={busy || !loaded}
+              onClick={() => void save()}
+            >
+              {fa ? 'ذخیرهٔ انتخاب الگو' : 'Save pattern selection'}
+            </button>
+          </div>
         </>
       )}
       {error && <p role="alert">{error}</p>}
