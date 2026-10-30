@@ -203,6 +203,39 @@ describe.skipIf(!adminUrl)('the business of a project, from Contenter (ADR-0021)
     expect(bad.statusCode).toBe(400);
   });
 
+  it('BIZ-002b: one business of Contenter can be read whole before it is linked to anything', async () => {
+    const before = await h.admin.query<{ n: string }>(
+      'select count(*)::text as n from business_snapshots where workspace_id = $1',
+      [h.ids.workspaceA],
+    );
+    const one = await h.request('GET', api('/contenter-businesses/biz-wepod'), { cookie: cookieA });
+    expect(one.statusCode, one.body).toBe(200);
+    const body = one.json<{
+      content: { business: { externalId: string; name: string }; sections: unknown[] };
+      contenterUrl: string | null;
+    }>();
+    expect(body.content.business).toMatchObject({
+      externalId: 'biz-wepod',
+      name: 'WePod Digital Branch',
+    });
+    expect(body.content.sections.length).toBeGreaterThan(0);
+    expect(body.contenterUrl).toContain('/app/businesses/biz-wepod');
+    expect(one.body).not.toContain(FAKE_CONTENTER_TOKEN);
+    // Looking is not storing: no snapshot was made.
+    const after = await h.admin.query<{ n: string }>(
+      'select count(*)::text as n from business_snapshots where workspace_id = $1',
+      [h.ids.workspaceA],
+    );
+    expect(after.rows[0]!.n).toBe(before.rows[0]!.n);
+
+    const missing = await h.request('GET', api('/contenter-businesses/biz-nope'), {
+      cookie: cookieA,
+    });
+    expect(missing.statusCode).toBe(404);
+    const odd = await h.request('GET', api('/contenter-businesses/a%2Fb'), { cookie: cookieA });
+    expect(odd.statusCode).toBe(400);
+  });
+
   it('BIZ-003: a project links to a business and reads all of it as a pinned snapshot', async () => {
     const project = await newProject('biz-link');
     expect(project.business).toBeNull();

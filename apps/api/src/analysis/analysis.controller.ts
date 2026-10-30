@@ -4,7 +4,7 @@ import { answerStatuses } from '@docoo/domain';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { AnswerSuggestionService } from './answer-suggestion.service.js';
@@ -100,6 +100,7 @@ export class AnalysisController {
   @ApiOperation({
     summary: "Ask the Brain to judge the analyst's questions with the model (costs a model call)",
   })
+  @UsesAi()
   @RequireWorkspacePermission('project.run')
   async qualityRun(@Req() request: FastifyRequest, @Param('projectId') raw: string) {
     return this.quality.run(workspaceContext(request), id(raw));
@@ -128,6 +129,7 @@ export class AnalysisController {
   @ApiOperation({
     summary: 'Draft an answer to a question with the model; nothing is saved (costs a model call)',
   })
+  @UsesAi()
   @RequireWorkspacePermission('analysis.answer')
   async suggestAnswer(@Req() request: FastifyRequest, @Param('questionId') raw: string) {
     return this.suggestions.suggest(workspaceContext(request), id(raw));
@@ -136,6 +138,7 @@ export class AnalysisController {
   @Post('projects/:projectId/analysis/finish')
   @HttpCode(200)
   @ApiOperation({ summary: 'Ask the analyst to write the problem definition now' })
+  @UsesAi()
   @RequireWorkspacePermission('workflow.approve')
   async finish(
     @Req() request: FastifyRequest,

@@ -1,9 +1,12 @@
+import type { PromptResearchQuestion } from '@docoo/domain';
 import type { PoolClient } from 'pg';
 
+import type { ResearchFollowup } from './research-followup.js';
 import { retrieveKnowledge, type RetrievedPassage } from './knowledge-retrieval.js';
 import {
   assignReferences,
   buildResearchQueries,
+  mergeFollowup,
   verifyResearch,
   type KnowledgePassage,
   type ResearchContent,
@@ -44,6 +47,10 @@ export async function prepareResearch(
     readonly topics: readonly string[];
     /** The content of the approved analysis output. */
     readonly analysis: unknown;
+    /** The confirmed research questions (ADR-0038); they replace the default queries. */
+    readonly plan?: readonly PromptResearchQuestion[] | undefined;
+    /** Passage references continue after this many earlier ones in a follow-up round (ADR-0039). */
+    readonly refOffset?: number | undefined;
   },
 ): Promise<ResearchRun> {
   const { scope, config } = input;
@@ -70,6 +77,7 @@ export async function prepareResearch(
         rows.map((row) => ({ snapshotId: row.id, results: row.results })),
         config.researchKnowledgeLimit,
         config.researchMaxSources,
+        input.refOffset,
       ),
       queries: rows.map((row) => row.query),
       snapshots: rows.map((row) => ({ id: row.id, query: row.query, results: row.results.length })),
@@ -108,13 +116,19 @@ export async function prepareResearch(
     };
   }
 
-  const queries = buildResearchQueries({
-    projectTitle: input.projectTitle,
-    problem: input.problem,
-    topics: input.topics,
-    analysis: input.analysis,
-    max: config.researchMaxQueries,
-  });
+  // The administrator's confirmed questions are the queries; without them the stage derives its
+  // own from the problem statement as before.
+  const planned = (input.plan ?? []).filter((question) => question.channel !== 'web');
+  const queries =
+    input.plan && input.plan.length > 0
+      ? planned.map((question) => question.question)
+      : buildResearchQueries({
+          projectTitle: input.projectTitle,
+          problem: input.problem,
+          topics: input.topics,
+          analysis: input.analysis,
+          max: config.researchMaxQueries,
+        });
   const retrievals: { snapshotId: string; results: RetrievedPassage[] }[] = [];
   const snapshots: { id: string; query: string; results: number }[] = [];
   const exclude = excludedRestricted ? ['restricted'] : [];
@@ -155,6 +169,7 @@ export async function prepareResearch(
       retrievals,
       config.researchKnowledgeLimit,
       config.researchMaxSources,
+      input.refOffset,
     ),
     queries,
     snapshots,
@@ -173,9 +188,10 @@ export async function finishResearch(
   scope: ToolCallScope,
   run: ResearchRun,
   output: unknown,
+  plan?: { readonly versionNo: number; readonly questions: readonly PromptResearchQuestion[] },
 ): Promise<ResearchContent> {
   const started = Date.now();
-  const { content, cited } = verifyResearch({ output, ...run });
+  const { content, cited } = verifyResearch({ output, ...run, plan });
   await recordToolCall(client, scope, {
     tool: 'citation_verifier',
     decision: run.verifierTool,
@@ -195,4 +211,26 @@ export async function finishResearch(
     errorCode: run.verifierTool === 'denied' ? 'tool_not_allowed' : null,
   });
   return content;
+}
+
+/**
+ * The content the research stage stores: the verified answer of this attempt, and, in a follow-up
+ * round (ADR-0039), that answer joined onto the output the round follows.
+ */
+export async function finishedResearch(
+  client: PoolClient,
+  scope: ToolCallScope,
+  run: ResearchRun,
+  output: unknown,
+  plan?: { readonly versionNo: number; readonly questions: readonly PromptResearchQuestion[] },
+  followup?: ResearchFollowup | null,
+): Promise<ResearchContent> {
+  const fresh = await finishResearch(client, scope, run, output, plan);
+  if (!followup) return fresh;
+  return mergeFollowup({
+    previous: followup.previous,
+    fresh,
+    focus: followup.focus.map((question) => question.id),
+    plan: followup.plan,
+  });
 }

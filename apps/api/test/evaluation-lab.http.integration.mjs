@@ -12,6 +12,7 @@ import {
   evaluationComparisonPageSchema,
   evaluationExperimentPageSchema,
 } from '@docoo/contracts';
+import { AccountPolicyService } from '../dist/auth/account-policy.service.js';
 import { AuthService } from '../dist/auth/auth.service.js';
 import { WorkspacePermissionGuard } from '../dist/auth/auth.authorization.js';
 import { EvaluationLabController } from '../dist/projects/evaluation-lab.controller.js';
@@ -48,6 +49,7 @@ export async function verifyEvaluationLabHttp({
     providers: [
       EvaluationLabService,
       WorkspacePermissionGuard,
+      AccountPolicyService,
       { provide: DATABASE_POOL, useValue: pool },
       { provide: API_CONFIG, useValue: config },
       { provide: WORKFLOW_ENGINE, useValue: new TemporalWorkflowEngine(config) },

@@ -1152,7 +1152,11 @@ describe.skipIf(!adminUrl || !temporalAddress)(
         const [request] = researchRequests();
         const data = dataOf(request!);
         expect(data['webSources']).toEqual([
-          expect.objectContaining({ ref: 'W1', url: 'https://example.test/fake-source' }),
+          expect.objectContaining({
+            ref: 'W1',
+            url: 'https://example.test/fake-source',
+            sourceClass: 'public',
+          }),
         ]);
         expect(request!.instructions).toContain('webSources lists pages found by a web search');
 
@@ -1167,6 +1171,8 @@ describe.skipIf(!adminUrl || !temporalAddress)(
               url: 'https://example.test/fake-source',
               title: 'Fake source',
               cited: true,
+              // example.test is no institution and not in research.official_domains (ADR-0040).
+              sourceClass: 'public',
             },
           ],
         });

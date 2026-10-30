@@ -6,6 +6,8 @@ import { Reflector } from '@nestjs/core';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ProblemPatternsController } from '../src/problem-patterns/problem-patterns.controller.js';
+import { MeetingsController } from '../src/meetings/meetings.controller.js';
 import { AgentsController } from '../src/agents/agents.controller.js';
 import { AnalysisController } from '../src/analysis/analysis.controller.js';
 import { AuditController } from '../src/audit/audit.controller.js';
@@ -17,8 +19,11 @@ import {
   WORKSPACE_PERMISSIONS,
   WorkspacePermissionGuard,
 } from '../src/auth/auth.authorization.js';
+import type { AccountPolicyService } from '../src/auth/account-policy.service.js';
 import type { AuthService } from '../src/auth/auth.service.js';
 import { DeliverablesController } from '../src/deliverables/deliverables.controller.js';
+import { ResearchPlanController } from '../src/research-plan/research-plan.controller.js';
+import { OutputRequirementsController } from '../src/output-requirements/output-requirements.controller.js';
 import { DocumentsController } from '../src/documents/documents.controller.js';
 import { ReportsController } from '../src/reports/reports.controller.js';
 import { ConfigController } from '../src/config/config.controller.js';
@@ -38,6 +43,23 @@ import { WorkspaceController } from '../src/workspaces/workspace.controller.js';
  * workspace route must appear here with exactly this permission.
  */
 const expectedMatrix: Record<string, string> = {
+  'GET workspaces/:workspaceId/projects/problem-pattern-versions': 'project.create',
+  'PUT workspaces/:workspaceId/projects/:projectId/problem-pattern': 'project.update',
+  'GET workspaces/:workspaceId/projects/:projectId/meeting': 'project.read',
+  'PUT workspaces/:workspaceId/projects/:projectId/meeting': 'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/meeting/messages': 'project.update',
+  'GET workspaces/:workspaceId/problem-patterns': 'workspace.configure',
+  'POST workspaces/:workspaceId/problem-patterns': 'workspace.configure',
+  'GET workspaces/:workspaceId/problem-patterns/published-versions': 'project.create',
+  'GET workspaces/:workspaceId/problem-patterns/:patternId': 'workspace.configure',
+  'GET workspaces/:workspaceId/problem-patterns/:patternId/versions/:versionId':
+    'workspace.configure',
+  'PUT workspaces/:workspaceId/problem-patterns/:patternId/draft': 'workspace.configure',
+  'POST workspaces/:workspaceId/problem-patterns/:patternId/archive': 'workspace.configure',
+  'POST workspaces/:workspaceId/problem-patterns/:patternId/versions': 'workspace.configure',
+  'POST workspaces/:workspaceId/problem-patterns/:patternId/messages': 'workspace.configure',
+  'POST workspaces/:workspaceId/problem-patterns/:patternId/tests': 'workspace.configure',
+
   'POST workspaces/:workspaceId/projects/:projectId/solutions/sensitivity': 'project.read',
   'GET workspaces/:workspaceId/projects/:projectId/solution-decisions': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/solution-decisions': 'workflow.approve',
@@ -128,6 +150,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/integrations/contenter/test': 'integration.configure',
   'DELETE workspaces/:workspaceId/integrations/contenter': 'integration.configure',
   'GET workspaces/:workspaceId/contenter-businesses': 'business.read',
+  'GET workspaces/:workspaceId/contenter-businesses/:businessId': 'business.read',
   'GET workspaces/:workspaceId/projects/:projectId/business': 'business.read',
   'PUT workspaces/:workspaceId/projects/:projectId/business': 'business.link',
   'POST workspaces/:workspaceId/projects/:projectId/business/unlink': 'business.link',
@@ -140,6 +163,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/projects/:projectId/workflow/start': 'project.run',
   'POST workspaces/:workspaceId/projects/:projectId/workflow/sync': 'project.run',
   'POST workspaces/:workspaceId/projects/:projectId/workflow/cancel': 'workflow.cancel',
+  'POST workspaces/:workspaceId/projects/:projectId/workflow/redo': 'project.run',
   'GET workspaces/:workspaceId/projects/:projectId/stages/:stageRunId': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/outputs/:outputId/approve':
     'workflow.approve',
@@ -169,6 +193,24 @@ const expectedMatrix: Record<string, string> = {
   'PUT workspaces/:workspaceId/projects/:projectId/deliverables': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/deliverables/propose': 'project.run',
   'POST workspaces/:workspaceId/projects/:projectId/deliverables/confirm': 'workflow.approve',
+  'GET workspaces/:workspaceId/projects/:projectId/research-plan': 'project.read',
+  'PUT workspaces/:workspaceId/projects/:projectId/research-plan': 'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/research-plan/propose': 'project.run',
+  'POST workspaces/:workspaceId/projects/:projectId/research-plan/confirm': 'workflow.approve',
+  'POST workspaces/:workspaceId/projects/:projectId/research-plan/followup': 'workflow.reject',
+  'POST workspaces/:workspaceId/projects/:projectId/research-plan/requirement-gaps': 'project.run',
+  'GET workspaces/:workspaceId/projects/:projectId/research-conflicts': 'project.read',
+  'POST workspaces/:workspaceId/projects/:projectId/research-conflicts/:fingerprint/decision':
+    'project.update',
+  'GET workspaces/:workspaceId/projects/:projectId/output-requirements': 'project.read',
+  'POST workspaces/:workspaceId/projects/:projectId/output-requirements': 'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/output-requirements/check': 'project.run',
+  'PATCH workspaces/:workspaceId/projects/:projectId/output-requirements/:requirementId':
+    'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/output-requirements/:requirementId/withdraw':
+    'project.update',
+  'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/messages/:messageId/requirements':
+    'project.update',
   'GET workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/messages': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/messages': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/stages/:stageRunId/messages/send-as-rejection':
@@ -252,6 +294,8 @@ const expectedMatrix: Record<string, string> = {
 };
 
 const controllers = [
+  ProblemPatternsController,
+  MeetingsController,
   WorkspaceController,
   TopicsController,
   ProjectsController,
@@ -263,6 +307,8 @@ const controllers = [
   WorkflowController,
   StageChatController,
   DeliverablesController,
+  OutputRequirementsController,
+  ResearchPlanController,
   AgentsController,
   AnalysisController,
   BusinessController,
@@ -348,7 +394,11 @@ describe('authorization matrix (AUTH-003, TC-AUTH-005)', () => {
       switchToHttp: () => ({ getRequest: () => request, getResponse: () => reply }),
     } as unknown as ExecutionContext;
 
-    const guard = new WorkspacePermissionGuard(authService, new Reflector());
+    const guard = new WorkspacePermissionGuard(
+      authService,
+      new Reflector(),
+      {} as unknown as AccountPolicyService,
+    );
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

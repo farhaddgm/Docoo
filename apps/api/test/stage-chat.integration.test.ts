@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { StageChatService } from '../src/stage-chat/stage-chat.service.js';
 import { adminUrl, createHarness, type Harness } from './support/harness.js';
 
 let h: Harness;
@@ -117,7 +119,16 @@ describe.skipIf(!adminUrl)('Stage conversation with the agent (ADR-0031 P1)', ()
 
   it('answers a question from the stage output without changing it', async () => {
     const invoke = vi.spyOn(h.fake, 'invoke');
+    // A newly uploaded attachment takes time to scan; that wait must consume the same
+    // request budget as the model so the combined response stays below the proxy timeout.
+    const files = vi
+      .spyOn(h.app.get<{ readAttachments: () => Promise<[]> }>(StageChatService), 'readAttachments')
+      .mockImplementationOnce(async () => {
+        await delay(120);
+        return [];
+      });
     const sent = await post(chat(), { kind: 'ask', content: 'Why do you say churn doubles?' });
+    files.mockRestore();
     expect(sent.statusCode, sent.body).toBe(200);
     const { asked, answer } = sent.json<{ asked: Message; answer: Message }>();
     expect(asked).toMatchObject({ role: 'admin', kind: 'ask', status: 'done' });
@@ -125,6 +136,8 @@ describe.skipIf(!adminUrl)('Stage conversation with the agent (ADR-0031 P1)', ()
     expect(answer.content).toMatch(/^Fake answer: /);
 
     const request = invoke.mock.calls[0]![0];
+    expect(request.timeoutMs).toBeGreaterThan(0);
+    expect(request.timeoutMs).toBeLessThanOrEqual(24_880);
     expect(request.responseSchema).toBeUndefined();
     expect(request.instructions ?? '').toContain('researcher');
     expect(request.instructions ?? '').toContain(
@@ -172,6 +185,23 @@ describe.skipIf(!adminUrl)('Stage conversation with the agent (ADR-0031 P1)', ()
     const again = await post(chat('/send-as-rejection'), { messageIds: [requestId] });
     expect(again.statusCode).toBe(409);
     expect(again.json<{ code: string }>().code).toBe('STAGE_CHAT_ALREADY_SENT');
+  });
+
+  it('refuses attachments that are not sources of the project', async () => {
+    const unknown = await post(chat(), {
+      kind: 'ask',
+      content: 'Read this file.',
+      attachments: [{ sourceId: '00000000-0000-4000-8000-000000000000' }],
+    });
+    expect(unknown.statusCode, unknown.body).toBe(404);
+    expect(unknown.json<{ code: string }>().code).toBe('STAGE_CHAT_ATTACHMENT_NOT_FOUND');
+    const malformed = await post(chat(), {
+      kind: 'ask',
+      content: 'Read this file.',
+      attachments: [{ sourceId: 'not-an-id' }],
+    });
+    expect(malformed.statusCode).toBe(400);
+    expect(malformed.json<{ code: string }>().code).toBe('STAGE_CHAT_INVALID_REQUEST');
   });
 
   it('stops at the message limit', async () => {

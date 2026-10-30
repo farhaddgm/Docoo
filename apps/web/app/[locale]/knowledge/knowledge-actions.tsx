@@ -8,6 +8,7 @@ import { apiGet, apiSend } from '../../api-client';
 import { formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, useAction } from '../use-action';
+import { ReasonBar } from '../reason-bar';
 import { isoToLocal, localToIso } from './knowledge-common';
 import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
@@ -232,23 +233,14 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
             aria-describedby={`${id}-until-help`}
             onChange={(event) => setValidUntil(event.target.value)}
           />
-          <FieldLabel htmlFor={`${id}-reason`} help={text.reasonHelp} helpId={`${id}-reason-help`}>
-            {text.reasonLabel}
-          </FieldLabel>
-          <input
+          <ReasonBar
+            locale={locale}
             id={`${id}-reason`}
-            dir={textDir(locale)}
+            label={text.reasonLabel}
+            help={text.reasonHelp}
             value={reason}
-            maxLength={1000}
-            aria-describedby={`${id}-reason-help`}
-            onChange={(event) => setReason(event.target.value)}
-          />
-          {!changed && !validityChanged && (
-            <small className="muted" role="status">
-              {text.unchangedContent}
-            </small>
-          )}
-          <p>
+            onChange={setReason}
+          >
             <button
               type="submit"
               className="primary-button"
@@ -256,7 +248,12 @@ export function EditSection({ locale, workspaceId, knowledge, onChanged, action 
             >
               {text.newVersionSubmit}
             </button>
-          </p>
+          </ReasonBar>
+          {!changed && !validityChanged && (
+            <small className="muted" role="status">
+              {text.unchangedContent}
+            </small>
+          )}
         </form>
       )}
 

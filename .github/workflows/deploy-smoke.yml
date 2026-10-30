@@ -41,7 +41,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/edge"
           printf 'other.localhost {\n\trespond "other site"\n}\n' > "$RUNNER_TEMP/edge/Caddyfile"
           docker run -d --name existing-proxy -p 80:80 -p 443:443 \
-            -v "$RUNNER_TEMP/edge/Caddyfile:/etc/caddy/Caddyfile" caddy:2@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772
+            -v "$RUNNER_TEMP/edge/Caddyfile:/etc/caddy/Caddyfile" caddy:2@sha256:504a44d7d74bd2bc28a66afc4774912fc21223ca8a67734af1c54ab2f999b489
       - name: Install the production stack (unattended)
         env:
           DOCOO_UNATTENDED: '1'
@@ -59,7 +59,12 @@ jobs:
           BACKUP_S3_ACCESS_KEY_ID: docoo
           BACKUP_S3_SECRET_ACCESS_KEY: deploy-smoke-object-secret
           BACKUP_S3_FORCE_PATH_STYLE: 'true'
-        run: sudo -E ./scripts/deploy/install.sh 2>&1 | tee install.log
+        # `sudo -E` is ignored by sudo-rs (the default on newer runner images), which silently
+        # dropped the unattended answers and stopped the installer at its first question; name
+        # the variables instead, which both sudo implementations honour.
+        run: |
+          sudo --preserve-env=DOCOO_UNATTENDED,DOCOO_SKIP_FIREWALL,DOMAIN,FILES_DOMAIN,ACME_EMAIL,ADMIN_EMAIL,ADMIN_DISPLAY_NAME,S3_SECRET_ACCESS_KEY,BACKUP_S3_PREFIX,BACKUP_S3_ENDPOINT,BACKUP_S3_ACCESS_KEY_ID,BACKUP_S3_SECRET_ACCESS_KEY,BACKUP_S3_FORCE_PATH_STYLE \
+            ./scripts/deploy/install.sh 2>&1 | tee install.log
       - name: Set the password with the printed link and sign in over HTTPS
         run: |
           set -euo pipefail
@@ -180,7 +185,7 @@ jobs:
           set -uo pipefail
           # Exit 1 means a FAIL row; the rows below are what a clean install must always show.
           # The AI connection, mail and release rows depend on the owner and on tags, not on the install.
-          sudo -E ./scripts/deploy/acceptance.sh | tee acceptance.md
+          sudo --preserve-env=DOCOO_ACCEPTANCE_CURL_OPTS ./scripts/deploy/acceptance.sh | tee acceptance.md
           grep -F '| Containers | PASS |' acceptance.md
           grep -F '| API ready | PASS |' acceptance.md
           # Caddy's local CA signs a certificate that lives about 12 hours, so the expiry check

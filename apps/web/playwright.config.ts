@@ -39,10 +39,14 @@ export default defineConfig({
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      // Slower to render on a shared runner than Chromium; a stall of a few seconds is not a bug.
+      expect: { timeout: 10_000 },
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      // Slower to render on a shared runner than Chromium; a stall of a few seconds is not a bug.
+      expect: { timeout: 10_000 },
     },
   ],
   webServer: [

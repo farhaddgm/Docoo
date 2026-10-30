@@ -112,6 +112,7 @@ export class AnswerSuggestionService {
       const result = await this.runtime.invoke(
         {
           workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
           projectId: plan.question.projectId,
           stageRunId: null,
           attemptId: null,

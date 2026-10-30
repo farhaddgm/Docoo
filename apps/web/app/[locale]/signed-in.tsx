@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { AccountRole } from '@docoo/contracts';
+import type { AccountRole, EffectiveAccess } from '@docoo/contracts';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { messagesFor, type Locale } from '../i18n';
@@ -18,6 +18,8 @@ export interface SessionIdentity {
     isOwner?: boolean;
     loginMethod?: string;
     hasPassword?: boolean;
+    /** What the owner's settings leave open to this account (ADR-0042). */
+    access?: EffectiveAccess;
   };
   workspaces: { id: string; code: string; name: string; role: AccountRole }[];
 }

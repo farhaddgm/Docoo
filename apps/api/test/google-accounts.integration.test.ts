@@ -100,7 +100,10 @@ describe.skipIf(!adminUrl)('Google accounts on the deployed database schema', ()
     expect((await app.inject({ method: 'GET', url: '/v1/auth/providers' })).json()).toEqual({
       google: true,
     });
-  });
+    // GET /v1/admin/users asks once per user and workspace whether the user is a member, so it
+    // slows down as the shared test database fills with workspaces (about 7 s with 500 here):
+    // the default 5 s is not enough.
+  }, 30000);
   it('rejects unapproved, unverified and organizational accounts', async () => {
     await expect(
       auth.loginWithGoogle(googleIdentity(`unknown.${suffix}@gmail.com`), {
@@ -249,7 +252,80 @@ describe.skipIf(!adminUrl)('Google accounts on the deployed database schema', ()
       db.release();
     }
   });
-  it('allows EDIT for an explicitly granted project while retaining viewer creation limits', async () => {
+  it('keeps a viewer looking only: an EDIT grant is refused and a write is denied (ADR-0042)', async () => {
+    const refused = await app.inject({
+      method: 'PUT',
+      url: `/v1/owner/users/${viewerId}/access/project/${projectId}`,
+      headers: headers(ownerCookie),
+      payload: { workspaceId, access: 'EDIT' },
+    });
+    expect(refused.statusCode).toBe(400);
+    const update = await app.inject({
+      method: 'PATCH',
+      url: `/v1/workspaces/${workspaceId}/projects/${projectId}`,
+      headers: { ...headers(viewerCookie), 'if-match': '"1"' },
+      payload: { title: 'A viewer cannot change this' },
+    });
+    expect(update.statusCode).toBe(403);
+  });
+  it('lets only the owner read and set the settings of an account, and applies them at once', async () => {
+    const url = `/v1/owner/users/${viewerId}/policy`;
+    const read = await app.inject({ method: 'GET', url, headers: headers(ownerCookie) });
+    expect(read.statusCode, read.body).toBe(200);
+    expect(
+      read.json<{ effective: { canCreateProjects: boolean } }>().effective.canCreateProjects,
+    ).toBe(false);
+    const policy = {
+      canCreateProjects: false,
+      canCreateTopics: false,
+      maxProjects: null,
+      sections: { knowledge: 'none' },
+      canUploadFiles: false,
+      ai: { enabled: false, monthlyTokens: null, monthlyCostUsd: null, dailyCalls: null },
+      expiresAt: null,
+      note: 'Read-only reviewer',
+    };
+    expect(
+      (await app.inject({ method: 'PUT', url, headers: headers(viewerCookie), payload: policy }))
+        .statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: 'PUT',
+          url,
+          headers: headers(ownerCookie),
+          payload: { ...policy, sections: { secrets: 'edit' } },
+        })
+      ).statusCode,
+    ).toBe(400);
+    const saved = await app.inject({
+      method: 'PUT',
+      url,
+      headers: headers(ownerCookie),
+      payload: policy,
+    });
+    expect(saved.statusCode, saved.body).toBe(200);
+    // The hidden section is closed on the account's very next request.
+    const closed = await app.inject({
+      method: 'GET',
+      url: `/v1/workspaces/${workspaceId}/knowledge`,
+      headers: headers(viewerCookie),
+    });
+    expect(closed.statusCode).toBe(403);
+    expect(closed.json<{ code: string }>().code).toBe('AUTH_SECTION_DENIED');
+    // Put it back so the tests below see what they did before.
+    await app.inject({
+      method: 'PUT',
+      url,
+      headers: headers(ownerCookie),
+      payload: { ...policy, sections: {}, canUploadFiles: true },
+    });
+  });
+  it('allows EDIT for an explicitly granted project to an editor, whose creation still needs the owner', async () => {
+    // The same account becomes an editor, so the grant below can let it change the project.
+    await admin.query("update users set account_role='editor' where id=$1", [viewerId]);
+    await admin.query("update memberships set role='editor' where user_id=$1", [viewerId]);
     const grant = await app.inject({
       method: 'PUT',
       url: `/v1/owner/users/${viewerId}/access/project/${projectId}`,
@@ -441,6 +517,23 @@ describe.skipIf(!adminUrl)('Google accounts on the deployed database schema', ()
     });
     expect(created.statusCode).toBe(201);
     const creatorId = created.json<{ id: string }>().id;
+    // A new editor cannot create anything until the owner allows it (ADR-0042).
+    const allowed = await app.inject({
+      method: 'PUT',
+      url: `/v1/owner/users/${creatorId}/policy`,
+      headers: headers(ownerCookie),
+      payload: {
+        canCreateProjects: true,
+        canCreateTopics: true,
+        maxProjects: null,
+        sections: {},
+        canUploadFiles: true,
+        ai: { enabled: true, monthlyTokens: null, monthlyCostUsd: null, dailyCalls: null },
+        expiresAt: null,
+        note: '',
+      },
+    });
+    expect(allowed.statusCode, allowed.body).toBe(200);
     const creator = await auth.loginWithGoogle(googleIdentity(email), {
       correlationId: randomUUID(),
     });

@@ -44,8 +44,7 @@ it.skipIf(!adminUrl || !temporalAddress)(
     // The installed SDK permits one worker per queue/build in a process. Use two real OS
     // processes, matching horizontal replicas and giving each its own restricted PG pool.
     await temporal.stopWorker();
-    let active = 0;
-    let peak = 0;
+    const invocations: { started: bigint; completed: bigint }[] = [];
     const roundsByWorker = [0, 0];
     const workerPids = new Set<number>();
     await Promise.all(
@@ -80,19 +79,23 @@ it.skipIf(!adminUrl || !temporalAddress)(
             clearTimeout(timer);
             if (code !== 0) reject(new Error('Agent load worker failed: ' + diagnostic));
           });
-          child.on('message', (message: { event?: string; pid?: number }) => {
-            if (message.event === 'ready') {
-              clearTimeout(timer);
-              workerPids.add(message.pid!);
-              resolve();
-            }
-            if (message.event === 'analysis') roundsByWorker[index] = roundsByWorker[index]! + 1;
-            if (message.event === 'invoke.started') {
-              active++;
-              peak = Math.max(peak, active);
-            }
-            if (message.event === 'invoke.completed') active--;
-          });
+          child.on(
+            'message',
+            (message: { event?: string; pid?: number; started?: string; completed?: string }) => {
+              if (message.event === 'ready') {
+                clearTimeout(timer);
+                workerPids.add(message.pid!);
+                resolve();
+              }
+              if (message.event === 'analysis') roundsByWorker[index] = roundsByWorker[index]! + 1;
+              if (message.event === 'invoke.interval') {
+                invocations.push({
+                  started: BigInt(message.started!),
+                  completed: BigInt(message.completed!),
+                });
+              }
+            },
+          );
         });
       }),
     );
@@ -211,6 +214,22 @@ it.skipIf(!adminUrl || !temporalAddress)(
     expect(new Set(ledger.map((row) => row.project_id)).size).toBe(25);
     expect(new Set(ledger.map((row) => row.stage_run_id)).size).toBe(25);
     expect(ledger.every((row) => row.status === 'succeeded')).toBe(true);
+    // IPC preserves order within one worker, not between workers. Count overlaps on the
+    // shared monotonic clock so a delayed completion message cannot invent concurrency.
+    await expect.poll(() => invocations.length).toBe(25);
+    const events = invocations
+      .flatMap(({ started, completed }) => [
+        { time: started, delta: 1 },
+        { time: completed, delta: -1 },
+      ])
+      .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : a.delta - b.delta));
+    let active = 0;
+    let peak = 0;
+    for (const event of events) {
+      active += event.delta;
+      peak = Math.max(peak, active);
+    }
+    expect(active).toBe(0);
     expect(peak).toBe(configuredLimit);
     expect(roundsByWorker).toHaveLength(2);
     expect(roundsByWorker.every((calls) => calls > 0)).toBe(true);

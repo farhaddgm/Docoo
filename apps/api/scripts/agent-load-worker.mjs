@@ -35,12 +35,16 @@ const runtime = new ProviderRuntime(
       listModels: () => fake.listModels(),
       healthCheck: () => fake.healthCheck(),
       invoke: async (request) => {
-        process.send({ event: 'invoke.started' });
+        const started = process.hrtime.bigint();
         try {
           await delay(120);
           return await fake.invoke(request);
         } finally {
-          process.send({ event: 'invoke.completed' });
+          process.send({
+            event: 'invoke.interval',
+            started: started.toString(),
+            completed: process.hrtime.bigint().toString(),
+          });
         }
       },
     };

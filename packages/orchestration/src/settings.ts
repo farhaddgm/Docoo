@@ -1,4 +1,4 @@
-import { clampBusinessBudget } from '@docoo/domain';
+import { clampBusinessBudget, normalizeOfficialDomains } from '@docoo/domain';
 import type { PoolClient } from 'pg';
 
 import { RESEARCH_DEFAULTS } from './research.js';
@@ -38,6 +38,10 @@ export interface Settings {
   researchWebMaxSearches: number;
   /** Ideation waits for the administrator to confirm the plan of deliverables (ADR-0031). */
   requireDeliverableConfirmation: boolean;
+  /** Domains counted as official web sources besides the built-in ones (ADR-0040). */
+  researchOfficialDomains: string[];
+  /** Research waits for the administrator to confirm the research plan (ADR-0038). */
+  requireResearchPlanConfirmation: boolean;
 }
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
@@ -102,5 +106,8 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
     researchWebEnabled: values['research.web_enabled'] !== false,
     researchWebMaxSearches: boundedInteger(values['research.web_max_searches'], 5, 1, 10),
     requireDeliverableConfirmation: values['workflow.require_deliverable_confirmation'] !== false,
+    researchOfficialDomains: normalizeOfficialDomains(values['research.official_domains']),
+    requireResearchPlanConfirmation:
+      values['workflow.require_research_plan_confirmation'] !== false,
   };
 }

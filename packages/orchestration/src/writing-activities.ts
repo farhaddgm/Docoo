@@ -45,8 +45,10 @@ import type { Pool, PoolClient } from 'pg';
 import { loadAgentVersion, resolveAgentProfile } from './agents.js';
 import { businessForRole, loadWritingBusiness } from './business.js';
 import { confirmedDeliverables } from './deliverables.js';
+import { promptRequirements } from './output-requirements.js';
 import { audit, inWorkspace } from './db.js';
 import { canonicalJson, retrieveKnowledge, type RetrievedPassage } from './knowledge-retrieval.js';
+import { promptConflictDecisions } from './research-conflicts.js';
 import { compactResearchForPrompt, assignReferences, type KnowledgePassage } from './research.js';
 import type { ProviderRuntime } from './runtime.js';
 import {
@@ -278,19 +280,27 @@ export function createWritingActivities(
       ).rows[0]?.criteria ?? DEFAULT_CRITERIA;
     const score = scoreSolution(solution.score_inputs, criteria);
 
-    const research = (
-      await client.query<{ content: unknown }>(
-        `select o.content from stage_runs s join stage_outputs o on o.id = s.latest_output_id
+    const researchRow = (
+      await client.query<{ content: unknown; stageRunId: string }>(
+        `select s.id as "stageRunId", o.content from stage_runs s join stage_outputs o on o.id = s.latest_output_id
           where s.project_id = $1 and s.stage = 'research' and s.status = 'completed'
           order by s.created_at desc limit 1`,
         [row.project_id],
       )
-    ).rows[0]?.content;
+    ).rows[0];
+    const research = researchRow?.content;
+    const conflictDecisions = researchRow
+      ? await promptConflictDecisions(client, researchRow.stageRunId, research)
+      : [];
     const compact = compactResearchForPrompt(research) as { findings?: unknown } | null;
     const findings = Array.isArray(compact?.findings)
       ? (compact.findings as Record<string, unknown>[])
           .slice(0, 12)
-          .map((item) => ({ claim: text(item['claim']), support: text(item['support']) }))
+          .map((item) => ({
+            claim: text(item['claim']),
+            support: text(item['support']),
+            ...(text(item['level']) ? { level: text(item['level']) } : {}),
+          }))
           .filter((item) => item.claim !== '')
       : [];
 
@@ -338,11 +348,13 @@ export function createWritingActivities(
         },
       },
       research: findings,
+      researchConflictDecisions: conflictDecisions.length > 0 ? conflictDecisions : undefined,
       stageOutline,
       notes: row.notes,
       knowledge,
       business: business?.prompt,
       deliverables: (await confirmedDeliverables(client, row.project_id)) ?? undefined,
+      requirements: await promptRequirements(client, row.project_id, 'documentation'),
     };
     return {
       material,

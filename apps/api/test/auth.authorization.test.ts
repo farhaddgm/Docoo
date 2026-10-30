@@ -15,6 +15,7 @@ import {
   RequireWorkspacePermission,
   WorkspacePermissionGuard,
 } from '../src/auth/auth.authorization.js';
+import type { AccountPolicyService } from '../src/auth/account-policy.service.js';
 import type { AuthService } from '../src/auth/auth.service.js';
 
 const workspace = {
@@ -60,7 +61,11 @@ function fixture() {
     assertSameOrigin,
     secureCookies: false,
   } as unknown as AuthService;
-  const guard = new WorkspacePermissionGuard(authService, new Reflector());
+  const guard = new WorkspacePermissionGuard(
+    authService,
+    new Reflector(),
+    {} as unknown as AccountPolicyService,
+  );
   const context = {
     getHandler: () => ProtectedController.prototype.read,
     getClass: () => ProtectedController,

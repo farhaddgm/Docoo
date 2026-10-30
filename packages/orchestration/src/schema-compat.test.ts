@@ -1,5 +1,10 @@
 import { OUTLINE_SCHEMA, SECTION_SCHEMA } from '@docoo/documents';
-import { ROLE_EVALUATION_SCHEMA } from '@docoo/domain';
+import {
+  COVERAGE_SCHEMA,
+  DELIVERABLE_SCHEMA,
+  RESEARCH_PLAN_SCHEMA,
+  ROLE_EVALUATION_SCHEMA,
+} from '@docoo/domain';
 import { strictSchemaProblems, type JsonSchema } from '@docoo/providers';
 import { describe, expect, it } from 'vitest';
 
@@ -12,6 +17,12 @@ import { STAGE_SCHEMAS, STAGES } from './stages.js';
  * mode (OpenAI `strict: true`), so the offline fake provider and the real ones accept the same.
  */
 describe('provider schemas of the platform', () => {
+  it('the output requirement coverage check is accepted by strict structured outputs', () => {
+    expect(strictSchemaProblems(COVERAGE_SCHEMA)).toEqual([]);
+    expect(strictSchemaProblems(DELIVERABLE_SCHEMA)).toEqual([]);
+    expect(strictSchemaProblems(RESEARCH_PLAN_SCHEMA)).toEqual([]);
+  });
+
   for (const stage of STAGES) {
     it(`the ${stage} stage output is accepted by strict structured outputs`, () => {
       expect(strictSchemaProblems(STAGE_SCHEMAS[stage])).toEqual([]);

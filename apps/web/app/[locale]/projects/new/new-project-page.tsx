@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import type { Locale } from '../../../i18n';
 import { WorkspacePage } from '../../workspace-page';
+import { canCreateProjects } from '../../access';
 import { useSessionIdentity } from '../../signed-in';
 import { projectMessages } from '../messages';
 import { ProjectWizard } from './project-wizard';
@@ -24,12 +25,16 @@ function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: stri
   const text = projectMessages(locale);
   const router = useRouter();
   const identity = useSessionIdentity();
-  if (identity?.user.role === 'viewer')
+  if (!canCreateProjects(identity))
     return (
       <p role="alert">
-        {locale === 'fa'
-          ? 'نقش مشاهده‌گر اجازهٔ ساخت پروژه ندارد.'
-          : 'Viewers cannot create projects.'}
+        {identity?.user.role === 'viewer'
+          ? locale === 'fa'
+            ? 'نقش مشاهده‌گر اجازهٔ ساخت پروژه ندارد.'
+            : 'Viewers cannot create projects.'
+          : locale === 'fa'
+            ? 'این حساب اجازهٔ ساخت پروژه ندارد. از مالک بخواهید آن را فعال کند.'
+            : 'This account may not create projects. Ask the owner to allow it.'}
       </p>
     );
 
