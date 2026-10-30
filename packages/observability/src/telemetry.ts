@@ -45,10 +45,12 @@ export function startTelemetry(options: TelemetryOptions): NodeSDK | undefined {
     traceExporter: new PrivateTraceExporter(
       new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }),
     ),
-    metricReader: new PeriodicExportingMetricReader({
-      exporter: new OTLPMetricExporter({ url: `${endpoint}/v1/metrics` }),
-      exportIntervalMillis: 15_000,
-    }),
+    metricReaders: [
+      new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter({ url: `${endpoint}/v1/metrics` }),
+        exportIntervalMillis: 15_000,
+      }),
+    ],
     instrumentations: [
       getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-fs': { enabled: false },
