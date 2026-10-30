@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Security
+
+- Upgrade the Temporal TypeScript SDK to 1.25.0, whose native core bridge bundles `zip` 9.0.5 and clears CVE-2026-115905, CVE-2026-115907, CVE-2026-115908 and CVE-2026-115909 that failed the worker image scans on 1.24.0. 1.25.0 is younger than the seven-day release-age gate, so it is listed in `minimumReleaseAgeExclude` (exact versions only) with a reminder to remove the entries once the gate passes.
+
 ### Fixed
 
 - Make the administrator's account list (`GET /v1/admin/users`) fast on a database with many workspaces. It asked once per listed account and workspace whether the account is a member (about 7.5 s with 500 workspaces and 20 accounts); it now asks once per workspace for all listed accounts (about 0.5 s). The result is unchanged, and a test now checks which workspaces the list names for an account.
