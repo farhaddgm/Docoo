@@ -711,6 +711,37 @@
       ],
       "note": "Connections default to fallback false and a failing project tries no other connection before pausing."
     },
+    "FR-EXP-001": {
+      "status": "tested",
+      "evidence": ["apps/api/test/explorations.integration.test.ts"],
+      "note": "Create, read, update, archive and reopen run against PostgreSQL with the runtime role; the archived state closes messages and new candidates."
+    },
+    "FR-EXP-002": {
+      "status": "tested",
+      "evidence": ["apps/api/test/explorations.integration.test.ts"],
+      "note": "The conversation is numbered, stored append-only, capped by exploration.max_messages and refused while no model is configured."
+    },
+    "FR-EXP-003": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/explorations.integration.test.ts",
+        "packages/domain/src/exploration.test.ts"
+      ],
+      "note": "A scripted model proposes candidates: invalid and repeated ones are dropped, the cap holds and nothing becomes a project or a decision by itself."
+    },
+    "FR-EXP-004": {
+      "status": "tested",
+      "evidence": ["apps/api/test/explorations.integration.test.ts"],
+      "note": "Hand-written candidates, versioned edits, stale and duplicate refusals, and reversible park/drop/restore decisions are asserted."
+    },
+    "FR-EXP-005": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/explorations.integration.test.ts",
+        "apps/api/test/authorization-matrix.test.ts"
+      ],
+      "note": "Workspace isolation, a read-only viewer, append-only triggers and an audit trail free of the administrator's text are asserted; the authorization matrix lists every route."
+    },
     "FR-AUD-001": {
       "status": "tested",
       "evidence": [

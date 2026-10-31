@@ -1139,6 +1139,90 @@ export const stageMessages = pgTable(
   (table) => [index('stage_messages_stage_idx').on(table.stageRunId, table.createdAt)],
 );
 
+/** An exploration turns an event into candidate problems (ADR-0044); the row itself can change. */
+export const explorations = pgTable(
+  'explorations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    title: text('title').notNull(),
+    eventText: text('event_text').notNull(),
+    status: text('status').notNull().default('open'),
+    outputLanguage: text('output_language').notNull().default('fa'),
+    version: integer('version').notNull().default(1),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('explorations_workspace_idx').on(table.workspaceId, table.updatedAt)],
+);
+
+/** The conversation of an exploration; append-only. */
+export const explorationMessages = pgTable('exploration_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'restrict' }),
+  explorationId: uuid('exploration_id').notNull(),
+  seq: integer('seq').notNull(),
+  role: text('role').notNull(),
+  content: text('content').notNull(),
+  status: text('status').notNull().default('done'),
+  invocationId: uuid('invocation_id'),
+  authorId: uuid('author_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** One row per version of a candidate problem; `candidateKey` is its identity across edits. */
+export const explorationCandidates = pgTable(
+  'exploration_candidates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Keeps the order of candidates added in one request stable. */
+    seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    explorationId: uuid('exploration_id').notNull(),
+    candidateKey: uuid('candidate_key').notNull(),
+    versionNo: integer('version_no').notNull(),
+    title: text('title').notNull(),
+    problemDraft: text('problem_draft').notNull(),
+    why: text('why').notNull().default(''),
+    assumptions: text('assumptions').notNull().default(''),
+    expectedOutput: text('expected_output').notNull().default(''),
+    source: text('source').notNull(),
+    invocationId: uuid('invocation_id'),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('exploration_candidates_exploration_idx').on(table.explorationId, table.createdAt),
+  ],
+);
+
+/** The decisions on a candidate; the newest is its state, none means proposed. Append-only. */
+export const explorationCandidateDecisions = pgTable(
+  'exploration_candidate_decisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    explorationId: uuid('exploration_id').notNull(),
+    candidateKey: uuid('candidate_key').notNull(),
+    decision: text('decision').notNull(),
+    reason: text('reason').notNull().default(''),
+    decidedBy: uuid('decided_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('exploration_decisions_idx').on(table.explorationId, table.candidateKey, table.createdAt),
+  ],
+);
+
 /** The plan of expected deliverables of a project, one version per edit (ADR-0031); append-only. */
 export const deliverablePlans = pgTable(
   'deliverable_plans',
