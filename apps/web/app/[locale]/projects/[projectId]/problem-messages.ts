@@ -22,9 +22,8 @@ const messages = {
     readOnlyNote: 'این پروژه فقط‌خواندنی است؛ پاسخی ثبت نمی‌شود.',
     // Progress
     progressTitle: 'پیشرفت پرسش‌ها',
-    progressSummary: '{asked} پرسش از حداکثر {max} · {answered} پاسخ‌داده‌شده · حداقل لازم: {min}',
+    progressCompact: '{asked} از {max} پرسش · حداقل {min}',
     progressLabel: 'تعداد پرسش‌های پرسیده‌شده از حداکثر مجاز',
-    minimumReached: 'حداقل {min} پرسش پرسیده شده است.',
     minimumMissing: 'هنوز {n} پرسش تا حداقل {min} مانده است.',
     counts: {
       asked: 'پرسیده‌شده',
@@ -227,10 +226,8 @@ const messages = {
       'The project is paused. Your answers are saved, and the analyst picks them up after "Resume".',
     readOnlyNote: 'This project is read-only; answers are not saved.',
     progressTitle: 'Question progress',
-    progressSummary:
-      '{asked} questions of at most {max} · {answered} answered · minimum needed: {min}',
+    progressCompact: '{asked} of {max} questions · minimum {min}',
     progressLabel: 'Questions asked out of the maximum allowed',
-    minimumReached: 'At least {min} questions have been asked.',
     minimumMissing: '{n} more questions are needed to reach the minimum of {min}.',
     counts: {
       asked: 'Asked',

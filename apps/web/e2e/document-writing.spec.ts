@@ -7,6 +7,7 @@ import {
   expectNoSeriousA11yViolations,
   signInWithKeyboard,
   useFakeProvider,
+  fillReason,
 } from './support';
 
 const editor = editorMessages('fa');
@@ -121,7 +122,7 @@ test.describe('the documenter writes and the structured editor changes a documen
     // A reason is required; the new count is checked with the server before saving.
     const save = page.getByRole('button', { name: editor.save, exact: true });
     await expect(save).toBeDisabled();
-    await page.locator('#editor-reason').fill('اصلاح عنوان و افزودن فهرست');
+    await fillReason(page, page.locator('#editor-reason'), 'اصلاح عنوان و افزودن فهرست');
     await expect(page.getByText(editor.validStructure)).toBeVisible();
     await expect(save).toBeEnabled();
     await save.click();

@@ -11,6 +11,7 @@ import {
   expectNoSeriousA11yViolations,
   signInWithKeyboard,
   useFakeProvider,
+  fillReason,
 } from './support';
 
 const settings = settingsMessages('fa');
@@ -30,7 +31,7 @@ const row = (page: Page, key: string): Locator =>
 async function saveSetting(page: Page, key: string, value: string, reason: string) {
   const item = row(page, key);
   await item.getByRole('spinbutton').fill(value);
-  await item.getByLabel(settings.reasonLabel).fill(reason);
+  await fillReason(page, item.getByLabel(settings.reasonLabel), reason);
   await item.getByRole('button', { name: settings.save, exact: true }).click();
 }
 
@@ -64,7 +65,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await count.getByRole('spinbutton').fill('7');
     await expect(count.getByRole('button', { name: settings.save, exact: true })).toBeDisabled();
     await count.getByRole('spinbutton').fill('99');
-    await count.getByLabel(settings.reasonLabel).fill('خیلی زیاد');
+    await fillReason(page, count.getByLabel(settings.reasonLabel), 'خیلی زیاد');
     await expect(problem(count)).toContainText('بیشتر از ۲۰');
     await expect(count.getByRole('button', { name: settings.save, exact: true })).toBeDisabled();
 
@@ -86,7 +87,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
       expect(await versions.count()).toBeGreaterThanOrEqual(2);
     }).toPass({ timeout: 15_000 });
     const before = await versions.count();
-    await count.getByLabel(settings.reasonLabel).fill('برگشت');
+    await fillReason(page, count.getByLabel(settings.reasonLabel), 'برگشت');
     await versions
       .filter({ hasText: 'برای آزمون' })
       .first()
@@ -97,7 +98,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await expect(versions.first()).toContainText(settings.historyRestored.replace('{n}', ''));
 
     // Back to the system default clears the workspace value.
-    await count.getByLabel(settings.reasonLabel).fill('بازگشت');
+    await fillReason(page, count.getByLabel(settings.reasonLabel), 'بازگشت');
     await count.getByRole('button', { name: settings.resetWorkspace }).click();
     await expect(count.getByRole('spinbutton')).toHaveValue('5');
     await expect(count.getByText(settings.sources.system, { exact: true }).first()).toBeVisible();
@@ -132,11 +133,11 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     const levelMax = (n: number) =>
       page.getByLabel(`${templates.level.replace('{n}', n === 1 ? '۱' : '۲')}: ${templates.max}`);
     const save = page.getByRole('button', { name: templates.saveLevels });
-    const reason = page.getByLabel(templates.reasonLabel).first();
+    const reason = page.getByLabel(templates.reasonLabel).and(page.locator('input')).first();
 
     // A range that breaks the rules is explained and cannot be saved.
     await levelMin(1).fill('999999999');
-    await reason.fill('آزمون');
+    await fillReason(page, reason, 'آزمون');
     await expect(problem(page)).toContainText(
       templates.boundsProblems['min_not_below_max']!.replace('{level}', '۱'),
     );
@@ -153,7 +154,11 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     // The system default is one click away.
     await page.getByRole('button', { name: templates.restoreDefaults }).click();
     await expect(levelMin(1)).toHaveValue('1000');
-    await page.getByLabel(templates.reasonLabel).first().fill('بازگشت به پیش‌فرض');
+    await fillReason(
+      page,
+      page.getByLabel(templates.reasonLabel).and(page.locator('input')).first(),
+      'بازگشت به پیش‌فرض',
+    );
     await page.getByRole('button', { name: templates.saveLevels }).click();
     await expect(page.getByRole('status').filter({ hasText: templates.savedLevels })).toBeVisible();
 
@@ -165,10 +170,11 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     ).toBeVisible();
     await group.getByRole('radio', { name: new RegExp(templates.names['detailed']!, 'u') }).check();
     await expect(page.getByRole('button', { name: templates.saveTemplate })).toBeDisabled();
-    await page
-      .locator('section', { has: group })
-      .getByLabel(templates.reasonLabel)
-      .fill('اسناد تفصیلی');
+    await fillReason(
+      page,
+      page.locator('section', { has: group }).getByLabel(templates.reasonLabel),
+      'اسناد تفصیلی',
+    );
     await page.getByRole('button', { name: templates.saveTemplate }).click();
     await expect(
       page.getByRole('status').filter({ hasText: templates.savedTemplate }),
@@ -178,7 +184,11 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
 
     // Put the default back so later tests start from the same place.
     await group.getByRole('radio', { name: new RegExp(templates.names['standard']!, 'u') }).check();
-    await page.locator('section', { has: group }).getByLabel(templates.reasonLabel).fill('بازگشت');
+    await fillReason(
+      page,
+      page.locator('section', { has: group }).getByLabel(templates.reasonLabel),
+      'بازگشت',
+    );
     await page.getByRole('button', { name: templates.saveTemplate }).click();
     await expect(
       page.getByRole('status').filter({ hasText: templates.savedTemplate }),
@@ -236,7 +246,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     ).toBeVisible();
     const section = (index: number) => page.locator('details.wizard-section').nth(index);
     const open = async (index: number) => {
-      await section(index).locator('summary').click();
+      await section(index).locator('summary .wizard-section-title').click();
       return section(index);
     };
     const flow = await open(0);
@@ -335,7 +345,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await expect(page.getByRole('spinbutton', { name: /Impact/u })).toHaveValue('35');
     await page.getByRole('button', { name: detail.tabs.settings, exact: true }).click();
     // Going back to the inherited value is one click with a reason.
-    await own.getByLabel(settings.reasonLabel).fill('برگشت');
+    await fillReason(page, own.getByLabel(settings.reasonLabel), 'برگشت');
     await own.getByRole('button', { name: settings.resetProject }).click();
     await expect(own.getByRole('spinbutton')).toHaveValue('5');
     await expectNoSeriousA11yViolations(page);

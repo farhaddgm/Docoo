@@ -296,9 +296,7 @@ export function ProblemPanel({
             {quickDraftMessages(locale).warning}
           </p>
         )}
-        <p className="muted">
-          {analysis.profile === 'quick' ? quickDraftMessages(locale).help : text.intro}
-        </p>
+        {analysis.profile !== 'quick' && <p className="muted">{text.intro}</p>}
         <p role="status" aria-busy={analysis.phase === 'analysing'}>
           <strong>{text.phaseHeading}:</strong> {phaseText}
         </p>
@@ -310,33 +308,34 @@ export function ProblemPanel({
           </p>
         )}
 
-        <h4 id="progress-heading">{text.progressTitle}</h4>
-        <p>
-          {fill(text.progressSummary, {
-            asked: formatNumber(locale, progress.asked),
-            max: formatNumber(locale, progress.maximum),
-            answered: formatNumber(locale, progress.answered),
-            min: formatNumber(locale, progress.minimum),
-          })}
-        </p>
-        <meter
-          className="progress-meter"
-          min={0}
-          max={progress.maximum}
-          low={progress.minimum}
-          value={progress.asked}
-          aria-label={text.progressLabel}
-        >
-          {progress.asked}/{progress.maximum}
-        </meter>
-        <p className="muted">
-          {progress.minimumReached
-            ? fill(text.minimumReached, { min: formatNumber(locale, progress.minimum) })
-            : fill(text.minimumMissing, {
-                n: formatNumber(locale, missing),
-                min: formatNumber(locale, progress.minimum),
-              })}
-        </p>
+        <div className="progress-compact">
+          <h4 id="progress-heading">{text.progressTitle}</h4>
+          <span>
+            {fill(text.progressCompact, {
+              asked: formatNumber(locale, progress.asked),
+              max: formatNumber(locale, progress.maximum),
+              min: formatNumber(locale, progress.minimum),
+            })}
+          </span>
+          <meter
+            className="progress-meter"
+            min={0}
+            max={progress.maximum}
+            low={progress.minimum}
+            value={progress.asked}
+            aria-label={text.progressLabel}
+          >
+            {progress.asked}/{progress.maximum}
+          </meter>
+        </div>
+        {!progress.minimumReached && (
+          <p className="muted">
+            {fill(text.minimumMissing, {
+              n: formatNumber(locale, missing),
+              min: formatNumber(locale, progress.minimum),
+            })}
+          </p>
+        )}
         <dl className="counts counts-compact" aria-labelledby="progress-heading">
           {(['asked', 'answered', 'unanswered', 'irrelevant', 'later', 'open'] as const).map(
             (key) => (

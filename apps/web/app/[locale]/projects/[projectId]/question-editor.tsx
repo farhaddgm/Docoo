@@ -1,5 +1,6 @@
 'use client';
 
+import { InfoTip } from '../../../info-tip';
 import { useId, useRef, useState, type ReactNode } from 'react';
 
 import { formatNumber, type Locale, textDir } from '../../../i18n';
@@ -256,23 +257,22 @@ export function QuestionEditor({
         )}
         {!noteOnly && (
           <div className="file-pick">
-            <label htmlFor={`${id}-file`}>{text.attach}</label>
             <input
               ref={picker}
               id={`${id}-file`}
+              aria-label={text.attach}
               type="file"
               accept={ACCEPTED_EXTENSIONS}
               disabled={disabled || draft.uploading}
               aria-describedby={`${id}-file-help`}
               onChange={(event) => pick(event.target.files)}
             />
-            <small
-              id={`${id}-file-help`}
-              className="muted"
-              role={draft.uploading ? 'status' : undefined}
-            >
-              {draft.uploading ? text.uploading : text.attachHelp}
-            </small>
+            <InfoTip id={`${id}-file-help`} text={text.attachHelp} />
+            {draft.uploading && (
+              <small className="muted" role="status">
+                {text.uploading}
+              </small>
+            )}
           </div>
         )}
         {draft.files.length > 0 && (

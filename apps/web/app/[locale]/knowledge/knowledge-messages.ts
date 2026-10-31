@@ -297,6 +297,37 @@ const fa = {
   declarationHelp:
     'این منبع از کجا آمده و چرا قابل‌اعتماد است؟ این متن بخشی از ردپای منبع می‌شود و Brain آن را می‌سنجد.',
   createSubmit: 'ساخت دانش (پیش‌نویس)',
+  createFlow:
+    'مسیر کار: منبع ← پیش‌نویس دانش ← ممیزی Brain ← تأیید ← در دسترس ایجنت‌ها. اینجا فقط پیش‌نویس ساخته می‌شود.',
+  createStepsLabel: 'گام‌های ساخت دانش',
+  createSteps: {
+    basics: 'اطلاعات پایه',
+    scope: 'دامنهٔ استفاده',
+    provenance: 'اعلامیهٔ منبع',
+    review: 'مرور و ساخت',
+  } as Record<'basics' | 'scope' | 'provenance' | 'review', string>,
+  createStepOf: 'گام {n} از {total}: {name}',
+  createNext: 'گام بعدی',
+  createBack: 'گام قبلی',
+  createNeeds: {
+    basics: 'برای ادامه، عنوان دانش را بنویسید.',
+    scope: 'برای ادامه، دست‌کم یک دامنه لازم است.',
+    provenance: 'برای ادامه، اعلامیهٔ منبع (دست‌کم ۳ نویسه) را بنویسید.',
+    partial: 'استخراج این منبع ناقص بوده؛ برای ادامه باید تأیید صریح بدهید.',
+  } as Record<'basics' | 'scope' | 'provenance' | 'partial', string>,
+  createReviewIntro:
+    'پیش از ساخت، انتخاب‌های خود را مرور کنید. برای تغییر هر مورد از نوار گام‌ها به گام آن برگردید.',
+  createSummary: { source: 'منبع', partial: 'پذیرش منبع ناقص' } as Record<
+    'source' | 'partial',
+    string
+  >,
+  createNextHeading: 'پس از ساخت چه می‌شود؟',
+  createNextSteps: [
+    'یک پیش‌نویس دانش با ادعاهای استخراج‌شده ساخته می‌شود.',
+    'تا ممیزی، هیچ ایجنتی این دانش را نمی‌بیند.',
+    'صفحهٔ دانش را باز می‌کنید و آن را به ممیزی Brain می‌فرستید.',
+    'پس از تأیید (Brain یا تصمیم دستی شما)، دانش در دسترس ایجنت‌ها قرار می‌گیرد.',
+  ] as readonly string[],
   created: 'دانش ساخته شد؛ برای ممیزی آن را باز کنید.',
   openCreated: 'باز کردن دانش',
   scopeHeading: 'دامنهٔ استفاده',
@@ -898,6 +929,34 @@ const en: Table = {
   declarationHelp:
     'Where does this source come from and why is it trustworthy? This becomes part of the source trail and the Brain weighs it.',
   createSubmit: 'Build knowledge (draft)',
+  createFlow:
+    'The path: source → knowledge draft → Brain audit → approval → available to agents. This only makes the draft.',
+  createStepsLabel: 'Steps to build knowledge',
+  createSteps: {
+    basics: 'Basics',
+    scope: 'Where it applies',
+    provenance: 'Source declaration',
+    review: 'Review and build',
+  },
+  createStepOf: 'Step {n} of {total}: {name}',
+  createNext: 'Next step',
+  createBack: 'Previous step',
+  createNeeds: {
+    basics: 'To continue, write the knowledge title.',
+    scope: 'To continue, at least one scope is needed.',
+    provenance: 'To continue, write the source declaration (at least 3 characters).',
+    partial: 'This source was only partly extracted; to continue you must accept that explicitly.',
+  },
+  createReviewIntro:
+    'Look over your choices before building. To change one, go back to its step in the step bar.',
+  createSummary: { source: 'Source', partial: 'Partial source accepted' },
+  createNextHeading: 'What happens after you build?',
+  createNextSteps: [
+    'A knowledge draft is made with the extracted claims.',
+    'No agent sees this knowledge until it is audited.',
+    'You open the knowledge page and send it to the Brain audit.',
+    'Once approved (by the Brain or by your manual decision), it becomes available to agents.',
+  ],
   created: 'Knowledge created; open it to audit it.',
   openCreated: 'Open the knowledge',
   scopeHeading: 'Where it applies',

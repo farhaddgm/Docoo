@@ -301,57 +301,62 @@ export function TopicsSection({
                   >
                     {text.removeTopic}
                   </button>
-                  <div className="field-stack" style={{ flexBasis: '100%' }}>
-                    <label htmlFor={`conflict-${choice.topicId}`}>{text.conflictInstruction}</label>
-                    <input
-                      id={`conflict-${choice.topicId}`}
-                      dir={textDir(locale)}
-                      value={choice.conflictInstruction}
-                      maxLength={2000}
-                      onChange={(event) =>
-                        setTopics(
-                          values.topics.map((item) =>
-                            item.topicId === choice.topicId
-                              ? { ...item, conflictInstruction: event.target.value }
-                              : item,
-                          ),
-                        )
-                      }
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="field-stack" style={{ flexBasis: '100%' }}>
-                    <FieldLabel
-                      htmlFor={`sharing-${choice.topicId}`}
-                      help={text.sharingHelp}
-                      helpId={`sharing-help-${choice.topicId}`}
-                    >
-                      {text.sharing}
-                    </FieldLabel>
-                    <select
-                      id={`sharing-${choice.topicId}`}
-                      value={choice.knowledgeSharing}
-                      aria-describedby={`sharing-help-${choice.topicId}`}
-                      onChange={(event) =>
-                        setTopics(
-                          values.topics.map((item) =>
-                            item.topicId === choice.topicId
-                              ? {
-                                  ...item,
-                                  knowledgeSharing: event.target.value as KnowledgeSharing,
-                                }
-                              : item,
-                          ),
-                        )
-                      }
-                    >
-                      {KNOWLEDGE_SHARING.map((mode) => (
-                        <option key={mode} value={mode}>
-                          {text.sharingModes[mode]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <details className="topic-details" style={{ flexBasis: '100%' }}>
+                    <summary>{text.topicDetails}</summary>
+                    <div className="field-stack" style={{ flexBasis: '100%' }}>
+                      <label htmlFor={`conflict-${choice.topicId}`}>
+                        {text.conflictInstruction}
+                      </label>
+                      <input
+                        id={`conflict-${choice.topicId}`}
+                        dir={textDir(locale)}
+                        value={choice.conflictInstruction}
+                        maxLength={2000}
+                        onChange={(event) =>
+                          setTopics(
+                            values.topics.map((item) =>
+                              item.topicId === choice.topicId
+                                ? { ...item, conflictInstruction: event.target.value }
+                                : item,
+                            ),
+                          )
+                        }
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="field-stack" style={{ flexBasis: '100%' }}>
+                      <FieldLabel
+                        htmlFor={`sharing-${choice.topicId}`}
+                        help={text.sharingHelp}
+                        helpId={`sharing-help-${choice.topicId}`}
+                      >
+                        {text.sharing}
+                      </FieldLabel>
+                      <select
+                        id={`sharing-${choice.topicId}`}
+                        value={choice.knowledgeSharing}
+                        aria-describedby={`sharing-help-${choice.topicId}`}
+                        onChange={(event) =>
+                          setTopics(
+                            values.topics.map((item) =>
+                              item.topicId === choice.topicId
+                                ? {
+                                    ...item,
+                                    knowledgeSharing: event.target.value as KnowledgeSharing,
+                                  }
+                                : item,
+                            ),
+                          )
+                        }
+                      >
+                        {KNOWLEDGE_SHARING.map((mode) => (
+                          <option key={mode} value={mode}>
+                            {text.sharingModes[mode]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </details>
                 </li>
               );
             })}

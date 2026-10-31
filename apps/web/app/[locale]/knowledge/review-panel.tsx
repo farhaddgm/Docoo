@@ -5,10 +5,11 @@ import { useId } from 'react';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages, type KnowledgeText } from './knowledge-messages';
 import { criteria, rubrics, type BrainDecision, type Review } from './knowledge-types';
 import { parseReason } from './reasons';
-import { InfoTip } from '../../info-tip';
+import { InfoTip, SectionTitle } from '../../info-tip';
 
 export const brainTone = (decision: BrainDecision) =>
   decision === 'approved' ? 'ok' : decision === 'rejected' ? 'danger' : 'warn';
@@ -58,12 +59,15 @@ export function reasonText(text: KnowledgeText, locale: Locale, raw: string): st
  */
 export function ReviewPanel({ locale, review }: { locale: Locale; review: Review | null }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const rubric = review ? rubrics[review.rubricVersion] : undefined;
 
   return (
     <section className="card stack" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{text.reviewHeading}</h2>
+      <SectionTitle id={`${id}-heading`} help={help.detail.audit}>
+        {text.reviewHeading}
+      </SectionTitle>
       {!review ? (
         <p className="muted" role="status">
           {text.reviewNone}
@@ -82,7 +86,8 @@ export function ReviewPanel({ locale, review }: { locale: Locale; review: Review
           </p>
 
           <div>
-            <strong id={`${id}-overall`}>{text.overallLabel}</strong>{' '}
+            <strong id={`${id}-overall`}>{text.overallLabel}</strong>
+            <InfoTip text={help.detail.overall} />{' '}
             <span>{fill(text.overallValue, { n: formatNumber(locale, review.overall) })}</span>
             <meter
               className="progress-meter"
@@ -147,7 +152,9 @@ export function ReviewPanel({ locale, review }: { locale: Locale; review: Review
 
           {review.criticalFlags.length > 0 && (
             <div className="highlight" role="status">
-              <h3>{text.criticalHeading}</h3>
+              <SectionTitle as="h3" help={help.detail.critical}>
+                {text.criticalHeading}
+              </SectionTitle>
               <p>{text.criticalHelp}</p>
               <ul>
                 {review.criticalFlags.map((flag) => (
@@ -158,7 +165,9 @@ export function ReviewPanel({ locale, review }: { locale: Locale; review: Review
           )}
 
           <div>
-            <h3>{text.reasonsHeading}</h3>
+            <SectionTitle as="h3" help={help.detail.reasons}>
+              {text.reasonsHeading}
+            </SectionTitle>
             <ul className="output-list">
               {review.reasons.map((reason, index) => (
                 <li key={`${index}-${reason}`} dir={textDir(locale)}>

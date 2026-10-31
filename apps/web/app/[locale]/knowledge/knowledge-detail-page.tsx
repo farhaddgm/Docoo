@@ -7,6 +7,7 @@ import { useCallback, useEffect, useId, useState } from 'react';
 import { apiGet, ApiError, query } from '../../api-client';
 import { formatDate, formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
+import { InfoTip, SectionTitle } from '../../info-tip';
 import { Notice } from '../use-action';
 import { WorkspacePage } from '../workspace-page';
 import { ClaimsPanel } from './claims-panel';
@@ -14,6 +15,7 @@ import { ConflictCard } from './conflicts-panel';
 import { HistoryPanel } from './history-panel';
 import { Badge, decisionTone, ScopeList, statusTone } from './knowledge-common';
 import { AuditSection, EditSection, useKnowledgeAction } from './knowledge-actions';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
 import type { Conflict, KnowledgeDetail } from './knowledge-types';
 import { OverridePanel } from './override-panel';
@@ -50,6 +52,7 @@ function Detail({
   knowledgeId: string;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const base = `/workspaces/${workspaceId}`;
   const [knowledge, setKnowledge] = useState<KnowledgeDetail | null>(null);
@@ -132,46 +135,71 @@ function Detail({
         )}
         <dl className="facts">
           <div>
-            <dt>{text.factSource}</dt>
+            <dt>
+              {text.factSource}
+              <InfoTip text={help.detail.facts.source} />
+            </dt>
             <dd>{text.sourceTypes[knowledge.sourceType]}</dd>
           </div>
           <div>
-            <dt>{text.factConfidentiality}</dt>
+            <dt>
+              {text.factConfidentiality}
+              <InfoTip text={help.detail.facts.confidentiality} />
+            </dt>
             <dd>{text.confidentiality[knowledge.confidentiality]}</dd>
           </div>
           <div>
-            <dt>{text.factLanguage}</dt>
+            <dt>
+              {text.factLanguage}
+              <InfoTip text={help.detail.facts.language} />
+            </dt>
             <dd>{text.languages[knowledge.language]}</dd>
           </div>
           {version && (
             <div>
-              <dt>{text.factVersion}</dt>
+              <dt>
+                {text.factVersion}
+                <InfoTip text={help.detail.facts.version} />
+              </dt>
               <dd>{fill(text.versionLabel, { n: formatNumber(locale, version.versionNo) })}</dd>
             </div>
           )}
           {version?.validFrom && (
             <div>
-              <dt>{text.factValidFrom}</dt>
+              <dt>
+                {text.factValidFrom}
+                <InfoTip text={help.detail.facts.validFrom} />
+              </dt>
               <dd>{formatDate(locale, version.validFrom)}</dd>
             </div>
           )}
           {version?.validUntil && (
             <div>
-              <dt>{text.factValidUntil}</dt>
+              <dt>
+                {text.factValidUntil}
+                <InfoTip text={help.detail.facts.validUntil} />
+              </dt>
               <dd>{formatDate(locale, version.validUntil)}</dd>
             </div>
           )}
           <div>
-            <dt>{text.factCreated}</dt>
+            <dt>
+              {text.factCreated}
+              <InfoTip text={help.detail.facts.created} />
+            </dt>
             <dd>{formatDateTime(locale, knowledge.createdAt)}</dd>
           </div>
           <div>
-            <dt>{text.factUpdated}</dt>
+            <dt>
+              {text.factUpdated}
+              <InfoTip text={help.detail.facts.updated} />
+            </dt>
             <dd>{formatDateTime(locale, knowledge.updatedAt)}</dd>
           </div>
         </dl>
         <div>
           <strong>{text.factScopes}</strong>
+          <InfoTip text={help.detail.facts.scopes} />
           <ScopeList locale={locale} text={text} scopes={knowledge.scopes} />
         </div>
       </section>
@@ -205,7 +233,9 @@ function Detail({
       )}
 
       <section className="card stack" aria-labelledby={`${id}-conflicts`}>
-        <h2 id={`${id}-conflicts`}>{text.conflictsOfThis}</h2>
+        <SectionTitle id={`${id}-conflicts`} help={help.detail.conflictsOfThis}>
+          {text.conflictsOfThis}
+        </SectionTitle>
         {conflicts.length === 0 ? (
           <p className="muted">{text.conflictsOfThisNone}</p>
         ) : (

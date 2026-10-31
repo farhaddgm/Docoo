@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 
 import type { Locale } from '../../i18n';
+import { InfoTip } from '../../info-tip';
 import { WorkspacePage } from '../workspace-page';
 import { ConflictsPanel } from './conflicts-panel';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
 import { ManualKnowledgePanel } from './manual-panel';
 import { QueuePanel } from './queue-panel';
@@ -28,6 +30,7 @@ export function KnowledgePage({ locale }: { locale: Locale }) {
 /** The sections of knowledge management; the chosen one survives a reload (`?tab=sources`). */
 function Sections({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const [tab, setTab] = useState<Tab>('queue');
   const [status, setStatus] = useState('');
   const [deleted, setDeleted] = useState(false);
@@ -74,6 +77,7 @@ function Sections({ locale, workspaceId }: { locale: Locale; workspaceId: string
               >
                 {text.tabs[item]}
               </button>
+              <InfoTip text={help.tabs[item]} />
             </li>
           ))}
         </ul>

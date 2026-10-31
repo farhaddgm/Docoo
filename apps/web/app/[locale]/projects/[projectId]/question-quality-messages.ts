@@ -12,6 +12,8 @@ const messages = {
     none: 'هنوز ارزیابی‌ای انجام نشده است.',
     latest: 'آخرین ارزیابی',
     when: 'زمان',
+    viewReport: 'مشاهدهٔ گزارش',
+    close: 'بستن',
     scoreOf: 'امتیاز: {n} از ۵',
     questionsJudged: '{n} پرسش سنجیده شد',
     criteriaHeading: 'جنبه‌های سنجیده‌شده',
@@ -55,6 +57,8 @@ const messages = {
     latest: 'Latest evaluation',
     when: 'When',
     scoreOf: 'Score: {n} of 5',
+    viewReport: 'View report',
+    close: 'Close',
     questionsJudged: '{n} questions judged',
     criteriaHeading: 'Aspects judged',
     criteria: {

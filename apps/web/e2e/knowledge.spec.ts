@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { fill } from '../app/[locale]/agents/agent-messages';
+import { knowledgeHelp } from '../app/[locale]/knowledge/knowledge-help';
 import { knowledgeMessages } from '../app/[locale]/knowledge/knowledge-messages';
 import { manualMessages } from '../app/[locale]/knowledge/manual-messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
@@ -9,9 +10,11 @@ import {
   createViaApi,
   expectNoSeriousA11yViolations,
   signInWithKeyboard,
+  fillReason,
 } from './support';
 
 const text = knowledgeMessages('fa');
+const help = knowledgeHelp('fa');
 const english = knowledgeMessages('en');
 const manual = manualMessages('fa');
 const project = projectPageMessages('fa');
@@ -87,6 +90,18 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('every section explains itself behind an "i" that opens on hover', async () => {
+    await page.goto('/fa/knowledge?tab=queue');
+    const tip = page.locator('#docoo-info-tooltip');
+    const tabHelp = sections(page).getByRole('button', { name: 'راهنما' });
+    await tabHelp.first().hover();
+    await expect(tip).toHaveText(help.tabs.queue);
+    await tabHelp.nth(1).hover();
+    await expect(tip).toHaveText(help.tabs.sources);
+    await page.getByRole('button', { name: 'راهنما' }).nth(6).hover();
+    await expect(tip).not.toBeEmpty();
+  });
+
   test('a pasted text goes through the pipeline, becomes a draft and opens its page', async () => {
     await page.goto('/fa/knowledge?tab=sources');
     await expect(tab(page, text.tabs.sources)).toHaveAttribute('aria-current', 'page');
@@ -107,7 +122,9 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     const card = page.getByRole('list', { name: text.sourceCaption }).getByRole('listitem').filter({
       hasText: sourceTitle,
     });
-    await expect(card.getByText(text.sourceStatuses.indexed)).toBeVisible({ timeout: 90_000 });
+    await expect(card.getByText(text.sourceStatuses.indexed, { exact: true })).toBeVisible({
+      timeout: 90_000,
+    });
     await expect(card.getByText(text.noDerived)).toBeVisible();
 
     await card
@@ -115,9 +132,17 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
       .click();
     const create = card.getByRole('form', { name: text.createHeading });
     await expect(create.getByLabel(text.knowledgeTitle)).toHaveValue(sourceTitle);
-    // A declaration is required before the draft can be made.
-    await expect(create.getByRole('button', { name: text.createSubmit })).toBeDisabled();
+    // The draft is made in four steps: basics, scope, source declaration, review.
+    const next = create.getByRole('button', { name: text.createNext });
+    await next.click();
+    await expect(create.getByRole('heading', { level: 5 })).toContainText(text.createSteps.scope);
+    await next.click();
+    // A declaration is required before the last step opens.
+    await expect(next).toBeDisabled();
     await create.getByLabel(text.declarationLabel).fill('سیاست مصوب کمیتهٔ فروش');
+    await next.click();
+    await expect(create.getByText('سیاست مصوب کمیتهٔ فروش')).toBeVisible();
+    await expect(create.getByText(text.createNextHeading)).toBeVisible();
     await expectNoSeriousA11yViolations(page);
     await create.getByRole('button', { name: text.createSubmit }).click();
     await expect(page.getByRole('status').filter({ hasText: text.created })).toBeVisible();
@@ -125,7 +150,7 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
 
     await expect(page.getByRole('heading', { level: 2, name: sourceTitle })).toBeVisible();
     knowledgeUrl = page.url();
-    await expect(page.getByText(text.statuses.draft).first()).toBeVisible();
+    await expect(page.getByText(text.statuses.draft, { exact: true }).first()).toBeVisible();
     await expect(page.getByText(text.reviewNone)).toBeVisible();
   });
 
@@ -168,7 +193,7 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await page.getByLabel(text.retrievalQuery).fill('سقف تخفیف خرده‌فروشی');
     await page.getByRole('button', { name: text.retrievalSubmit }).click();
     const result = page.getByRole('listitem').filter({ hasText: sourceTitle });
-    await expect(result.getByText(text.retrievalEffective.approved)).toBeVisible();
+    await expect(result.getByText(text.retrievalEffective.approved, { exact: true })).toBeVisible();
     await expect(result.getByRole('link', { name: sourceTitle })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 
@@ -178,7 +203,7 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
       hasText: sourceTitle,
     });
     await expect(card.getByRole('link', { name: sourceTitle })).toBeVisible();
-    await expect(card.getByText(text.statuses.approved)).toBeVisible();
+    await expect(card.getByText(text.statuses.approved, { exact: true })).toBeVisible();
   });
 
   test('a new version goes back to audit; the history keeps both versions', async () => {
@@ -190,11 +215,15 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
       `${await content.inputValue()}\n\nسقف تخفیف برای کالاهای فصلی باید دوازده درصد باشد.`,
     );
     await expect(actions.getByRole('button', { name: text.newVersionSubmit })).toBeDisabled();
-    await actions.getByLabel(text.reasonLabel, { exact: true }).fill('افزودن کالاهای فصلی');
+    await fillReason(
+      page,
+      actions.getByLabel(text.reasonLabel, { exact: true }),
+      'افزودن کالاهای فصلی',
+    );
     await actions.getByRole('button', { name: text.newVersionSubmit }).click();
     await expect(page.getByRole('status').filter({ hasText: 'در انتظار ممیزی است' })).toBeVisible();
 
-    await expect(page.getByText(text.statuses.pending).first()).toBeVisible();
+    await expect(page.getByText(text.statuses.pending, { exact: true }).first()).toBeVisible();
     await expect(page.getByText(text.reviewNone)).toBeVisible();
     const history = page.getByRole('region', { name: text.versionsHeading });
     await expect(history.locator('.version-row')).toHaveCount(2);
@@ -225,13 +254,15 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     const review = panel.getByRole('button', { name: text.overrideReview });
     await expect(review).toBeDisabled();
     // Too short, and a repeated character, are not reasons.
-    await panel.getByLabel(text.overrideReason).fill('تأیید');
+    await fillReason(page, panel.getByLabel(text.overrideReason), 'تأیید');
     await expect(review).toBeDisabled();
-    await panel.getByLabel(text.overrideReason).fill('ااااااااااااااااااااااااا');
+    await fillReason(page, panel.getByLabel(text.overrideReason), 'ااااااااااااااااااااااااا');
     await expect(review).toBeDisabled();
-    await panel
-      .getByLabel(text.overrideReason)
-      .fill('متن نمونهٔ آموزشی است و دستور مشکوک بخشی از مثال است.');
+    await fillReason(
+      page,
+      panel.getByLabel(text.overrideReason),
+      'متن نمونهٔ آموزشی است و دستور مشکوک بخشی از مثال است.',
+    );
     await expect(review).toBeEnabled();
     // The effect is spelled out, including the warning about the critical flaw.
     await expect(panel.getByText('تأییدشده حساب می‌شود')).toBeVisible();
@@ -383,7 +414,9 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
       hasText: title,
     });
     await expect(card).toContainText(fill(text.projectScope, { title: `پروژهٔ دانش ${stamp}` }));
-    await expect(card.getByText(text.sourceStatuses.indexed)).toBeVisible({ timeout: 90_000 });
+    await expect(card.getByText(text.sourceStatuses.indexed, { exact: true })).toBeVisible({
+      timeout: 90_000,
+    });
     await expectNoSeriousA11yViolations(page);
 
     await page.goto('/fa');
@@ -439,9 +472,9 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await expect(page.getByRole('status').filter({ hasText: manual.created })).toBeVisible();
     await page.getByRole('link', { name: manual.open }).click();
     await expect(page.getByRole('heading', { level: 2, name: `دانش دستی ${stamp}` })).toBeVisible();
-    await expect(page.getByText(text.statuses.draft).first()).toBeVisible();
+    await expect(page.getByText(text.statuses.draft, { exact: true }).first()).toBeVisible();
     await expect(page.getByText(claim).first()).toBeVisible();
-    await expect(page.getByText(text.citationComplete).first()).toBeVisible();
+    await expect(page.getByText(text.citationComplete, { exact: true }).first()).toBeVisible();
     await expect(page.getByText('گزارش سالانهٔ وفاداری')).toBeVisible();
   });
 
@@ -456,7 +489,7 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await page.getByRole('button', { name: text.cancel }).click();
     await expect(page.getByRole('button', { name: text.deleteStart })).toBeVisible();
     await page.getByRole('button', { name: text.deleteStart }).click();
-    await page.getByLabel(text.deleteReason).fill('نمونهٔ آزمایشی');
+    await fillReason(page, page.getByLabel(text.deleteReason), 'نمونهٔ آزمایشی');
     await page.getByRole('button', { name: text.deleteConfirm }).click();
     await expect(page.getByRole('status').filter({ hasText: text.deleted })).toBeVisible();
     await expect(page).toHaveURL(/\/fa\/knowledge\?tab=queue|\/fa\/knowledge$/u);
@@ -469,9 +502,12 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await page.goto('/en/knowledge');
     await expect(page.getByRole('heading', { level: 1, name: english.title })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
-    await expect(
-      page.getByRole('navigation', { name: english.sections }).getByRole('button'),
-    ).toHaveCount(5);
+    // Each of the five sections is a button, and each has its own "i" next to it.
+    const nav = page.getByRole('navigation', { name: english.sections });
+    for (const name of Object.values(english.tabs)) {
+      await expect(nav.getByRole('button', { name, exact: true })).toBeVisible();
+    }
+    await expect(nav.getByRole('button', { name: 'Help', exact: true })).toHaveCount(5);
     await expectNoSeriousA11yViolations(page);
     await page
       .getByRole('navigation', { name: english.sections })
