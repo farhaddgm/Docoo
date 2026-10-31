@@ -2,6 +2,7 @@ export * from './agents.js';
 export * from './analysis.js';
 export * from './business.js';
 export * from './deliverables.js';
+export * from './exploration.js';
 export * from './output-requirements.js';
 export * from './research-plan.js';
 export * from './research-sources.js';
