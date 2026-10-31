@@ -241,6 +241,8 @@ export const projects = pgTable(
     approvedProblemVersionId: uuid('approved_problem_version_id'),
     analysisProfile: text('analysis_profile').notNull().default('full'),
     analysisContinuationSessionId: uuid('analysis_continuation_session_id'),
+    /** 'standard' or 'exploration' (ADR-0045); set at creation and never changes. */
+    kind: text('kind').notNull().default('standard'),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     purgeAfter: timestamp('purge_after', { withTimezone: true }),

@@ -84,6 +84,7 @@ function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: stri
   const router = useRouter();
   const identity = useSessionIdentity();
   const seedState = useCandidateSeed(workspaceId);
+  const params = useSearchParams();
   if (!canCreateProjects(identity))
     return (
       <p role="alert">
@@ -117,10 +118,11 @@ function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: stri
       )}
       <ProjectWizard
         // A different candidate is a different start, not an edit of this one.
-        key={`${workspaceId}:${seedState.seed?.candidateKey ?? ''}`}
+        key={`${workspaceId}:${seedState.seed?.candidateKey ?? ''}:${params.get('kind') ?? ''}`}
         locale={locale}
         workspaceId={workspaceId}
         seed={seedState.seed}
+        kind={params.get('kind') === 'exploration' ? 'exploration' : 'standard'}
         onCreated={(projectId) => router.push(`/${locale}/projects/${projectId}` as Route)}
       />
     </div>

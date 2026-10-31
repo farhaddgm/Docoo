@@ -519,6 +519,13 @@
       "when": 1793808757919,
       "tag": "0073_project_exploration_origin",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1793808758919,
+      "tag": "0074_project_kind",
+      "breakpoints": true
     }
   ]
 }
