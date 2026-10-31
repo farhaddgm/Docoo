@@ -15,6 +15,15 @@
 # deploy/.env.production (mode 600) and are never overwritten.
 set -euo pipefail
 
+# docker compose writes its build metadata into $TMPDIR (/tmp by default). On many servers /tmp is a
+# small tmpfs that something else can fill, which made `update` fail with "no space left on device"
+# while the main disk had room. Work from a directory on the main disk instead; if it cannot be
+# made, the default stays.
+docoo_tmp="${DOCOO_TMPDIR:-/var/tmp/docoo-install}"
+if mkdir -p "$docoo_tmp" 2>/dev/null && chmod 700 "$docoo_tmp" 2>/dev/null; then
+  export TMPDIR="$docoo_tmp"
+fi
+
 root=$(cd "$(dirname "$0")/../.." && pwd)
 deploy="$root/deploy"
 compose=(docker compose --project-directory "$deploy" -f "$deploy/compose.production.yaml")
