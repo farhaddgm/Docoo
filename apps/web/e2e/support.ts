@@ -138,7 +138,9 @@ export async function completeAnalysis(page: Page) {
  * which also matches the pen button, so it is narrowed to the input here).
  */
 export async function fillReason(page: Page, target: Locator, value: string) {
-  const input = target.and(page.locator('input'));
+  const input = target.and(page.locator('input, textarea'));
+  // The field may not be rendered yet (a page just loaded): look for its dialog only once it is.
+  await input.waitFor({ state: 'attached' });
   const dialog = input.locator('xpath=ancestor::dialog[1]');
   if ((await dialog.count()) === 0) {
     await input.fill(value);
