@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "90622f8941f3a4aaf53fed0c482a6a4e52466d68"
+    "source_commit": "f28e82d15bc68de7f20bf5ca8a63e7f86d9bd06c"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-31T12:59:23.113Z",
+    "synced_at": "2026-10-31T14:41:21.692Z",
     "created": 0,
-    "updated": 3,
-    "unchanged": 71,
+    "updated": 2,
+    "unchanged": 72,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -137,13 +137,13 @@
       "version": "1.2.0",
       "status": "proposed",
       "owner": "Product Engineering",
-      "checksum_sha256": "f69f36caf822000f9027265d56f2c57fd2734e2f7e98358a7e2bf0c44884d6c9",
+      "checksum_sha256": "f91c0dafe4658fec2553a36e72f97852a3672adef8cde59b1ba3a8ca854f1c1f",
       "notion_page_id": "3e55a24a-6668-81ff-aacf-de5e02637357",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881ffaacfde5e02637357?pvs=204",
       "index_row_page_id": "3e55a24a-6668-8144-aa3f-deadfcb6207b",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a66688144aa3fdeadfcb6207b",
-      "synced_commit": "90622f8941f3a4aaf53fed0c482a6a4e52466d68",
-      "synced_at": "2026-10-31T12:59:23.113Z"
+      "synced_commit": "f28e82d15bc68de7f20bf5ca8a63e7f86d9bd06c",
+      "synced_at": "2026-10-31T14:41:21.692Z"
     },
     "DOCOO-NONFUNCTIONAL-REQUIREMENTS": {
       "path": "docs/01-product/03-non-functional-requirements.md",
@@ -179,13 +179,13 @@
       "version": "1.9.0",
       "status": "proposed",
       "owner": "Product Design",
-      "checksum_sha256": "3e156a071c671e97b18e62b293d8a4331b4d569d4ee34c584163b9309eeaa6d5",
+      "checksum_sha256": "ddcc9aefdc8c8925e99864f39f3c9580930c205eaa3c9d6e7a52824875999904",
       "notion_page_id": "3e55a24a-6668-813a-a383-dae2ab20f78b",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668813aa383dae2ab20f78b?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81c0-8cf1-f939f466e9b8",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881c08cf1f939f466e9b8",
-      "synced_commit": "420dcc18afea6c16d5f18bf404bdbe582819796c",
-      "synced_at": "2026-10-24T13:48:23.851Z"
+      "synced_commit": "f28e82d15bc68de7f20bf5ca8a63e7f86d9bd06c",
+      "synced_at": "2026-10-31T14:41:21.692Z"
     },
     "DOCOO-DOMAIN-MODEL": {
       "path": "docs/02-domain/01-domain-model.md",
