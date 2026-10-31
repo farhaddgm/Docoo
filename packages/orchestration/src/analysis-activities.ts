@@ -435,9 +435,10 @@ export function createAnalysisActivities(
             title: string;
             problem: string;
             expected_output: string;
+            kind: 'standard' | 'exploration';
             language: 'fa' | 'en';
           }>(
-            `select title, initial_problem as problem, expected_output, output_language as language from projects where id = $1`,
+            `select title, initial_problem as problem, expected_output, kind, output_language as language from projects where id = $1`,
             [ref.projectId],
           )
         ).rows[0]!;
@@ -496,6 +497,7 @@ export function createAnalysisActivities(
           projectTitle: project.title,
           problem: project.problem,
           expectedOutput: project.expected_output,
+          ...(project.kind === 'exploration' ? { kind: project.kind } : {}),
           topics: topics.rows.map((row) => row.title),
           feedback: feedback.rows.map((row) => row.comment),
           analysis: context,

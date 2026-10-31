@@ -770,6 +770,14 @@
       "evidence": ["apps/api/test/projects.integration.test.ts"],
       "note": "A project is standard unless made as an exploration; an unknown kind is refused; the list filters by kind; a copy of an exploration is an exploration; the database refuses to change the kind."
     },
+    "FR-EXP-010": {
+      "status": "tested",
+      "evidence": [
+        "packages/orchestration/src/analysis.test.ts",
+        "apps/api/test/exploration-project.integration.test.ts"
+      ],
+      "note": "The analyst of an exploration is told it is about an event or topic in every round and in the definition; research gets no knowledge and says it is off without a confirmed plan; the prompts of an ordinary project are equal to the ones before."
+    },
     "FR-AUD-001": {
       "status": "tested",
       "evidence": [

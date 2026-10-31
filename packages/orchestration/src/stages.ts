@@ -1,6 +1,7 @@
 import {
   DELIVERABLE_STAGE_RULES,
   EXPECTED_OUTPUT_ANALYST_RULES,
+  EXPLORATION_ANALYST_RULES,
   NO_RESEARCH_PLAN_RULES,
   OUTPUT_REQUIREMENT_RULES,
   RESEARCH_DECISION_RULES,
@@ -193,6 +194,8 @@ export interface StageContext {
   readonly problem: string;
   /** What the administrator expects to receive (ADR-0043); read only by the analysis stage. */
   readonly expectedOutput?: string | undefined;
+  /** `exploration` makes the analysis about an event or topic (ADR-0045); absent changes nothing. */
+  readonly kind?: 'standard' | 'exploration' | undefined;
   readonly topics: readonly string[];
   /** Approved outputs of earlier stages, in order. */
   readonly previous: readonly { readonly stage: Stage; readonly content: unknown }[];
@@ -325,6 +328,9 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
         : []),
       ...(context.stage === 'analysis' && context.expectedOutput?.trim()
         ? EXPECTED_OUTPUT_ANALYST_RULES
+        : []),
+      ...(context.stage === 'analysis' && context.kind === 'exploration'
+        ? EXPLORATION_ANALYST_RULES
         : []),
       ...(context.stage === 'analysis' && context.analysis?.problemPattern
         ? [
