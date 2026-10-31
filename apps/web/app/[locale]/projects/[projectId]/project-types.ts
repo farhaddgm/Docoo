@@ -12,6 +12,8 @@ export interface ProjectDetail {
   expectedOutput: string;
   outputLanguage: 'fa' | 'en';
   analysisProfile?: 'full' | 'quick';
+  /** 'exploration' proposes the dimensions of a topic instead of ideas (ADR-0045). */
+  kind?: 'standard' | 'exploration';
   status: string;
   currentStage: string;
   pauseReason: string | null;
