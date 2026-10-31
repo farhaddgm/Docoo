@@ -536,6 +536,12 @@ export function ProjectWizard({
           const changed = key in touched && parsed.ok && !sameValue(parsed.value, inherited);
           return (
             <li key={key} className="stack">
+              {text.settingTitles[key] && (
+                <div>
+                  <strong>{text.settingTitles[key].title}</strong>
+                  <p className="muted">{text.settingTitles[key].hint}</p>
+                </div>
+              )}
               <SettingControl
                 id={`${id}-${key}`}
                 locale={locale}
