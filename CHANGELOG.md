@@ -6,17 +6,11 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Added
 
+- **Explorations: the screens** ([ADR-0044](docs/adr/0044-exploration-before-projects.md) P1b). A new **Explorations** entry sits right under **Projects** in the menu. The list page starts an exploration from an event or topic and shows, for each, how many candidate problems are proposed, parked, dropped or made projects. An exploration page has three parts: the event (editable, with archive and reopen), the conversation with the analyst (message counter, plain-text answers, a clear message when the model does not answer), and the **candidate problems** — ask the model to propose some, write one by hand, edit it as a new version, filter by state, and park, drop or bring one back with an optional reason. When something is not possible the page says why (archived, limit reached, read-only, AI off or its allowance used up) instead of only greying out a button. Persian and English, keyboard-friendly, with accessibility scans. The offline fake model now proposes two numbered candidates so the screens can be tried without a provider key. Making a project from a candidate follows (P2).
+
 - **Explorations: from an event to candidate problems, API first** ([ADR-0044](docs/adr/0044-exploration-before-projects.md) P1, backend). An exploration is a workspace-level place to think about an event or topic before any project exists. The administrator describes the event and talks to the analyst (plain-text answers that change nothing); an explicit **propose** action asks the model for separate candidate problems, each with a draft problem statement, why it matters, assumptions and a probable expected output. Candidates can also be written by hand and edited (each edit is a new version), and parked, dropped or brought back at any time — every decision is one more row, so nothing is lost. An exploration stays alive after projects come out of it; archiving only stops new messages and candidates. The model never creates a project or decides on a candidate. Messages, candidates and decisions are append-only with row-level security per workspace; viewers can read, editors and owners write, account AI limits apply to the two model actions, and the audit trail keeps only ids and counts. New permissions `exploration.read|update|run`, settings `exploration.max_messages` (40) and `exploration.max_candidates` (30). The screens and making a project from a candidate follow in the next changes. Migration 0072; API under `/workspaces/{id}/explorations`.
 
-### Added
-
 - **Expected output when creating a project** ([ADR-0043](docs/adr/0043-expected-output-at-project-creation.md)). The first step of the new-project wizard has an optional **Expected output** field under the initial problem ("a 90-day plan with an owner for every task"). The analyst now reads it as information in every round and in the problem definition, and aims its questions at what is missing between the problem and that output instead of asking what it already answers; it is told not to treat it as verified and to report a contradiction. The AI proposal of the deliverables list starts from it, and the deliverables card shows it beside the list. It is an input, not a commitment: nothing is confirmed until you confirm the deliverables. The text can be edited until the project is activated (then `409 PROJECT_EXPECTED_OUTPUT_LOCKED`; use the deliverables or the output requirements), is kept by a copy and a continuation and left out of a pivot, and the audit trail keeps only its digest. Projects without one give every agent exactly the same prompts as before. Migration 0071 (adds `expected_output`); API `expectedOutput` on `POST|PATCH /projects`.
-
-### Security
-
-- Upgrade the Temporal TypeScript SDK to 1.25.0, whose native core bridge bundles `zip` 9.0.5 and clears CVE-2026-115905, CVE-2026-115907, CVE-2026-115908 and CVE-2026-115909 that failed the worker image scans on 1.24.0. 1.25.0 is younger than the seven-day release-age gate, so it is listed in `minimumReleaseAgeExclude` (exact versions only) with a reminder to remove the entries once the gate passes.
-
-### Added
 
 - **Every control in Knowledge and audit explains itself.** Sections, tabs, filters, table columns, fields, citation fields and actions have an "i" button; hovering it, focusing it with the keyboard or tapping it shows what the control does (Persian and English). The words live in `knowledge-help.ts`, and a test fails if a control has no text in either language.
 
@@ -26,9 +20,15 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Fixed
 
+- **The side menu no longer hides its last entries on a short screen.** The menu list is now what scrolls, and the account block under it stays in place instead of sitting on top of the bottom entries. Until now it did cover them once the list was taller than the window; adding one more entry made that visible to the accessibility scan on a 720-pixel-high window.
+
 - Make the installer's `update` independent of `/tmp`. `docker compose` writes its build metadata into `$TMPDIR`, and on a server whose `/tmp` is a small tmpfs that is full, the update stopped with "no space left on device" although the main disk had room (and rolled back). The installer now works from `/var/tmp/docoo-install` (or `DOCOO_TMPDIR`); if that cannot be created, `TMPDIR` stays as it was.
 
 - Make the administrator's account list (`GET /v1/admin/users`) fast on a database with many workspaces. It asked once per listed account and workspace whether the account is a member (about 7.5 s with 500 workspaces and 20 accounts); it now asks once per workspace for all listed accounts (about 0.5 s). The result is unchanged, and a test now checks which workspaces the list names for an account.
+
+### Security
+
+- Upgrade the Temporal TypeScript SDK to 1.25.0, whose native core bridge bundles `zip` 9.0.5 and clears CVE-2026-115905, CVE-2026-115907, CVE-2026-115908 and CVE-2026-115909 that failed the worker image scans on 1.24.0. 1.25.0 is younger than the seven-day release-age gate, so it is listed in `minimumReleaseAgeExclude` (exact versions only) with a reminder to remove the entries once the gate passes.
 
 ## [0.46.1] — 2026-10-29
 
