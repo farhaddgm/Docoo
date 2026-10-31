@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "c5cb087a6d39b6ca9258fb9d574ec5766e303f68"
+    "source_commit": "c43b666683fc50d9677b7de3b8f143b1a279e5f8"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-31T19:42:17.750Z",
+    "synced_at": "2026-10-31T20:16:21.719Z",
     "created": 0,
-    "updated": 0,
-    "unchanged": 74,
+    "updated": 2,
+    "unchanged": 72,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -137,13 +137,13 @@
       "version": "1.2.0",
       "status": "proposed",
       "owner": "Product Engineering",
-      "checksum_sha256": "e95babaee2b9d6bf43211bb4d2dadd99552fcd152a594c00ce6aba804e8f040d",
+      "checksum_sha256": "afa092939d70d1754ef71825f9376f6d5cf8e2ea25dfda5629dfecc285f83148",
       "notion_page_id": "3e55a24a-6668-81ff-aacf-de5e02637357",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881ffaacfde5e02637357?pvs=204",
       "index_row_page_id": "3e55a24a-6668-8144-aa3f-deadfcb6207b",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a66688144aa3fdeadfcb6207b",
-      "synced_commit": "2f607cda1b61c37866a72932fabd79d1fd107107",
-      "synced_at": "2026-10-31T15:30:01.424Z"
+      "synced_commit": "c43b666683fc50d9677b7de3b8f143b1a279e5f8",
+      "synced_at": "2026-10-31T20:16:21.719Z"
     },
     "DOCOO-NONFUNCTIONAL-REQUIREMENTS": {
       "path": "docs/01-product/03-non-functional-requirements.md",
@@ -333,13 +333,13 @@
       "version": "1.12.0",
       "status": "proposed",
       "owner": "API Architecture",
-      "checksum_sha256": "cb32fc71f7fc5af8971f055e94c6006a113040ff137b903ef9717ddf48a81c2e",
+      "checksum_sha256": "f74ead709ed5148d56f3c9a1c149dbb9494b4335045a2f42792a8c87f9e1dab2",
       "notion_page_id": "3e55a24a-6668-812d-9f69-cd7fceb4fea8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812d9f69cd7fceb4fea8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a8-8910-fed8b8b362d3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a88910fed8b8b362d3",
-      "synced_commit": "2f607cda1b61c37866a72932fabd79d1fd107107",
-      "synced_at": "2026-10-31T15:30:01.424Z"
+      "synced_commit": "c43b666683fc50d9677b7de3b8f143b1a279e5f8",
+      "synced_at": "2026-10-31T20:16:21.719Z"
     },
     "DOCOO-WORKFLOWS-JOBS": {
       "path": "docs/04-architecture/04-workflows-and-jobs.md",
