@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { isoToLocal, joinList, localToIso, safeHref, scopesPayload } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
 import { claimReasonKey, parseConflictAnalysis, parseReason } from './reasons';
 
@@ -15,6 +16,36 @@ function paths(value: unknown, prefix = ''): string[] {
 describe('knowledge messages', () => {
   it('has the same keys in Persian and English', () => {
     expect(paths(knowledgeMessages('en')).sort()).toEqual(paths(knowledgeMessages('fa')).sort());
+  });
+
+  it('explains every control in both languages, in a sentence of its own', () => {
+    expect(paths(knowledgeHelp('en')).sort()).toEqual(paths(knowledgeHelp('fa')).sort());
+    for (const locale of ['fa', 'en'] as const) {
+      const texts = Object.fromEntries(
+        paths(knowledgeHelp(locale)).map((path) => [
+          path,
+          path
+            .split('.')
+            .reduce<unknown>((node, key) => (node as never)[key], knowledgeHelp(locale)),
+        ]),
+      );
+      for (const [path, value] of Object.entries(texts)) {
+        expect(typeof value, `${locale}: ${path}`).toBe('string');
+        expect((value as string).trim().length, `${locale}: ${path}`).toBeGreaterThan(15);
+      }
+    }
+  });
+
+  it('names the four steps of building knowledge from a source, with a help text for each', () => {
+    const steps = ['basics', 'scope', 'provenance', 'review'] as const;
+    for (const locale of ['fa', 'en'] as const) {
+      const text = knowledgeMessages(locale);
+      for (const step of steps) {
+        expect(text.createSteps[step]).toBeTruthy();
+        expect(knowledgeHelp(locale).create.steps[step]).toBeTruthy();
+      }
+      expect(text.createNextSteps.length).toBeGreaterThanOrEqual(3);
+    }
   });
 
   it('words every error code the knowledge and source API can answer with', () => {

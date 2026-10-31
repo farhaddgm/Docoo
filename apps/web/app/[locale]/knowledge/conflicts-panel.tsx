@@ -9,10 +9,11 @@ import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { Badge } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages, type KnowledgeText } from './knowledge-messages';
 import { MIN_RESOLUTION_LENGTH, type Conflict } from './knowledge-types';
 import { parseConflictAnalysis } from './reasons';
-import { FieldLabel, SectionTitle } from '../../info-tip';
+import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
 
 function analysisText(text: KnowledgeText, locale: Locale, raw: string): string {
   const analysis = parseConflictAnalysis(raw);
@@ -133,6 +134,7 @@ export function ConflictCard({
 /** The conflicts between knowledge in use, open ones first (UX §8, FR-KNO-009). */
 export function ConflictsPanel({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const [status, setStatus] = useState<'open' | 'resolved'>('open');
   const [items, setItems] = useState<Conflict[] | null>(null);
@@ -177,6 +179,7 @@ export function ConflictsPanel({ locale, workspaceId }: { locale: Locale; worksp
             {item === 'open' ? text.conflictOpen : text.conflictResolved}
           </button>
         ))}
+        <InfoTip text={status === 'open' ? help.conflicts.open : help.conflicts.resolved} />
       </div>
       {justResolved && (
         <p className="notice ok" role="status">

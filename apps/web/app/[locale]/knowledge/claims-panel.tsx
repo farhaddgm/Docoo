@@ -5,10 +5,11 @@ import { useId } from 'react';
 import { formatDate, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge, joinList, safeHref } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages, type KnowledgeText } from './knowledge-messages';
 import type { Citation, Claim, Review } from './knowledge-types';
 import { claimReasonKey } from './reasons';
-import { SectionTitle } from '../../info-tip';
+import { InfoTip, SectionTitle } from '../../info-tip';
 
 /** Where in the original a claim comes from, in words (ING-003, ING-008). */
 export function locationText(
@@ -64,6 +65,7 @@ function CitationView({
   locale: Locale;
   citation: Citation;
 }) {
+  const help = knowledgeHelp(locale);
   const href = safeHref(citation.sourceRef);
   const missing = citation.missingFields.map((field) => text.missingFields[field] ?? field);
   return (
@@ -80,7 +82,10 @@ function CitationView({
       <dl className="facts">
         {citation.sourceRef && (
           <div>
-            <dt>{text.factSource}</dt>
+            <dt>
+              {text.factSource}
+              <InfoTip text={help.detail.citation.source} />
+            </dt>
             <dd dir="ltr">
               {href ? (
                 <a href={href} rel="noopener noreferrer">
@@ -94,37 +99,55 @@ function CitationView({
         )}
         {citation.publisher && (
           <div>
-            <dt>{text.citationPublisher}</dt>
+            <dt>
+              {text.citationPublisher}
+              <InfoTip text={help.detail.citation.publisher} />
+            </dt>
             <dd dir={textDir(locale)}>{citation.publisher}</dd>
           </div>
         )}
         {citation.author && (
           <div>
-            <dt>{text.citationAuthor}</dt>
+            <dt>
+              {text.citationAuthor}
+              <InfoTip text={help.detail.citation.author} />
+            </dt>
             <dd dir={textDir(locale)}>{citation.author}</dd>
           </div>
         )}
         {citation.publishedAt && (
           <div>
-            <dt>{text.citationPublished}</dt>
+            <dt>
+              {text.citationPublished}
+              <InfoTip text={help.detail.citation.published} />
+            </dt>
             <dd>{formatDate(locale, citation.publishedAt)}</dd>
           </div>
         )}
         {citation.accessedAt && (
           <div>
-            <dt>{text.citationAccessed}</dt>
+            <dt>
+              {text.citationAccessed}
+              <InfoTip text={help.detail.citation.accessed} />
+            </dt>
             <dd>{formatDate(locale, citation.accessedAt)}</dd>
           </div>
         )}
         {citation.locator && (
           <div>
-            <dt>{text.citationLocator}</dt>
+            <dt>
+              {text.citationLocator}
+              <InfoTip text={help.detail.citation.locator} />
+            </dt>
             <dd dir={textDir(locale)}>{citation.locator}</dd>
           </div>
         )}
         {citation.quoteDigest && (
           <div>
-            <dt>{text.citationDigest}</dt>
+            <dt>
+              {text.citationDigest}
+              <InfoTip text={help.detail.citation.digest} />
+            </dt>
             <dd dir="ltr">
               <code>{citation.quoteDigest.slice(0, 16)}…</code>
             </dd>
@@ -152,6 +175,7 @@ export function ClaimsPanel({
   conflictCounts: ReadonlyMap<string, number>;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const results = new Map((review?.claimResults ?? []).map((result) => [result.claimId, result]));
 
@@ -204,6 +228,7 @@ export function ClaimsPanel({
               {claim.citations.length > 0 ? (
                 <div>
                   <strong>{text.citationsHeading}</strong>
+                  <InfoTip text={help.detail.citationsHeading} />
                   <ul className="plain-list">
                     {claim.citations.map((citation) => (
                       <CitationView

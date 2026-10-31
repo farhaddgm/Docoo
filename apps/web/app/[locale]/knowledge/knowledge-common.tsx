@@ -17,7 +17,7 @@ import {
   type SourceStatus,
   type TopicOption,
 } from './knowledge-types';
-import { FieldLabel, GroupLabel } from '../../info-tip';
+import { FieldLabel, GroupLabel, InfoTip } from '../../info-tip';
 import { textDir, type Locale } from '../../i18n';
 
 /** A status is told by its words; the tone only supports them. */
@@ -253,6 +253,7 @@ export function ScopeEditor({
   workspaceId,
   options,
   text,
+  help,
   disabled,
 }: {
   rows: readonly ScopeRow[];
@@ -260,6 +261,8 @@ export function ScopeEditor({
   workspaceId: string;
   options: ScopeOptions | null;
   text: KnowledgeText;
+  /** Explains the role choice and the add button; shown behind an "i" next to each. */
+  help?: { role: string; add: string };
   disabled?: boolean | undefined;
 }) {
   const id = useId();
@@ -302,6 +305,7 @@ export function ScopeEditor({
                   </option>
                 ))}
               </select>
+              {help && <InfoTip text={help.role} />}
               {rows.length > 1 && (
                 <button
                   type="button"
@@ -327,6 +331,7 @@ export function ScopeEditor({
         >
           {text.addScope}
         </button>
+        {help && <InfoTip text={help.add} />}
       </p>
     </fieldset>
   );

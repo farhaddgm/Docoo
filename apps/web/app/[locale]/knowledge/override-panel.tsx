@@ -7,6 +7,7 @@ import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { Badge, decisionTone, localToIso } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
 import {
   criteria,
@@ -15,7 +16,7 @@ import {
   type Override,
 } from './knowledge-types';
 import { brainTone } from './review-panel';
-import { FieldLabel, SectionTitle } from '../../info-tip';
+import { FieldLabel, GroupLabel, InfoTip, SectionTitle } from '../../info-tip';
 
 type Decision = 'approve' | 'reject';
 type Validity = 'version' | 'date';
@@ -48,6 +49,7 @@ export function OverridePanel({
   onChanged: () => Promise<void>;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const version = knowledge.currentVersion;
   const review = version?.latestReview ?? null;
@@ -114,7 +116,9 @@ export function OverridePanel({
 
   const effect = (
     <div className="stack" aria-live="polite">
-      <h3>{text.effectHeading}</h3>
+      <SectionTitle as="h3" help={help.detail.overrideEffect}>
+        {text.effectHeading}
+      </SectionTitle>
       <p>
         {fill(decision === 'approve' ? text.effectApprove : text.effectReject, {
           brain: text.brainDecisions[review.decision],
@@ -142,14 +146,20 @@ export function OverridePanel({
 
       <dl className="facts">
         <div>
-          <dt>{text.overrideBrain}</dt>
+          <dt>
+            {text.overrideBrain}
+            <InfoTip text={help.detail.overrideBrain} />
+          </dt>
           <dd>
             <Badge tone={brainTone(review.decision)}>{text.brainDecisions[review.decision]}</Badge>{' '}
             {fill(text.overallValue, { n: formatNumber(locale, review.overall) })}
           </dd>
         </div>
         <div>
-          <dt>{text.overrideCurrent}</dt>
+          <dt>
+            {text.overrideCurrent}
+            <InfoTip text={help.detail.overrideCurrent} />
+          </dt>
           <dd>
             <Badge tone={decisionTone(version.effectiveDecision)}>
               {text.decisions[version.effectiveDecision]}
@@ -159,6 +169,7 @@ export function OverridePanel({
       </dl>
       <div>
         <strong>{text.overrideEvidence}</strong>
+        <InfoTip text={help.detail.overrideEvidence} />
         <dl className="counts">
           {criteria.map((criterion) => (
             <div key={criterion}>
@@ -195,7 +206,9 @@ export function OverridePanel({
       {step === 'edit' ? (
         <form className="field-stack" onSubmit={submit}>
           <fieldset className="mode-choice">
-            <legend>{text.overrideDecision}</legend>
+            <legend>
+              <GroupLabel help={help.detail.overrideDecision}>{text.overrideDecision}</GroupLabel>
+            </legend>
             {(['approve', 'reject'] as const).map((item) => (
               <label key={item} className="mode">
                 <input
@@ -232,7 +245,9 @@ export function OverridePanel({
           </small>
 
           <fieldset className="mode-choice">
-            <legend>{text.overrideValidity}</legend>
+            <legend>
+              <GroupLabel help={help.detail.overrideValidity}>{text.overrideValidity}</GroupLabel>
+            </legend>
             {(['version', 'date'] as const).map((item) => (
               <label key={item} className="mode">
                 <input
@@ -303,7 +318,9 @@ export function OverridePanel({
 
       {version.overrides.length > 0 && (
         <div>
-          <h3>{text.overrideHistory}</h3>
+          <SectionTitle as="h3" help={help.detail.overrideHistory}>
+            {text.overrideHistory}
+          </SectionTitle>
           <ul className="plain-list">
             {version.overrides.map((item) => (
               <li key={item.id} dir={textDir(locale)}>

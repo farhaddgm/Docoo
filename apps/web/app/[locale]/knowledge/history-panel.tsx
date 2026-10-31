@@ -6,6 +6,7 @@ import { apiGet, query } from '../../api-client';
 import { formatDate, formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Badge, statusTone } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
 import type { KnowledgeVersion, ListedReview } from './knowledge-types';
 import { brainTone } from './review-panel';
@@ -27,6 +28,7 @@ export function HistoryPanel({
   refreshKey: string;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const base = `/workspaces/${workspaceId}`;
   const [versions, setVersions] = useState<KnowledgeVersion[] | null>(null);
@@ -143,7 +145,9 @@ export function HistoryPanel({
 
       {reviews && reviews.length > 0 && (
         <div>
-          <h3>{text.reviewHistory}</h3>
+          <SectionTitle as="h3" help={help.detail.reviewHistory}>
+            {text.reviewHistory}
+          </SectionTitle>
           <ul className="plain-list">
             {reviews.map((review) => (
               <li key={review.id}>
