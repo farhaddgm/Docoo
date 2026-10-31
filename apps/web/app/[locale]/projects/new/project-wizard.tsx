@@ -100,7 +100,9 @@ const draftKey = (workspaceId: string) => `docoo:new-project:${workspaceId}`;
 const REVIEW_VALUE_MAX = 60;
 function clip(value: string): string {
   const chars = Array.from(value);
-  return chars.length > REVIEW_VALUE_MAX ? `${chars.slice(0, REVIEW_VALUE_MAX).join('')}...` : value;
+  return chars.length > REVIEW_VALUE_MAX
+    ? `${chars.slice(0, REVIEW_VALUE_MAX).join('')}...`
+    : value;
 }
 
 function readDraft(workspaceId: string): Draft | null {
