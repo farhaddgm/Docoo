@@ -139,12 +139,15 @@ export async function completeAnalysis(page: Page) {
  */
 export async function fillReason(page: Page, target: Locator, value: string) {
   const input = target.and(page.locator('input'));
-  if (!(await input.isVisible())) {
-    const dialog = input.locator('xpath=ancestor::dialog[1]');
-    await dialog.locator('xpath=preceding-sibling::button[1]').click();
+  const dialog = input.locator('xpath=ancestor::dialog[1]');
+  if ((await dialog.count()) === 0) {
     await input.fill(value);
-    await dialog.locator('.reason-dialog-head .secondary-button').click();
     return;
   }
+  // An empty required reason opens the dialog by itself when the form is submitted.
+  if (!(await input.isVisible())) {
+    await dialog.locator('xpath=preceding-sibling::button[1]').click();
+  }
   await input.fill(value);
+  await dialog.locator('.reason-dialog-head .secondary-button').click();
 }

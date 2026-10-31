@@ -4681,7 +4681,24 @@ button.link-button {
   background: var(--color-surface);
 }
 
+.wizard-section-item {
+  position: relative;
+}
+
+/* The "i" sits over the end of the section's summary, not inside it: a button inside a
+   summary is a nested interactive control. */
+.wizard-section-tip {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: var(--space-3);
+  display: flex;
+  align-items: center;
+  block-size: 3.25rem;
+}
+
 .wizard-section > summary {
+  min-block-size: 3.25rem;
+  padding-inline-end: 3rem;
   display: flex;
   align-items: center;
   justify-content: space-between;

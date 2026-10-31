@@ -761,70 +761,75 @@ export function ProjectWizard({
               {ADVANCED_SECTIONS.map((section, index) => {
                 const count = sectionCounts[index]!;
                 return (
-                  <details
-                    key={section.id}
-                    className="wizard-section"
-                    open={Boolean(opened[section.id]) || problemSection === section.id}
-                    onToggle={(event) => {
-                      const open = event.currentTarget.open;
-                      setOpened((current) =>
-                        Boolean(current[section.id]) === open
-                          ? current
-                          : { ...current, [section.id]: open },
-                      );
-                    }}
-                  >
-                    <summary>
-                      <span className="wizard-section-title">{text.sectionTitles[section.id]}</span>
-                      <InfoTip text={text.sectionHelp[section.id]} />
-                      <span className={`badge ${count > 0 ? 'tone-ok' : 'tone-neutral'}`}>
-                        {count > 0
-                          ? fill(text.sectionChanged, { n: formatNumber(locale, count) })
-                          : text.sectionDefault}
-                      </span>
-                    </summary>
-                    <div className="stack wizard-section-body">
-                      {section.id === 'model' && (
-                        <ModelPicker
-                          locale={locale}
-                          workspaceId={workspaceId}
-                          connectionId={connectionId}
-                          model={model}
-                          idPrefix={`${id}-model`}
-                          onChange={(nextConnection, nextModel) => {
-                            setConnectionId(nextConnection);
-                            setModel(nextModel);
-                          }}
-                        />
-                      )}
-                      {settingsList(section.keys)}
-                      {section.id === 'solutions' &&
-                        (shownCriteria ? (
-                          <CriteriaEditor
+                  <div key={section.id} className="wizard-section-item">
+                    <details
+                      className="wizard-section"
+                      open={Boolean(opened[section.id]) || problemSection === section.id}
+                      onToggle={(event) => {
+                        const open = event.currentTarget.open;
+                        setOpened((current) =>
+                          Boolean(current[section.id]) === open
+                            ? current
+                            : { ...current, [section.id]: open },
+                        );
+                      }}
+                    >
+                      <summary>
+                        <span className="wizard-section-title">
+                          {text.sectionTitles[section.id]}
+                        </span>
+                        <span className={`badge ${count > 0 ? 'tone-ok' : 'tone-neutral'}`}>
+                          {count > 0
+                            ? fill(text.sectionChanged, { n: formatNumber(locale, count) })
+                            : text.sectionDefault}
+                        </span>
+                      </summary>
+                      <div className="stack wizard-section-body">
+                        {section.id === 'model' && (
+                          <ModelPicker
                             locale={locale}
-                            idPrefix={`${id}-criteria`}
-                            criteria={shownCriteria}
-                            onChange={setCriteria}
+                            workspaceId={workspaceId}
+                            connectionId={connectionId}
+                            model={model}
+                            idPrefix={`${id}-model`}
+                            onChange={(nextConnection, nextModel) => {
+                              setConnectionId(nextConnection);
+                              setModel(nextModel);
+                            }}
                           />
-                        ) : (
-                          <p role="status">{text.criteriaLoading}</p>
-                        ))}
-                      {section.id === 'solutions' && customCriteria && (
-                        <div>
-                          <button
-                            type="button"
-                            className="link-like"
-                            onClick={() => setCriteria(null)}
-                          >
-                            {text.criteriaReset}
-                          </button>
-                        </div>
-                      )}
-                      {section.id === 'documents' && values.analysisProfile === 'quick' && (
-                        <p className="notice">{quickDraftMessages(locale).level}</p>
-                      )}
-                    </div>
-                  </details>
+                        )}
+                        {settingsList(section.keys)}
+                        {section.id === 'solutions' &&
+                          (shownCriteria ? (
+                            <CriteriaEditor
+                              locale={locale}
+                              idPrefix={`${id}-criteria`}
+                              criteria={shownCriteria}
+                              onChange={setCriteria}
+                            />
+                          ) : (
+                            <p role="status">{text.criteriaLoading}</p>
+                          ))}
+                        {section.id === 'solutions' && customCriteria && (
+                          <div>
+                            <button
+                              type="button"
+                              className="link-like"
+                              onClick={() => setCriteria(null)}
+                            >
+                              {text.criteriaReset}
+                            </button>
+                          </div>
+                        )}
+                        {section.id === 'documents' && values.analysisProfile === 'quick' && (
+                          <p className="notice">{quickDraftMessages(locale).level}</p>
+                        )}
+                      </div>
+                    </details>
+                    <span className="wizard-section-tip">
+                      <InfoTip text={text.sectionHelp[section.id]} />
+                    </span>
+                  </div>
                 );
               })}
             </div>

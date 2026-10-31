@@ -418,7 +418,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
           .replace('{min}', digits(30)),
       ),
     ).toBeVisible();
-    await expect(page.getByText(problemText.minimumMissing.split('{n}')[0]!)).toHaveCount(0);
+    await expect(page.getByText(/^هنوز .+ پرسش تا حداقل .+ مانده است/u)).toHaveCount(0);
 
     // The "later" queue keeps sixteen questions; one of them is answered now.
     const queue = page.locator('#followups-heading').locator('xpath=..').locator('ol > li');
