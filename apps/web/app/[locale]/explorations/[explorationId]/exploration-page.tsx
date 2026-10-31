@@ -6,7 +6,7 @@ import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 
 
 import { apiGet, apiSend } from '../../../api-client';
 import { formatDateTime, formatNumber, textDir, type Locale } from '../../../i18n';
-import { aiEnabled } from '../../access';
+import { aiEnabled, canCreateProjects } from '../../access';
 import { useSessionIdentity } from '../../signed-in';
 import { explainError, Notice, useAction } from '../../use-action';
 import { WorkspacePage } from '../../workspace-page';
@@ -14,7 +14,9 @@ import {
   CANDIDATE_FILTERS,
   composerState,
   countByState,
+  canMakeProject,
   filterCandidates,
+  newProjectHref,
   offeredDecisions,
   proposeState,
   type Candidate,
@@ -57,6 +59,7 @@ function Exploration({
   const identity = useSessionIdentity();
   const readOnly = identity?.user.role === 'viewer';
   const aiOn = aiEnabled(identity);
+  const mayCreateProjects = canCreateProjects(identity);
   const base = `/workspaces/${workspaceId}/explorations/${explorationId}`;
   const [detail, setDetail] = useState<ExplorationDetail | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -215,6 +218,7 @@ function Exploration({
         locale={locale}
         detail={detail}
         readOnly={readOnly}
+        mayCreateProjects={mayCreateProjects}
         aiOn={aiOn}
         busy={busy}
         pending={pending}
@@ -440,6 +444,7 @@ function Candidates({
   locale,
   detail,
   readOnly,
+  mayCreateProjects,
   aiOn,
   busy,
   pending,
@@ -451,6 +456,7 @@ function Candidates({
   locale: Locale;
   detail: ExplorationDetail;
   readOnly: boolean;
+  mayCreateProjects: boolean;
   aiOn: boolean;
   busy: boolean;
   pending: Pending;
@@ -550,7 +556,9 @@ function Candidates({
               key={candidate.candidateKey}
               locale={locale}
               candidate={candidate}
+              explorationId={detail.exploration.id}
               readOnly={readOnly}
+              mayCreateProjects={mayCreateProjects}
               busy={busy}
               onEdit={onEdit}
               onDecide={onDecide}
@@ -565,14 +573,18 @@ function Candidates({
 function CandidateCard({
   locale,
   candidate,
+  explorationId,
   readOnly,
+  mayCreateProjects,
   busy,
   onEdit,
   onDecide,
 }: {
   locale: Locale;
   candidate: Candidate;
+  explorationId: string;
   readOnly: boolean;
+  mayCreateProjects: boolean;
   busy: boolean;
   onEdit: (candidate: Candidate, fields: CandidateFields) => Promise<boolean>;
   onDecide: (candidate: Candidate, decision: CandidateDecision, reason: string) => Promise<boolean>;
@@ -633,7 +645,25 @@ function CandidateCard({
             ))}
         </dl>
       )}
-      {candidate.state === 'promoted' && <p className="muted">{text.promotedNote}</p>}
+      {candidate.projects.length > 0 && (
+        <div>
+          <p className="muted">
+            {candidate.state === 'promoted' ? text.promotedNote : text.madeProjects}
+          </p>
+          <ul className="plain-list">
+            {candidate.projects.map((project) => (
+              <li key={project.id}>
+                <Link href={`/${locale}/projects/${project.id}` as Route}>
+                  <span dir={textDir(locale)}>{project.title}</span>
+                </Link>{' '}
+                <small className="muted" dir="ltr">
+                  {project.code}
+                </small>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {candidate.reason && candidate.state !== 'proposed' && (
         <p className="muted" dir={textDir(locale)}>
           {candidate.reason}
@@ -649,6 +679,14 @@ function CandidateCard({
           >
             {text.edit}
           </button>
+          {canMakeProject({ state: candidate.state, readOnly, mayCreateProjects }) && (
+            <Link
+              className="primary-button"
+              href={newProjectHref(locale, explorationId, candidate.candidateKey) as Route}
+            >
+              {text.makeProject}
+            </Link>
+          )}
           {decisions.length > 0 && (
             <>
               <label htmlFor={`${id}-reason`} className="visually-hidden">

@@ -16,7 +16,7 @@ import { JourneyCard } from './journey-card';
 import { projectPageMessages } from './messages';
 import type { WorkflowFacts } from './project-health';
 import { hasJourney } from './project-journey';
-import { NextProjectCard, OriginNote } from './next-project';
+import { ExplorationOriginNote, NextProjectCard, OriginNote } from './next-project';
 import type { ProjectDetail } from './project-types';
 import { textDir } from '../../../i18n';
 
@@ -185,6 +185,7 @@ export function OverviewPanel({
       )}
       {milestone}
       <OriginNote locale={locale} project={project} />
+      <ExplorationOriginNote locale={locale} project={project} />
       <section className="card" aria-labelledby="problem-title">
         <div className="toolbar spread">
           <h2 id="problem-title">{text.problem}</h2>

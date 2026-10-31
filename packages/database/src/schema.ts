@@ -234,6 +234,9 @@ export const projects = pgTable(
     clonedFromId: uuid('cloned_from_id'),
     /** How a project built on another began: 'copy', 'continuation' or 'pivot'; null when it did not. */
     originKind: text('origin_kind'),
+    /** The candidate problem of an exploration this project was made from (ADR-0044); never changes. */
+    originExplorationId: uuid('origin_exploration_id'),
+    originCandidateKey: uuid('origin_candidate_key'),
     /** The analysis stage output the administrator approved as the problem definition (FR-ANL-005). */
     approvedProblemVersionId: uuid('approved_problem_version_id'),
     analysisProfile: text('analysis_profile').notNull().default('full'),

@@ -86,6 +86,8 @@ export interface Project {
   readonly clonedFromId: string | null;
   /** `copy`, `continuation` or `pivot` when the project was built on another one. */
   readonly originKind: ProjectOriginKind | null;
+  /** The candidate problem of an exploration the project was made from (ADR-0044); null when none. */
+  readonly explorationOrigin: ProjectExplorationOrigin | null;
   /** The approved analysis output that serves as the problem definition (FR-ANL-005). */
   readonly approvedProblemVersionId: string | null;
   readonly version: number;
@@ -93,6 +95,13 @@ export interface Project {
   readonly purgeAfter: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+export interface ProjectExplorationOrigin {
+  readonly explorationId: string;
+  readonly candidateKey: string;
+  readonly explorationTitle: string | null;
+  readonly candidateTitle: string | null;
 }
 
 export interface ProjectBusiness {
@@ -125,6 +134,9 @@ export interface CreateProjectInput {
   readonly problemTemplateId?: string | undefined;
   /** Selects one immutable published problem-pattern version for this new project. */
   readonly problemPatternVersionId?: string | undefined;
+  /** Makes the project from a candidate problem of an exploration (ADR-0044). */
+  readonly explorationCandidate?:
+    { readonly explorationId: string; readonly candidateKey: string } | undefined;
 }
 
 export interface UpdateProjectInput {
@@ -209,6 +221,10 @@ interface ProjectRow extends QueryResultRow {
   config_snapshot_id: string | null;
   cloned_from_id: string | null;
   origin_kind: ProjectOriginKind | null;
+  origin_exploration_id: string | null;
+  origin_candidate_key: string | null;
+  origin_exploration_title: string | null;
+  origin_candidate_title: string | null;
   approved_problem_version_id: string | null;
   problem_template_snapshot: ProblemTemplate | null;
   problem_pattern_snapshot: ProblemPatternSnapshot | null;
@@ -242,6 +258,10 @@ interface LinkRow extends QueryResultRow {
 const projectColumns = `
   id, workspace_id, code, title, description, initial_problem, expected_output, output_language, status,analysis_profile,analysis_continuation_session_id,
   previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id, origin_kind,
+  origin_exploration_id, origin_candidate_key,
+  (select e.title from explorations e where e.id = origin_exploration_id) as origin_exploration_title,
+  (select c.title from exploration_candidates c where c.candidate_key = origin_candidate_key
+    order by c.version_no desc limit 1) as origin_candidate_title,
   approved_problem_version_id, problem_template_snapshot, problem_pattern_snapshot, version,
   ${isoColumn('deleted_at', 'deleted_at')},
   ${isoColumn('purge_after', 'purge_after')},
@@ -517,6 +537,12 @@ export class ProjectsService {
             definition: problemPattern.definition,
           }
         : null;
+      // A project made from a candidate problem (ADR-0044): the candidate must exist in this
+      // workspace and not be dropped. The exploration row is locked so two projects made at once
+      // cannot both write the "promoted" decision.
+      const origin = input.explorationCandidate
+        ? await this.lockCandidate(client, context, input.explorationCandidate)
+        : null;
       let row: ProjectRow | undefined;
       try {
         const result = await client.query<ProjectRow>(
@@ -524,8 +550,9 @@ export class ProjectsService {
              insert into projects (
                workspace_id, code, title, description, initial_problem, problem_template_snapshot,
                problem_pattern_snapshot,
-               output_language, created_by, analysis_profile, expected_output
-             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11)
+               output_language, created_by, analysis_profile, expected_output,
+               origin_exploration_id, origin_candidate_key
+             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, $13)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -541,6 +568,8 @@ export class ProjectsService {
             context.actorId,
             input.analysisProfile ?? 'full',
             input.expectedOutput ?? '',
+            origin?.explorationId ?? null,
+            origin?.candidateKey ?? null,
           ],
         );
         row = result.rows[0];
@@ -549,6 +578,7 @@ export class ProjectsService {
         throw error;
       }
       if (!row) throw new Error('Project insert did not return a row');
+      if (origin) await this.markCandidatePromoted(client, context, origin, row.id);
       await this.replaceLinks(client, context, row.id, input.topics);
       // The wizard's choices are saved in the same transaction: a bad value creates nothing.
       const settings = input.settings ?? [];
@@ -604,6 +634,14 @@ export class ProjectsService {
           settings: settings.map((setting) => setting.key),
           ...(criteria ? { solutionCriteria: true } : {}),
           ...(business ? { businessId: business.content.business.externalId } : {}),
+          ...(origin
+            ? {
+                explorationOrigin: {
+                  explorationId: origin.explorationId,
+                  candidateKey: origin.candidateKey,
+                },
+              }
+            : {}),
           ...(problemTemplate
             ? { problemTemplate: { id: problemTemplate.id, version: problemTemplate.version } }
             : {}),
@@ -1262,6 +1300,72 @@ export class ProjectsService {
     }
   }
 
+  /** Finds the candidate a project is made from and locks its exploration; refuses a dropped one. */
+  private async lockCandidate(
+    client: PoolClient,
+    context: WorkspaceRequestContext,
+    ref: { explorationId: string; candidateKey: string },
+  ): Promise<{ explorationId: string; candidateKey: string; state: string }> {
+    const locked = await client.query(
+      `select 1 from explorations where id = $1 and workspace_id = $2 for update`,
+      [ref.explorationId, context.workspaceId],
+    );
+    const candidate = locked.rowCount
+      ? (
+          await client.query<{ state: string }>(
+            `select coalesce((select d.decision from exploration_candidate_decisions d
+                               where d.exploration_id = c.exploration_id and d.candidate_key = c.candidate_key
+                               order by d.created_at desc, d.id desc limit 1), 'proposed') as state
+               from exploration_candidates c
+              where c.exploration_id = $1 and c.workspace_id = $2 and c.candidate_key = $3
+              limit 1`,
+            [ref.explorationId, context.workspaceId, ref.candidateKey],
+          )
+        ).rows[0]
+      : undefined;
+    if (!candidate) {
+      throw notFound('EXPLORATION_CANDIDATE_NOT_FOUND', 'The candidate problem was not found.');
+    }
+    if (candidate.state === 'dropped') {
+      throw conflict(
+        'EXPLORATION_CANDIDATE_DROPPED',
+        'Bring the dropped candidate back before making a project from it.',
+      );
+    }
+    return { ...ref, state: candidate.state };
+  }
+
+  /** The candidate becomes "promoted" once; a second project from it adds no second decision. */
+  private async markCandidatePromoted(
+    client: PoolClient,
+    context: WorkspaceRequestContext,
+    origin: { explorationId: string; candidateKey: string; state: string },
+    projectId: string,
+  ): Promise<void> {
+    if (origin.state !== 'promoted') {
+      await client.query(
+        `insert into exploration_candidate_decisions
+           (workspace_id, exploration_id, candidate_key, decision, reason, decided_by)
+         values ($1, $2, $3, 'promoted', '', $4)`,
+        [context.workspaceId, origin.explorationId, origin.candidateKey, context.actorId],
+      );
+    }
+    await client.query(`update explorations set updated_at = now() where id = $1`, [
+      origin.explorationId,
+    ]);
+    await writeAudit(client, context, {
+      action: 'exploration.candidate_promoted',
+      targetType: 'exploration',
+      targetId: origin.explorationId,
+      projectId,
+      after: {
+        candidateKey: origin.candidateKey,
+        projectId,
+        firstProject: origin.state !== 'promoted',
+      },
+    });
+  }
+
   private snapshot(row: ProjectRow): Record<string, unknown> {
     return {
       analysisProfile: row.analysis_profile,
@@ -1317,6 +1421,15 @@ export class ProjectsService {
       approvedProblemVersionId: row.approved_problem_version_id,
       clonedFromId: row.cloned_from_id,
       originKind: row.origin_kind,
+      explorationOrigin:
+        row.origin_exploration_id && row.origin_candidate_key
+          ? {
+              explorationId: row.origin_exploration_id,
+              candidateKey: row.origin_candidate_key,
+              explorationTitle: row.origin_exploration_title,
+              candidateTitle: row.origin_candidate_title,
+            }
+          : null,
       version: row.version,
       deletedAt: row.deleted_at,
       purgeAfter: row.purge_after,

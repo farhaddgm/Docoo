@@ -751,6 +751,20 @@
       ],
       "note": "The list and detail screens run in Persian and English with axe checks, the menu order is asserted, the reasons an action is blocked are tested as pure logic, and both languages are checked for the same keys."
     },
+    "FR-EXP-007": {
+      "status": "tested",
+      "evidence": ["apps/api/test/explorations.integration.test.ts"],
+      "note": "A project made from a candidate is linked and marks it promoted once; a second project adds no second decision; dropped, unknown, foreign and malformed candidates create nothing; a failed creation leaves the candidate unchanged; the link cannot be changed even by the database owner; the audit trail has ids only."
+    },
+    "FR-EXP-008": {
+      "status": "tested",
+      "evidence": [
+        "apps/web/e2e/explorations.spec.ts",
+        "apps/web/app/[locale]/projects/new/wizard-model.test.ts",
+        "apps/web/app/[locale]/explorations/exploration-model.test.ts"
+      ],
+      "note": "In Persian and English the button opens the wizard filled from the candidate with its source shown, creating the project links both ways, and the rule for which draft is kept is unit-tested."
+    },
     "FR-AUD-001": {
       "status": "tested",
       "evidence": [

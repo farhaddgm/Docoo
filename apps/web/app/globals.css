@@ -4680,7 +4680,7 @@ button.link-button {
 .stepper .step-kind {
   font-size: 0.75rem;
   font-weight: 500;
-  opacity: 0.85;
+  /* No opacity: the muted colour on white is already 5.9:1, and fading it fell to 4.25:1. */
 }
 
 .stepper li.step-problem {

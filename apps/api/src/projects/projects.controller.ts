@@ -100,6 +100,11 @@ const createSchema = z
     expectedOutput: expectedOutputSchema.default(''),
     problemTemplateId: problemTemplateIdSchema.optional(),
     problemPatternVersionId: z.uuid().optional(),
+    // The candidate problem of an exploration this project is made from (ADR-0044).
+    explorationCandidate: z
+      .object({ explorationId: z.uuid(), candidateKey: z.uuid() })
+      .strict()
+      .optional(),
     outputLanguage: languageSchema.default('fa'),
     analysisProfile: z.enum(['full', 'quick']).default('full'),
     topics: topicsSchema.default([]),
