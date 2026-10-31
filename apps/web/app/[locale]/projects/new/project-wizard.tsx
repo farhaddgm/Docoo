@@ -124,10 +124,13 @@ export function ProjectWizard({
   locale,
   workspaceId,
   seed = null,
+  kind = 'standard',
   onCreated,
 }: {
   locale: Locale;
   workspaceId: string;
+  /** 'exploration' makes an exploration, a project about the dimensions of a topic (ADR-0045). */
+  kind?: 'standard' | 'exploration';
   /** A candidate problem of an exploration the project is made from (ADR-0044); null for a plain one. */
   seed?: CandidateSeed | null;
   onCreated: (projectId: string) => void;
@@ -431,6 +434,7 @@ export function ProjectWizard({
             : {}),
           outputLanguage: values.outputLanguage,
           analysisProfile: values.analysisProfile ?? 'full',
+          ...(kind === 'exploration' ? { kind } : {}),
           topics: values.topics.map((topic) => ({
             topicId: topic.topicId,
             ...(topic.conflictInstruction.trim()
@@ -637,6 +641,11 @@ export function ProjectWizard({
 
         {step === PROBLEM_STEP && (
           <>
+            {kind === 'exploration' && (
+              <p className="notice" role="note">
+                {text.explorationBanner}
+              </p>
+            )}
             {seed && (
               <p className="notice" role="note">
                 {fill(text.seedBanner, {

@@ -68,6 +68,7 @@ const listQuerySchema = z
       .transform((value) => value.toLowerCase())
       .optional(),
     language: z.enum(['fa', 'en']).optional(),
+    kind: z.enum(['standard', 'exploration']).optional(),
     updatedFrom: z.iso.date().optional(),
     updatedTo: z.iso.date().optional(),
     waiting: z
@@ -107,6 +108,7 @@ const createSchema = z
       .optional(),
     outputLanguage: languageSchema.default('fa'),
     analysisProfile: z.enum(['full', 'quick']).default('full'),
+    kind: z.enum(['standard', 'exploration']).default('standard'),
     topics: topicsSchema.default([]),
     settings: settingsSchema.default([]),
     // The id of a business in Contenter; the project is linked to it as it is created.
