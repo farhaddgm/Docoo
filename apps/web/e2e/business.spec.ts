@@ -9,6 +9,7 @@ import {
   expectNoSeriousA11yViolations,
   revealRow,
   signInWithKeyboard,
+  fillReason,
 } from './support';
 
 const integ = integrationMessages('fa');
@@ -314,7 +315,7 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
     await page.getByRole('button', { name: biz.panel.change, exact: true }).click();
     const confirm = page.getByRole('group', { name: biz.panel.change });
     await confirm.getByRole('radio', { name: new RegExp(SECOND, 'u') }).check();
-    await confirm.getByLabel(biz.panel.reason).fill('پروژهٔ دیگر');
+    await fillReason(page, confirm.getByLabel(biz.panel.reason), 'پروژهٔ دیگر');
     await confirm.getByRole('button', { name: biz.panel.confirm }).click();
     await expect(page.getByRole('status').filter({ hasText: biz.panel.linked })).toBeVisible();
     await expect(page.getByTestId('business-header')).toContainText(SECOND);

@@ -2518,8 +2518,10 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
 }
 
 .file-pick {
-  display: grid;
-  gap: var(--space-1);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .field-error {
@@ -4685,7 +4687,24 @@ button.link-button {
   background: var(--color-surface);
 }
 
+.wizard-section-item {
+  position: relative;
+}
+
+/* The "i" sits over the end of the section's summary, not inside it: a button inside a
+   summary is a nested interactive control. */
+.wizard-section-tip {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: var(--space-3);
+  display: flex;
+  align-items: center;
+  block-size: 3.25rem;
+}
+
 .wizard-section > summary {
+  min-block-size: 3.25rem;
+  padding-inline-end: 3rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4884,17 +4903,74 @@ button.link-button {
   margin: var(--space-2) 0;
 }
 
-.reason-bar > .field-label {
-  flex: none;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
+.reason-pen {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--control-height);
+  block-size: var(--control-height);
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
 }
 
-.reason-bar .reason-input {
-  flex: 1 1 14rem;
-  min-inline-size: 0;
-  inline-size: auto;
-  max-inline-size: 100%;
+.reason-pen svg {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+}
+
+.reason-pen:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary-strong);
+}
+
+/* A dot shows a reason is written (green) or still missing where one is required (red). */
+.reason-pen.filled::after,
+.reason-pen.flagged::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 0.2rem;
+  inset-inline-end: 0.2rem;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.reason-pen.flagged::after {
+  background: var(--color-danger-ink);
+}
+
+.reason-dialog {
+  inline-size: min(28rem, calc(100vw - 2rem));
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-md);
+}
+
+.reason-dialog::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}
+
+.reason-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-3);
+  font-weight: 700;
+}
+
+.reason-dialog .reason-input {
+  inline-size: 100%;
 }
 
 .reason-actions {
@@ -5085,4 +5161,30 @@ button.link-button {
 
 .policy-meter meter {
   inline-size: 100%;
+}
+
+/* The pattern picker: the menu and its save button side by side, with a small gap. */
+.pattern-select-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The question progress: title, count and meter on one line. */
+.progress-compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.progress-compact h4 {
+  margin: 0;
+}
+
+.progress-compact .progress-meter {
+  flex: 1 1 8rem;
+  inline-size: auto;
+  min-inline-size: 6rem;
 }

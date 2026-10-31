@@ -13,6 +13,7 @@ import {
   expectNoSeriousA11yViolations,
   signInWithKeyboard,
   useFakeProvider,
+  fillReason,
 } from './support';
 
 test('an optional quick draft continues to full analysis with the original answers', async ({
@@ -149,7 +150,7 @@ test('an optional quick draft continues to full analysis with the original answe
   await page.goto(`/fa/projects/${projectId}`);
   await page.getByRole('button', { name: quickDraftMessages('fa').continue, exact: true }).click();
   await expect(page.getByText(quickDraftMessages('fa').effect, { exact: true })).toBeVisible();
-  await page.locator('#command-reason').fill('ادامه با حفظ پاسخ‌های قبلی');
+  await fillReason(page, page.locator('#command-reason'), 'ادامه با حفظ پاسخ‌های قبلی');
   await page.getByRole('button', { name: projectPageMessages('fa').confirm, exact: true }).click();
   await expect
     .poll(async () => (await read<ProjectResponse>(base)).project.analysisProfile)

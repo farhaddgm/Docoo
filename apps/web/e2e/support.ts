@@ -131,3 +131,25 @@ export async function completeAnalysis(page: Page) {
   }
   throw new Error('The analysis did not reach a problem definition.');
 }
+
+/**
+ * Types a "reason for the change". The field lives in a small dialog opened by a pen button next
+ * to the save buttons; `target` may be any locator that resolves to the field (by id or by label,
+ * which also matches the pen button, so it is narrowed to the input here).
+ */
+export async function fillReason(page: Page, target: Locator, value: string) {
+  const input = target.and(page.locator('input, textarea'));
+  // The field may not be rendered yet (a page just loaded): look for its dialog only once it is.
+  await input.waitFor({ state: 'attached' });
+  const dialog = input.locator('xpath=ancestor::dialog[1]');
+  if ((await dialog.count()) === 0) {
+    await input.fill(value);
+    return;
+  }
+  // An empty required reason opens the dialog by itself when the form is submitted.
+  if (!(await input.isVisible())) {
+    await dialog.locator('xpath=preceding-sibling::button[1]').click();
+  }
+  await input.fill(value);
+  await dialog.locator('.reason-dialog-head .secondary-button').click();
+}

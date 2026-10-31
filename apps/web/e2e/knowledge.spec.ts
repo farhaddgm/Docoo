@@ -10,6 +10,7 @@ import {
   createViaApi,
   expectNoSeriousA11yViolations,
   signInWithKeyboard,
+  fillReason,
 } from './support';
 
 const text = knowledgeMessages('fa');
@@ -214,7 +215,11 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
       `${await content.inputValue()}\n\nسقف تخفیف برای کالاهای فصلی باید دوازده درصد باشد.`,
     );
     await expect(actions.getByRole('button', { name: text.newVersionSubmit })).toBeDisabled();
-    await actions.getByLabel(text.reasonLabel, { exact: true }).fill('افزودن کالاهای فصلی');
+    await fillReason(
+      page,
+      actions.getByLabel(text.reasonLabel, { exact: true }),
+      'افزودن کالاهای فصلی',
+    );
     await actions.getByRole('button', { name: text.newVersionSubmit }).click();
     await expect(page.getByRole('status').filter({ hasText: 'در انتظار ممیزی است' })).toBeVisible();
 
@@ -249,13 +254,15 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     const review = panel.getByRole('button', { name: text.overrideReview });
     await expect(review).toBeDisabled();
     // Too short, and a repeated character, are not reasons.
-    await panel.getByLabel(text.overrideReason).fill('تأیید');
+    await fillReason(page, panel.getByLabel(text.overrideReason), 'تأیید');
     await expect(review).toBeDisabled();
-    await panel.getByLabel(text.overrideReason).fill('ااااااااااااااااااااااااا');
+    await fillReason(page, panel.getByLabel(text.overrideReason), 'ااااااااااااااااااااااااا');
     await expect(review).toBeDisabled();
-    await panel
-      .getByLabel(text.overrideReason)
-      .fill('متن نمونهٔ آموزشی است و دستور مشکوک بخشی از مثال است.');
+    await fillReason(
+      page,
+      panel.getByLabel(text.overrideReason),
+      'متن نمونهٔ آموزشی است و دستور مشکوک بخشی از مثال است.',
+    );
     await expect(review).toBeEnabled();
     // The effect is spelled out, including the warning about the critical flaw.
     await expect(panel.getByText('تأییدشده حساب می‌شود')).toBeVisible();
@@ -482,7 +489,7 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await page.getByRole('button', { name: text.cancel }).click();
     await expect(page.getByRole('button', { name: text.deleteStart })).toBeVisible();
     await page.getByRole('button', { name: text.deleteStart }).click();
-    await page.getByLabel(text.deleteReason).fill('نمونهٔ آزمایشی');
+    await fillReason(page, page.getByLabel(text.deleteReason), 'نمونهٔ آزمایشی');
     await page.getByRole('button', { name: text.deleteConfirm }).click();
     await expect(page.getByRole('status').filter({ hasText: text.deleted })).toBeVisible();
     await expect(page).toHaveURL(/\/fa\/knowledge\?tab=queue|\/fa\/knowledge$/u);

@@ -7,6 +7,7 @@ import {
   expectNoSeriousA11yViolations,
   signInWithKeyboard,
   useFakeProvider,
+  fillReason,
 } from './support';
 
 const text = agentMessages('fa');
@@ -97,7 +98,11 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
       page.getByRole('alert').filter({ hasText: text.clientIssues.needReason }),
     ).toBeVisible();
 
-    await page.getByLabel(text.reasonLabel, { exact: true }).fill('اصل تازه برای تحقیق');
+    await fillReason(
+      page,
+      page.getByLabel(text.reasonLabel, { exact: true }),
+      'اصل تازه برای تحقیق',
+    );
     await page.getByRole('button', { name: text.save, exact: true }).click();
     const savedNotice = page.getByRole('status').filter({ hasText: 'هنوز فعال نیست' });
     await expect(savedNotice).toBeVisible();
@@ -113,7 +118,11 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     await expect(history.locator('.version-row .badge.state-passed')).toHaveCount(1);
 
     // Activate it with a reason.
-    await page.getByLabel(text.activateReason).first().fill('فعال‌سازی نسخهٔ تازه');
+    await fillReason(
+      page,
+      page.getByLabel(text.activateReason).and(page.locator('input')).first(),
+      'فعال‌سازی نسخهٔ تازه',
+    );
     await page.getByRole('button', { name: fill(text.activateNow, { n: digits(after) }) }).click();
     await expect(headerBadge).toContainText(versionLabel(after));
     await expect(
@@ -124,7 +133,7 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     ).toBeVisible();
 
     // Roll back: activating the earlier version, which stays in the history unchanged.
-    await history.getByLabel(text.activateReason).fill('بازگشت به نسخهٔ قبلی');
+    await fillReason(page, history.getByLabel(text.activateReason), 'بازگشت به نسخهٔ قبلی');
     await history
       .getByRole('button', { name: `${text.restore}: ${versionLabel(before)}`, exact: true })
       .click();
@@ -174,7 +183,11 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     const preview = page.getByRole('region', { name: text.preview });
     await expect(preview.locator('.diff-added').filter({ hasText: 'fake-standard' })).toBeVisible();
 
-    await page.getByLabel(text.reasonLabel, { exact: true }).fill('مدل اختصاصی مستندساز');
+    await fillReason(
+      page,
+      page.getByLabel(text.reasonLabel, { exact: true }),
+      'مدل اختصاصی مستندساز',
+    );
     await page.getByRole('button', { name: text.save, exact: true }).click();
     await expect(page.getByRole('status').filter({ hasText: 'هنوز فعال نیست' })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
@@ -231,7 +244,11 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
       .getByRole('button', { name: `${text.copyDefault}: ${text.roles.researcher.name}` })
       .click();
     await expect(row.getByText(text.copyWarning)).toBeVisible();
-    await row.getByLabel(text.copyReason).fill('این پروژه تحقیق‌کنندهٔ مخصوص می‌خواهد');
+    await fillReason(
+      page,
+      row.getByLabel(text.copyReason),
+      'این پروژه تحقیق‌کنندهٔ مخصوص می‌خواهد',
+    );
     await row.getByRole('button', { name: text.copyConfirm }).click();
     await expect(page.getByRole('status').filter({ hasText: text.copied })).toBeVisible();
     await expect(row.locator('.badge').first()).toContainText('کپی اختصاصی پروژه');
@@ -240,7 +257,7 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     const duties = row.getByRole('group', { name: text.sections.duties });
     await duties.getByRole('button', { name: text.addDuty }).click();
     await duties.getByRole('textbox').last().fill(`وظیفهٔ این پروژه ${stamp}`);
-    await row.getByLabel(text.reasonLabel, { exact: true }).fill('وظیفهٔ اختصاصی');
+    await fillReason(page, row.getByLabel(text.reasonLabel, { exact: true }), 'وظیفهٔ اختصاصی');
     await row.getByRole('button', { name: text.saveProject }).click();
     await expect(
       page.getByRole('status').filter({ hasText: 'برای همین پروژه فعال شد' }),
@@ -257,7 +274,7 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     await row
       .getByRole('button', { name: `${text.useDefault}: ${text.roles.researcher.name}` })
       .click();
-    await row.getByLabel(text.pinReason, { exact: true }).fill('برگشت به پیش‌فرض');
+    await fillReason(page, row.getByLabel(text.pinReason, { exact: true }), 'برگشت به پیش‌فرض');
     await row.getByRole('button', { name: text.pinConfirm }).click();
     await expect(page.getByRole('status').filter({ hasText: text.pinned })).toBeVisible();
     await expect(row.locator('.badge').first()).not.toContainText('کپی اختصاصی');

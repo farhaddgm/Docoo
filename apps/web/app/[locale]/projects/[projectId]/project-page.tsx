@@ -217,11 +217,6 @@ function ProjectView({
         <h2 id="project-heading" dir={textDir(locale)}>
           <span dir="ltr">{project.code}</span> — {project.title}
         </h2>
-        {project.analysisProfile === 'quick' && (
-          <p className="notice" role="status">
-            {quickDraftMessages(locale).warning}
-          </p>
-        )}
         <dl className="facts">
           <div>
             <dt>{text.status}</dt>
@@ -288,6 +283,11 @@ function ProjectView({
             </div>
           )}
         </dl>
+        {project.analysisProfile === 'quick' && (
+          <p className="notice" role="status">
+            {quickDraftMessages(locale).warning}
+          </p>
+        )}
         {project.pauseReason && (
           <p className="notice error" role="status">
             <strong>{text.pauseReason}:</strong>{' '}
