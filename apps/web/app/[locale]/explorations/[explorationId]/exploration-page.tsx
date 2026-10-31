@@ -682,7 +682,7 @@ function CandidateCard({
           {canMakeProject({ state: candidate.state, readOnly, mayCreateProjects }) && (
             <Link
               className="primary-button"
-              href={newProjectHref(locale, explorationId, candidate.candidateKey) as Route}
+              href={newProjectHref(locale, explorationId, candidate.candidateKey)}
             >
               {text.makeProject}
             </Link>

@@ -1,3 +1,7 @@
+import type { Route } from 'next';
+
+import type { Locale } from '../../i18n';
+
 /** What the exploration screens know about the data and what they offer for it (ADR-0044). */
 
 export type CandidateState = 'proposed' | 'parked' | 'dropped' | 'promoted';
@@ -175,8 +179,8 @@ export function canMakeProject(input: {
   return !input.readOnly && input.mayCreateProjects && input.state !== 'dropped';
 }
 
-/** The address of the new-project wizard filled from a candidate. */
-export function newProjectHref(locale: string, explorationId: string, candidateKey: string) {
+/** The address of the new-project wizard filled from a candidate, as a route the links accept. */
+export function newProjectHref(locale: Locale, explorationId: string, candidateKey: string): Route {
   const query = new URLSearchParams({ exploration: explorationId, candidate: candidateKey });
-  return `/${locale}/projects/new?${query.toString()}`;
+  return `/${locale}/projects/new?${query.toString()}` as Route;
 }
