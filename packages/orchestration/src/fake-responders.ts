@@ -1,5 +1,9 @@
 import { OUTLINE_SCHEMA_NAME, SECTION_SCHEMA_NAME } from '@docoo/documents';
-import { QUESTION_QUALITY_SCHEMA_NAME, ROLE_EVALUATION_SCHEMA_NAME } from '@docoo/domain';
+import {
+  EXPLORATION_PROPOSAL_SCHEMA_NAME,
+  QUESTION_QUALITY_SCHEMA_NAME,
+  ROLE_EVALUATION_SCHEMA_NAME,
+} from '@docoo/domain';
 import type { NormalizedModelRequest, ToolCall } from '@docoo/providers';
 
 import { dataOf, fakeAnalystResponder } from './fake-analyst.js';
@@ -62,6 +66,39 @@ export function fakeResearchResponder(request: NormalizedModelRequest): unknown 
         : 'The running cost of each approach is not yet known.',
     ],
     conflicts: [],
+  };
+}
+
+/**
+ * Deterministic candidate problems of an exploration (ADR-0044), so the screens can be tried and
+ * tested without a real model: two candidates each time, numbered after the ones that already
+ * exist, so a second proposal adds new ones instead of repeating.
+ */
+export function fakeExplorationResponder(request: NormalizedModelRequest): unknown {
+  if (request.responseSchema?.name !== EXPLORATION_PROPOSAL_SCHEMA_NAME) return null;
+  const persian = isPersian(request);
+  const data = dataOf(request);
+  const existing = records(data['candidates']).length;
+  const event = typeof data['eventText'] === 'string' ? data['eventText'].slice(0, 80) : '';
+  return {
+    candidates: [1, 2].map((offset) => {
+      const n = existing + offset;
+      return persian
+        ? {
+            title: `مسئلهٔ کاندید ${n}`,
+            problemDraft: `مسئله‌ای که از این اتفاق بیرون می‌آید (${n}): ${event}`,
+            why: 'اگر رها شود، اثرش روی کسب‌وکار ادامه پیدا می‌کند.',
+            assumptions: 'فرض شده است که علت اصلی هنوز روشن نیست.',
+            expectedOutput: 'یک برنامهٔ اقدام کوتاه',
+          }
+        : {
+            title: `Candidate problem ${n}`,
+            problemDraft: `A problem that comes out of this event (${n}): ${event}`,
+            why: 'Left alone, its effect on the business continues.',
+            assumptions: 'It is assumed that the main cause is not yet clear.',
+            expectedOutput: 'A short action plan',
+          };
+    }),
   };
 }
 
@@ -322,6 +359,7 @@ export function fakeResponder(request: NormalizedModelRequest): unknown {
     fakeResearchResponder(request) ??
     fakeRoleEvaluationResponder(request) ??
     fakeQuestionQualityResponder(request) ??
+    fakeExplorationResponder(request) ??
     fakeDocumenterResponder(request)
   );
 }

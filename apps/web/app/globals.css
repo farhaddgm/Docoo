@@ -457,11 +457,10 @@ input[type='file']::file-selector-button {
   gap: var(--space-4);
   height: 100vh;
   padding: var(--space-4) 0.875rem 0;
-  overflow-y: auto;
+  /* The menu list scrolls by itself, so the foot never covers an entry on a short screen. */
+  overflow: hidden;
   background: var(--sidebar-bg);
   color: var(--sidebar-ink);
-  scrollbar-width: thin;
-  scrollbar-color: var(--sidebar-line) transparent;
 }
 
 .sidebar-head {
@@ -503,7 +502,16 @@ input[type='file']::file-selector-button {
 /* The navigation scrolls on its own when the list is longer than the window. */
 .sidebar-nav {
   display: grid;
+  flex: 1 1 auto;
+  align-content: start;
   gap: var(--space-3);
+  min-height: 0;
+  /* A little room on the sides keeps the focus ring of an entry from being cut off. */
+  margin-inline: -0.25rem;
+  padding: 0.25rem 0.25rem var(--space-3);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-line) transparent;
 }
 
 .nav-group {
@@ -594,11 +602,9 @@ a.nav-item:hover {
 }
 
 .sidebar-foot {
-  position: sticky;
-  bottom: 0;
   display: grid;
+  flex: none;
   gap: var(--space-3);
-  margin-top: auto;
   padding: var(--space-3) var(--space-2) var(--space-4);
   border-top: 1px solid var(--sidebar-line);
   background: var(--sidebar-bg);

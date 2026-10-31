@@ -742,6 +742,15 @@
       ],
       "note": "Workspace isolation, a read-only viewer, append-only triggers and an audit trail free of the administrator's text are asserted; the authorization matrix lists every route."
     },
+    "FR-EXP-006": {
+      "status": "tested",
+      "evidence": [
+        "apps/web/e2e/explorations.spec.ts",
+        "apps/web/app/[locale]/explorations/exploration-model.test.ts",
+        "apps/web/app/[locale]/explorations/messages.test.ts"
+      ],
+      "note": "The list and detail screens run in Persian and English with axe checks, the menu order is asserted, the reasons an action is blocked are tested as pure logic, and both languages are checked for the same keys."
+    },
     "FR-AUD-001": {
       "status": "tested",
       "evidence": [

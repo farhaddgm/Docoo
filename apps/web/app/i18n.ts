@@ -52,6 +52,7 @@ export function localizedPath(pathname: string, locale: Locale): string {
 export const navigation = [
   'dashboard',
   'projects',
+  'explorations',
   'topics',
   'knowledge',
   'businesses',
@@ -70,7 +71,15 @@ export type NavigationKey = (typeof navigation)[number];
 export const navigationGroups = [
   {
     key: 'work',
-    items: ['dashboard', 'projects', 'topics', 'knowledge', 'businesses', 'patterns'],
+    items: [
+      'dashboard',
+      'projects',
+      'explorations',
+      'topics',
+      'knowledge',
+      'businesses',
+      'patterns',
+    ],
   },
   { key: 'intelligence', items: ['agents', 'brain', 'smart'] },
   { key: 'setup', items: ['providers', 'costs', 'settings'] },
@@ -118,6 +127,7 @@ const messages = {
     nav: {
       dashboard: 'داشبورد',
       projects: 'پروژه‌ها',
+      explorations: 'کاوش‌ها',
       topics: 'حوزه‌های موضوعی',
       knowledge: 'دانش و ممیزی',
       agents: 'ایجنت‌ها',
@@ -216,6 +226,7 @@ const messages = {
     nav: {
       dashboard: 'Dashboard',
       projects: 'Projects',
+      explorations: 'Explorations',
       topics: 'Topics',
       knowledge: 'Knowledge & audit',
       agents: 'Agents',
