@@ -96,6 +96,15 @@ interface PublishedProblemPattern {
 
 const draftKey = (workspaceId: string) => `docoo:new-project:${workspaceId}`;
 
+/** Review values are shown at most 60 characters long; the rest is replaced by "...". */
+const REVIEW_VALUE_MAX = 60;
+function clip(value: string): string {
+  const chars = Array.from(value);
+  return chars.length > REVIEW_VALUE_MAX
+    ? `${chars.slice(0, REVIEW_VALUE_MAX).join('')}...`
+    : value;
+}
+
 function readDraft(workspaceId: string): Draft | null {
   try {
     const raw = localStorage.getItem(draftKey(workspaceId));
@@ -124,10 +133,13 @@ export function ProjectWizard({
   locale,
   workspaceId,
   seed = null,
+  kind = 'standard',
   onCreated,
 }: {
   locale: Locale;
   workspaceId: string;
+  /** 'exploration' makes an exploration, a project about the dimensions of a topic (ADR-0045). */
+  kind?: 'standard' | 'exploration';
   /** A candidate problem of an exploration the project is made from (ADR-0044); null for a plain one. */
   seed?: CandidateSeed | null;
   onCreated: (projectId: string) => void;
@@ -431,6 +443,7 @@ export function ProjectWizard({
             : {}),
           outputLanguage: values.outputLanguage,
           analysisProfile: values.analysisProfile ?? 'full',
+          ...(kind === 'exploration' ? { kind } : {}),
           topics: values.topics.map((topic) => ({
             topicId: topic.topicId,
             ...(topic.conflictInstruction.trim()
@@ -643,6 +656,11 @@ export function ProjectWizard({
 
         {step === PROBLEM_STEP && (
           <>
+            {kind === 'exploration' && (
+              <p className="notice" role="note">
+                {text.explorationBanner}
+              </p>
+            )}
             {seed && (
               <p className="notice" role="note">
                 {fill(text.seedBanner, {
@@ -1005,34 +1023,38 @@ function Review({
       <dl className="facts">
         <div>
           <dt>{project.titleLabel}</dt>
-          <dd dir={textDir(locale)}>{values.title.trim()}</dd>
+          <dd dir={textDir(locale)}>{clip(values.title.trim())}</dd>
         </div>
         <div>
           <dt>{project.codeLabel}</dt>
-          <dd dir="ltr">{values.code.trim()}</dd>
+          <dd dir="ltr">{clip(values.code.trim())}</dd>
         </div>
         {values.expectedOutput.trim() && (
           <div>
             <dt>{project.expectedOutputLabel}</dt>
             <dd dir={textDir(locale)} style={{ whiteSpace: 'pre-wrap' }}>
-              {values.expectedOutput.trim()}
+              {clip(values.expectedOutput.trim())}
             </dd>
           </div>
         )}
         <div>
           <dt>{text.problemTemplate}</dt>
           <dd>
-            {problemTemplate
-              ? `${problemTemplate.name[locale]} · v${problemTemplate.version} · ${text.problemTemplateCandidate}`
-              : text.noProblemTemplate}
+            {clip(
+              problemTemplate
+                ? `${problemTemplate.name[locale]} · v${problemTemplate.version} · ${text.problemTemplateCandidate}`
+                : text.noProblemTemplate,
+            )}
           </dd>
         </div>
         <div>
           <dt>{text.problemPattern}</dt>
           <dd>
-            {problemPattern
-              ? `${problemPattern.definition.title} · v${problemPattern.version}`
-              : text.noProblemPattern}
+            {clip(
+              problemPattern
+                ? `${problemPattern.definition.title} · v${problemPattern.version}`
+                : text.noProblemPattern,
+            )}
           </dd>
         </div>
         <div>
@@ -1054,7 +1076,7 @@ function Review({
         <div>
           <dt>{businessText.picker.title}</dt>
           <dd dir={textDir(locale)}>
-            {business ? business.name : businessText.picker.noneSelected}
+            {clip(business ? business.name : businessText.picker.noneSelected)}
           </dd>
         </div>
         {!connectionId && (

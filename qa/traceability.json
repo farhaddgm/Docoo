@@ -765,6 +765,11 @@
       ],
       "note": "In Persian and English the button opens the wizard filled from the candidate with its source shown, creating the project links both ways, and the rule for which draft is kept is unit-tested."
     },
+    "FR-EXP-009": {
+      "status": "tested",
+      "evidence": ["apps/api/test/projects.integration.test.ts"],
+      "note": "A project is standard unless made as an exploration; an unknown kind is refused; the list filters by kind; a copy of an exploration is an exploration; the database refuses to change the kind."
+    },
     "FR-AUD-001": {
       "status": "tested",
       "evidence": [
