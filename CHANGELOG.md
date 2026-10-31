@@ -16,6 +16,12 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 - **Building knowledge from a source is step by step.** The form now has four steps — **Basics**, **Where it applies**, **Source declaration** and **Review and build** — with a step bar, a message saying what each step still needs, and a final review that lists your choices and what happens after the draft is made (it stays invisible to agents until audited).
 
+### Fixed
+
+- Make the installer's `update` independent of `/tmp`. `docker compose` writes its build metadata into `$TMPDIR`, and on a server whose `/tmp` is a small tmpfs that is full, the update stopped with "no space left on device" although the main disk had room (and rolled back). The installer now works from `/var/tmp/docoo-install` (or `DOCOO_TMPDIR`); if that cannot be created, `TMPDIR` stays as it was.
+
+- Make the administrator's account list (`GET /v1/admin/users`) fast on a database with many workspaces. It asked once per listed account and workspace whether the account is a member (about 7.5 s with 500 workspaces and 20 accounts); it now asks once per workspace for all listed accounts (about 0.5 s). The result is unchanged, and a test now checks which workspaces the list names for an account.
+
 ## [0.46.1] — 2026-10-29
 
 ### Fixed
