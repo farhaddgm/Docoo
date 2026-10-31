@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **A project has a kind** ([ADR-0045](docs/adr/0045-exploration-as-a-project-kind.md) step A). An _exploration_ is a project that goes through the same stages but is meant to propose the dimensions of a topic instead of ideas. This first step adds the kind itself: the new-project page accepts `?kind=exploration` (a **New exploration** button on the projects list opens it), the list can be filtered by kind, and a copy keeps its kind. The kind is chosen at creation and can never change. Every existing project stays a standard project and behaves exactly as before; the exploration-specific stages follow in the next steps. Migration 0074; API `kind` on `POST /projects` and `GET /projects?kind=`.
+
 ## [0.47.0] — 2026-10-31
 
 ### Added

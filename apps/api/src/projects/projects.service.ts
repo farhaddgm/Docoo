@@ -57,7 +57,10 @@ export interface ProjectTopicLink {
   readonly topicStatus: 'active' | 'archived' | 'deleted';
 }
 
+export type ProjectKind = 'standard' | 'exploration';
+
 export interface Project {
+  readonly kind: ProjectKind;
   readonly analysisProfile: AnalysisProfile;
   readonly id: string;
   readonly workspaceId: string;
@@ -116,6 +119,7 @@ export interface TopicLinkInput {
 }
 
 export interface CreateProjectInput {
+  readonly kind?: ProjectKind;
   readonly analysisProfile?: AnalysisProfile;
   readonly code: string;
   readonly title: string;
@@ -176,6 +180,8 @@ export interface ListProjectsInput {
   /** Projects that use this topic (UX §4). */
   readonly topicId?: string | undefined;
   readonly language?: OutputLanguage | undefined;
+  /** Only projects of this kind (ADR-0045); absent lists every kind. */
+  readonly kind?: ProjectKind | undefined;
   /** Last change on or after / on or before this day (`YYYY-MM-DD`). */
   readonly updatedFrom?: string | undefined;
   readonly updatedTo?: string | undefined;
@@ -204,6 +210,7 @@ export interface TimelineEntry {
 }
 
 interface ProjectRow extends QueryResultRow {
+  kind: ProjectKind;
   analysis_profile: AnalysisProfile;
   analysis_continuation_session_id: string | null;
   id: string;
@@ -256,7 +263,7 @@ interface LinkRow extends QueryResultRow {
 }
 
 const projectColumns = `
-  id, workspace_id, code, title, description, initial_problem, expected_output, output_language, status,analysis_profile,analysis_continuation_session_id,
+  id, workspace_id, code, title, description, initial_problem, expected_output, output_language, status, kind, analysis_profile,analysis_continuation_session_id,
   previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id, origin_kind,
   origin_exploration_id, origin_candidate_key,
   (select e.title from explorations e where e.id = origin_exploration_id) as origin_exploration_title,
@@ -296,6 +303,7 @@ export class ProjectsService {
       status,
       input.topicId ?? '',
       input.language ?? '',
+      input.kind ?? '',
       input.updatedFrom ?? '',
       input.updatedTo ?? '',
       input.waiting ? 'waiting' : '',
@@ -323,6 +331,7 @@ export class ProjectsService {
         conditions.push(
           `exists (select 1 from project_topics pt where pt.project_id = projects.id and pt.topic_id = ${bind(input.topicId)}::uuid)`,
         );
+      if (input.kind) conditions.push(`kind = ${bind(input.kind)}`);
       if (input.language) conditions.push(`output_language = ${bind(input.language)}::locale`);
       if (input.updatedFrom) conditions.push(`updated_at >= ${bind(input.updatedFrom)}::date`);
       if (input.updatedTo)
@@ -551,8 +560,8 @@ export class ProjectsService {
                workspace_id, code, title, description, initial_problem, problem_template_snapshot,
                problem_pattern_snapshot,
                output_language, created_by, analysis_profile, expected_output,
-               origin_exploration_id, origin_candidate_key
-             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, $13)
+               origin_exploration_id, origin_candidate_key, kind
+             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, $13, $14)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -570,6 +579,7 @@ export class ProjectsService {
             input.expectedOutput ?? '',
             origin?.explorationId ?? null,
             origin?.candidateKey ?? null,
+            input.kind ?? 'standard',
           ],
         );
         row = result.rows[0];
@@ -936,8 +946,8 @@ export class ProjectsService {
              insert into projects (
                workspace_id, code, title, description, initial_problem, output_language,
                created_by, cloned_from_id, origin_kind, problem_template_snapshot,
-               problem_pattern_snapshot, expected_output
-             ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12)
+               problem_pattern_snapshot, expected_output, kind
+             ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12, $13)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -959,6 +969,8 @@ export class ProjectsService {
               : null,
             // A pivot is a new direction: what the old problem was meant to give does not carry over.
             kind === 'pivot' ? '' : source.expected_output,
+            // A copy or pivot of an exploration is an exploration (ADR-0045).
+            source.kind,
           ],
         );
         row = result.rows[0];
@@ -1368,6 +1380,7 @@ export class ProjectsService {
 
   private snapshot(row: ProjectRow): Record<string, unknown> {
     return {
+      kind: row.kind,
       analysisProfile: row.analysis_profile,
       code: row.code,
       title: row.title,
@@ -1395,6 +1408,7 @@ export class ProjectsService {
     sharedKnowledgeIds: readonly string[],
   ): Project {
     return {
+      kind: row.kind,
       analysisProfile: row.analysis_profile,
       id: row.id,
       workspaceId: row.workspace_id,
