@@ -100,10 +100,7 @@ describe.skipIf(!adminUrl)('Google accounts on the deployed database schema', ()
     expect((await app.inject({ method: 'GET', url: '/v1/auth/providers' })).json()).toEqual({
       google: true,
     });
-    // GET /v1/admin/users asks once per user and workspace whether the user is a member, so it
-    // slows down as the shared test database fills with workspaces (about 7 s with 500 here):
-    // the default 5 s is not enough.
-  }, 30000);
+  });
   it('rejects unapproved, unverified and organizational accounts', async () => {
     await expect(
       auth.loginWithGoogle(googleIdentity(`unknown.${suffix}@gmail.com`), {
@@ -143,6 +140,21 @@ describe.skipIf(!adminUrl)('Google accounts on the deployed database schema', ()
       { correlationId: randomUUID() },
     );
     viewerCookie = 'docoo_session=' + session.token;
+    // The account list names the workspaces each account belongs to: the viewer only the one it was
+    // approved for, however many other workspaces the shared test database holds.
+    const listed = await app.inject({
+      method: 'GET',
+      url: `/v1/admin/users?q=${suffix}`,
+      headers: headers(ownerCookie),
+    });
+    expect(listed.statusCode).toBe(200);
+    const workspacesOf = new Map(
+      listed
+        .json<{ items: { email: string; workspaceIds: string[] }[] }>()
+        .items.map((account) => [account.email, account.workspaceIds]),
+    );
+    expect(workspacesOf.get(ownerEmail)).toContain(workspaceId);
+    expect(workspacesOf.get(`docoo.viewer.${suffix}@gmail.com`)).toEqual([workspaceId]);
     expect(
       (
         await app.inject({
