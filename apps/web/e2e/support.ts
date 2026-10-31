@@ -84,12 +84,33 @@ export async function createViaApi<T>(
 /** Points the workspace at an offline test provider so stages run without a real key. */
 export async function useFakeProvider(page: Page) {
   const { workspaceId, headers } = await apiSession(page);
-  const created = await createViaApi<{ connection: { id: string } }>(
-    page,
-    '/provider-connections',
-    { provider: 'fake', name: `E2E flow provider ${Date.now()}` },
+  // One offline provider serves the whole run. The test database is shared and the providers page
+  // lists every connection, so making a new one per test made that table longer with each spec and
+  // changed the layout other specs scan (a long table needs "load more" and moves buttons around).
+  const listed = await page.request.get(`/api/workspaces/${workspaceId}/provider-connections`, {
+    headers,
+  });
+  const known = listed.ok()
+    ? (
+        (await listed.json()) as {
+          items: { id: string; name: string; provider: string; status: string }[];
+        }
+      ).items
+    : [];
+  const reusable = known.find(
+    (item) =>
+      item.provider === 'fake' &&
+      item.name.startsWith('E2E flow provider') &&
+      item.status !== 'disabled',
   );
-  const id = created.connection.id;
+  const id =
+    reusable?.id ??
+    (
+      await createViaApi<{ connection: { id: string } }>(page, '/provider-connections', {
+        provider: 'fake',
+        name: `E2E flow provider ${Date.now()}`,
+      })
+    ).connection.id;
   await page.request.post(
     `/api/workspaces/${workspaceId}/provider-connections/${id}/models/refresh`,
     {
