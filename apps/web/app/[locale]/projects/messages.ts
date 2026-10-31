@@ -80,6 +80,9 @@ const messages = {
     descriptionLabel: 'توضیح کوتاه (اختیاری)',
     problemLabel: 'مسئلهٔ اولیه',
     problemHelp: 'تا قبل از فعال‌سازی قابل ویرایش است؛ تحلیلگر از همین متن شروع می‌کند.',
+    expectedOutputLabel: 'خروجی مورد انتظار (اختیاری)',
+    expectedOutputHelp:
+      'اگر می‌دانید در پایان چه چیزی می‌خواهید (مثلاً «برنامهٔ ۹۰‌روزه با مسئول هر کار»)، همین‌جا بنویسید. تحلیلگر پرسش‌هایش را روی فاصلهٔ مسئله تا این خروجی متمرکز می‌کند و پیشنهاد فهرست خروجی‌ها هم از آن شروع می‌شود. این فقط یک ورودی است، نه تعهد؛ بعداً هم می‌توانید فهرست خروجی‌ها را ویرایش کنید. تا قبل از فعال‌سازی قابل ویرایش است.',
     outputLanguage: 'زبان خروجی',
     topicsSection: 'حوزه‌ها و اولویت',
     topicsHelp: 'ترتیب فهرست همان اولویت است؛ هنگام تعارض دانش، حوزهٔ بالاتر مقدم است.',
@@ -121,6 +124,8 @@ const messages = {
       PROJECT_TOO_MANY_TOPICS: 'حداکثر ۲۰ حوزه می‌توان انتخاب کرد.',
       PROJECT_VERSION_CONFLICT: 'پروژه پس از بارگذاری تغییر کرده است. صفحه را به‌روز کنید.',
       PROJECT_PROBLEM_LOCKED: 'مسئلهٔ اولیه پس از شروع کار قابل ویرایش نیست.',
+      PROJECT_EXPECTED_OUTPUT_LOCKED:
+        'خروجی مورد انتظار پس از شروع کار قابل ویرایش نیست؛ فهرست خروجی‌ها یا الزامات خروجی را ویرایش کنید.',
       PROJECT_READ_ONLY: 'پروژهٔ بایگانی یا حذف‌شده را ابتدا بازیابی کنید.',
       PROJECT_STATE_CONFLICT: 'وضعیت پروژه با این اقدام سازگار نیست.',
       PROJECT_REASON_REQUIRED: 'برای این اقدام دلیل لازم است.',
@@ -215,6 +220,9 @@ const messages = {
     descriptionLabel: 'Short description (optional)',
     problemLabel: 'Initial problem',
     problemHelp: 'Editable until the project is activated; the analyst starts from this text.',
+    expectedOutputLabel: 'Expected output (optional)',
+    expectedOutputHelp:
+      'If you already know what you want at the end (for example "a 90-day plan with an owner for each task"), write it here. The analyst aims its questions at the gap between the problem and this output, and the proposal of the deliverables list starts from it. It is an input, not a commitment; you can still edit the deliverables later. Editable until the project is activated.',
     outputLanguage: 'Output language',
     topicsSection: 'Topics and priority',
     topicsHelp: 'The list order is the priority; when knowledge conflicts the higher topic wins.',
@@ -256,6 +264,8 @@ const messages = {
       PROJECT_TOO_MANY_TOPICS: 'At most 20 topics can be chosen.',
       PROJECT_VERSION_CONFLICT: 'The project changed after you loaded it. Reload the page.',
       PROJECT_PROBLEM_LOCKED: 'The initial problem cannot be edited once work has started.',
+      PROJECT_EXPECTED_OUTPUT_LOCKED:
+        'The expected output cannot be edited once work has started; edit the deliverables or the output requirements instead.',
       PROJECT_READ_ONLY: 'Restore an archived or deleted project first.',
       PROJECT_STATE_CONFLICT: 'The project status does not allow this action.',
       PROJECT_REASON_REQUIRED: 'This action needs a reason.',

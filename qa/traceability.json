@@ -105,7 +105,7 @@
         "apps/api/test/settings.integration.test.ts",
         "apps/web/e2e/core-flow.spec.ts"
       ],
-      "note": "Code, title, initial problem, topics and settings are saved via the wizard and API."
+      "note": "Code, title, initial problem, topics and settings are saved via the wizard and API. The optional expected output (ADR-0043) is saved, locked after draft, redacted in the audit and read by the analyst and the deliverables proposal; apps/api/test/workflow.integration.test.ts and packages/orchestration/src/analysis.test.ts cover it."
     },
     "FR-PRJ-003": {
       "status": "tested",

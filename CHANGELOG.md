@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **Expected output when creating a project** ([ADR-0043](docs/adr/0043-expected-output-at-project-creation.md)). The first step of the new-project wizard has an optional **Expected output** field under the initial problem ("a 90-day plan with an owner for every task"). The analyst now reads it as information in every round and in the problem definition, and aims its questions at what is missing between the problem and that output instead of asking what it already answers; it is told not to treat it as verified and to report a contradiction. The AI proposal of the deliverables list starts from it, and the deliverables card shows it beside the list. It is an input, not a commitment: nothing is confirmed until you confirm the deliverables. The text can be edited until the project is activated (then `409 PROJECT_EXPECTED_OUTPUT_LOCKED`; use the deliverables or the output requirements), is kept by a copy and a continuation and left out of a pivot, and the audit trail keeps only its digest. Projects without one give every agent exactly the same prompts as before. Migration 0071 (adds `expected_output`); API `expectedOutput` on `POST|PATCH /projects`.
+
 ### Security
 
 - Upgrade the Temporal TypeScript SDK to 1.25.0, whose native core bridge bundles `zip` 9.0.5 and clears CVE-2026-115905, CVE-2026-115907, CVE-2026-115908 and CVE-2026-115909 that failed the worker image scans on 1.24.0. 1.25.0 is younger than the seven-day release-age gate, so it is listed in `minimumReleaseAgeExclude` (exact versions only) with a reminder to remove the entries once the gate passes.

@@ -26,6 +26,8 @@ interface Plan {
 
 interface Data {
   plan: Plan | null;
+  /** What the administrator expected when creating the project (ADR-0043); empty when not said. */
+  expectedOutput?: string;
   required: boolean;
   kinds: { kind: Kind; supported: boolean }[];
   waiting: boolean;
@@ -36,6 +38,7 @@ const copy = {
     title: 'خروجی‌های موردانتظار',
     help: 'پیش از ایده‌پردازی مشخص کنید چه خروجی‌هایی می‌خواهید. ایده‌پردازی تا تأیید شما منتظر می‌ماند و سپس فقط برای همین خروجی‌ها کار می‌کند.',
     waiting: 'ایده‌پردازی منتظر تأیید این فهرست است.',
+    expectedOutput: 'آنچه هنگام ساخت پروژه به‌عنوان خروجی مورد انتظار نوشتید',
     empty: 'هنوز خروجی‌ای تعیین نشده است.',
     confirmed: 'تأییدشده در {at}',
     unconfirmed: 'تأیید نشده',
@@ -79,6 +82,7 @@ const copy = {
     title: 'Expected deliverables',
     help: 'Say which outputs you expect before ideation. Ideation waits for your confirmation and then works for these outputs only.',
     waiting: 'Ideation is waiting for this list to be confirmed.',
+    expectedOutput: 'What you wrote as the expected output when creating the project',
     empty: 'No deliverable has been set yet.',
     confirmed: 'Confirmed {at}',
     unconfirmed: 'Not confirmed',
@@ -212,6 +216,14 @@ export function DeliverablesPanel({
         <p className="notice" role="status">
           {text.waiting}
         </p>
+      )}
+      {data.expectedOutput && (
+        <figure className="stack" aria-label={text.expectedOutput}>
+          <figcaption className="muted">{text.expectedOutput}</figcaption>
+          <blockquote dir={textDir(locale)} style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
+            {data.expectedOutput}
+          </blockquote>
+        </figure>
       )}
       {plan && (
         <p className="muted">

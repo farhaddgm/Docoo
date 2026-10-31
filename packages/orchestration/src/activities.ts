@@ -232,10 +232,11 @@ export function createOrchestrationActivities(
             stage: Stage;
             project_title: string;
             problem: string;
+            expected_output: string;
             language: 'fa' | 'en';
             problem_pattern_snapshot: unknown;
           }>(
-            `select s.stage, p.title as project_title, p.initial_problem as problem, p.output_language as language, p.problem_pattern_snapshot
+            `select s.stage, p.title as project_title, p.initial_problem as problem, p.expected_output, p.output_language as language, p.problem_pattern_snapshot
                from stage_runs s join projects p on p.id = s.project_id where s.id = $1`,
             [ref.stageRunId],
           )
@@ -431,6 +432,7 @@ export function createOrchestrationActivities(
           language: stage.language,
           projectTitle: stage.project_title,
           problem: stage.problem,
+          expectedOutput: stage.expected_output,
           topics: topics.rows.map((row) => row.title),
           // Later stages see the research as claims with their support, not as raw evidence.
           previous: previous.rows.map((row) =>
