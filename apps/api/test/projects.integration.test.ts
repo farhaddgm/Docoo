@@ -324,6 +324,89 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
     expect(JSON.stringify(audit.rows)).not.toContain('Confidential problem');
   });
 
+  it('carries an optional expected output until work starts (ADR-0043)', async () => {
+    const secret = 'A confidential 90-day plan with an owner for every task';
+    const plain = await createProject('eo-plain');
+    expect(plain).toMatchObject({ expectedOutput: '' });
+
+    const created = await h.request('POST', projects(h.ids.workspaceA), {
+      cookie: cookieA,
+      payload: {
+        code: 'eo-given',
+        title: 'Expected output',
+        initialProblem: 'Sales dropped',
+        expectedOutput: `  ${secret}  `,
+        topics: topicIds.map((topicId) => ({ topicId })),
+      },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    let project = created.json<{ project: ProjectBody & { expectedOutput: string } }>().project;
+    expect(project.expectedOutput).toBe(secret);
+
+    const tooLong = await h.request('POST', projects(h.ids.workspaceA), {
+      cookie: cookieA,
+      payload: {
+        code: 'eo-long',
+        title: 'Too long',
+        initialProblem: 'x',
+        expectedOutput: 'x'.repeat(5001),
+        topics: [],
+      },
+    });
+    expect(tooLong.statusCode).toBe(400);
+
+    const patch = (version: number, payload: Record<string, unknown>) =>
+      h.request('PATCH', projects(h.ids.workspaceA, `/${project.id}`), {
+        cookie: cookieA,
+        headers: { 'if-match': `"${version}"` },
+        payload,
+      });
+    const changed = await patch(project.version, { expectedOutput: 'A product specification' });
+    expect(changed.statusCode, changed.body).toBe(200);
+    project = changed.json<{ project: ProjectBody & { expectedOutput: string } }>().project;
+    expect(project.expectedOutput).toBe('A product specification');
+    // Saving other fields keeps it.
+    const retitled = await patch(project.version, { title: 'Renamed' });
+    project = retitled.json<{ project: ProjectBody & { expectedOutput: string } }>().project;
+    expect(project.expectedOutput).toBe('A product specification');
+
+    // The text is content: the audit trail holds a digest, never the text.
+    const audit = await h.admin.query(
+      `select before, after from audit_events where project_id = $1`,
+      [project.id],
+    );
+    expect(JSON.stringify(audit.rows)).not.toContain('product specification');
+
+    // A clone keeps it, a pivot (a new direction) starts without it.
+    const activated = await step(project, 'activate');
+    const sameValue = await patch(activated.version, { expectedOutput: 'A product specification' });
+    expect(sameValue.statusCode, 'an unchanged value is not an edit').toBe(200);
+    const locked = await patch(sameValue.json<{ project: ProjectBody }>().project.version, {
+      expectedOutput: 'Something else',
+    });
+    expect(locked.statusCode).toBe(409);
+    expect(locked.json<{ code: string }>().code).toBe('PROJECT_EXPECTED_OUTPUT_LOCKED');
+
+    const copy = await h.request('POST', projects(h.ids.workspaceA, `/${project.id}/clone`), {
+      cookie: cookieA,
+      payload: { code: 'eo-copy' },
+    });
+    expect(copy.json<{ project: { expectedOutput: string } }>().project.expectedOutput).toBe(
+      'A product specification',
+    );
+    const done = await step(
+      sameValue.json<{ project: ProjectBody }>().project,
+      'complete',
+      'Accepted by the board',
+    );
+    const pivot = await h.request('POST', projects(h.ids.workspaceA, `/${done.id}/clone`), {
+      cookie: cookieA,
+      payload: { code: 'eo-pivot', kind: 'pivot', pivotProblem: 'A different direction' },
+    });
+    expect(pivot.statusCode, pivot.body).toBe(201);
+    expect(pivot.json<{ project: { expectedOutput: string } }>().project.expectedOutput).toBe('');
+  });
+
   it('filters the list by topic, language, last change, waiting and text, and shows the owner (UX §4)', async () => {
     const solo = await createTopic('solo-filter');
     const mine = await createProject('flt-alpha', [solo]);

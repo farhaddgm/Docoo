@@ -130,6 +130,9 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.locator('#project-code').fill(code);
     await page.locator('#project-title').fill('پروژهٔ آزمون');
     await page.locator('#project-problem').fill('فروش آنلاین کند شده و علت آن را نمی‌دانیم.');
+    // The optional expected output (ADR-0043) is saved with the project and shown on its page.
+    const expectedOutput = 'برنامهٔ ۹۰‌روزه برای بازگشت فروش با مسئول هر اقدام';
+    await page.locator('#project-expected-output').fill(expectedOutput);
     // The wizard: basics, then the prioritized topics.
     await page.getByRole('button', { name: wizardText.next }).click();
     const picker = page.locator('#project-add-topic');
@@ -154,6 +157,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       page.getByRole('heading', { level: 2, name: new RegExp(code, 'u') }),
     ).toBeVisible();
     await expect(statusBadge(page)).toHaveText(detail.statuses['draft']!);
+    await expect(page.getByText(expectedOutput)).toBeVisible();
     await expect(healthBadge(page)).toHaveText(health.levels['idle']!);
     const milestone = page.getByRole('region', { name: health.milestone });
     await expect(milestone.getByText(health.milestoneNone)).toBeVisible();
@@ -186,6 +190,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     // The problem is locked once the project left draft; other fields stay editable.
     await page.getByRole('button', { name: detail.edit }).click();
     await expect(page.locator('#project-problem')).toBeDisabled();
+    await expect(page.locator('#project-expected-output')).toBeDisabled();
     await page.locator('#project-title').fill('پروژهٔ آزمون بازنگری‌شده');
     await page.getByRole('button', { name: projectText.saveChanges }).click();
     await expect(page.getByRole('heading', { level: 2, name: /بازنگری‌شده/u })).toBeVisible();

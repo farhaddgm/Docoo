@@ -14,7 +14,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { projectStatuses, type ProjectCommand } from '@docoo/domain';
+import { EXPECTED_OUTPUT_MAX_LENGTH, projectStatuses, type ProjectCommand } from '@docoo/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { problemTemplateIdSchema } from '@docoo/contracts';
@@ -44,6 +44,7 @@ const codeSchema = z
 const titleSchema = z.string().trim().min(1).max(200);
 const descriptionSchema = z.string().trim().max(10_000);
 const problemSchema = z.string().trim().min(1).max(50_000);
+const expectedOutputSchema = z.string().trim().max(EXPECTED_OUTPUT_MAX_LENGTH);
 const languageSchema = z.enum(['fa', 'en']);
 const reasonSchema = z.string().trim().min(1).max(1000);
 const topicsSchema = z
@@ -96,6 +97,7 @@ const createSchema = z
     title: titleSchema,
     description: descriptionSchema.default(''),
     initialProblem: problemSchema,
+    expectedOutput: expectedOutputSchema.default(''),
     problemTemplateId: problemTemplateIdSchema.optional(),
     problemPatternVersionId: z.uuid().optional(),
     outputLanguage: languageSchema.default('fa'),
@@ -127,6 +129,7 @@ const updateSchema = z
     title: titleSchema.optional(),
     description: descriptionSchema.optional(),
     initialProblem: problemSchema.optional(),
+    expectedOutput: expectedOutputSchema.optional(),
     outputLanguage: languageSchema.optional(),
     topics: topicsSchema.optional(),
     sharedKnowledgeIds: z

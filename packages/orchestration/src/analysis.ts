@@ -1,6 +1,7 @@
 import type { ProblemPatternDefinition } from '@docoo/contracts';
 import {
   ANALYSIS_LIMITS,
+  EXPECTED_OUTPUT_ANALYST_RULES,
   type AnalysisLimits,
   type AnalysisProfile,
   composeInstructions,
@@ -275,6 +276,8 @@ export interface RoundRequestInput {
   readonly language: 'fa' | 'en';
   readonly projectTitle: string;
   readonly problem: string;
+  /** What the administrator expects to receive (ADR-0043); empty or absent when not said. */
+  readonly expectedOutput?: string | undefined;
   readonly topics: readonly string[];
   /** Reviewer feedback on rejected problem definitions. */
   readonly feedback: readonly string[];
@@ -321,6 +324,7 @@ export function roundPrompt(input: RoundRequestInput): { instructions: string; m
       'Set "sufficient" to true only when the problem can be defined without guessing; then propose no questions.',
       'In "understood" summarise what is now clear; in "nextAmbiguity" name the most important open point.',
       'Use followUpOf with the number of an earlier question when a new question follows from its answer, otherwise 0.',
+      ...(input.expectedOutput?.trim() ? EXPECTED_OUTPUT_ANALYST_RULES : []),
       ...(input.business
         ? [
             'businessProfile already tells you about the company: do not ask what it answers, and ask instead what it leaves open for this problem.',
@@ -337,6 +341,7 @@ export function roundPrompt(input: RoundRequestInput): { instructions: string; m
   const data = {
     project: input.projectTitle,
     problem: input.problem,
+    ...(input.expectedOutput?.trim() ? { expectedOutput: input.expectedOutput.trim() } : {}),
     topics: input.topics,
     round: analysis.round,
     asked: analysis.asked,

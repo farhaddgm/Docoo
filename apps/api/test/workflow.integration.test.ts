@@ -54,6 +54,7 @@ async function project(
   code: string,
   configure?: (projectId: string) => Promise<void>,
   analysisProfile: 'full' | 'quick' = 'full',
+  extra: Record<string, unknown> = {},
 ): Promise<string> {
   const created = await h.request('POST', api('/projects'), {
     cookie,
@@ -63,6 +64,7 @@ async function project(
       initialProblem: 'Reduce repeat-customer churn by 20%.',
       topics: [{ topicId }],
       analysisProfile,
+      ...extra,
     },
   });
   expect(created.statusCode, created.body).toBe(201);
@@ -1099,6 +1101,75 @@ describe.skipIf(!adminUrl || !temporalAddress)(
           'deliverables.edited',
           'deliverables.confirmed',
         ]);
+      } finally {
+        seen.mockRestore();
+      }
+    }, 150_000);
+
+    it('ADR-0043: the expected output reaches the analyst and the proposal of deliverables, not the other stages', async () => {
+      const wanted = 'A 90-day retention plan with an owner for every action';
+      const projectId = await project(
+        'expected-output',
+        async (id) => {
+          await setting('workflow.require_human_approval', false, 'project', id);
+          await setting('workflow.require_deliverable_confirmation', true, 'project', id);
+        },
+        'full',
+        { expectedOutput: wanted },
+      );
+      const seen = vi.spyOn(h.fake, 'invoke');
+      try {
+        const gate = await analysisGate(projectId);
+        const contents = () =>
+          seen.mock.calls.map((call) => ({
+            content: String(call[0].messages[0]?.content ?? ''),
+            instructions: String(call[0].instructions ?? ''),
+          }));
+        const rounds = contents().filter((call) => call.content.includes('"questionsAndAnswers"'));
+        expect(rounds.length).toBeGreaterThan(0);
+        for (const round of rounds) {
+          expect(round.content).toContain(`"expectedOutput":"${wanted}"`);
+          expect(round.instructions).toContain('expectedOutput is what the administrator said');
+          expect(round.instructions).not.toContain('90-day');
+        }
+        expect(stageOf(gate, 'analysis').pendingGateOutputId).toBeTruthy();
+        expect((await decide(projectId, stageOf(gate, 'analysis'), 'approve')).statusCode).toBe(
+          200,
+        );
+        await waitFor(
+          projectId,
+          (view) => view.humanTasks.some((task) => task.kind === 'deliverables_confirmation'),
+          'the deliverables task',
+        );
+
+        const route = api(`/projects/${projectId}/deliverables`);
+        const read = await h.request('GET', route, { cookie });
+        expect(read.json<{ expectedOutput: string }>().expectedOutput).toBe(wanted);
+        const proposed = await h.request('POST', `${route}/propose`, { cookie });
+        expect(proposed.statusCode, proposed.body).toBe(200);
+        const proposal = contents().find((call) =>
+          call.content.includes('"approvedProblemDefinition"'),
+        );
+        expect(proposal, 'the proposal prompt').toBeDefined();
+        expect(proposal!.content).toContain(`"expectedOutput":"${wanted}"`);
+        expect(proposal!.instructions).toContain('project.expectedOutput');
+        const version = proposed.json<{ plan: { versionNo: number } }>().plan.versionNo;
+        expect(
+          (await h.request('POST', `${route}/confirm`, { cookie, payload: { versionNo: version } }))
+            .statusCode,
+        ).toBe(200);
+        await waitFor(projectId, (view) => view.run?.status === 'completed', 'completion');
+
+        // Only the analyst reads it; every later stage works from the confirmed plan.
+        const later = contents().filter(
+          (call) =>
+            !call.content.includes('"questionsAndAnswers"') &&
+            call.content.includes('"previousStages"'),
+        );
+        expect(later.length).toBeGreaterThan(0);
+        for (const call of later) {
+          expect(call.content).not.toContain('"expectedOutput"');
+        }
       } finally {
         seen.mockRestore();
       }

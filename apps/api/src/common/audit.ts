@@ -26,6 +26,8 @@ const contentKeys = new Set([
   'description',
   'initialProblem',
   'initial_problem',
+  'expectedOutput',
+  'expected_output',
   'conflictInstruction',
 ]);
 

@@ -221,6 +221,8 @@ export const projects = pgTable(
     title: text('title').notNull(),
     description: text('description').notNull().default(''),
     initialProblem: text('initial_problem').notNull(),
+    /** What the administrator expects to receive (ADR-0043); empty when not said. */
+    expectedOutput: text('expected_output').notNull().default(''),
     problemTemplateSnapshot: jsonb('problem_template_snapshot'),
     problemPatternSnapshot: jsonb('problem_pattern_snapshot'),
     outputLanguage: locale('output_language').notNull().default('fa'),
