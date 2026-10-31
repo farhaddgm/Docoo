@@ -192,19 +192,23 @@ export class AccountsService {
       const catalog = await client.query<{ id: string; code: string; name: string }>(
         'select * from app.account_workspace_catalog() order by code',
       );
-      const items: Account[] = [];
-      for (const row of all.slice((page - 1) * 20, page * 20)) {
-        row.workspace_ids = [];
+      const shown = all.slice((page - 1) * 20, page * 20);
+      for (const row of shown) row.workspace_ids = [];
+      // Memberships are tenant-scoped, so each workspace is entered once and asked about every
+      // listed account in a single query (one pass per workspace, not one per account and workspace).
+      if (shown.length) {
+        const ids = shown.map((row) => row.id);
         for (const w of catalog.rows) {
           await client.query("select set_config('app.workspace_id',$1,true)", [w.id]);
-          const member = await client.query(
-            'select 1 from memberships where workspace_id=$1 and user_id=$2',
-            [w.id, row.id],
+          const members = await client.query<{ user_id: string }>(
+            'select user_id from memberships where workspace_id=$1 and user_id = any($2::uuid[])',
+            [w.id, ids],
           );
-          if (member.rowCount) row.workspace_ids.push(w.id);
+          const inside = new Set(members.rows.map((member) => member.user_id));
+          for (const row of shown) if (inside.has(row.id)) row.workspace_ids.push(w.id);
         }
-        items.push(this.public(row));
       }
+      const items: Account[] = shown.map((row) => this.public(row));
       return {
         items,
         total: all.length,
