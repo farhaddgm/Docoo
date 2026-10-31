@@ -64,6 +64,7 @@ export function ProjectForm({
       title: values.title.trim(),
       description: values.description.trim(),
       initialProblem: values.initialProblem.trim(),
+      expectedOutput: values.expectedOutput.trim(),
       topics: values.topics.map((topic) => ({
         topicId: topic.topicId,
         conflictInstruction: topic.conflictInstruction.trim(),
@@ -80,6 +81,8 @@ export function ProjectForm({
     if (clean.description !== initial.description) changes.description = clean.description;
     if (clean.initialProblem !== initial.initialProblem)
       changes.initialProblem = clean.initialProblem;
+    if (clean.expectedOutput !== initial.expectedOutput)
+      changes.expectedOutput = clean.expectedOutput;
     if (clean.outputLanguage !== initial.outputLanguage)
       changes.outputLanguage = clean.outputLanguage;
     if (JSON.stringify(clean.topics) !== JSON.stringify(initial.topics))

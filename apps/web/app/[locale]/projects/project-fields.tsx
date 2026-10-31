@@ -25,6 +25,8 @@ export interface ProjectValues {
   title: string;
   description: string;
   initialProblem: string;
+  /** What the administrator expects to receive (ADR-0043); optional. */
+  expectedOutput: string;
   outputLanguage: 'fa' | 'en';
   analysisProfile?: 'full' | 'quick';
   topics: TopicChoice[];
@@ -51,6 +53,7 @@ export const emptyProject = (locale: Locale): ProjectValues => ({
   title: '',
   description: '',
   initialProblem: '',
+  expectedOutput: '',
   outputLanguage: locale,
   analysisProfile: 'full',
   topics: [],
@@ -58,6 +61,9 @@ export const emptyProject = (locale: Locale): ProjectValues => ({
 });
 
 const MAX_TOPICS = 20;
+
+/** Same limit as the API (`EXPECTED_OUTPUT_MAX_LENGTH` in @docoo/domain). */
+export const EXPECTED_OUTPUT_MAX_LENGTH = 5000;
 
 /** The code pattern the API accepts; the form and the wizard check it before sending. */
 export const PROJECT_CODE_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/u;
@@ -134,6 +140,25 @@ export function BasicsFields({
             aria-describedby="project-problem-help"
             disabled={problemLocked}
             required
+          />
+          <FieldLabel
+            htmlFor="project-expected-output"
+            help={text.expectedOutputHelp}
+            helpId="project-expected-output-help"
+          >
+            {text.expectedOutputLabel}
+          </FieldLabel>
+          <textarea
+            id="project-expected-output"
+            dir={textDir(locale)}
+            rows={3}
+            value={values.expectedOutput}
+            onChange={(event) =>
+              setValues({ ...values, expectedOutput: event.target.value }, 'expectedOutput')
+            }
+            maxLength={EXPECTED_OUTPUT_MAX_LENGTH}
+            aria-describedby="project-expected-output-help"
+            disabled={problemLocked}
           />
           <label htmlFor="project-language">{text.outputLanguage}</label>
           <select

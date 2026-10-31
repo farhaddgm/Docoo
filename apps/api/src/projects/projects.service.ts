@@ -65,6 +65,8 @@ export interface Project {
   readonly title: string;
   readonly description: string;
   readonly initialProblem: string;
+  /** What the administrator expects to receive (ADR-0043); empty when not said. */
+  readonly expectedOutput: string;
   readonly outputLanguage: OutputLanguage;
   readonly status: ProjectStatus;
   readonly previousStatus: ProjectStatus | null;
@@ -110,6 +112,8 @@ export interface CreateProjectInput {
   readonly title: string;
   readonly description: string;
   readonly initialProblem: string;
+  /** Optional: the output the administrator expects (ADR-0043). */
+  readonly expectedOutput?: string | undefined;
   readonly outputLanguage: OutputLanguage;
   readonly topics: readonly TopicLinkInput[];
   /** Project-scope settings saved together with the project (the wizard's choices). */
@@ -128,6 +132,8 @@ export interface UpdateProjectInput {
   readonly title?: string | undefined;
   readonly description?: string | undefined;
   readonly initialProblem?: string | undefined;
+  /** Can change only while the project is a draft, like the initial problem (ADR-0043). */
+  readonly expectedOutput?: string | undefined;
   readonly outputLanguage?: OutputLanguage | undefined;
   readonly topics?: readonly TopicLinkInput[] | undefined;
   /** Replaces the list of own knowledge items shared on `selected` topic links. */
@@ -194,6 +200,7 @@ interface ProjectRow extends QueryResultRow {
   title: string;
   description: string;
   initial_problem: string;
+  expected_output: string;
   output_language: OutputLanguage;
   status: ProjectStatus;
   previous_status: ProjectStatus | null;
@@ -233,7 +240,7 @@ interface LinkRow extends QueryResultRow {
 }
 
 const projectColumns = `
-  id, workspace_id, code, title, description, initial_problem, output_language, status,analysis_profile,analysis_continuation_session_id,
+  id, workspace_id, code, title, description, initial_problem, expected_output, output_language, status,analysis_profile,analysis_continuation_session_id,
   previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id, origin_kind,
   approved_problem_version_id, problem_template_snapshot, problem_pattern_snapshot, version,
   ${isoColumn('deleted_at', 'deleted_at')},
@@ -517,8 +524,8 @@ export class ProjectsService {
              insert into projects (
                workspace_id, code, title, description, initial_problem, problem_template_snapshot,
                problem_pattern_snapshot,
-               output_language, created_by, analysis_profile
-             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10)
+               output_language, created_by, analysis_profile, expected_output
+             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -533,6 +540,7 @@ export class ProjectsService {
             input.outputLanguage,
             context.actorId,
             input.analysisProfile ?? 'full',
+            input.expectedOutput ?? '',
           ],
         );
         row = result.rows[0];
@@ -635,6 +643,16 @@ export class ProjectsService {
           'The initial problem can only change while the project is a draft.',
         );
       }
+      if (
+        input.expectedOutput !== undefined &&
+        input.expectedOutput !== current.expected_output &&
+        current.status !== 'draft'
+      ) {
+        throw conflict(
+          'PROJECT_EXPECTED_OUTPUT_LOCKED',
+          'The expected output can only change while the project is a draft.',
+        );
+      }
       const previousLinks =
         (await this.loadLinks(client, context, [projectId])).get(projectId) ?? [];
       if (input.topics) await this.assertTopicsUsable(client, context, input.topics, previousLinks);
@@ -645,7 +663,7 @@ export class ProjectsService {
           `with updated as (
              update projects
                 set code = $3, title = $4, description = $5, initial_problem = $6,
-                    output_language = $7, version = version + 1
+                    output_language = $7, expected_output = $8, version = version + 1
               where workspace_id = $1 and id = $2
               returning *
            )
@@ -658,6 +676,7 @@ export class ProjectsService {
             input.description ?? current.description,
             input.initialProblem ?? current.initial_problem,
             input.outputLanguage ?? current.output_language,
+            input.expectedOutput ?? current.expected_output,
           ],
         );
         updated = result.rows[0];
@@ -879,8 +898,8 @@ export class ProjectsService {
              insert into projects (
                workspace_id, code, title, description, initial_problem, output_language,
                created_by, cloned_from_id, origin_kind, problem_template_snapshot,
-               problem_pattern_snapshot
-             ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb)
+               problem_pattern_snapshot, expected_output
+             ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -900,6 +919,8 @@ export class ProjectsService {
             source.problem_pattern_snapshot
               ? JSON.stringify(source.problem_pattern_snapshot)
               : null,
+            // A pivot is a new direction: what the old problem was meant to give does not carry over.
+            kind === 'pivot' ? '' : source.expected_output,
           ],
         );
         row = result.rows[0];
@@ -1248,6 +1269,7 @@ export class ProjectsService {
       title: row.title,
       description: row.description,
       initialProblem: row.initial_problem,
+      expectedOutput: row.expected_output,
       outputLanguage: row.output_language,
       status: row.status,
       version: row.version,
@@ -1276,6 +1298,7 @@ export class ProjectsService {
       title: row.title,
       description: row.description,
       initialProblem: row.initial_problem,
+      expectedOutput: row.expected_output,
       outputLanguage: row.output_language,
       status: row.status,
       previousStatus: row.previous_status,

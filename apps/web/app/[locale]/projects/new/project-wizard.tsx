@@ -176,6 +176,8 @@ export function ProjectWizard({
       // Drafts saved before topic knowledge sharing existed have no such fields.
       setValues({
         ...draft.values,
+        // Drafts saved before the expected output existed have no such field.
+        expectedOutput: draft.values.expectedOutput ?? '',
         topics: draft.values.topics.map((topic) => ({
           ...topic,
           knowledgeSharing: topic.knowledgeSharing ?? 'none',
@@ -389,6 +391,7 @@ export function ProjectWizard({
           title: trimmed.title,
           description: values.description.trim(),
           initialProblem: trimmed.problem,
+          ...(values.expectedOutput.trim() ? { expectedOutput: values.expectedOutput.trim() } : {}),
           ...(problemTemplateId ? { problemTemplateId } : {}),
           ...(problemPatternVersionId ? { problemPatternVersionId } : {}),
           outputLanguage: values.outputLanguage,
@@ -944,6 +947,14 @@ function Review({
           <dt>{project.codeLabel}</dt>
           <dd dir="ltr">{values.code.trim()}</dd>
         </div>
+        {values.expectedOutput.trim() && (
+          <div>
+            <dt>{project.expectedOutputLabel}</dt>
+            <dd dir={textDir(locale)} style={{ whiteSpace: 'pre-wrap' }}>
+              {values.expectedOutput.trim()}
+            </dd>
+          </div>
+        )}
         <div>
           <dt>{text.problemTemplate}</dt>
           <dd>

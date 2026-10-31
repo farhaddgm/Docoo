@@ -8,6 +8,8 @@ export interface ProjectDetail {
   title: string;
   description: string;
   initialProblem: string;
+  /** What the administrator expects to receive (ADR-0043); empty when not said. */
+  expectedOutput: string;
   outputLanguage: 'fa' | 'en';
   analysisProfile?: 'full' | 'quick';
   status: string;

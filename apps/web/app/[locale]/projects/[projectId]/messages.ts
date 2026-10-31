@@ -98,6 +98,7 @@ const messages = {
     } as Record<string, string>,
     // Overview
     problem: 'مسئلهٔ اولیه',
+    expectedOutput: 'خروجی مورد انتظار',
     description: 'توضیح',
     topics: 'حوزه‌ها (به ترتیب اولویت)',
     noTopics: 'هنوز حوزه‌ای وصل نشده است.',
@@ -210,6 +211,7 @@ const messages = {
       restore: 'The project was restored.',
     } as Record<string, string>,
     problem: 'Initial problem',
+    expectedOutput: 'Expected output',
     description: 'Description',
     topics: 'Topics (in priority order)',
     noTopics: 'No topic is linked yet.',

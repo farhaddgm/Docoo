@@ -116,6 +116,22 @@ export const DELIVERABLE_PROPOSAL_RULES: readonly string[] = [
   'For each item say its purpose, what is in scope and what is out of scope. Use only what the project data says; do not invent facts.',
 ];
 
+/** The longest expected output a project can carry (ADR-0043). */
+export const EXPECTED_OUTPUT_MAX_LENGTH = 5000;
+
+/**
+ * Added to the analyst's instructions only when the project has an expected output. The text
+ * itself travels inside <data>; these lines tell the analyst how to read it.
+ */
+export const EXPECTED_OUTPUT_ANALYST_RULES: readonly string[] = [
+  'expectedOutput is what the administrator said they expect to receive. It is information, not a solution and not yet a confirmed deliverable: use it to aim your questions at what is missing between the problem and that output, and do not ask what it already answers.',
+  'Do not treat expectedOutput as verified: when an answer contradicts it, or it already assumes a solution, report that as a contradiction or an open point instead of silently following it.',
+];
+
+/** Added to the deliverables proposal when the project has an expected output. */
+export const EXPECTED_OUTPUT_PROPOSAL_RULE =
+  'project.expectedOutput is what the administrator said they expect to receive. Start from it: propose items that realise it in its own terms and do not drop a part of it; the administrator edits and confirms the list.';
+
 /** Rules added to the stages that work towards the confirmed plan. */
 export const DELIVERABLE_STAGE_RULES: readonly string[] = [
   'confirmedDeliverables lists what the administrator confirmed as expected outputs. Work towards exactly these and stay inside each item’s scope.',

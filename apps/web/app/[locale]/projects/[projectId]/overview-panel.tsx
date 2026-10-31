@@ -71,6 +71,7 @@ export function OverviewPanel({
       title: project.title,
       description: project.description,
       initialProblem: project.initialProblem,
+      expectedOutput: project.expectedOutput ?? '',
       outputLanguage: project.outputLanguage,
       topics: project.topics.map((topic) => ({
         topicId: topic.topicId,
@@ -191,6 +192,14 @@ export function OverviewPanel({
         <p dir={textDir(locale)} style={{ whiteSpace: 'pre-wrap' }}>
           {project.initialProblem}
         </p>
+        {project.expectedOutput && (
+          <>
+            <h3>{text.expectedOutput}</h3>
+            <p dir={textDir(locale)} style={{ whiteSpace: 'pre-wrap' }}>
+              {project.expectedOutput}
+            </p>
+          </>
+        )}
         {project.description && (
           <>
             <h3>{text.description}</h3>

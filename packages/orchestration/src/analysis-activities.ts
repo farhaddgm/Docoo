@@ -431,8 +431,13 @@ export function createAnalysisActivities(
         }
 
         const project = (
-          await client.query<{ title: string; problem: string; language: 'fa' | 'en' }>(
-            `select title, initial_problem as problem, output_language as language from projects where id = $1`,
+          await client.query<{
+            title: string;
+            problem: string;
+            expected_output: string;
+            language: 'fa' | 'en';
+          }>(
+            `select title, initial_problem as problem, expected_output, output_language as language from projects where id = $1`,
             [ref.projectId],
           )
         ).rows[0]!;
@@ -490,6 +495,7 @@ export function createAnalysisActivities(
           language: project.language,
           projectTitle: project.title,
           problem: project.problem,
+          expectedOutput: project.expected_output,
           topics: topics.rows.map((row) => row.title),
           feedback: feedback.rows.map((row) => row.comment),
           analysis: context,
