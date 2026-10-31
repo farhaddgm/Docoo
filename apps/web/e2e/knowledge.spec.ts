@@ -495,9 +495,12 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await page.goto('/en/knowledge');
     await expect(page.getByRole('heading', { level: 1, name: english.title })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
-    await expect(
-      page.getByRole('navigation', { name: english.sections }).getByRole('button'),
-    ).toHaveCount(5);
+    // Each of the five sections is a button, and each has its own "i" next to it.
+    const nav = page.getByRole('navigation', { name: english.sections });
+    for (const name of Object.values(english.tabs)) {
+      await expect(nav.getByRole('button', { name, exact: true })).toBeVisible();
+    }
+    await expect(nav.getByRole('button', { name: 'Help', exact: true })).toHaveCount(5);
     await expectNoSeriousA11yViolations(page);
     await page
       .getByRole('navigation', { name: english.sections })
