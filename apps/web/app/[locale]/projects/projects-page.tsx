@@ -27,6 +27,7 @@ export interface ProjectSummary {
   availableCommands: string[];
   currentStage: string;
   outputLanguage: 'fa' | 'en';
+  kind?: 'standard' | 'exploration';
   updatedAt: string;
   topics: { topicId: string; title: string; priority: number }[];
   owner: { id: string; displayName: string } | null;
@@ -38,11 +39,12 @@ interface Filters {
   q: string;
   topicId: string;
   language: string;
+  kind: string;
   from: string;
   to: string;
 }
 
-const noFilters: Filters = { q: '', topicId: '', language: '', from: '', to: '' };
+const noFilters: Filters = { q: '', topicId: '', language: '', kind: '', from: '', to: '' };
 
 const viewOrder = [
   'current',
@@ -109,6 +111,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
           q: filter.q.trim() || undefined,
           topicId: filter.topicId || undefined,
           language: filter.language || undefined,
+          kind: filter.kind || undefined,
           updatedFrom: filter.from || undefined,
           updatedTo: filter.to || undefined,
         })}`,
@@ -172,6 +175,14 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                 {text.newProject}
               </Link>
             )}
+            {canCreateProjects(identity) && (
+              <Link
+                className="secondary-button link-button"
+                href={`/${locale}/projects/new?kind=exploration` as Route}
+              >
+                {text.newExploration}
+              </Link>
+            )}
           </div>
         </div>
         <form
@@ -229,6 +240,18 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
               <option value="">{text.anyLanguage}</option>
               <option value="fa">{text.languages.fa}</option>
               <option value="en">{text.languages.en}</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="project-kind">{text.kindFilter}</label>
+            <select
+              id="project-kind"
+              value={filters.kind}
+              onChange={(event) => setFilters({ ...filters, kind: event.target.value })}
+            >
+              <option value="">{text.anyKind}</option>
+              <option value="standard">{text.kinds.standard}</option>
+              <option value="exploration">{text.kinds.exploration}</option>
             </select>
           </div>
           <div className="field">

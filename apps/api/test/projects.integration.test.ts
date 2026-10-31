@@ -407,6 +407,61 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
     expect(pivot.json<{ project: { expectedOutput: string } }>().project.expectedOutput).toBe('');
   });
 
+  it('has a kind that is set at creation, filters the list and never changes (ADR-0045)', async () => {
+    const standard = await createProject('kind-standard');
+    expect(standard).toMatchObject({ kind: 'standard' });
+
+    const created = await h.request('POST', projects(h.ids.workspaceA), {
+      cookie: cookieA,
+      payload: {
+        code: 'kind-explore',
+        title: 'An event to explore',
+        initialProblem: 'A new regulation was announced',
+        kind: 'exploration',
+        topics: topicIds.map((topicId) => ({ topicId })),
+      },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const exploration = created.json<{ project: ProjectBody & { kind: string } }>().project;
+    expect(exploration.kind).toBe('exploration');
+
+    const bad = await h.request('POST', projects(h.ids.workspaceA), {
+      cookie: cookieA,
+      payload: { code: 'kind-bad', title: 'Bad', initialProblem: 'x', kind: 'other' },
+    });
+    expect(bad.statusCode).toBe(400);
+
+    const list = async (query: string) =>
+      (
+        await h.request('GET', `${projects(h.ids.workspaceA)}?limit=100${query}`, {
+          cookie: cookieA,
+        })
+      ).json<{ items: { code: string; kind: string }[] }>().items;
+    const onlyExplorations = await list('&kind=exploration');
+    expect(onlyExplorations.map((item) => item.code)).toContain('kind-explore');
+    expect(onlyExplorations.every((item) => item.kind === 'exploration')).toBe(true);
+    const onlyStandard = await list('&kind=standard');
+    expect(onlyStandard.map((item) => item.code)).not.toContain('kind-explore');
+    expect(onlyStandard.map((item) => item.code)).toContain('kind-standard');
+    expect((await list('')).map((item) => item.code)).toEqual(
+      expect.arrayContaining(['kind-standard', 'kind-explore']),
+    );
+
+    // A copy of an exploration is an exploration; the kind can never be changed.
+    const copy = await h.request('POST', projects(h.ids.workspaceA, `/${exploration.id}/clone`), {
+      cookie: cookieA,
+      payload: { code: 'kind-copy' },
+    });
+    expect(copy.statusCode, copy.body).toBe(201);
+    expect(copy.json<{ project: { kind: string } }>().project.kind).toBe('exploration');
+    await expect(
+      h.admin.query(`update projects set kind = 'standard' where id = $1`, [exploration.id]),
+    ).rejects.toThrow(/immutable/);
+    await expect(
+      h.admin.query(`update projects set kind = 'bogus' where id = $1`, [exploration.id]),
+    ).rejects.toThrow();
+  });
+
   it('filters the list by topic, language, last change, waiting and text, and shows the owner (UX §4)', async () => {
     const solo = await createTopic('solo-filter');
     const mine = await createProject('flt-alpha', [solo]);
