@@ -105,6 +105,8 @@ const messages = {
     decided: 'وضعیت مسئله عوض شد.',
     noneInFilter: 'در این نما مسئله‌ای نیست.',
     promotedNote: 'از این مسئله پروژه ساخته شده است.',
+    makeProject: 'ساخت پروژه از این مسئله',
+    madeProjects: 'پروژه‌های ساخته‌شده از این مسئله',
     errors: {
       ...rateLimitErrors.fa,
       AI_NOT_CONFIGURED:
@@ -230,6 +232,8 @@ const messages = {
     decided: 'The state of the problem changed.',
     noneInFilter: 'There is no problem in this view.',
     promotedNote: 'A project was made from this problem.',
+    makeProject: 'Make a project from this problem',
+    madeProjects: 'Projects made from this problem',
     errors: {
       ...rateLimitErrors.en,
       AI_NOT_CONFIGURED:

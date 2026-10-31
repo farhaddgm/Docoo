@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canMakeProject,
   composerState,
   countByState,
   filterCandidates,
+  newProjectHref,
   offeredDecisions,
   proposeState,
   type CandidateState,
@@ -74,5 +76,33 @@ describe('exploration screens', () => {
     expect(proposeState(base).canSend).toBe(true);
     expect(proposeState({ ...base, usedCandidates: 30 }).blocked).toBe('limit');
     expect(proposeState({ ...base, status: 'archived' }).blocked).toBe('archived');
+  });
+});
+
+describe('making a project from a candidate', () => {
+  const may = { readOnly: false, mayCreateProjects: true };
+
+  it('is offered for every state except dropped, including after a project was already made', () => {
+    expect(canMakeProject({ ...may, state: 'proposed' })).toBe(true);
+    expect(canMakeProject({ ...may, state: 'parked' })).toBe(true);
+    expect(canMakeProject({ ...may, state: 'promoted' })).toBe(true);
+    expect(canMakeProject({ ...may, state: 'dropped' })).toBe(false);
+  });
+
+  it('is not offered to someone who only reads or may not create projects', () => {
+    expect(canMakeProject({ state: 'proposed', readOnly: true, mayCreateProjects: true })).toBe(
+      false,
+    );
+    expect(canMakeProject({ state: 'proposed', readOnly: false, mayCreateProjects: false })).toBe(
+      false,
+    );
+  });
+
+  it('points the wizard at the exploration and the candidate', () => {
+    const href = newProjectHref('fa', 'e-1', 'k-1');
+    expect(href).toBe('/fa/projects/new?exploration=e-1&candidate=k-1');
+    const url = new URL(href, 'http://x');
+    expect(url.searchParams.get('exploration')).toBe('e-1');
+    expect(url.searchParams.get('candidate')).toBe('k-1');
   });
 });

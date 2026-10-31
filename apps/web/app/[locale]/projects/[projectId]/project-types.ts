@@ -33,6 +33,13 @@ export interface ProjectDetail {
   approvedProblemVersionId: string | null;
   clonedFromId?: string | null;
   originKind?: 'copy' | 'continuation' | 'pivot' | null;
+  /** The candidate problem of an exploration the project was made from (ADR-0044); null when none. */
+  explorationOrigin?: {
+    explorationId: string;
+    candidateKey: string;
+    explorationTitle: string | null;
+    candidateTitle: string | null;
+  } | null;
   version: number;
   deletedAt: string | null;
   purgeAfter: string | null;

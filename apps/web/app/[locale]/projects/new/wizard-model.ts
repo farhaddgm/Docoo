@@ -94,3 +94,84 @@ export function changedInSection(
   if (section === 'solutions' && extra.criteriaChanged) count += 1;
   return count;
 }
+
+// ---------------------------------------------------------------- from a candidate problem
+
+/** A candidate problem of an exploration the project is being made from (ADR-0044 P2). */
+export interface CandidateSeed {
+  readonly explorationId: string;
+  readonly candidateKey: string;
+  readonly explorationTitle: string;
+  readonly candidateTitle: string;
+  readonly title: string;
+  readonly initialProblem: string;
+  readonly expectedOutput: string;
+  readonly outputLanguage: 'fa' | 'en';
+}
+
+/** The candidate a saved draft was started from, if any. */
+export interface DraftSource {
+  readonly explorationId: string;
+  readonly candidateKey: string;
+}
+
+/**
+ * Whether the wizard starts fresh from the candidate. A draft already started from the same
+ * candidate comes back with what the person has typed since; any other draft (none, a plain one,
+ * one from another candidate) is left aside, so nothing of it leaks into the new project.
+ */
+export function shouldApplySeed(
+  draftSource: DraftSource | null | undefined,
+  seed: Pick<CandidateSeed, 'explorationId' | 'candidateKey'>,
+): boolean {
+  return !(
+    draftSource &&
+    draftSource.explorationId === seed.explorationId &&
+    draftSource.candidateKey === seed.candidateKey
+  );
+}
+
+/** The fields of the first step a candidate fills in. Nothing else of the draft is touched. */
+export function seedFields(seed: CandidateSeed) {
+  return {
+    title: seed.title.trim(),
+    initialProblem: seed.initialProblem.trim(),
+    expectedOutput: seed.expectedOutput.trim(),
+    outputLanguage: seed.outputLanguage,
+  };
+}
+
+/**
+ * Builds the seed from the exploration the page loaded, or null when the candidate cannot be
+ * used: it is not there, or it was dropped (the API refuses a project from a dropped one).
+ */
+export function candidateSeed(
+  detail: {
+    exploration: { id: string; title: string; outputLanguage: 'fa' | 'en' };
+    candidates: readonly {
+      candidateKey: string;
+      title: string;
+      problemDraft: string;
+      expectedOutput: string;
+      state: string;
+    }[];
+  },
+  candidateKey: string,
+): { seed: CandidateSeed | null; reason: 'missing' | 'dropped' | null } {
+  const candidate = detail.candidates.find((item) => item.candidateKey === candidateKey);
+  if (!candidate) return { seed: null, reason: 'missing' };
+  if (candidate.state === 'dropped') return { seed: null, reason: 'dropped' };
+  return {
+    seed: {
+      explorationId: detail.exploration.id,
+      candidateKey: candidate.candidateKey,
+      explorationTitle: detail.exploration.title,
+      candidateTitle: candidate.title,
+      title: candidate.title,
+      initialProblem: candidate.problemDraft,
+      expectedOutput: candidate.expectedOutput,
+      outputLanguage: detail.exploration.outputLanguage,
+    },
+    reason: null,
+  };
+}

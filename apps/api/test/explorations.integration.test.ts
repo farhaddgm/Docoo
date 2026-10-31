@@ -416,6 +416,153 @@ describe.skipIf(!adminUrl)('explorations (ADR-0044 P1)', () => {
     }
   });
 
+  it('makes projects from a candidate: marked once, linked for good, refused when dropped (P2)', async () => {
+    const { exploration } = await create('From problem to project');
+    const added = await h.request('POST', api(`/${exploration.id}/candidates`), {
+      cookie,
+      payload: { title: 'Slow onboarding', problemDraft: 'New clients wait weeks to start.' },
+    });
+    const key = added.json<Detail>().candidates[0]!.candidateKey;
+    const projectsUrl = `/v1/workspaces/${h.ids.workspaceA}/projects`;
+    const make = (code: string, extra: Record<string, unknown> = {}) =>
+      h.request('POST', projectsUrl, {
+        cookie,
+        payload: {
+          code,
+          title: 'Onboarding',
+          initialProblem: 'New clients wait weeks to start.',
+          topics: [],
+          explorationCandidate: { explorationId: exploration.id, candidateKey: key },
+          ...extra,
+        },
+      });
+    const candidateOf = async () =>
+      (await detail(exploration.id)).candidates.find(
+        (item) => item.candidateKey === key,
+      )! as CandidateView & {
+        projects: { id: string; code: string }[];
+      };
+    const decisions = () =>
+      h.admin.query<{ decision: string }>(
+        'select decision from exploration_candidate_decisions where candidate_key = $1 order by created_at, id',
+        [key],
+      );
+
+    // A failed creation leaves the candidate as it was: nothing is half done.
+    expect((await make('p2-dup')).statusCode).toBe(201);
+    const duplicate = await make('p2-dup');
+    expect(duplicate.statusCode).toBe(409);
+    expect((await candidateOf()).projects).toHaveLength(1);
+    expect((await decisions()).rows.map((row) => row.decision)).toEqual(['promoted']);
+
+    const first = await h.request('GET', `${projectsUrl}?q=p2-dup`, { cookie });
+    const project = first
+      .json<{ items: { id: string; explorationOrigin: unknown }[] }>()
+      .items.find(Boolean)!;
+    expect(project.explorationOrigin).toEqual({
+      explorationId: exploration.id,
+      candidateKey: key,
+      explorationTitle: 'From problem to project',
+      candidateTitle: 'Slow onboarding',
+    });
+    const state = await candidateOf();
+    expect(state.state).toBe('promoted');
+    expect(state.projects.map((item) => item.code)).toEqual(['p2-dup']);
+
+    // One candidate can give another project; the candidate is not marked a second time.
+    expect((await make('p2-second')).statusCode).toBe(201);
+    expect((await candidateOf()).projects.map((item) => item.code)).toEqual([
+      'p2-dup',
+      'p2-second',
+    ]);
+    expect((await decisions()).rows).toHaveLength(1);
+
+    // A promoted candidate no longer changes state by hand.
+    const decide = await h.request('POST', api(`/${exploration.id}/candidates/${key}/decision`), {
+      cookie,
+      payload: { decision: 'dropped' },
+    });
+    expect(decide.json<{ code: string }>().code).toBe('EXPLORATION_CANDIDATE_PROMOTED');
+
+    // The link never changes, not even by the database owner.
+    await expect(
+      h.admin.query('update projects set origin_candidate_key = null where id = $1', [project.id]),
+    ).rejects.toThrow();
+
+    // Audit: ids and counts only.
+    const audit = await h.admin.query<{ action: string; after: unknown }>(
+      `select action, after from audit_events where target_id = $1 and action = 'exploration.candidate_promoted' order by occurred_at`,
+      [exploration.id],
+    );
+    expect(audit.rows).toHaveLength(2);
+    expect(audit.rows[0]!.after).toMatchObject({ candidateKey: key, firstProject: true });
+    expect(audit.rows[1]!.after).toMatchObject({ firstProject: false });
+    expect(JSON.stringify(audit.rows)).not.toContain('New clients wait');
+  });
+
+  it('refuses a dropped, unknown or foreign candidate and creates no project (P2)', async () => {
+    const { exploration } = await create('Refusals');
+    const key = (
+      await h.request('POST', api(`/${exploration.id}/candidates`), {
+        cookie,
+        payload: { title: 'Dropped idea', problemDraft: 'x' },
+      })
+    ).json<Detail>().candidates[0]!.candidateKey;
+    await h.request('POST', api(`/${exploration.id}/candidates/${key}/decision`), {
+      cookie,
+      payload: { decision: 'dropped' },
+    });
+    const projectsUrl = `/v1/workspaces/${h.ids.workspaceA}/projects`;
+    const attempt = (code: string, explorationId: string, candidateKey: string) =>
+      h.request('POST', projectsUrl, {
+        cookie,
+        payload: {
+          code,
+          title: 'No',
+          initialProblem: 'x',
+          topics: [],
+          explorationCandidate: { explorationId, candidateKey },
+        },
+      });
+    const dropped = await attempt('p2-dropped', exploration.id, key);
+    expect(dropped.statusCode).toBe(409);
+    expect(dropped.json<{ code: string }>().code).toBe('EXPLORATION_CANDIDATE_DROPPED');
+    const unknown = await attempt(
+      'p2-unknown',
+      exploration.id,
+      '00000000-0000-4000-8000-000000000000',
+    );
+    expect(unknown.statusCode).toBe(404);
+    const noExploration = await attempt('p2-none', '00000000-0000-4000-8000-000000000000', key);
+    expect(noExploration.statusCode).toBe(404);
+    expect((await attempt('p2-bad', 'not-a-uuid', key)).statusCode).toBe(400);
+
+    // An exploration of another workspace is invisible, even with its real ids.
+    const other = await h.login(h.emails.b);
+    const foreign = await h.request('POST', `/v1/workspaces/${h.ids.workspaceB}/projects`, {
+      cookie: other,
+      payload: {
+        code: 'p2-foreign',
+        title: 'No',
+        initialProblem: 'x',
+        topics: [],
+        explorationCandidate: { explorationId: exploration.id, candidateKey: key },
+      },
+    });
+    expect(foreign.statusCode).toBe(404);
+
+    const created = await h.admin.query(
+      "select 1 from projects where code in ('p2-dropped','p2-unknown','p2-none','p2-bad','p2-foreign')",
+    );
+    expect(created.rowCount).toBe(0);
+    // Brought back, the same candidate can be used.
+    await h.request('POST', api(`/${exploration.id}/candidates/${key}/decision`), {
+      cookie,
+      payload: { decision: 'proposed' },
+    });
+    expect((await attempt('p2-ok', exploration.id, key)).statusCode).toBe(201);
+  });
+
   it('validates what it receives', async () => {
     for (const payload of [
       {},

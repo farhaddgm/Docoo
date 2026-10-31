@@ -27,6 +27,8 @@ const copy = {
     create: 'ساخت پیش‌نویس',
     cancel: 'انصراف',
     from: 'ساخته‌شده بر پایهٔ پروژهٔ',
+    fromProblem: 'ساخته‌شده از مسئلهٔ',
+    inExploration: 'در کاوش',
     kinds: { copy: 'کپی', continuation: 'ادامه', pivot: 'Pivot' },
   },
   en: {
@@ -42,6 +44,8 @@ const copy = {
     create: 'Create the draft',
     cancel: 'Cancel',
     from: 'Built on project',
+    fromProblem: 'Made from the problem',
+    inExploration: 'in the exploration',
     kinds: { copy: 'Copy', continuation: 'Continuation', pivot: 'Pivot' },
   },
 } as const;
@@ -181,6 +185,29 @@ export function OriginNote({ locale, project }: { locale: Locale; project: Proje
     <p className="muted">
       {copy[locale].from}{' '}
       <Link href={`/${locale}/projects/${project.clonedFromId}` as Route}>{label}</Link>
+    </p>
+  );
+}
+
+/** A link back to the candidate problem of an exploration this project was made from (ADR-0044). */
+export function ExplorationOriginNote({
+  locale,
+  project,
+}: {
+  locale: Locale;
+  project: ProjectDetail;
+}) {
+  const origin = project.explorationOrigin;
+  if (!origin) return null;
+  const text = copy[locale];
+  return (
+    <p className="muted">
+      {text.fromProblem}{' '}
+      <strong dir={textDir(locale)}>{origin.candidateTitle ?? origin.candidateKey}</strong>{' '}
+      {text.inExploration}{' '}
+      <Link href={`/${locale}/explorations/${origin.explorationId}` as Route}>
+        <span dir={textDir(locale)}>{origin.explorationTitle ?? origin.explorationId}</span>
+      </Link>
     </p>
   );
 }

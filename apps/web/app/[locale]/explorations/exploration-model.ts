@@ -1,9 +1,21 @@
+import type { Route } from 'next';
+
+import type { Locale } from '../../i18n';
+
 /** What the exploration screens know about the data and what they offer for it (ADR-0044). */
 
 export type CandidateState = 'proposed' | 'parked' | 'dropped' | 'promoted';
 export type CandidateDecision = 'proposed' | 'parked' | 'dropped';
 
+export interface CandidateProject {
+  id: string;
+  code: string;
+  title: string;
+}
+
 export interface Candidate {
+  /** The projects made from this candidate that the person can see (ADR-0044 P2). */
+  projects: CandidateProject[];
   candidateKey: string;
   versionNo: number;
   title: string;
@@ -152,4 +164,23 @@ export function proposeState(input: {
           ? 'limit'
           : null;
   return { canSend: blocked === null, blocked };
+}
+
+/**
+ * Whether a project can be made from a candidate now: not read-only, allowed to create projects,
+ * and the candidate not dropped (the API refuses a dropped one). A candidate that already gave a
+ * project can give another.
+ */
+export function canMakeProject(input: {
+  state: CandidateState;
+  readOnly: boolean;
+  mayCreateProjects: boolean;
+}): boolean {
+  return !input.readOnly && input.mayCreateProjects && input.state !== 'dropped';
+}
+
+/** The address of the new-project wizard filled from a candidate, as a route the links accept. */
+export function newProjectHref(locale: Locale, explorationId: string, candidateKey: string): Route {
+  const query = new URLSearchParams({ exploration: explorationId, candidate: candidateKey });
+  return `/${locale}/projects/new?${query.toString()}` as Route;
 }

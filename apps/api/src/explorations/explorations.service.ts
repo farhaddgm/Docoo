@@ -54,6 +54,12 @@ export interface ExplorationMessage {
 }
 
 export interface ExplorationCandidate extends CandidateInput {
+  /** The projects made from this candidate that the person can see (ADR-0044 P2). */
+  readonly projects: readonly {
+    readonly id: string;
+    readonly code: string;
+    readonly title: string;
+  }[];
   readonly candidateKey: string;
   readonly versionNo: number;
   readonly source: 'ai' | 'admin';
@@ -95,6 +101,11 @@ const currentCandidates = `
   select c.candidate_key as "candidateKey", c.version_no as "versionNo", c.title,
          c.problem_draft as "problemDraft", c.why, c.assumptions, c.expected_output as "expectedOutput",
          c.source, ${isoColumn('c.created_at', '"createdAt"')},
+         coalesce((select json_agg(json_build_object('id', p.id, 'code', p.code, 'title', p.title)
+                                   order by p.created_at)
+                     from projects p
+                    where p.origin_candidate_key = c.candidate_key and p.workspace_id = c.workspace_id
+                      and p.deleted_at is null), '[]'::json) as projects,
          coalesce(d.decision, 'proposed') as state, coalesce(d.reason, '') as reason,
          ${isoColumn('d.created_at', '"decidedAt"')}
     from (select distinct on (candidate_key) * from exploration_candidates

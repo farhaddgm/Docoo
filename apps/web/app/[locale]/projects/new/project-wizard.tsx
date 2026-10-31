@@ -1,5 +1,7 @@
 'use client';
 
+import type { Route } from 'next';
+import Link from 'next/link';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { ApiError, apiGet, apiSend } from '../../../api-client';
@@ -50,9 +52,13 @@ import {
   changedInSection,
   migrateDraftStep,
   reachableSteps,
+  seedFields,
+  shouldApplySeed,
   shouldSuggestCode,
   suggestProjectCode,
   type AdvancedSection,
+  type CandidateSeed,
+  type DraftSource,
 } from './wizard-model';
 import { FieldLabel, InfoTip, SectionTitle } from '../../../info-tip';
 
@@ -75,6 +81,8 @@ interface Draft {
   business?: ContenterBusinessItem | null;
   problemTemplateId?: ProblemTemplateId | '';
   problemPatternVersionId?: string;
+  /** The candidate problem the draft was started from (ADR-0044), so a reload keeps what was typed. */
+  source?: DraftSource | null;
 }
 
 interface PublishedProblemPattern {
@@ -115,10 +123,13 @@ function writeDraft(workspaceId: string, draft: Draft | null) {
 export function ProjectWizard({
   locale,
   workspaceId,
+  seed = null,
   onCreated,
 }: {
   locale: Locale;
   workspaceId: string;
+  /** A candidate problem of an exploration the project is made from (ADR-0044); null for a plain one. */
+  seed?: CandidateSeed | null;
   onCreated: (projectId: string) => void;
 }) {
   const text = wizardMessages(locale);
@@ -166,7 +177,11 @@ export function ProjectWizard({
 
   // A draft left earlier comes back; the wizard saves one after every change.
   useEffect(() => {
-    const draft = readDraft(workspaceId);
+    const stored = readDraft(workspaceId);
+    // A draft started from this very candidate comes back with what was typed since. Any other
+    // draft is not carried into a project made from a candidate: it starts fresh from the candidate.
+    const applySeed = seed !== null && shouldApplySeed(stored?.source, seed);
+    const draft = applySeed ? null : stored;
     if (draft) {
       // A draft of the eight-step wizard has no version; its step is mapped onto the new four.
       const restoredStep = draft.v === 2 ? draft.step : migrateDraftStep(draft.step);
@@ -193,6 +208,17 @@ export function ProjectWizard({
       setProblemPatternVersionId(draft.problemPatternVersionId ?? '');
       setRestored(true);
     }
+    if (seed && applySeed) {
+      const fields = seedFields(seed);
+      // A project made from a candidate is a new start: its code is suggested from its title.
+      codeTouchedRef.current = false;
+      setCodeTouched(false);
+      setValues((current) => ({
+        ...current,
+        ...fields,
+        code: shouldSuggestCode(fields.title) ? suggestProjectCode(fields.title) : '',
+      }));
+    }
     setReady(true);
   }, [workspaceId]);
 
@@ -210,6 +236,7 @@ export function ProjectWizard({
       business,
       problemTemplateId,
       problemPatternVersionId,
+      source: seed ? { explorationId: seed.explorationId, candidateKey: seed.candidateKey } : null,
     });
   }, [
     ready,
@@ -394,6 +421,14 @@ export function ProjectWizard({
           ...(values.expectedOutput.trim() ? { expectedOutput: values.expectedOutput.trim() } : {}),
           ...(problemTemplateId ? { problemTemplateId } : {}),
           ...(problemPatternVersionId ? { problemPatternVersionId } : {}),
+          ...(seed
+            ? {
+                explorationCandidate: {
+                  explorationId: seed.explorationId,
+                  candidateKey: seed.candidateKey,
+                },
+              }
+            : {}),
           outputLanguage: values.outputLanguage,
           analysisProfile: values.analysisProfile ?? 'full',
           topics: values.topics.map((topic) => ({
@@ -602,6 +637,17 @@ export function ProjectWizard({
 
         {step === PROBLEM_STEP && (
           <>
+            {seed && (
+              <p className="notice" role="note">
+                {fill(text.seedBanner, {
+                  candidate: seed.candidateTitle,
+                  exploration: seed.explorationTitle,
+                })}{' '}
+                <Link href={`/${locale}/explorations/${seed.explorationId}` as Route}>
+                  {text.seedOpen}
+                </Link>
+              </p>
+            )}
             <BasicsFields locale={locale} values={values} onChange={changeBasics} />
             <div className="filter-grid">
               <FieldLabel
