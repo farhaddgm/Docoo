@@ -4,6 +4,8 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.47.0] — 2026-10-31
+
 ### Added
 
 - **Make a project from a candidate problem** ([ADR-0044](docs/adr/0044-exploration-before-projects.md) P2). Every candidate problem of an exploration (except a dropped one) has a **Make a project from this problem** button. It opens the new-project wizard with the title, the problem and the expected output filled in from the candidate and says where they came from; a draft you had started for something else is set aside, so none of its topics or settings reach the new project. Creating the project links it to the candidate for good: the project page shows which problem and exploration it came from, the candidate becomes **made a project** and lists its projects, and you can make another project from the same candidate later. A dropped candidate must be brought back first, and a failed creation changes nothing. API: `explorationCandidate` on `POST /projects`, `explorationOrigin` on a project, `projects` on a candidate. Migration 0073.
