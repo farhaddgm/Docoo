@@ -9,9 +9,10 @@ import { formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { explainError, Notice, useAction } from '../use-action';
 import { Badge, useScopeOptions } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
 import { scopeRoles, type Retrieval, type ScopeRole } from './knowledge-types';
-import { SectionTitle } from '../../info-tip';
+import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
 
 /**
  * Shows what an agent would be given for a question (KNO-007): only approved, current and valid
@@ -28,6 +29,7 @@ export function RetrievalPanel({
   projectId?: string;
 }) {
   const text = knowledgeMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const options = useScopeOptions(workspaceId);
   const explain = useCallback(
@@ -67,7 +69,9 @@ export function RetrievalPanel({
         {text.retrievalHeading}
       </SectionTitle>
       <form className="field-stack" onSubmit={submit}>
-        <label htmlFor={`${id}-q`}>{text.retrievalQuery}</label>
+        <FieldLabel htmlFor={`${id}-q`} help={help.retrieval.query}>
+          {text.retrievalQuery}
+        </FieldLabel>
         <input
           id={`${id}-q`}
           dir={textDir(locale)}
@@ -78,7 +82,9 @@ export function RetrievalPanel({
         />
         {!projectId && (
           <>
-            <label htmlFor={`${id}-scope`}>{text.retrievalScope}</label>
+            <FieldLabel htmlFor={`${id}-scope`} help={help.retrieval.scope}>
+              {text.retrievalScope}
+            </FieldLabel>
             <select
               id={`${id}-scope`}
               disabled={!ready}
@@ -99,7 +105,9 @@ export function RetrievalPanel({
             </select>
           </>
         )}
-        <label htmlFor={`${id}-role`}>{text.retrievalRole}</label>
+        <FieldLabel htmlFor={`${id}-role`} help={help.retrieval.role}>
+          {text.retrievalRole}
+        </FieldLabel>
         <select
           id={`${id}-role`}
           disabled={!ready}
@@ -134,6 +142,7 @@ export function RetrievalPanel({
           ) : (
             <>
               <p className="muted" role="status" dir={textDir(locale)}>
+                <InfoTip text={help.retrieval.results} />{' '}
                 {fill(text.retrievalSummary, {
                   n: formatNumber(locale, result.results.length),
                   model: result.embeddingModel,

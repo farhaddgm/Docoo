@@ -15,6 +15,7 @@ import {
   useScopeOptions,
   type ScopeRow,
 } from './knowledge-common';
+import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
 import {
   claimKinds,
@@ -25,7 +26,7 @@ import {
   type SourceType,
 } from './knowledge-types';
 import { manualMessages } from './manual-messages';
-import { FieldLabel, GroupLabel, SectionTitle } from '../../info-tip';
+import { FieldLabel, GroupLabel, InfoTip, SectionTitle } from '../../info-tip';
 import { textDir } from '../../i18n';
 
 interface CitationDraft {
@@ -81,6 +82,7 @@ export function ManualKnowledgePanel({
 }) {
   const text = knowledgeMessages(locale);
   const manual = manualMessages(locale);
+  const help = knowledgeHelp(locale);
   const id = useId();
   const options = useScopeOptions(workspaceId);
   const explain = useCallback(
@@ -102,6 +104,16 @@ export function ManualKnowledgePanel({
   const [claims, setClaims] = useState<ClaimDraft[]>([]);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
+  const citationHelp: Record<keyof CitationDraft, string> = {
+    sourceRef: help.manual.sourceRef,
+    title: help.manual.citationTitle,
+    publisher: help.manual.publisher,
+    author: help.manual.author,
+    publishedAt: help.manual.publishedAt,
+    accessedAt: help.manual.accessedAt,
+    locator: help.manual.locator,
+    quote: help.manual.quote,
+  };
   const claimsReady = claims.every((claim) => claim.text.trim().length > 0);
   const ready = title.trim() !== '' && content.trim() !== '' && claimsReady;
 
@@ -176,7 +188,9 @@ export function ManualKnowledgePanel({
         </p>
       )}
 
-      <label htmlFor={`${id}-title`}>{manual.title}</label>
+      <FieldLabel htmlFor={`${id}-title`} help={help.manual.title}>
+        {manual.title}
+      </FieldLabel>
       <input
         id={`${id}-title`}
         dir={textDir(locale)}
@@ -185,7 +199,9 @@ export function ManualKnowledgePanel({
         onChange={(event) => setTitle(event.target.value)}
       />
       <div className="filter-grid">
-        <label htmlFor={`${id}-language`}>{manual.language}</label>
+        <FieldLabel htmlFor={`${id}-language`} help={help.manual.language}>
+          {manual.language}
+        </FieldLabel>
         <select
           id={`${id}-language`}
           value={language}
@@ -194,7 +210,9 @@ export function ManualKnowledgePanel({
           <option value="fa">فارسی</option>
           <option value="en">English</option>
         </select>
-        <label htmlFor={`${id}-confidentiality`}>{manual.confidentiality}</label>
+        <FieldLabel htmlFor={`${id}-confidentiality`} help={help.manual.confidentiality}>
+          {manual.confidentiality}
+        </FieldLabel>
         <select
           id={`${id}-confidentiality`}
           value={confidentiality}
@@ -206,7 +224,9 @@ export function ManualKnowledgePanel({
             </option>
           ))}
         </select>
-        <label htmlFor={`${id}-source-type`}>{manual.sourceType}</label>
+        <FieldLabel htmlFor={`${id}-source-type`} help={help.manual.sourceType}>
+          {manual.sourceType}
+        </FieldLabel>
         <select
           id={`${id}-source-type`}
           value={sourceType}
@@ -218,14 +238,18 @@ export function ManualKnowledgePanel({
             </option>
           ))}
         </select>
-        <label htmlFor={`${id}-from`}>{manual.validFrom}</label>
+        <FieldLabel htmlFor={`${id}-from`} help={help.manual.validFrom}>
+          {manual.validFrom}
+        </FieldLabel>
         <input
           id={`${id}-from`}
           type="datetime-local"
           value={validFrom}
           onChange={(event) => setValidFrom(event.target.value)}
         />
-        <label htmlFor={`${id}-until`}>{manual.validUntil}</label>
+        <FieldLabel htmlFor={`${id}-until`} help={help.manual.validUntil}>
+          {manual.validUntil}
+        </FieldLabel>
         <input
           id={`${id}-until`}
           type="datetime-local"
@@ -268,6 +292,7 @@ export function ManualKnowledgePanel({
         workspaceId={workspaceId}
         options={options}
         text={text}
+        help={{ role: help.create.role, add: help.create.addScope }}
         disabled={busy}
       />
 
@@ -281,9 +306,12 @@ export function ManualKnowledgePanel({
             return (
               <li key={`${id}-claim-${index}`} className="card field-stack">
                 <h3>{fill(manual.claimN, { n })}</h3>
-                <label htmlFor={`${id}-claim-${index}-text`}>
-                  {fill(manual.claimN, { n })}: {manual.claimText}
-                </label>
+                <span className="field-label">
+                  <label htmlFor={`${id}-claim-${index}-text`}>
+                    {fill(manual.claimN, { n })}: {manual.claimText}
+                  </label>
+                  <InfoTip text={help.manual.claimText} />
+                </span>
                 <textarea
                   id={`${id}-claim-${index}-text`}
                   dir={textDir(locale)}
@@ -292,9 +320,12 @@ export function ManualKnowledgePanel({
                   value={claim.text}
                   onChange={(event) => patchClaim(index, { text: event.target.value })}
                 />
-                <label htmlFor={`${id}-claim-${index}-kind`}>
-                  {fill(manual.claimN, { n })}: {manual.claimKind}
-                </label>
+                <span className="field-label">
+                  <label htmlFor={`${id}-claim-${index}-kind`}>
+                    {fill(manual.claimN, { n })}: {manual.claimKind}
+                  </label>
+                  <InfoTip text={help.manual.claimKind} />
+                </span>
                 <select
                   id={`${id}-claim-${index}-kind`}
                   value={claim.kind}
@@ -316,9 +347,12 @@ export function ManualKnowledgePanel({
                       type: 'text' | 'date' = 'text',
                     ) => (
                       <>
-                        <label htmlFor={`${id}-claim-${index}-cit-${at}-${name}`}>
-                          {label}: {caption}
-                        </label>
+                        <span className="field-label">
+                          <label htmlFor={`${id}-claim-${index}-cit-${at}-${name}`}>
+                            {label}: {caption}
+                          </label>
+                          <InfoTip text={citationHelp[name]} />
+                        </span>
                         <input
                           id={`${id}-claim-${index}-cit-${at}-${name}`}
                           type={type}
@@ -379,6 +413,7 @@ export function ManualKnowledgePanel({
                   >
                     {fill(manual.addCitation, { c: n })}
                   </button>
+                  <InfoTip text={help.manual.addCitation} />
                   <button
                     type="button"
                     className="secondary-button"
@@ -400,7 +435,8 @@ export function ManualKnowledgePanel({
             onClick={() => setClaims([...claims, { text: '', kind: 'statement', citations: [] }])}
           >
             {manual.addClaim}
-          </button>
+          </button>{' '}
+          <InfoTip text={help.manual.addClaim} />
         </p>
       </fieldset>
 

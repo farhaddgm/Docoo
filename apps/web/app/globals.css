@@ -1750,6 +1750,12 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   list-style: none;
 }
 
+.section-nav li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .section-nav-divider {
   align-self: stretch;
   inline-size: 1px;
