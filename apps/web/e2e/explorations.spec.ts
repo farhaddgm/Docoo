@@ -26,10 +26,11 @@ for (const locale of ['fa', 'en'] as const) {
         topics: [{ topicId: topic.topic.id }],
         ...(kind ? { kind } : {}),
       });
-    const exploration = `Exploration ${locale} ${stamp}`;
-    const ordinary = `Ordinary ${locale} ${stamp}`;
-    await make(`ex-${locale}-${stamp}`, exploration, 'exploration');
-    await make(`or-${locale}-${stamp}`, ordinary);
+    // The code is the link of a row; the title is a plain cell next to it.
+    const exploration = `ex-${locale}-${stamp}`;
+    const ordinary = `or-${locale}-${stamp}`;
+    await make(exploration, `Exploration ${locale} ${stamp}`, 'exploration');
+    await make(ordinary, `Ordinary ${locale} ${stamp}`);
 
     await page.goto(`/${locale}/explorations`);
     await expect(
