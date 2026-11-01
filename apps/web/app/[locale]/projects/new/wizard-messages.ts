@@ -155,6 +155,11 @@ const messages = {
       'ساخت از مسئلهٔ «{candidate}» در کاوش «{exploration}». عنوان، مسئله و خروجی مورد انتظار از آن پر شده است؛ هر چیزی را می‌توانید عوض کنید.',
     explorationBanner:
       'این یک کاوش است: مثل یک پروژه همهٔ مرحله‌ها را می‌گذراند، اما به‌جای ایده، ابعاد مختلف موضوع را پیشنهاد می‌دهد؛ هر بعد می‌تواند پروژه‌ای جدا شود. موضوع یا رویداد را در «مسئله» بنویسید.',
+    dimensionBanner:
+      'ساخت از بُعد «{candidate}» در کاوش «{exploration}». عنوان و شرح مسئله از آن پر شده است؛ هر چیزی را می‌توانید عوض کنید.',
+    dimensionOpen: 'بازکردن کاوش',
+    seedUnselected:
+      'این بُعد هنوز در کاوش انتخاب نشده است. ابتدا آن را در تب راه‌حل‌های کاوش انتخاب کنید؛ فعلاً می‌توانید پروژه را دستی بسازید.',
     seedOpen: 'بازکردن کاوش',
     seedLoading: 'در حال خواندن مسئله از کاوش…',
     seedFailed: 'مسئلهٔ کاوش خوانده نشد؛ می‌توانید پروژه را دستی بسازید.',
@@ -320,6 +325,11 @@ const messages = {
       'Made from the problem “{candidate}” in the exploration “{exploration}”. The title, problem and expected output are filled in from it; you can change anything.',
     explorationBanner:
       'This is an exploration: like a project it goes through every stage, but instead of ideas it proposes the dimensions of the topic, and each dimension can become a project of its own. Write the topic or event in the problem field.',
+    dimensionBanner:
+      'Made from the dimension “{candidate}” of the exploration “{exploration}”. The title and the problem statement are filled in from it; you can change anything.',
+    dimensionOpen: 'Open the exploration',
+    seedUnselected:
+      'This dimension is not selected in the exploration yet. Select it in the exploration’s solutions tab first; for now you can make the project by hand.',
     seedOpen: 'Open the exploration',
     seedLoading: 'Reading the problem from the exploration…',
     seedFailed:

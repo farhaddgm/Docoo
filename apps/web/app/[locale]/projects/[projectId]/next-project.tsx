@@ -27,6 +27,7 @@ const copy = {
     create: 'ساخت پیش‌نویس',
     cancel: 'انصراف',
     from: 'ساخته‌شده بر پایهٔ پروژهٔ',
+    fromDimension: 'ساخته‌شده از بُعد',
     fromProblem: 'ساخته‌شده از مسئلهٔ',
     inExploration: 'در کاوش',
     kinds: { copy: 'کپی', continuation: 'ادامه', pivot: 'Pivot' },
@@ -44,6 +45,7 @@ const copy = {
     create: 'Create the draft',
     cancel: 'Cancel',
     from: 'Built on project',
+    fromDimension: 'Made from the dimension',
     fromProblem: 'Made from the problem',
     inExploration: 'in the exploration',
     kinds: { copy: 'Copy', continuation: 'Continuation', pivot: 'Pivot' },
@@ -198,8 +200,21 @@ export function ExplorationOriginNote({
   project: ProjectDetail;
 }) {
   const origin = project.explorationOrigin;
-  if (!origin) return null;
   const text = copy[locale];
+  const dimension = project.dimensionOrigin;
+  if (dimension) {
+    return (
+      <p className="muted">
+        {text.fromDimension}{' '}
+        <strong dir={textDir(locale)}>{dimension.dimensionTitle ?? dimension.solutionId}</strong>{' '}
+        {text.inExploration}{' '}
+        <Link href={`/${locale}/projects/${dimension.projectId}` as Route}>
+          <span dir={textDir(locale)}>{dimension.projectTitle ?? dimension.projectId}</span>
+        </Link>
+      </p>
+    );
+  }
+  if (!origin) return null;
   return (
     <p className="muted">
       {text.fromProblem}{' '}

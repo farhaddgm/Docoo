@@ -107,6 +107,11 @@ export interface CandidateSeed {
   readonly initialProblem: string;
   readonly expectedOutput: string;
   readonly outputLanguage: 'fa' | 'en';
+  /**
+   * `dimension`: the seed is a selected dimension of an exploration project (ADR-0045). Then
+   * `explorationId` is that project's id and `candidateKey` the id of the dimension.
+   */
+  readonly origin?: 'dimension';
 }
 
 /** The candidate a saved draft was started from, if any. */
@@ -171,6 +176,40 @@ export function candidateSeed(
       initialProblem: candidate.problemDraft,
       expectedOutput: candidate.expectedOutput,
       outputLanguage: detail.exploration.outputLanguage,
+    },
+    reason: null,
+  };
+}
+
+/**
+ * Builds the seed from a selected dimension of an exploration project (ADR-0045): the dimension's
+ * title and its draft problem statement fill the first step. A dimension that was not selected
+ * cannot start a project (the API refuses it), so it gives no seed.
+ */
+export function dimensionSeed(
+  project: { id: string; title: string; outputLanguage: 'fa' | 'en' },
+  items: readonly {
+    id: string;
+    title: string;
+    summary: string;
+    selectedPriority: number | null;
+  }[],
+  solutionId: string,
+): { seed: CandidateSeed | null; reason: 'missing' | 'unselected' | null } {
+  const item = items.find((entry) => entry.id === solutionId);
+  if (!item) return { seed: null, reason: 'missing' };
+  if (item.selectedPriority === null) return { seed: null, reason: 'unselected' };
+  return {
+    seed: {
+      explorationId: project.id,
+      candidateKey: item.id,
+      explorationTitle: project.title,
+      candidateTitle: item.title,
+      title: item.title,
+      initialProblem: item.summary,
+      expectedOutput: '',
+      outputLanguage: project.outputLanguage,
+      origin: 'dimension',
     },
     reason: null,
   };

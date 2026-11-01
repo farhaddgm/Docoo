@@ -91,6 +91,8 @@ export interface Project {
   readonly originKind: ProjectOriginKind | null;
   /** The candidate problem of an exploration the project was made from (ADR-0044); null when none. */
   readonly explorationOrigin: ProjectExplorationOrigin | null;
+  /** The selected dimension of an exploration the project was made from (ADR-0045); null when none. */
+  readonly dimensionOrigin: ProjectDimensionOrigin | null;
   /** The approved analysis output that serves as the problem definition (FR-ANL-005). */
   readonly approvedProblemVersionId: string | null;
   readonly version: number;
@@ -98,6 +100,14 @@ export interface Project {
   readonly purgeAfter: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/** The selected dimension of an exploration project this project was made from (ADR-0045). */
+export interface ProjectDimensionOrigin {
+  readonly projectId: string;
+  readonly projectTitle: string | null;
+  readonly solutionId: string;
+  readonly dimensionTitle: string | null;
 }
 
 export interface ProjectExplorationOrigin {
@@ -141,6 +151,8 @@ export interface CreateProjectInput {
   /** Makes the project from a candidate problem of an exploration (ADR-0044). */
   readonly explorationCandidate?:
     { readonly explorationId: string; readonly candidateKey: string } | undefined;
+  /** Makes the project from a selected dimension of an exploration project (ADR-0045). */
+  readonly dimension?: { readonly projectId: string; readonly solutionId: string } | undefined;
 }
 
 export interface UpdateProjectInput {
@@ -232,6 +244,10 @@ interface ProjectRow extends QueryResultRow {
   origin_candidate_key: string | null;
   origin_exploration_title: string | null;
   origin_candidate_title: string | null;
+  origin_project_id: string | null;
+  origin_solution_id: string | null;
+  origin_project_title: string | null;
+  origin_dimension_title: string | null;
   approved_problem_version_id: string | null;
   problem_template_snapshot: ProblemTemplate | null;
   problem_pattern_snapshot: ProblemPatternSnapshot | null;
@@ -265,7 +281,9 @@ interface LinkRow extends QueryResultRow {
 const projectColumns = `
   id, workspace_id, code, title, description, initial_problem, expected_output, output_language, status, kind, analysis_profile,analysis_continuation_session_id,
   previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id, origin_kind,
-  origin_exploration_id, origin_candidate_key,
+  origin_exploration_id, origin_candidate_key, origin_project_id, origin_solution_id,
+  (select o.title from projects o where o.id = origin_project_id) as origin_project_title,
+  (select s.title from solutions s where s.id = origin_solution_id) as origin_dimension_title,
   (select e.title from explorations e where e.id = origin_exploration_id) as origin_exploration_title,
   (select c.title from exploration_candidates c where c.candidate_key = origin_candidate_key
     order by c.version_no desc limit 1) as origin_candidate_title,
@@ -551,8 +569,17 @@ export class ProjectsService {
       // A project made from a candidate problem (ADR-0044): the candidate must exist in this
       // workspace and not be dropped. The exploration row is locked so two projects made at once
       // cannot both write the "promoted" decision.
+      if (input.explorationCandidate && input.dimension) {
+        throw badRequest(
+          'PROJECT_ORIGIN_AMBIGUOUS',
+          'A project comes from a candidate or from a dimension, not both.',
+        );
+      }
       const origin = input.explorationCandidate
         ? await this.lockCandidate(client, context, input.explorationCandidate)
+        : null;
+      const dimension = input.dimension
+        ? await this.checkDimension(client, context, input.dimension)
         : null;
       let row: ProjectRow | undefined;
       try {
@@ -562,8 +589,9 @@ export class ProjectsService {
                workspace_id, code, title, description, initial_problem, problem_template_snapshot,
                problem_pattern_snapshot,
                output_language, created_by, analysis_profile, expected_output,
-               origin_exploration_id, origin_candidate_key, kind
-             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, $13, $14)
+               origin_exploration_id, origin_candidate_key, kind,
+               origin_project_id, origin_solution_id
+             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, $13, $14, $15, $16)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -582,6 +610,8 @@ export class ProjectsService {
             origin?.explorationId ?? null,
             origin?.candidateKey ?? null,
             input.kind ?? 'standard',
+            dimension?.projectId ?? null,
+            dimension?.solutionId ?? null,
           ],
         );
         row = result.rows[0];
@@ -646,6 +676,14 @@ export class ProjectsService {
           settings: settings.map((setting) => setting.key),
           ...(criteria ? { solutionCriteria: true } : {}),
           ...(business ? { businessId: business.content.business.externalId } : {}),
+          ...(dimension
+            ? {
+                dimensionOrigin: {
+                  projectId: dimension.projectId,
+                  solutionId: dimension.solutionId,
+                },
+              }
+            : {}),
           ...(origin
             ? {
                 explorationOrigin: {
@@ -1314,6 +1352,50 @@ export class ProjectsService {
     }
   }
 
+  /**
+   * A dimension is a solution of an exploration project that its selection chose. The exploration
+   * project is locked so a project made now cannot race a new selection (ADR-0045 step E).
+   */
+  private async checkDimension(
+    client: PoolClient,
+    context: WorkspaceRequestContext,
+    ref: { projectId: string; solutionId: string },
+  ): Promise<{ projectId: string; solutionId: string }> {
+    const source = (
+      await client.query<{ id: string }>(
+        `select id from projects
+          where id = $1 and workspace_id = $2 and kind = 'exploration' and deleted_at is null
+          for share`,
+        [ref.projectId, context.workspaceId],
+      )
+    ).rows[0];
+    const solution = source
+      ? (
+          await client.query<{ id: string }>(
+            `select id from solutions where id = $1 and project_id = $2 and workspace_id = $3`,
+            [ref.solutionId, ref.projectId, context.workspaceId],
+          )
+        ).rows[0]
+      : undefined;
+    if (!source || !solution) {
+      throw notFound('DIMENSION_NOT_FOUND', 'The dimension of the exploration was not found.');
+    }
+    const selected = (
+      await client.query<{ selected: { solutionId: string }[] }>(
+        `select selected from solution_selections where project_id = $1
+          order by created_at desc, id desc limit 1`,
+        [ref.projectId],
+      )
+    ).rows[0]?.selected;
+    if (!selected?.some((item) => item.solutionId === ref.solutionId)) {
+      throw conflict(
+        'DIMENSION_NOT_SELECTED',
+        'Select the dimension in the exploration before making a project from it.',
+      );
+    }
+    return ref;
+  }
+
   /** Finds the candidate a project is made from and locks its exploration; refuses a dropped one. */
   private async lockCandidate(
     client: PoolClient,
@@ -1437,6 +1519,15 @@ export class ProjectsService {
       approvedProblemVersionId: row.approved_problem_version_id,
       clonedFromId: row.cloned_from_id,
       originKind: row.origin_kind,
+      dimensionOrigin:
+        row.origin_project_id && row.origin_solution_id
+          ? {
+              projectId: row.origin_project_id,
+              projectTitle: row.origin_project_title,
+              solutionId: row.origin_solution_id,
+              dimensionTitle: row.origin_dimension_title,
+            }
+          : null,
       explorationOrigin:
         row.origin_exploration_id && row.origin_candidate_key
           ? {

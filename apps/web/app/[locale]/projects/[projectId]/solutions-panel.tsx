@@ -42,6 +42,8 @@ interface Solution {
   risks: string[];
   score: { criteria: CriterionScore[]; total: number };
   selectedPriority: number | null;
+  /** Projects made from this dimension of an exploration (ADR-0045). */
+  projects?: { id: string; code: string; title: string }[];
 }
 
 interface SolutionSet {
@@ -395,6 +397,33 @@ export function SolutionsPanel({
               </p>
             </div>
             <p dir={textDir(locale)}>{solution.summary}</p>
+            {kind === 'exploration' && solution.selectedPriority !== null && (
+              <div className="toolbar">
+                {!readOnly && (
+                  <Link
+                    className="secondary-button link-button"
+                    href={
+                      `/${locale}/projects/new?dimensionProject=${projectId}&dimension=${solution.id}` as Route
+                    }
+                  >
+                    {text.makeProject}
+                  </Link>
+                )}
+                {(solution.projects ?? []).length > 0 && (
+                  <span>
+                    {text.madeProjects}{' '}
+                    {(solution.projects ?? []).map((made, index) => (
+                      <span key={made.id}>
+                        {index > 0 && '، '}
+                        <Link href={`/${locale}/projects/${made.id}` as Route}>
+                          <span dir={textDir(locale)}>{made.title}</span>
+                        </Link>
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </div>
+            )}
             <details>
               <summary>{text.assumptions}</summary>
               <List locale={locale} items={solution.assumptions} />

@@ -6,6 +6,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Added
 
+- **Make projects from the selected dimensions of an exploration** ([ADR-0045](docs/adr/0045-exploration-as-a-project-kind.md) step E). In the solutions tab of an exploration, every selected dimension has a **Make a project from this dimension** button. It opens the new-project wizard with the dimension's title and its draft problem statement filled in and says where they came from. Creating the project links it to that dimension for good: the project page shows which dimension and exploration it came from, the dimension lists the projects made from it, and you can make more than one project from the same dimension. A dimension that is not selected, or a project that is not an exploration, cannot be used, and a failed creation changes nothing. The exploration itself ends like any project: complete it once the selection and the report are approved. API: `dimension` on `POST /projects`, `dimensionOrigin` on a project, `projects` on each row of the solutions list. Migration 0075.
+
+### Added
+
 - **An exploration ends with a report and its own rubric** ([ADR-0045](docs/adr/0045-exploration-as-a-project-kind.md) step D). For a project of kind _exploration_ the document written for the selected dimension is an **exploration report**: what the topic is, why this dimension is a problem worth its own project, who is affected, what is known and unknown from the approved analysis, the assumptions and what must be clarified first — without proposing a solution. The stage outline and the evaluation stage follow the same meaning, and the evaluation of the document uses an exploration rubric (coverage of the topic and the dimension, clarity of the dimension as a possible project, independence from the other dimensions, traceability to the analysis answers, consistency, clarity and format) instead of the solution rubric; you can still save your own rubric for a project. Ordinary projects keep their prompts and rubric exactly as before. Making projects from the selected dimensions follows in step E.
 
 ### Added

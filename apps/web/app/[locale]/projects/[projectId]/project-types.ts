@@ -14,6 +14,13 @@ export interface ProjectDetail {
   analysisProfile?: 'full' | 'quick';
   /** 'exploration' proposes the dimensions of a topic instead of ideas (ADR-0045). */
   kind?: 'standard' | 'exploration';
+  /** The selected dimension of an exploration this project was made from (ADR-0045). */
+  dimensionOrigin?: {
+    projectId: string;
+    projectTitle: string | null;
+    solutionId: string;
+    dimensionTitle: string | null;
+  } | null;
   status: string;
   currentStage: string;
   pauseReason: string | null;
