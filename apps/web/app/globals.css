@@ -5277,3 +5277,147 @@ button.link-button {
     animation: none;
   }
 }
+
+/* Floating notice that an AI step is running: small, draggable, informational only. */
+.ai-activity {
+  position: fixed;
+  inset-block-end: var(--space-5, 1.5rem);
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-inline-size: calc(100vw - 1rem);
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+  color: var(--color-ink);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.16);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  animation: ai-activity-in 0.28s ease-out both;
+}
+
+.ai-activity:active {
+  cursor: grabbing;
+}
+
+.ai-activity[data-leaving] {
+  animation: ai-activity-out 0.3s ease-in both;
+  pointer-events: none;
+}
+
+.ai-activity-orb {
+  position: relative;
+  flex: none;
+  inline-size: 0.6rem;
+  block-size: 0.6rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.ai-activity-orb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: ai-activity-pulse 1.6s ease-out infinite;
+}
+
+.ai-activity-label {
+  background: linear-gradient(
+    100deg,
+    var(--color-ink) 35%,
+    var(--color-primary) 50%,
+    var(--color-ink) 65%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ai-activity-shimmer 2.4s linear infinite;
+  white-space: nowrap;
+}
+
+.ai-activity-count {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.ai-activity-close {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.4rem;
+  block-size: 1.4rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--color-primary-soft);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.ai-activity-close svg {
+  inline-size: 0.8rem;
+  block-size: 0.8rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+}
+
+@keyframes ai-activity-in {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+    scale: 0.94;
+  }
+}
+
+@keyframes ai-activity-out {
+  to {
+    opacity: 0;
+    translate: 0 0.35rem;
+    scale: 0.94;
+  }
+}
+
+@keyframes ai-activity-pulse {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+@keyframes ai-activity-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-activity,
+  .ai-activity[data-leaving],
+  .ai-activity-orb::after,
+  .ai-activity-label {
+    animation: none;
+  }
+  .ai-activity-label {
+    color: var(--color-ink);
+    background: none;
+  }
+}
