@@ -778,6 +778,14 @@
       ],
       "note": "The analyst of an exploration is told it is about an event or topic in every round and in the definition; research gets no knowledge and says it is off without a confirmed plan; the prompts of an ordinary project are equal to the ones before."
     },
+    "FR-EXP-011": {
+      "status": "tested",
+      "evidence": [
+        "packages/orchestration/src/analysis.test.ts",
+        "apps/api/test/exploration-project.integration.test.ts"
+      ],
+      "note": "Ideation of an exploration asks for dimensions and the solutions step scores them on importance, urgency, clarity and independence (a new exploration starts with those criteria); an ordinary project keeps its ideation prompt, its solutions prompt and its six default criteria."
+    },
     "FR-AUD-001": {
       "status": "tested",
       "evidence": [

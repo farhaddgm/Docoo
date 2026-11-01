@@ -6,6 +6,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Added
 
+- **An exploration proposes the dimensions of its topic** ([ADR-0045](docs/adr/0045-exploration-as-a-project-kind.md) step C). For a project of kind _exploration_ the ideation stage no longer proposes ideas: each item is a dimension of the topic — a separate problem with a draft problem statement, why it matters, assumptions and a probable expected output, and no solution. The solutions step then scores and selects those dimensions with the same table, weights and selection as for a project, using criteria suited to dimensions: importance, urgency, clarity and independence (a new exploration starts with them and you can change them like any project's criteria). On the project page the solutions tab of an exploration speaks of dimensions. Ordinary projects keep their prompts, criteria and screens exactly as before. The documents and evaluation of an exploration follow in step D.
+
+### Added
+
 - **An exploration is analysed as a topic, and research is off by default** ([ADR-0045](docs/adr/0045-exploration-as-a-project-kind.md) step B). For a project of kind _exploration_ the analyst now treats the problem field as an event or topic to understand: it asks about what happened, who is affected, causes, risks, opportunities, constraints and what is unknown, and writes the topic definition without narrowing it to one problem or one solution. The research stage of an exploration does not search anything unless a research plan was confirmed; it ends with no sources and says so. Ordinary projects get exactly the same prompts as before. The ideation, solutions and document stages of an exploration still behave as for a project; they follow in steps C and D.
 
 ### Added

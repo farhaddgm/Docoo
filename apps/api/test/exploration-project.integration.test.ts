@@ -86,5 +86,72 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       expect(research.length).toBeGreaterThan(0);
       expect(research[0]!.instructions).not.toContain('Research is disabled');
     }, 120_000);
+
+    async function toIdeation(projectId: string) {
+      await toResearch(projectId);
+      const view = await flow.waitFor(projectId, flow.waiting('research'), 'research gate');
+      await flow.decide(projectId, flow.stageOf(view, 'research'), 'approve');
+      await flow.waitFor(projectId, flow.waiting('ideation'), 'ideation gate');
+    }
+
+    const ideator = () =>
+      captured.filter((request) => (request.instructions ?? '').includes('Your role: ideator.'));
+    const solutionRequest = () =>
+      captured.filter((request) => request.responseSchema?.name === 'solutions');
+
+    it('asks for the dimensions of the topic and scores them on the exploration criteria', async () => {
+      captured.length = 0;
+      const projectId = await create('expl-dim', 'exploration');
+      await toIdeation(projectId);
+      expect(ideator().length).toBeGreaterThan(0);
+      expect(
+        ideator().every((r) => (r.instructions ?? '').includes('a dimension of the topic')),
+      ).toBe(true);
+
+      const criteria = await flow.get<{ criteria: { criteria: { key: string }[] } }>(
+        `/projects/${projectId}/solution-criteria`,
+      );
+      expect(criteria.criteria.criteria.map((item) => item.key)).toEqual([
+        'importance',
+        'urgency',
+        'clarity',
+        'independence',
+      ]);
+
+      const generated = await flow.post<{
+        solutionSet: { items: { score: { criteria: { key: string }[] } }[] };
+      }>(`/projects/${projectId}/solutions/generate`, { count: 2 });
+      expect(generated.solutionSet.items).toHaveLength(2);
+      expect(solutionRequest()).toHaveLength(1);
+      expect(solutionRequest()[0]!.instructions).toContain('dimensions of the topic');
+      expect(generated.solutionSet.items[0]!.score.criteria.map((item) => item.key)).toEqual([
+        'importance',
+        'urgency',
+        'clarity',
+        'independence',
+      ]);
+    }, 180_000);
+
+    it('keeps the ideation and the solutions of an ordinary project as they were', async () => {
+      captured.length = 0;
+      const projectId = await create('std-dim');
+      await toIdeation(projectId);
+      expect(ideator().length).toBeGreaterThan(0);
+      expect(ideator().some((r) => (r.instructions ?? '').includes('dimension of the topic'))).toBe(
+        false,
+      );
+      const generated = await flow.post<{
+        solutionSet: { items: { score: { criteria: { key: string }[] } }[] };
+      }>(`/projects/${projectId}/solutions/generate`, { count: 2 });
+      expect(solutionRequest()[0]!.instructions).not.toContain('dimensions of the topic');
+      expect(generated.solutionSet.items[0]!.score.criteria.map((item) => item.key)).toEqual([
+        'impact',
+        'feasibility',
+        'evidence',
+        'cost',
+        'risk',
+        'time',
+      ]);
+    }, 180_000);
   },
 );

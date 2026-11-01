@@ -285,8 +285,24 @@ describe('analyst prompts', () => {
       expect(definition.instructions).toContain('This project is an exploration');
     });
 
+    it('asks ideation for the dimensions of the topic and leaves ordinary ideation alone', () => {
+      const plain = stagePrompt({ ...base, stage: 'ideation', previous: [] });
+      expect(stagePrompt({ ...base, stage: 'ideation', previous: [], kind: 'standard' })).toEqual(
+        plain,
+      );
+      expect(plain.instructions).not.toContain('a dimension of the topic');
+      const dimensions = stagePrompt({
+        ...base,
+        stage: 'ideation',
+        previous: [],
+        kind: 'exploration',
+      });
+      expect(dimensions.instructions).toContain('a dimension of the topic');
+      expect(dimensions.instructions).toContain('Do not propose solutions');
+    });
+
     it('adds nothing to the other stages', () => {
-      for (const stage of ['research', 'ideation', 'documentation', 'evaluation'] as const) {
+      for (const stage of ['research', 'documentation', 'evaluation'] as const) {
         const plain = stagePrompt({ ...base, stage, previous: [] });
         expect(stagePrompt({ ...base, stage, previous: [], kind: 'exploration' })).toEqual(plain);
       }

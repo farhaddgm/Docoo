@@ -148,3 +148,24 @@ export const EXPLORATION_ANALYST_RULES: readonly string[] = [
   'This project is an exploration: the problem field is an event or a topic to understand, not one problem to solve. Ask about what happened or what the topic contains, who is affected, causes, risks, opportunities, constraints and what is still unknown, so that separate problems hiding in it can later be told apart.',
   'Do not narrow the topic to one problem or one solution. Describe the topic as facts, stakeholders, ambiguities and assumptions, and keep different possible problems apart instead of merging them.',
 ];
+
+/**
+ * Added to the ideation stage of an exploration (ADR-0045 step C). The stage keeps its output
+ * shape (`ideas` with a title and a description) but each item is a dimension of the topic: a
+ * separate problem that could be defined as a project. Never added to an ordinary project.
+ */
+export const EXPLORATION_DIMENSION_RULES: readonly string[] = [
+  'This project is an exploration. Each item of ideas is not an idea or a solution but a dimension of the topic: a separate problem that could be defined and pursued as its own project.',
+  'Give each dimension a short title as its title. In its description write a draft problem statement (what is wrong or unknown, for whom), why it matters, what you assumed and could not confirm, and what the administrator would probably want at the end.',
+  'Base every dimension on the approved analysis of the topic; keep dimensions independent of each other and do not merge two different problems. Do not propose solutions, plans or actions.',
+];
+
+/**
+ * Added to the solutions step of an exploration: the same scored table, but each row is a
+ * dimension and the scores say how much it deserves its own project.
+ */
+export const EXPLORATION_SOLUTIONS_RULES: readonly string[] = [
+  'This project is an exploration, so a "solution" here is a dimension of the topic: a separate problem that could become a project. Use the dimensions in ideation as the candidates and add none that the analysis does not support.',
+  'title is the dimension. summary is a draft problem statement a project could start from. assumptions are what you assumed and could not confirm. evidence is what in the analysis supports that this dimension matters. plan is what must be clarified or decided first to define it as a project. risks are the risks of ignoring it or of defining it too narrowly.',
+  'Score each dimension 1-5 on the given criteria, where a higher number is always better: importance (5 = most important), urgency (5 = most urgent), clarity (5 = already clear enough to define), independence (5 = needs the least from other dimensions). Never propose a solution to the problem itself.',
+];

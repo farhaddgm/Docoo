@@ -2,6 +2,7 @@ import {
   DELIVERABLE_STAGE_RULES,
   EXPECTED_OUTPUT_ANALYST_RULES,
   EXPLORATION_ANALYST_RULES,
+  EXPLORATION_DIMENSION_RULES,
   NO_RESEARCH_PLAN_RULES,
   OUTPUT_REQUIREMENT_RULES,
   RESEARCH_DECISION_RULES,
@@ -331,6 +332,9 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
         : []),
       ...(context.stage === 'analysis' && context.kind === 'exploration'
         ? EXPLORATION_ANALYST_RULES
+        : []),
+      ...(context.stage === 'ideation' && context.kind === 'exploration'
+        ? EXPLORATION_DIMENSION_RULES
         : []),
       ...(context.stage === 'analysis' && context.analysis?.problemPattern
         ? [
