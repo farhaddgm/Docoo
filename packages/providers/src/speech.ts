@@ -4,6 +4,8 @@
  * ElevenLabs) translate this contract to their own APIs. Model and voice ids come from the live
  * catalog of the provider and are never fixed in business code.
  */
+import type { ProviderHealth } from './contract.js';
+
 export type SpeechProviderKind = 'openai' | 'elevenlabs' | 'fake';
 
 export const SPEECH_PROVIDER_KINDS: readonly SpeechProviderKind[] = [
@@ -58,6 +60,8 @@ export interface TranscribeRequest {
   readonly mimeType: AudioMimeType;
   /** `fa`, `en` or null to let the provider detect the language. */
   readonly language: string | null;
+  /** Length the browser measured; used for the price only when the provider does not report it. */
+  readonly durationMsHint?: number | null | undefined;
   readonly timeoutMs: number;
   readonly signal?: AbortSignal | undefined;
 }
@@ -91,6 +95,8 @@ export interface SynthesizeResult {
 
 export interface SpeechProviderAdapter {
   readonly kind: SpeechProviderKind;
+  /** Proves the key and the network without sending any customer audio or text. */
+  healthCheck?(): Promise<ProviderHealth>;
   listModels(): Promise<readonly SpeechModelDescriptor[]>;
   listVoices(): Promise<readonly VoiceDescriptor[]>;
   transcribe(request: TranscribeRequest): Promise<TranscribeResult>;

@@ -614,4 +614,45 @@ describe.skipIf(!adminUrl)('provider connections (AI-001, AI-003, AI-004)', () =
     );
     expect(foreign.statusCode).toBe(404);
   });
+  it('ADR-0046: an ElevenLabs connection checks its health and lists models with its own key header, and cannot run a stage', async () => {
+    const seen: string[] = [];
+    const eleven = createServer((request, response) => {
+      seen.push(String(request.headers['xi-api-key'] ?? ''));
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(
+        JSON.stringify([
+          { model_id: 'eleven_multilingual_v2', name: 'Multilingual', can_do_text_to_speech: true },
+        ]),
+      );
+    });
+    await new Promise<void>((resolve) => eleven.listen(0, '127.0.0.1', resolve));
+    try {
+      const elevenBase = `http://127.0.0.1:${(eleven.address() as AddressInfo).port}`;
+      const created = await h.request('POST', api('/provider-connections'), {
+        cookie,
+        payload: {
+          provider: 'elevenlabs',
+          name: 'ElevenLabs voice',
+          baseUrl: elevenBase,
+          secret: 'xi-secret-key-123456789',
+        },
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      expect(created.body).not.toContain('xi-secret-key-123456789');
+      const id = created.json<{ connection: Connection }>().connection.id;
+      const healthy = await h.request('POST', api(`/provider-connections/${id}/health-check`), {
+        cookie,
+      });
+      expect(healthy.json<{ connection: Connection }>().connection.status).toBe('healthy');
+      const refreshed = await h.request('POST', api(`/provider-connections/${id}/models/refresh`), {
+        cookie,
+      });
+      expect(refreshed.statusCode, refreshed.body).toBeLessThan(300);
+      expect(refreshed.body).toContain('scribe_v1');
+      expect(refreshed.body).toContain('eleven_multilingual_v2');
+      expect(new Set(seen)).toEqual(new Set(['xi-secret-key-123456789']));
+    } finally {
+      await new Promise<void>((resolve) => eleven.close(() => resolve()));
+    }
+  });
 });

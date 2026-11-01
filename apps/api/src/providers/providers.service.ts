@@ -44,9 +44,12 @@ import { PRICE_CATALOG, type PriceCatalogSource } from './price-catalog.source.j
 export const SECRET_MASTER_KEY = Symbol('SECRET_MASTER_KEY');
 export const PROVIDER_RUNTIME = Symbol('PROVIDER_RUNTIME');
 
+/** A connection's brand: a model provider, or ElevenLabs, which only speaks (ADR-0046). */
+export type ConnectionBrand = ProviderKind | 'elevenlabs';
+
 interface ConnectionRow extends QueryResultRow {
   id: string;
-  provider: ProviderKind;
+  provider: ConnectionBrand;
   name: string;
   base_url: string | null;
   status: string;
@@ -149,7 +152,7 @@ export class ProvidersService {
   async create(
     context: WorkspaceRequestContext,
     input: {
-      provider: ProviderKind;
+      provider: ConnectionBrand;
       name: string;
       baseUrl?: string | undefined;
       secret?: string | undefined;
@@ -375,9 +378,14 @@ export class ProvidersService {
       if (connection.disabled_at)
         throw conflict('PROVIDER_DISABLED', 'The connection is disabled.');
       await client.query(`update provider_connections set status = 'checking' where id = $1`, [id]);
-      return this.runtime
-        .adapterFor(client, id)
-        .catch((error: unknown) => (error instanceof Error ? error : new Error('adapter_failed')));
+      // ElevenLabs only speaks; its health is proven by its own speech adapter (ADR-0046).
+      const resolve =
+        connection.provider === 'elevenlabs'
+          ? this.runtime.speechAdapterFor(client, id)
+          : this.runtime.adapterFor(client, id);
+      return resolve.catch((error: unknown) =>
+        error instanceof Error ? error : new Error('adapter_failed'),
+      );
     });
     const health =
       adapter instanceof Error
@@ -387,7 +395,13 @@ export class ProvidersService {
             latencyMs: null,
             error: sanitizeError(adapter.message),
           }
-        : await adapter.adapter.healthCheck();
+        : await (adapter.adapter.healthCheck?.() ??
+            Promise.resolve({
+              status: 'healthy' as const,
+              checkedAt: new Date().toISOString(),
+              latencyMs: null,
+              error: null,
+            }));
     return this.database.run(context, async (client) => {
       await client.query<Record<string, unknown>>(
         `update provider_connections set status = $2, last_checked_at = $3, last_latency_ms = $4, last_error = $5 where id = $1`,
@@ -413,12 +427,14 @@ export class ProvidersService {
   /** AI-003: the live model list is stored as a dated snapshot; nothing is hard-coded. */
   async refreshModels(context: WorkspaceRequestContext, id: string) {
     const adapter = await this.database.run(context, async (client) => {
-      await this.load(client, id);
-      return this.runtime.adapterFor(client, id);
+      const connection = await this.load(client, id);
+      return connection.provider === 'elevenlabs'
+        ? this.runtime.speechAdapterFor(client, id)
+        : this.runtime.adapterFor(client, id);
     });
-    let models;
+    let models: { id: string }[];
     try {
-      models = await adapter.adapter.listModels();
+      models = [...(await adapter.adapter.listModels())];
     } catch (error) {
       throw unavailable(
         'PROVIDER_CATALOG_UNAVAILABLE',

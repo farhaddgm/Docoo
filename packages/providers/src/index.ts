@@ -1,6 +1,12 @@
 import { AnthropicAdapter, GeminiAdapter, OpenAiAdapter, type AdapterOptions } from './adapters.js';
 import type { ModelProviderAdapter, ProviderKind } from './contract.js';
 import { FakeAdapter } from './fake.js';
+import { ElevenLabsSpeechAdapter, OpenAiSpeechAdapter } from './speech-adapters.js';
+import {
+  FakeSpeechAdapter,
+  type SpeechProviderAdapter,
+  type SpeechProviderKind,
+} from './speech.js';
 
 export * from './adapters.js';
 export * from './contract.js';
@@ -26,3 +32,19 @@ export function createAdapter(kind: ProviderKind, options: AdapterOptions): Mode
 export * from './schema-compat.js';
 export * from './openai-embedding-adapter.js';
 export * from './speech.js';
+export * from './speech-adapters.js';
+
+/** Builds the speech adapter for a stored connection (ADR-0046); the fake needs no secret. */
+export function createSpeechAdapter(
+  kind: SpeechProviderKind,
+  options: AdapterOptions,
+): SpeechProviderAdapter {
+  switch (kind) {
+    case 'openai':
+      return new OpenAiSpeechAdapter(options);
+    case 'elevenlabs':
+      return new ElevenLabsSpeechAdapter(options);
+    case 'fake':
+      return new FakeSpeechAdapter();
+  }
+}
