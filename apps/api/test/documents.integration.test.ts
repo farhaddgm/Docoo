@@ -828,6 +828,110 @@ describe.skipIf(!adminUrl)('solutions, documents and evaluation (SOL-*, DOC-*, E
     }
   });
 
+  it('makes a project from a selected dimension of an exploration and never lets the link change (ADR-0045)', async () => {
+    const make = (code: string, extra: Record<string, unknown>) =>
+      h.request('POST', api('/projects'), {
+        cookie,
+        payload: {
+          code,
+          title: `Project ${code}`,
+          initialProblem: 'A dimension of the topic',
+          topics: [{ topicId }],
+          ...extra,
+        },
+      });
+    const created = await make('expl-dims', { kind: 'exploration' });
+    expect(created.statusCode, created.body).toBe(201);
+    const explorationId = created.json<{ project: { id: string } }>().project.id;
+    const generated = await post(`/projects/${explorationId}/solutions/generate`, { count: 3 });
+    expect(generated.statusCode, generated.body).toBe(201);
+    const items = generated.json<{ solutionSet: { items: { id: string; title: string }[] } }>()
+      .solutionSet.items;
+
+    // A dimension nobody selected cannot start a project.
+    const early = await make('from-dim-early', {
+      dimension: { projectId: explorationId, solutionId: items[0]!.id },
+    });
+    expect(early.statusCode, early.body).toBe(409);
+    expect(early.json<{ code: string }>().code).toBe('DIMENSION_NOT_SELECTED');
+
+    const selected = await post(`/projects/${explorationId}/solution-selections`, {
+      solutionIds: [items[0]!.id],
+    });
+    expect(selected.statusCode, selected.body).toBe(201);
+
+    const first = await make('from-dim-1', {
+      dimension: { projectId: explorationId, solutionId: items[0]!.id },
+    });
+    expect(first.statusCode, first.body).toBe(201);
+    const made = first.json<{
+      project: {
+        id: string;
+        kind: string;
+        dimensionOrigin: { projectId: string; solutionId: string; dimensionTitle: string };
+      };
+    }>().project;
+    expect(made.kind).toBe('standard');
+    expect(made.dimensionOrigin).toMatchObject({
+      projectId: explorationId,
+      solutionId: items[0]!.id,
+      dimensionTitle: items[0]!.title,
+    });
+    // One dimension can give more than one project.
+    expect(
+      (
+        await make('from-dim-2', {
+          dimension: { projectId: explorationId, solutionId: items[0]!.id },
+        })
+      ).statusCode,
+    ).toBe(201);
+
+    // The dimension lists the projects made from it.
+    const listed = await h.request('GET', api(`/projects/${explorationId}/solutions`), { cookie });
+    const row = listed
+      .json<{ solutionSet: { items: { id: string; projects: { code: string }[] }[] } }>()
+      .solutionSet.items.find((item) => item.id === items[0]!.id)!;
+    expect(row.projects.map((item) => item.code)).toEqual(['from-dim-1', 'from-dim-2']);
+
+    // Unselected, foreign, ordinary-project and malformed sources create nothing.
+    const notSelected = await make('from-dim-3', {
+      dimension: { projectId: explorationId, solutionId: items[1]!.id },
+    });
+    expect(notSelected.statusCode).toBe(409);
+    const ordinary = await project('not-an-exploration');
+    const wrongKind = await make('from-dim-4', {
+      dimension: { projectId: ordinary, solutionId: items[0]!.id },
+    });
+    expect(wrongKind.statusCode).toBe(404);
+    const both = await make('from-dim-5', {
+      dimension: { projectId: explorationId, solutionId: items[0]!.id },
+      explorationCandidate: {
+        explorationId: items[0]!.id,
+        candidateKey: items[0]!.id,
+      },
+    });
+    expect(both.statusCode).toBe(400);
+    const missing = await h.admin.query(
+      `select 1 from projects where code in ('from-dim-3','from-dim-4','from-dim-5','from-dim-early')`,
+    );
+    expect(missing.rowCount).toBe(0);
+
+    // The database refuses to move or remove the link, even for its owner.
+    await expect(
+      h.admin.query(
+        `update projects set origin_solution_id = null, origin_project_id = null where id = $1`,
+        [made.id],
+      ),
+    ).rejects.toThrow(/does not change/);
+    // The audit trail has ids only, never the dimension text.
+    const audit = await h.admin.query<{ after: unknown }>(
+      `select after from audit_events where project_id = $1 and action = 'project.create'`,
+      [made.id],
+    );
+    expect(JSON.stringify(audit.rows[0]!.after)).toContain(items[0]!.id);
+    expect(JSON.stringify(audit.rows[0]!.after)).not.toContain(items[0]!.title);
+  });
+
   it('EVA-002: failures produce findings with target stages; exceptions stay visible', async () => {
     const { projectId, documents } = await documentsFor('evaluation');
     const target = documents[0]!;

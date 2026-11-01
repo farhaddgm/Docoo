@@ -237,6 +237,9 @@ export const projects = pgTable(
     /** The candidate problem of an exploration this project was made from (ADR-0044); never changes. */
     originExplorationId: uuid('origin_exploration_id'),
     originCandidateKey: uuid('origin_candidate_key'),
+    /** The selected dimension (a solution of an exploration project) this project was made from (ADR-0045). */
+    originProjectId: uuid('origin_project_id'),
+    originSolutionId: uuid('origin_solution_id'),
     /** The analysis stage output the administrator approved as the problem definition (FR-ANL-005). */
     approvedProblemVersionId: uuid('approved_problem_version_id'),
     analysisProfile: text('analysis_profile').notNull().default('full'),

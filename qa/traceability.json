@@ -796,6 +796,14 @@
       ],
       "note": "The documenter of an exploration is asked for a report on the selected dimension and the evaluator uses the exploration rubric and its instruction; the prompts and the system rubric of an ordinary project are equal to the ones before."
     },
+    "FR-EXP-013": {
+      "status": "tested",
+      "evidence": [
+        "apps/api/test/documents.integration.test.ts",
+        "apps/web/app/[locale]/projects/new/wizard-model.test.ts"
+      ],
+      "note": "A project is made from a selected dimension and linked to it for good; an unselected dimension, an ordinary project as source and both origins at once create nothing; the dimension lists its projects; the link cannot be changed even by the database owner; the audit trail has ids only; the wizard seed is unit-tested."
+    },
     "FR-AUD-001": {
       "status": "tested",
       "evidence": [

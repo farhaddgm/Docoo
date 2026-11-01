@@ -9,7 +9,11 @@ const messages = {
         'مدل تنظیم‌شده، چند بُعد امتیازدار از موضوع و ابعاد پیشنهادی ایده‌پردازی می‌سازد؛ هر بُعد مسئله‌ای است که می‌تواند پروژهٔ جدا شود. هر بار تولید، مجموعهٔ تازه‌ای می‌سازد و انتخاب فقط روی آخرین مجموعه است.',
       count: 'تعداد ابعاد (۲ تا ۲۰)',
       generate: 'تولید ابعاد',
+      makeProject: 'ساخت پروژه از این بُعد',
+      madeProjects: 'پروژه‌های ساخته‌شده:',
     },
+    makeProject: '',
+    madeProjects: '',
     generateTitle: 'تولید راه‌حل‌ها',
     generateHelp:
       'مدل تنظیم‌شده، چند راه‌حل امتیازدار از مسئله و ایده‌های تأییدشده می‌سازد. هر بار تولید، مجموعهٔ تازه‌ای می‌سازد و انتخاب فقط روی آخرین مجموعه است.',
@@ -95,7 +99,11 @@ const messages = {
         'The configured model proposes several scored dimensions of the topic from the analysis and the dimensions suggested in ideation; each dimension is a problem that can become a project of its own. Every run makes a new set, and a selection applies to the latest set only.',
       count: 'Number of dimensions (2 to 20)',
       generate: 'Generate the dimensions',
+      makeProject: 'Make a project from this dimension',
+      madeProjects: 'Projects made:',
     },
+    makeProject: '',
+    madeProjects: '',
     generateTitle: 'Generate solutions',
     generateHelp:
       'The configured model proposes several scored solutions from the problem and the approved ideas. Every run makes a new set, and a selection applies to the latest set only.',

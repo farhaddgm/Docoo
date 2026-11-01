@@ -13,7 +13,7 @@ import { useSessionIdentity } from '../../signed-in';
 import type { ExplorationDetail } from '../../explorations/exploration-model';
 import { projectMessages } from '../messages';
 import { ProjectWizard } from './project-wizard';
-import { candidateSeed, type CandidateSeed } from './wizard-model';
+import { candidateSeed, dimensionSeed, type CandidateSeed } from './wizard-model';
 import { wizardMessages } from './wizard-messages';
 
 export function NewProjectPage({ locale }: { locale: Locale }) {
@@ -36,7 +36,7 @@ type SeedState =
   | {
       status: 'ready';
       seed: CandidateSeed | null;
-      problem: 'failed' | 'dropped' | 'missing' | null;
+      problem: 'failed' | 'dropped' | 'missing' | 'unselected' | null;
     };
 
 /**
@@ -48,12 +48,49 @@ function useCandidateSeed(workspaceId: string): SeedState {
   const params = useSearchParams();
   const explorationId = params.get('exploration');
   const candidateKey = params.get('candidate');
-  const wanted = Boolean(explorationId && candidateKey);
+  // `?dimensionProject=…&dimension=…` makes it from a selected dimension (ADR-0045).
+  const dimensionProject = params.get('dimensionProject');
+  const dimensionId = params.get('dimension');
+  const wanted = Boolean((explorationId && candidateKey) || (dimensionProject && dimensionId));
   const [state, setState] = useState<SeedState>(
     wanted ? { status: 'loading' } : { status: 'ready', seed: null, problem: null },
   );
 
   useEffect(() => {
+    if (dimensionProject && dimensionId) {
+      let current = true;
+      setState({ status: 'loading' });
+      Promise.all([
+        apiGet<{ project: { id: string; title: string; outputLanguage: 'fa' | 'en' } }>(
+          `/workspaces/${workspaceId}/projects/${dimensionProject}`,
+        ),
+        apiGet<{
+          solutionSet: {
+            items: {
+              id: string;
+              title: string;
+              summary: string;
+              selectedPriority: number | null;
+            }[];
+          } | null;
+        }>(`/workspaces/${workspaceId}/projects/${dimensionProject}/solutions`),
+      ])
+        .then(([project, solutions]) => {
+          if (!current) return;
+          const { seed, reason } = dimensionSeed(
+            project.project,
+            solutions.solutionSet?.items ?? [],
+            dimensionId,
+          );
+          setState({ status: 'ready', seed, problem: reason });
+        })
+        .catch(() => {
+          if (current) setState({ status: 'ready', seed: null, problem: 'failed' });
+        });
+      return () => {
+        current = false;
+      };
+    }
     if (!explorationId || !candidateKey) {
       setState({ status: 'ready', seed: null, problem: null });
       return;
@@ -72,7 +109,7 @@ function useCandidateSeed(workspaceId: string): SeedState {
     return () => {
       current = false;
     };
-  }, [workspaceId, explorationId, candidateKey]);
+  }, [workspaceId, explorationId, candidateKey, dimensionProject, dimensionId]);
 
   return state;
 }
@@ -111,9 +148,11 @@ function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: stri
         <p className="notice warn" role="status">
           {seedState.problem === 'dropped'
             ? wizard.seedDropped
-            : seedState.problem === 'missing'
-              ? wizard.seedMissing
-              : wizard.seedFailed}
+            : seedState.problem === 'unselected'
+              ? wizard.seedUnselected
+              : seedState.problem === 'missing'
+                ? wizard.seedMissing
+                : wizard.seedFailed}
         </p>
       )}
       <ProjectWizard

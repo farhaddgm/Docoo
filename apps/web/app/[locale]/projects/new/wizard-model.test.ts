@@ -6,6 +6,7 @@ import {
   PROBLEM_STEP,
   REVIEW_STEP,
   candidateSeed,
+  dimensionSeed,
   changedInSection,
   migrateDraftStep,
   reachableSteps,
@@ -120,5 +121,36 @@ describe('making a project from a candidate problem (ADR-0044)', () => {
     expect(shouldApplySeed({ explorationId: 'e1', candidateKey: 'k9' }, seed)).toBe(true);
     expect(shouldApplySeed({ explorationId: 'e2', candidateKey: 'k1' }, seed)).toBe(true);
     expect(shouldApplySeed({ explorationId: 'e1', candidateKey: 'k1' }, seed)).toBe(false);
+  });
+});
+
+describe('a project made from a dimension (ADR-0045)', () => {
+  const project = { id: 'p1', title: 'Retail rules', outputLanguage: 'fa' as const };
+  const items = [
+    { id: 's1', title: 'Pricing', summary: 'Prices are unclear', selectedPriority: 1 },
+    { id: 's2', title: 'Staff', summary: 'Staff is unprepared', selectedPriority: null },
+  ];
+
+  it('fills the first step from a selected dimension and marks where it came from', () => {
+    const { seed, reason } = dimensionSeed(project, items, 's1');
+    expect(reason).toBeNull();
+    expect(seed).toMatchObject({
+      origin: 'dimension',
+      explorationId: 'p1',
+      candidateKey: 's1',
+      explorationTitle: 'Retail rules',
+      candidateTitle: 'Pricing',
+    });
+    expect(seedFields(seed!)).toEqual({
+      title: 'Pricing',
+      initialProblem: 'Prices are unclear',
+      expectedOutput: '',
+      outputLanguage: 'fa',
+    });
+  });
+
+  it('gives no seed for a dimension that is not selected or not there', () => {
+    expect(dimensionSeed(project, items, 's2')).toEqual({ seed: null, reason: 'unselected' });
+    expect(dimensionSeed(project, items, 'nope')).toEqual({ seed: null, reason: 'missing' });
   });
 });

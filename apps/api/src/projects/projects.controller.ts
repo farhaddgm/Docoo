@@ -106,6 +106,8 @@ const createSchema = z
       .object({ explorationId: z.uuid(), candidateKey: z.uuid() })
       .strict()
       .optional(),
+    // A selected dimension of an exploration project this project is made from (ADR-0045).
+    dimension: z.object({ projectId: z.uuid(), solutionId: z.uuid() }).strict().optional(),
     outputLanguage: languageSchema.default('fa'),
     analysisProfile: z.enum(['full', 'quick']).default('full'),
     kind: z.enum(['standard', 'exploration']).default('standard'),

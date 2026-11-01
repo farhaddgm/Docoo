@@ -619,6 +619,15 @@ export class SolutionsService {
           [projectId],
         )
       ).rows[0]?.selected ?? [];
+    // The projects made from a dimension (ADR-0045 step E); empty for an ordinary project's rows.
+    const madeFrom = (
+      await client.query<{ origin_solution_id: string; id: string; code: string; title: string }>(
+        `select origin_solution_id, id, code, title from projects
+          where origin_solution_id = any($1::uuid[]) and deleted_at is null
+          order by created_at, id`,
+        [rows.map((row) => row.id)],
+      )
+    ).rows;
     return {
       setId: set.id,
       requestedCount: set.requested_count,
@@ -636,6 +645,9 @@ export class SolutionsService {
         scoreInputs: row.score_inputs,
         score: scoreSolution(row.score_inputs, criteria.criteria),
         selectedPriority: selection.find((item) => item.solutionId === row.id)?.priority ?? null,
+        projects: madeFrom
+          .filter((project) => project.origin_solution_id === row.id)
+          .map((project) => ({ id: project.id, code: project.code, title: project.title })),
       })),
     };
   }
