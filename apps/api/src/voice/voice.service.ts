@@ -25,18 +25,27 @@ import type { PoolClient, QueryResultRow } from 'pg';
 
 import { writeAudit } from '../common/audit.js';
 import { isoColumn } from '../common/pagination.js';
-import { badRequest, conflict, notFound, unprocessable } from '../common/problems.js';
+import {
+  badRequest,
+  conflict,
+  notFound,
+  tooManyRequests,
+  unprocessable,
+} from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { ConfigService } from '../config/config.service.js';
 import { PROVIDER_RUNTIME } from '../providers/providers.service.js';
 import { OBJECT_STORE } from '../sources/ingestion.providers.js';
 import { textToSpeak, voiceCostUsd, type VoicePrice } from './voice-pricing.js';
+import { VoiceRateLimiter } from './voice-rate-limit.js';
 
 /** Below the 30 s proxy timeout of the web rewrite, so a slow provider fails visibly. */
 const PROVIDER_TIMEOUT_MS = 25_000;
 /** A recording longer than the limit by this much is refused; the browser's clock is not exact. */
 const RECORD_SLACK_S = 3;
+/** Paid voice calls one account may start per minute; a person talking does not come near it. */
+export const VOICE_CALLS_PER_MINUTE = 30;
 
 export interface VoiceSettings {
   readonly enabled: boolean;
@@ -95,12 +104,25 @@ export function audioMimeOf(contentType: string | undefined): AudioMimeType | nu
 /** Voice conversation (ADR-0046): speech to text and text to speech around the text chat. */
 @Injectable()
 export class VoiceService {
+  private readonly limiter = new VoiceRateLimiter(VOICE_CALLS_PER_MINUTE, 60_000);
+
   constructor(
     private readonly database: WorkspaceDatabase,
     private readonly config: ConfigService,
     @Inject(PROVIDER_RUNTIME) private readonly runtime: ProviderRuntime,
     @Inject(OBJECT_STORE) private readonly objects: ObjectStore | null,
   ) {}
+
+  /** Refuses a burst of paid calls before anything is sent to a provider. */
+  private throttle(context: WorkspaceRequestContext): void {
+    const wait = this.limiter.take(`${context.workspaceId}:${context.actorId}`);
+    if (wait > 0)
+      throw tooManyRequests(
+        'VOICE_RATE_LIMITED',
+        'Too many voice requests; wait a moment.',
+        Math.ceil(wait / 1000),
+      );
+  }
 
   // ---- settings and configuration -------------------------------------------------------
 
@@ -226,6 +248,7 @@ export class VoiceService {
       speed?: number | undefined;
     },
   ) {
+    this.throttle(context);
     const resolved = await this.resolve(context, 'catalog');
     const model = input.model ?? resolved.settings.ttsModel;
     const voiceId = input.voiceId ?? resolved.settings.voiceId;
@@ -256,6 +279,7 @@ export class VoiceService {
         'VOICE_AUDIO_INVALID',
         'The recording is empty or is not the audio format it claims.',
       );
+    this.throttle(context);
     const resolved = await this.resolve(context, 'stt');
     const { settings } = resolved;
     if (
@@ -266,6 +290,24 @@ export class VoiceService {
         'VOICE_AUDIO_TOO_LONG',
         `A recording can be at most ${settings.maxRecordSeconds} seconds.`,
       );
+    // Everything that can refuse the request is checked before the provider is called and paid.
+    const keeps =
+      settings.storeAdminAudio &&
+      Boolean(this.objects) &&
+      input.scope.conversationKind !== undefined &&
+      input.scope.conversationId !== undefined;
+    if (keeps) {
+      await this.database.run(context, (client) =>
+        this.assertConversation(
+          client,
+          context,
+          input.scope.conversationKind!,
+          input.scope.conversationId!,
+        ),
+      );
+    }
+    // Recordings past their retention are removed when their speaker next records (best effort).
+    await this.deleteAudio(context, { kind: 'my-expired' }).catch(() => undefined);
     const language = settings.languageHint === 'auto' ? input.locale : settings.languageHint;
     const started = performance.now();
     let result;
@@ -285,21 +327,28 @@ export class VoiceService {
       });
       throw this.providerFailure(error);
     }
-    const audioId = await this.database.run(context, async (client) => {
-      await this.record(context, resolved, 'stt', settings.sttModel, null, input.scope, {
+    // The call is written to the ledger first and on its own: it was paid for whatever happens next.
+    await this.database.run(context, (client) =>
+      this.record(context, resolved, 'stt', settings.sttModel, null, input.scope, {
         result,
         client,
-      });
-      return settings.storeAdminAudio
-        ? this.storeRecording(client, context, settings, input, result.durationMs)
-        : null;
-    });
+      }),
+    );
+    // A recording that cannot be kept never costs the administrator the transcript they paid for.
+    const audioId = keeps
+      ? await this.database
+          .run(context, (client) =>
+            this.storeRecording(client, context, settings, input, result.durationMs),
+          )
+          .catch(() => null)
+      : null;
     return { text: result.text, language: result.language, durationMs: result.durationMs, audioId };
   }
 
   // ---- text to speech -------------------------------------------------------------------
 
   async speak(context: WorkspaceRequestContext, input: { text: string; scope: VoiceCallScope }) {
+    this.throttle(context);
     const resolved = await this.resolve(context, 'tts');
     const { settings } = resolved;
     return this.speakWith(
@@ -572,6 +621,7 @@ export class VoiceService {
       | { kind: 'one'; id: string }
       | { kind: 'conversation'; conversationKind: VoiceConversationKind; conversationId: string }
       | { kind: 'mine' }
+      | { kind: 'my-expired' }
       | { kind: 'workspace' }
       | { kind: 'expired' },
   ) {
@@ -586,12 +636,17 @@ export class VoiceService {
               }
             : target.kind === 'mine'
               ? { sql: 'user_id = $1', args: [context.actorId] }
-              : target.kind === 'expired'
+              : target.kind === 'my-expired'
                 ? {
-                    sql: 'workspace_id = $1 and expires_at is not null and expires_at <= now()',
-                    args: [context.workspaceId],
+                    sql: 'user_id = $1 and expires_at is not null and expires_at <= now()',
+                    args: [context.actorId],
                   }
-                : { sql: 'workspace_id = $1', args: [context.workspaceId] };
+                : target.kind === 'expired'
+                  ? {
+                      sql: 'workspace_id = $1 and expires_at is not null and expires_at <= now()',
+                      args: [context.workspaceId],
+                    }
+                  : { sql: 'workspace_id = $1', args: [context.workspaceId] };
       const rows = (
         await client.query<AudioRow>(
           `select id, object_key from conversation_audio where ${where.sql} for update`,

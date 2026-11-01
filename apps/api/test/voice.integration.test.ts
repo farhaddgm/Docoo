@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { adminUrl, createHarness, type Harness } from './support/harness.js';
 
@@ -245,10 +245,13 @@ describe.skipIf(!adminUrl)('voice conversation (ADR-0046)', () => {
     ).toBe(404);
 
     // A conversation that is not the caller's is refused, not silently stored.
+    const sttBefore = (await ledger()).filter((row) => row['kind'] === 'stt').length;
     const stranger = await transcribe(
       '?conversationKind=smart&conversationId=00000000-0000-4000-8000-000000000000',
     );
     expect(stranger.statusCode).toBe(404);
+    // Refused before the provider was called, so nothing was spent and nothing is on the ledger.
+    expect((await ledger()).filter((row) => row['kind'] === 'stt')).toHaveLength(sttBefore);
 
     const removed = await h.request('DELETE', voice(`/audio?${scope}`), { cookie: cookieA });
     expect(removed.json()).toEqual({ deleted: 1 });
@@ -301,6 +304,46 @@ describe.skipIf(!adminUrl)('voice conversation (ADR-0046)', () => {
     expect([...h.objects.objects.keys()].filter((k) => k.startsWith('voice/'))).toHaveLength(0);
   });
 
+  it('keeps the paid call on the ledger and the transcript even when the recording cannot be stored', async () => {
+    const created = await h.request('POST', api('/smart/conversations'), {
+      cookie: cookieA,
+      payload: { kind: 'walker', route: '/' },
+    });
+    const conversationId = created.json<{ conversation: { id: string } }>().conversation.id;
+    const before = (await ledger()).filter((row) => row['kind'] === 'stt').length;
+    const failing = vi
+      .spyOn(h.objects, 'put')
+      .mockRejectedValueOnce(new Error('object store is down'));
+    const out = await transcribe(`?conversationKind=smart&conversationId=${conversationId}`);
+    failing.mockRestore();
+    expect(out.statusCode, out.body).toBe(200);
+    expect(out.json()).toMatchObject({ text: 'fake transcript', audioId: null });
+    expect((await ledger()).filter((row) => row['kind'] === 'stt')).toHaveLength(before + 1);
+    await h.request('DELETE', api(`/smart/conversations/${conversationId}`), { cookie: cookieA });
+  });
+
+  it('removes a speaker own expired recordings the next time they record', async () => {
+    const created = await h.request('POST', api('/smart/conversations'), {
+      cookie: cookieA,
+      payload: { kind: 'walker', route: '/' },
+    });
+    const conversationId = created.json<{ conversation: { id: string } }>().conversation.id;
+    const scope = `conversationKind=smart&conversationId=${conversationId}`;
+    const old = (await transcribe(`?${scope}`)).json<{ audioId: string }>().audioId;
+    await h.admin.query(
+      `update conversation_audio set expires_at = now() - interval '1 minute' where id = $1`,
+      [old],
+    );
+    const fresh = (await transcribe(`?${scope}`)).json<{ audioId: string }>().audioId;
+    const left = await h.admin.query<{ id: string }>(
+      'select id from conversation_audio where id = any($1::uuid[])',
+      [[old, fresh]],
+    );
+    expect(left.rows.map((row) => row.id)).toEqual([fresh]);
+    expect([...h.objects.objects.keys()].filter((key) => key.startsWith('voice/'))).toHaveLength(1);
+    await h.request('DELETE', voice('/audio'), { cookie: cookieA });
+  });
+
   it('remembers how each account speaks and hears Docoo, and refuses invalid modes', async () => {
     expect((await h.request('GET', voice('/preferences'), { cookie: cookieA })).json()).toEqual({
       input: 'text',
@@ -324,5 +367,25 @@ describe.skipIf(!adminUrl)('voice conversation (ADR-0046)', () => {
         })
       ).statusCode,
     ).toBe(400);
+  });
+
+  it('stops a burst of paid calls from one account with 429 and a time to wait, and never calls the provider for them', async () => {
+    let refused: Awaited<ReturnType<Harness['request']>> | null = null;
+    for (let call = 0; call < 40 && !refused; call += 1) {
+      const out = await h.request('POST', voice('/speak'), {
+        cookie: cookieA,
+        payload: { text: 'سلام' },
+      });
+      if (out.statusCode === 429) refused = out;
+      else expect(out.statusCode, out.body).toBe(200);
+    }
+    expect(refused, 'the limit was never reached').not.toBeNull();
+    expect(refused!.json()).toMatchObject({ code: 'VOICE_RATE_LIMITED' });
+    expect(refused!.json<{ retryAfterSeconds: number }>().retryAfterSeconds).toBeGreaterThan(0);
+    // Another account has its own window.
+    const other = await h.request('GET', `/v1/workspaces/${h.ids.workspaceB}/voice/config`, {
+      cookie: cookieB,
+    });
+    expect(other.statusCode).toBe(200);
   });
 });

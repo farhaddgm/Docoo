@@ -45,10 +45,22 @@ export type VoiceProblem =
   | 'provider'
   | 'timeout'
   | 'limit'
+  | 'rate'
+  | 'autoplay'
   | 'denied'
   | 'unknown';
 
+/** A browser refuses to start sound that no click asked for; the answer is ready and a tap plays it. */
+export function isAutoplayBlock(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { name?: unknown }).name === 'NotAllowedError'
+  );
+}
+
 export function problemFor(code: string | undefined, status: number): VoiceProblem {
+  if (code === undefined && status === 429) return 'rate';
   switch (code) {
     case 'VOICE_DISABLED':
       return 'disabled';
@@ -64,6 +76,8 @@ export function problemFor(code: string | undefined, status: number): VoiceProbl
       return 'timeout';
     case 'VOICE_PROVIDER_ERROR':
       return 'provider';
+    case 'VOICE_RATE_LIMITED':
+      return 'rate';
     case 'AUTH_AI_DISABLED':
     case 'AUTH_AI_LIMIT_REACHED':
       return 'limit';

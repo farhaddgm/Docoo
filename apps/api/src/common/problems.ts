@@ -49,6 +49,17 @@ export function unprocessable(code: string, detail: string, extra?: object): Htt
   );
 }
 
+export function tooManyRequests(
+  code: string,
+  detail: string,
+  retryAfterSeconds: number,
+): HttpException {
+  return new HttpException(
+    { status: 429, title: 'Too Many Requests', code, detail, retryAfterSeconds },
+    429,
+  );
+}
+
 export function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
 }

@@ -13,7 +13,7 @@ import {
   type VoicePreferences,
   type VoiceScope,
 } from './voice-api';
-import { appendTranscript, problemFor } from './voice-helpers';
+import { appendTranscript, isAutoplayBlock, problemFor } from './voice-helpers';
 import { voiceMessages } from './voice-messages';
 
 export interface TranscriptEvent {
@@ -79,7 +79,11 @@ export function useVoice({
 
   const explain = useCallback(
     (error: unknown) => {
-      const known = error instanceof ApiError ? problemFor(error.code, error.status) : 'unknown';
+      const known = isAutoplayBlock(error)
+        ? 'autoplay'
+        : error instanceof ApiError
+          ? problemFor(error.code, error.status)
+          : 'unknown';
       setProblem(text.problems[known]);
     },
     [text],

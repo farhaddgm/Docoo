@@ -4,6 +4,7 @@ import {
   appendTranscript,
   describeMode,
   formatElapsed,
+  isAutoplayBlock,
   pickRecordingType,
   problemFor,
 } from './voice-helpers';
@@ -41,5 +42,14 @@ describe('voice helpers', () => {
     expect(problemFor('VOICE_PROVIDER_TIMEOUT', 409)).toBe('timeout');
     expect(problemFor(undefined, 403)).toBe('denied');
     expect(problemFor(undefined, 500)).toBe('unknown');
+  });
+
+  it('tells a browser that blocked autoplay from every other failure, and a rate limit from a missing code', () => {
+    expect(isAutoplayBlock(new DOMException('blocked', 'NotAllowedError'))).toBe(true);
+    expect(isAutoplayBlock(new DOMException('gone', 'AbortError'))).toBe(false);
+    expect(isAutoplayBlock(new Error('x'))).toBe(false);
+    expect(isAutoplayBlock(null)).toBe(false);
+    expect(problemFor('VOICE_RATE_LIMITED', 429)).toBe('rate');
+    expect(problemFor(undefined, 429)).toBe('rate');
   });
 });
