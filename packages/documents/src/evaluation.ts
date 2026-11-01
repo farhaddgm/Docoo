@@ -55,6 +55,55 @@ export const SYSTEM_RUBRIC: Rubric = {
   minimums: { evidence: 60, domain_fit: 60 },
 };
 
+/**
+ * The rubric an exploration report starts with (ADR-0045 step D). It judges the report of one
+ * dimension of a topic: how well it covers the topic, how clearly and independently the dimension
+ * is defined, and whether it can be traced to the analysis. Format compliance stays deterministic.
+ */
+export const EXPLORATION_RUBRIC: Rubric = {
+  criteria: [
+    {
+      key: 'topic_coverage',
+      label: 'Coverage of the topic and the dimension',
+      weight: 25,
+      targetStage: 'analysis',
+    },
+    {
+      key: 'dimension_clarity',
+      label: 'Clarity of the dimension as a possible project',
+      weight: 25,
+      targetStage: 'ideation',
+    },
+    {
+      key: 'independence',
+      label: 'Independence from the other dimensions',
+      weight: 15,
+      targetStage: 'ideation',
+    },
+    {
+      key: 'traceability',
+      label: 'Traceability to the analysis answers',
+      weight: 20,
+      targetStage: 'analysis',
+    },
+    {
+      key: 'consistency',
+      label: 'Consistency, no contradictions',
+      weight: 5,
+      targetStage: 'documentation',
+    },
+    { key: 'clarity', label: 'Clarity and structure', weight: 5, targetStage: 'documentation' },
+    {
+      key: 'format_compliance',
+      label: 'Template, length and language compliance',
+      weight: 5,
+      targetStage: 'documentation',
+    },
+  ],
+  passThreshold: 80,
+  minimums: { topic_coverage: 60, dimension_clarity: 60 },
+};
+
 export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
 
 export interface DimensionScore {

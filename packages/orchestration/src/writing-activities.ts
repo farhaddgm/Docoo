@@ -222,8 +222,9 @@ export function createWritingActivities(
         title: string;
         initial_problem: string;
         approved: string | null;
+        kind: 'standard' | 'exploration';
       }>(
-        'select title, initial_problem, approved_problem_version_id as approved from projects where id = $1',
+        'select title, initial_problem, approved_problem_version_id as approved, kind from projects where id = $1',
         [row.project_id],
       )
     ).rows[0];
@@ -328,6 +329,7 @@ export function createWritingActivities(
     );
     const material: WritingMaterial = {
       project: project.title,
+      ...(project.kind === 'exploration' ? { kind: project.kind } : {}),
       language: row.language,
       problem,
       solution: {

@@ -194,6 +194,35 @@ describe('prompts', () => {
   });
 });
 
+describe('exploration report (ADR-0045)', () => {
+  const written = plan(3);
+  const section = written.sections[0]!;
+  const subsection = section.subsections[0]!;
+  const ask = (overrides: Partial<WritingMaterial>) =>
+    sectionPrompt({
+      definition,
+      material: material(overrides),
+      plan: written,
+      section,
+      subsection,
+      call: 'section',
+      written: {},
+      tablesAllowed: true,
+    });
+
+  it('leaves the prompt of an ordinary project exactly as it was', () => {
+    const plain = ask({});
+    expect(ask({ kind: 'standard' })).toEqual(plain);
+    expect(plain.instructions).not.toContain('exploration report');
+  });
+
+  it('asks the documenter for a report on the selected dimension', () => {
+    const prompt = ask({ kind: 'exploration' });
+    expect(prompt.instructions).toContain('exploration report');
+    expect(prompt.instructions).toContain('Do not propose or design a solution');
+  });
+});
+
 describe('decisions on research conflicts (ADR-0040)', () => {
   it('tells the documenter the administrator’s decisions, only when there are some', () => {
     const decided = outlinePrompt({

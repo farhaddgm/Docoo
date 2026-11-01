@@ -169,3 +169,21 @@ export const EXPLORATION_SOLUTIONS_RULES: readonly string[] = [
   'title is the dimension. summary is a draft problem statement a project could start from. assumptions are what you assumed and could not confirm. evidence is what in the analysis supports that this dimension matters. plan is what must be clarified or decided first to define it as a project. risks are the risks of ignoring it or of defining it too narrowly.',
   'Score each dimension 1-5 on the given criteria, where a higher number is always better: importance (5 = most important), urgency (5 = most urgent), clarity (5 = already clear enough to define), independence (5 = needs the least from other dimensions). Never propose a solution to the problem itself.',
 ];
+
+/**
+ * Added to the documenter of an exploration (ADR-0045 step D): the document is the exploration
+ * report. The solution in the material is the dimension that was selected. Never added to an
+ * ordinary project.
+ */
+export const EXPLORATION_REPORT_RULES: readonly string[] = [
+  'This project is an exploration, so the document is an exploration report, not a solution document. The "solution" in the material is a dimension of the topic that the administrator selected: write what the topic is, why this dimension is a problem worth its own project, who is affected, what is known and unknown from the approved analysis, the assumptions, and what must be clarified first to define it as a project.',
+  'Do not propose or design a solution to the dimension, and do not write an implementation plan. Say plainly what the analysis supports and what it does not.',
+];
+
+/**
+ * Added to the evaluator of an exploration report: the criteria are the exploration rubric, and
+ * a report is not faulted for lacking a solution.
+ */
+export const EXPLORATION_EVALUATION_RULES: readonly string[] = [
+  'This document is an exploration report about one dimension of a topic, not a solution document. Judge how well it covers the topic and the dimension, how clearly and independently the dimension is defined as a possible project, and whether each statement is traceable to the approved analysis. Do not fault the report for lacking a solution, a plan or a budget.',
+];

@@ -756,6 +756,78 @@ describe.skipIf(!adminUrl)('solutions, documents and evaluation (SOL-*, DOC-*, E
     );
   });
 
+  it('judges an exploration report on the exploration rubric and an ordinary project on the system one (ADR-0045)', async () => {
+    const created = await h.request('POST', api('/projects'), {
+      cookie,
+      payload: {
+        code: 'expl-rubric',
+        title: 'An exploration',
+        initialProblem: 'A new regulation was announced for retail.',
+        kind: 'exploration',
+        topics: [{ topicId }],
+      },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const projectId = created.json<{ project: { id: string } }>().project.id;
+    const keys = async (id: string) =>
+      (await h.request('GET', api(`/projects/${id}/rubric`), { cookie }))
+        .json<{ rubric: { rubric: { criteria: { key: string }[] } } }>()
+        .rubric.rubric.criteria.map((criterion) => criterion.key);
+    expect(await keys(projectId)).toEqual([
+      'topic_coverage',
+      'dimension_clarity',
+      'independence',
+      'traceability',
+      'consistency',
+      'clarity',
+      'format_compliance',
+    ]);
+    const ordinary = await project('ordinary-rubric');
+    expect(await keys(ordinary)).toContain('problem_fit');
+
+    const instructions: string[] = [];
+    const original = h.fake.responder;
+    h.fake.responder = (request) => {
+      instructions.push(request.instructions ?? '');
+      return request.responseSchema?.name === 'evaluation'
+        ? {
+            scores: [
+              'topic_coverage',
+              'dimension_clarity',
+              'independence',
+              'traceability',
+              'consistency',
+              'clarity',
+              'format_compliance',
+            ].map((criterion) => ({ criterion, score: 90, evidence: `evidence ${criterion}` })),
+            findings: [],
+          }
+        : original(request);
+    };
+    try {
+      const generated = await post(`/projects/${projectId}/solutions/generate`, { count: 2 });
+      expect(generated.statusCode, generated.body).toBe(201);
+      const items = generated.json<{ solutionSet: { items: { id: string }[] } }>().solutionSet
+        .items;
+      const selected = await post(`/projects/${projectId}/solution-selections`, {
+        solutionIds: [items[0]!.id],
+      });
+      expect(selected.statusCode, selected.body).toBe(201);
+      const docs = await h.request('GET', api(`/projects/${projectId}/documents`), { cookie });
+      const id = docs.json<{ items: { id: string }[] }>().items[0]!.id;
+      const evaluation = await post(`/documents/${id}/evaluate`);
+      expect(evaluation.statusCode, evaluation.body).toBe(201);
+      expect(instructions.at(-1)).toContain('exploration report about one dimension');
+      expect(
+        evaluation
+          .json<{ evaluation: { scores: { criterion: string }[] } }>()
+          .evaluation.scores.map((score) => score.criterion),
+      ).toContain('topic_coverage');
+    } finally {
+      h.fake.responder = original;
+    }
+  });
+
   it('EVA-002: failures produce findings with target stages; exceptions stay visible', async () => {
     const { projectId, documents } = await documentsFor('evaluation');
     const target = documents[0]!;

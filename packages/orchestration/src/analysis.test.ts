@@ -301,8 +301,19 @@ describe('analyst prompts', () => {
       expect(dimensions.instructions).toContain('Do not propose solutions');
     });
 
-    it('adds nothing to the other stages', () => {
-      for (const stage of ['research', 'documentation', 'evaluation'] as const) {
+    it('asks documentation for the report and evaluation for its rubric, only for an exploration', () => {
+      for (const stage of ['documentation', 'evaluation'] as const) {
+        const plain = stagePrompt({ ...base, stage, previous: [] });
+        expect(stagePrompt({ ...base, stage, previous: [], kind: 'standard' })).toEqual(plain);
+        expect(plain.instructions).not.toContain('This project is an exploration');
+        expect(plain.instructions).not.toContain('exploration report');
+        const exploration = stagePrompt({ ...base, stage, previous: [], kind: 'exploration' });
+        expect(exploration.instructions).toContain('exploration report');
+      }
+    });
+
+    it('adds nothing to the research stage', () => {
+      for (const stage of ['research'] as const) {
         const plain = stagePrompt({ ...base, stage, previous: [] });
         expect(stagePrompt({ ...base, stage, previous: [], kind: 'exploration' })).toEqual(plain);
       }

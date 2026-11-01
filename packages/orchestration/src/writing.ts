@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import {
   composeInstructions,
   DELIVERABLE_STAGE_RULES,
+  EXPLORATION_REPORT_RULES,
   OUTPUT_REQUIREMENT_RULES,
   type PromptConflictDecision,
   type PromptRequirement,
@@ -86,6 +87,8 @@ export function houseStyle(definition: AgentDefinitionContent): string | null {
 
 export interface WritingMaterial {
   readonly project: string;
+  /** `exploration` makes the document an exploration report (ADR-0045); absent changes nothing. */
+  readonly kind?: 'standard' | 'exploration' | undefined;
   readonly language: 'fa' | 'en';
   /** The approved problem definition (or the project's problem when there is none). */
   readonly problem: Record<string, unknown>;
@@ -176,6 +179,7 @@ function instructionsFor(
       ...(tablesAllowed
         ? []
         : ['Tables and charts are not allowed for this document; use paragraphs and lists only.']),
+      ...(material.kind === 'exploration' ? EXPLORATION_REPORT_RULES : []),
       ...(material.deliverables && material.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),
       ...(material.requirements && material.requirements.length > 0
         ? OUTPUT_REQUIREMENT_RULES
