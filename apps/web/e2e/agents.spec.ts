@@ -244,11 +244,7 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
       .getByRole('button', { name: `${text.copyDefault}: ${text.roles.researcher.name}` })
       .click();
     await expect(row.getByText(text.copyWarning)).toBeVisible();
-    await fillReason(
-      page,
-      row.getByLabel(text.copyReason),
-      'این پروژه تحقیق‌کننده مخصوص می‌خواهد',
-    );
+    await fillReason(page, row.getByLabel(text.copyReason), 'این پروژه تحقیق‌کننده مخصوص می‌خواهد');
     await row.getByRole('button', { name: text.copyConfirm }).click();
     await expect(page.getByRole('status').filter({ hasText: text.copied })).toBeVisible();
     await expect(row.locator('.badge').first()).toContainText('کپی اختصاصی پروژه');

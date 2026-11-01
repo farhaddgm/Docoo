@@ -163,8 +163,7 @@ const messages = {
       AGENT_ROLE_NOT_FOUND: 'چنین نقشی وجود ندارد.',
       AGENT_INVALID_REQUEST: 'اطلاعات واردشده معتبر نیست.',
       PROJECT_NOT_FOUND: 'پروژه پیدا نشد.',
-      IDEMPOTENCY_KEY_REUSED:
-        'این درخواست قبلا با محتوای دیگری فرستاده شده است؛ دوباره تلاش کنید.',
+      IDEMPOTENCY_KEY_REUSED: 'این درخواست قبلا با محتوای دیگری فرستاده شده است؛ دوباره تلاش کنید.',
     } as Record<string, string>,
     historyHeading: 'تاریخچه و بازگشت',
     historyHelp:

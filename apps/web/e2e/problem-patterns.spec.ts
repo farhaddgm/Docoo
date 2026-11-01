@@ -164,9 +164,7 @@ for (const locale of ['fa', 'en'] as const) {
         exact: true,
       })
       .click();
-    await page
-      .getByLabel(locale === 'fa' ? 'نقطه شروع' : 'Starting point')
-      .selectOption('meeting');
+    await page.getByLabel(locale === 'fa' ? 'نقطه شروع' : 'Starting point').selectOption('meeting');
     await page
       .getByLabel(
         locale === 'fa' ? 'شناسه الگو برای ساخت دستی' : 'Pattern identifier for manual creation',
