@@ -9,6 +9,7 @@ import { apiGet, dayBoundary, query } from '../../api-client';
 import { formatNumber, type Locale } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { reportMessagesFor } from '../../report-messages';
+import { VoiceUsagePanel } from '../../voice/voice-usage';
 import { SignedIn } from '../signed-in';
 import { SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
@@ -38,7 +39,10 @@ export function CostReport({ locale }: { locale: Locale }) {
     <SignedIn locale={locale} title={text.title} subtitle={text.subtitle}>
       {(identity) =>
         identity.workspaces[0] ? (
-          <Report locale={locale} workspaceId={identity.workspaces[0].id} />
+          <>
+            <Report locale={locale} workspaceId={identity.workspaces[0].id} />
+            <VoiceUsagePanel locale={locale} workspaceId={identity.workspaces[0].id} />
+          </>
         ) : null
       }
     </SignedIn>
