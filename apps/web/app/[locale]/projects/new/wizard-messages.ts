@@ -35,6 +35,52 @@ const messages = {
       documents:
         'سطح طول و قالب پیش‌فرض اسناد این پروژه. بازهٔ هر سطح در «قالب‌ها و سطوح سند» تعیین می‌شود.',
     },
+    settingTitles: {
+      'workflow.require_human_approval': {
+        title: 'تأیید دستی پیش از رفتن به مرحلهٔ بعد',
+        hint: 'اگر روشن باشد، پروژه پس از پایان هر مرحله می‌ایستد تا شما خروجی را تأیید کنید.',
+      },
+      'workflow.max_attempts_per_stage': {
+        title: 'حداکثر دفعات تلاش دوبارهٔ هر مرحله',
+        hint: 'اگر مرحله‌ای شکست بخورد یا خروجی‌اش رد شود، حداکثر این‌قدر دوباره اجرا می‌شود؛ بعد از آن می‌ایستد و منتظر مدیر می‌ماند.',
+      },
+      'ai.max_cost_usd_per_run': {
+        title: 'سقف هزینهٔ هر اجرا (دلار)',
+        hint: 'جمع هزینهٔ مدل هوش مصنوعی در یک اجرای پروژه از این مبلغ بیشتر نمی‌شود.',
+      },
+      'research.max_queries': {
+        title: 'تعداد عبارت‌های جست‌وجو در پایگاه دانش',
+        hint: 'محقق از روی مسئله و هدف‌ها حداکثر این‌قدر عبارت جست‌وجو می‌سازد و هرکدام را جداگانه در پایگاه دانش می‌گردد. عدد بیشتر یعنی پوشش گسترده‌تر ولی کندتر.',
+      },
+      'research.knowledge_limit': {
+        title: 'حداکثر تعداد بخش‌های دانشِ داده‌شده به مدل',
+        hint: 'از نتیجهٔ جست‌وجو فقط این تعداد بخش (پاراگراف) از دانش تأییدشده در پرامپت مدل می‌گذارند. صفر یعنی تحقیق بدون استفاده از پایگاه دانش.',
+      },
+      'research.max_sources': {
+        title: 'حداکثر تعداد منبعِ متمایز در تحقیق',
+        hint: 'سقف تعداد منبع‌های متفاوت (سند یا مرجع دانش) که تحقیق از آن‌ها بهره می‌برد؛ چند بخش از یک منبع فقط یک منبع حساب می‌شود.',
+      },
+      'knowledge.min_audit_score': {
+        title: 'حداقل امتیاز اعتبار دانش برای استفاده در تحقیق (۰ تا ۱)',
+        hint: 'دانشی که امتیاز ممیزی‌اش کمتر از این مقدار باشد در تحقیق استفاده نمی‌شود. ۰٫۷ یعنی ۷۰٪.',
+      },
+      'solution.count': {
+        title: 'تعداد راه‌حل‌های پیشنهادی',
+        hint: 'در مرحلهٔ ایده‌پردازی چند راه‌حل تولید و امتیازدهی شود.',
+      },
+      'document.level': {
+        title: 'سطح طول سند (۱ کوتاه تا ۵ بسیار مفصل)',
+        hint: 'هرچه عدد بزرگ‌تر باشد سندهای خروجی مفصل‌تر نوشته می‌شوند.',
+      },
+      'document.default_template': {
+        title: 'قالب پیش‌فرض سند',
+        hint: 'ساختار کلی سندهایی که برای این پروژه نوشته می‌شود.',
+      },
+      'document.default_export_format': {
+        title: 'فرمت پیش‌فرض خروجی سند',
+        hint: 'فرمتی که در صفحهٔ سند ابتدا برای دانلود پیشنهاد می‌شود.',
+      },
+    } as Record<string, { title: string; hint: string }>,
     sectionDefault: 'پیش‌فرض',
     sectionChanged: '{n} تغییر',
     continueDefaults: 'ادامه با پیش‌فرض‌ها',
@@ -153,6 +199,52 @@ const messages = {
       documents:
         'The length level and default template of this project’s documents. The range of each level is set on "Templates and document levels".',
     },
+    settingTitles: {
+      'workflow.require_human_approval': {
+        title: 'Manual approval before the next stage',
+        hint: 'When on, the project pauses after each stage until you approve its output.',
+      },
+      'workflow.max_attempts_per_stage': {
+        title: 'Maximum retries per stage',
+        hint: 'If a stage fails or its output is rejected it is re-run up to this many times, then it pauses for the administrator.',
+      },
+      'ai.max_cost_usd_per_run': {
+        title: 'Cost ceiling per run (USD)',
+        hint: 'The total AI model cost of one project run will not exceed this amount.',
+      },
+      'research.max_queries': {
+        title: 'Number of knowledge-base search phrases',
+        hint: 'From the problem and objectives, research builds at most this many search phrases and runs each against the knowledge base. More means wider coverage but slower.',
+      },
+      'research.knowledge_limit': {
+        title: 'Maximum knowledge passages given to the model',
+        hint: 'Of the search results, only this many approved knowledge passages are put into the model prompt. Zero means research runs without the knowledge base.',
+      },
+      'research.max_sources': {
+        title: 'Maximum distinct sources used in research',
+        hint: 'The ceiling on different sources (documents or references) research may draw on; several passages from one source count as one source.',
+      },
+      'knowledge.min_audit_score': {
+        title: 'Minimum knowledge reliability score for research (0 to 1)',
+        hint: 'Knowledge whose audit score is below this is not used in research. 0.7 means 70%.',
+      },
+      'solution.count': {
+        title: 'Number of proposed solutions',
+        hint: 'How many solutions the ideation stage generates and scores.',
+      },
+      'document.level': {
+        title: 'Document length level (1 short to 5 very detailed)',
+        hint: 'The higher the number, the more detailed the output documents are.',
+      },
+      'document.default_template': {
+        title: 'Default document template',
+        hint: 'The overall structure of the documents written for this project.',
+      },
+      'document.default_export_format': {
+        title: 'Default document export format',
+        hint: 'The format offered first for download on the document page.',
+      },
+    } as Record<string, { title: string; hint: string }>,
     sectionDefault: 'Default',
     sectionChanged: '{n} changed',
     continueDefaults: 'Continue with the defaults',

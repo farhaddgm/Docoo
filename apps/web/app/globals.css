@@ -1234,6 +1234,11 @@ button:disabled {
   color: var(--color-info-ink);
 }
 
+/* Notices stacked directly in a card (e.g. the project header) get breathing room. */
+.card > .notice + .notice {
+  margin-block-start: var(--space-3);
+}
+
 .notice.warn p {
   margin: var(--space-2) 0 0;
 }
