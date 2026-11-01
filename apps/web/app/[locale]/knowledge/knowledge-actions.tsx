@@ -94,8 +94,7 @@ export function AuditSection({ locale, workspaceId, knowledge, onChanged, action
                   {version.status === 'draft' || version.status === 'pending'
                     ? text.submitAudit
                     : text.reaudit}
-                </button>{' '}
-                <InfoTip text={help.detail.audit} />
+                </button>
               </p>
             </>
           ) : (

@@ -234,8 +234,7 @@ export function SourcesPanel({
         <p>
           <button type="button" className="primary-button" onClick={() => setAdding(true)}>
             {text.addSource}
-          </button>{' '}
-          <InfoTip text={help.sources.addSource} />
+          </button>
         </p>
       ) : (
         <AddSource
@@ -388,7 +387,6 @@ export function SourcesPanel({
                       {text.makeKnowledge}
                     </button>
                   )}
-                  {canBuild && <InfoTip text={help.sources.makeKnowledge} />}
                   {canRetry && (
                     <button
                       type="button"
@@ -400,7 +398,6 @@ export function SourcesPanel({
                       {text.retry}
                     </button>
                   )}
-                  {canRetry && <InfoTip text={help.sources.retry} />}
                   {!readOnly && (
                     <button
                       type="button"
@@ -412,7 +409,6 @@ export function SourcesPanel({
                       {text.deleteSource}
                     </button>
                   )}
-                  {!readOnly && <InfoTip text={help.sources.delete} />}
                   {canVersion && (
                     <button
                       type="button"
@@ -424,7 +420,6 @@ export function SourcesPanel({
                       {text.newSourceVersion}
                     </button>
                   )}
-                  {canVersion && <InfoTip text={help.sources.newVersion} />}
                 </p>
 
                 {deleting === row.id && (

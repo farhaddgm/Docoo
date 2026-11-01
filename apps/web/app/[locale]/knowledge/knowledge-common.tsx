@@ -331,7 +331,6 @@ export function ScopeEditor({
         >
           {text.addScope}
         </button>
-        {help && <InfoTip text={help.add} />}
       </p>
     </fieldset>
   );
