@@ -26,7 +26,8 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          // The microphone is allowed for this origin only, for voice conversation (ADR-0046).
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=()' },
         ],
       },
     ];

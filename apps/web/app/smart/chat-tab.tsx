@@ -9,6 +9,10 @@ import type { Locale } from '../i18n';
 import { smartApi, type Conversation, type Message } from './api';
 import { fill, smartErrorMessage, smartMessagesFor } from './messages';
 import { refreshSummary } from './summary';
+import { SpeakButton, VoiceBar } from '../voice/voice-bar';
+import { appendTranscript } from '../voice/voice-helpers';
+import { useVoice } from '../voice/use-voice';
+import { voiceApi } from '../voice/voice-api';
 
 export interface ChatSeed {
   /** Changes on every request so the same text can be seeded twice. */
@@ -46,6 +50,8 @@ export function ChatTab({
   const text = smartMessagesFor(locale);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
+  const currentIdRef = useRef<string | null>(null);
+  currentIdRef.current = currentId;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -54,6 +60,42 @@ export function ChatTab({
   const [saving, setSaving] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const lastSeed = useRef<number | null>(null);
+  const inputRef = useRef('');
+  inputRef.current = input;
+  /** The stored recording of the message being written, linked to it once it is saved. */
+  const pendingAudio = useRef<string | null>(null);
+  const sendRef = useRef<(content: string, mode: 'chat' | 'report') => Promise<void>>(() =>
+    Promise.resolve(),
+  );
+
+  // The conversation exists before its first message when a recording has to be kept in it.
+  const ensureConversation = useCallback(async () => {
+    let id = currentIdRef.current;
+    if (!id) {
+      const conversation = await smartApi.createConversation(workspaceId, {
+        kind: 'walker',
+        route,
+        ...(projectId ? { projectId } : {}),
+      });
+      id = conversation.id;
+      currentIdRef.current = id;
+      setCurrentId(id);
+    }
+    return { conversationKind: 'smart' as const, conversationId: id };
+  }, [workspaceId, route, projectId]);
+
+  const voice = useVoice({
+    locale,
+    workspaceId,
+    scope: currentId ? { conversationKind: 'smart', conversationId: currentId } : null,
+    ensureScope: ensureConversation,
+    onTranscript: ({ text: heard, sendNow, audioId }) => {
+      pendingAudio.current = audioId;
+      const next = appendTranscript(inputRef.current, heard);
+      setInput(next);
+      if (sendNow) void sendRef.current(next, 'chat');
+    },
+  });
 
   const refreshList = useCallback(async () => {
     try {
@@ -133,7 +175,7 @@ export function ChatTab({
     setMessages((current) => [...current, pending]);
     if (mode === 'chat') setInput('');
     try {
-      let id = currentId;
+      let id = currentIdRef.current;
       if (!id) {
         const conversation = await smartApi.createConversation(workspaceId, {
           kind: 'walker',
@@ -157,6 +199,14 @@ export function ChatTab({
         answer.userMessage,
         answer.assistantMessage,
       ]);
+      if (pendingAudio.current && mode === 'chat') {
+        void voiceApi
+          .attach(workspaceId, pendingAudio.current, answer.userMessage.id)
+          .catch(() => undefined);
+      }
+      pendingAudio.current = null;
+      if (voice.autoSpeak && answer.assistantMessage.status === 'done')
+        void voice.speak(answer.assistantMessage.id, answer.assistantMessage.content);
       void refreshList();
     } catch (caught) {
       setMessages((current) => current.filter((item) => item.id !== pending.id));
@@ -166,6 +216,8 @@ export function ChatTab({
       setBusy(false);
     }
   }
+
+  sendRef.current = send;
 
   async function save(message: Message) {
     setSaving(message.id);
@@ -246,6 +298,12 @@ export function ChatTab({
             )}
             {message.role === 'assistant' && message.status === 'done' && (
               <div className="toolbar">
+                <SpeakButton
+                  locale={locale}
+                  voice={voice}
+                  id={message.id}
+                  content={message.content}
+                />
                 {message.savedIssueId ? (
                   <>
                     <span className="badge">{text.chat.saved}</span>
@@ -281,6 +339,13 @@ export function ChatTab({
       {notice && <p className="notice error">{notice}</p>}
 
       <div className="smart-compose">
+        <VoiceBar
+          locale={locale}
+          workspaceId={workspaceId}
+          voice={voice}
+          disabled={busy}
+          scope={currentId ? { conversationKind: 'smart', conversationId: currentId } : null}
+        />
         <textarea
           value={input}
           rows={3}

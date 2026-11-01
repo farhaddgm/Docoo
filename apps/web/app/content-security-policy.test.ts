@@ -25,6 +25,7 @@ describe('content security policy', () => {
     expect(policy).toContain("script-src 'self';");
     expect(policy).not.toContain("script-src 'self' 'unsafe-inline'");
     expect(policy).toContain("img-src 'self' data: blob:;");
+    expect(policy).toContain("media-src 'self' blob:;");
     expect(policy).not.toContain('bucket');
   });
 
