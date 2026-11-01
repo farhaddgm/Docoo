@@ -83,6 +83,7 @@ export function aiTaskKeyFor(method: string, path: string): string | null {
   if (/\/documents\/[^/]+\/evaluate$/u.test(clean)) return 'task:evaluate';
   if (/\/writings(\/[^/]+\/[^/]+)?$/u.test(clean)) return 'task:writing';
   if (/\/solutions\/sensitivity$/u.test(clean)) return 'task:sensitivity';
+  if (/\/analysis-questions\/[^/]+\/suggest-answer$/u.test(clean)) return 'task:suggestAnswer';
   if (/\/stages\/[^/]+\/messages$/u.test(clean)) return 'task:chat';
   return null;
 }
