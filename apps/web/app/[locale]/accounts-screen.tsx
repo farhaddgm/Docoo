@@ -1,6 +1,5 @@
 'use client';
 import Link from 'next/link';
-import type { Route } from 'next';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   isGmail,
