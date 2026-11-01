@@ -64,7 +64,7 @@ export function MeetingScreen({
               : 'This project has no meeting pattern or is unavailable.'
             : response.status === 403
               ? fa
-                ? 'اجازهٔ ویرایش این پروژه را ندارید.'
+                ? 'اجازه ویرایش این پروژه را ندارید.'
                 : 'You cannot edit this project.'
               : response.status === 409
                 ? fa
@@ -72,7 +72,7 @@ export function MeetingScreen({
                   : 'The state changed or another request is active. Refresh.'
                 : failure.code === 'PATTERN_AI_NOT_CONFIGURED'
                   ? fa
-                    ? 'سرویس AI فعال نیست؛ ویرایش دستی و برگهٔ آمادگی در دسترس‌اند.'
+                    ? 'سرویس AI فعال نیست؛ ویرایش دستی و برگه آمادگی در دسترس‌اند.'
                     : 'AI is not configured. Manual editing and the brief remain available.'
                   : fa
                     ? 'درخواست کامل نشد؛ اطلاعات ذخیره‌شده محفوظ است.'
@@ -163,18 +163,18 @@ export function MeetingScreen({
   }
   const contextLabels: Record<keyof MeetingState['context'], string> = {
     counterpart: t('با چه کسی ملاقات داری؟', 'Who are you meeting?'),
-    relationship: t('رابطهٔ شما', 'Your relationship'),
+    relationship: t('رابطه شما', 'Your relationship'),
     topic: t('موضوع ملاقات', 'Meeting topic'),
-    goal: t('نتیجهٔ مطلوب', 'Desired outcome'),
+    goal: t('نتیجه مطلوب', 'Desired outcome'),
     concerns: t('نگرانی یا واکنش سخت', 'Concern or difficult reaction'),
     boundaries: t('مرزهای من', 'My boundaries'),
     flexibility: t('موارد قابل انعطاف', 'Where I can be flexible'),
   };
   const briefLabels: Record<Exclude<keyof MeetingState['brief'], 'points'>, string> = {
     goal: t('هدف اصلی من', 'My main goal'),
-    opening: t('جملهٔ شروع', 'Opening line'),
+    opening: t('جمله شروع', 'Opening line'),
     hardPart: t('بخش سخت', 'The difficult part'),
-    response: t('نحوهٔ مواجهه', 'How I will respond'),
+    response: t('نحوه مواجهه', 'How I will respond'),
     boundary: t('چیزی که نباید فراموش کنم', 'What I must remember'),
   };
   const briefText = () =>
@@ -190,7 +190,7 @@ export function MeetingScreen({
       <h1>{t('آمادگی برای جلسه', 'Meeting preparation')}</h1>
       <p>
         {t(
-          'از یک توضیح کوتاه شروع کنید؛ هدف، بخش سخت و برگهٔ همراه را روشن کنید. تمرین و مرور بعد از ملاقات اختیاری‌اند.',
+          'از یک توضیح کوتاه شروع کنید؛ هدف، بخش سخت و برگه همراه را روشن کنید. تمرین و مرور بعد از ملاقات اختیاری‌اند.',
           'Start with a short explanation; clarify your goal, practice the difficult part and take a brief with you. Practice and reflection are optional.',
         )}
       </p>
@@ -211,7 +211,7 @@ export function MeetingScreen({
                 })
               }
             >
-              {t('ذخیرهٔ آمادگی', 'Save preparation')}
+              {t('ذخیره آمادگی', 'Save preparation')}
             </button>
             <button disabled={busy || !dirty} onClick={() => setDraft(detail.state)}>
               {t('کنار گذاشتن تغییرات', 'Discard changes')}
@@ -282,7 +282,7 @@ export function MeetingScreen({
                         )}
                         {run.result.brief && (
                           <div>
-                            <h4>{t('پیشنهاد برگهٔ آمادگی', 'Suggested preparation brief')}</h4>
+                            <h4>{t('پیشنهاد برگه آمادگی', 'Suggested preparation brief')}</h4>
                             <p>{run.result.brief.goal}</p>
                             <p>{run.result.brief.opening}</p>
                             <ul>
@@ -445,7 +445,7 @@ export function MeetingScreen({
             </section>
             <section>
               <fieldset disabled={busy || readOnly}>
-                <legend>{t('شناخت موقعیت و خواستهٔ من', 'My situation and goal')}</legend>
+                <legend>{t('شناخت موقعیت و خواسته من', 'My situation and goal')}</legend>
                 {(Object.keys(contextLabels) as (keyof MeetingState['context'])[]).map((key) => (
                   <label key={key}>
                     {contextLabels[key]}
@@ -494,7 +494,7 @@ export function MeetingScreen({
                 </ul>
               </section>
               <fieldset disabled={busy || readOnly} className="meeting-brief">
-                <legend>{t('برگهٔ آمادگی همراه', 'My preparation brief')}</legend>
+                <legend>{t('برگه آمادگی همراه', 'My preparation brief')}</legend>
                 {(Object.keys(briefLabels) as (keyof typeof briefLabels)[]).map((key) => (
                   <label key={key}>
                     {briefLabels[key]}
@@ -545,7 +545,7 @@ export function MeetingScreen({
                     })
                   }
                 >
-                  {t('ذخیرهٔ برگه', 'Save brief')}
+                  {t('ذخیره برگه', 'Save brief')}
                 </button>
               </div>
               <fieldset disabled={busy || readOnly}>
@@ -575,7 +575,7 @@ export function MeetingScreen({
                           outcome: t('چه شد؟', 'What happened?'),
                           surprises: t('چه چیزی غافلگیرتان کرد؟', 'What surprised you?'),
                           nextTime: t(
-                            'دفعهٔ بعد چه تغییری می‌دهید؟',
+                            'دفعه بعد چه تغییری می‌دهید؟',
                             'What will you change next time?',
                           ),
                         }[key]
@@ -600,7 +600,7 @@ export function MeetingScreen({
                     })
                   }
                 >
-                  {t('ذخیرهٔ مرور نتیجه', 'Save reflection')}
+                  {t('ذخیره مرور نتیجه', 'Save reflection')}
                 </button>
               </fieldset>
             </section>

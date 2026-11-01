@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useState } from 'react';
 
+import { SectionTitle } from '../../../info-tip';
 import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { useReadOnlyAccess } from '../../resource-access';
@@ -37,18 +38,18 @@ interface Data {
 
 const copy = {
   fa: {
-    title: 'برنامهٔ تحقیق',
+    title: 'برنامه تحقیق',
     help: 'پرسش‌هایی که تحقیق باید جواب بدهد. ایجنت برای همین پرسش‌ها شاهد پیدا می‌کند و یافته‌ها زیر هر پرسش می‌آیند. اگر برنامه ننویسید، تحقیق مثل قبل از روی تعریف مسئله انجام می‌شود.',
     waiting: 'تحقیق منتظر تأیید این برنامه است. بدون هیچ پرسشی هم می‌توانید ادامه دهید.',
-    notReady: 'تحلیل هنوز تأیید نشده؛ برنامهٔ تحقیق بهتر است بعد از آن نوشته شود.',
+    notReady: 'تحلیل هنوز تأیید نشده؛ برنامه تحقیق بهتر است بعد از آن نوشته شود.',
     stale:
       'تعریف مسئله بعد از نوشتن این برنامه عوض شده است. پرسش‌ها را مرور کنید یا پیشنهاد تازه بگیرید.',
     started:
-      'تحقیق یک بار اجرا شده است؛ برنامهٔ تازه در تلاش بعدی (بازبینی یا انجام دوباره) به کار می‌رود.',
+      'تحقیق یک بار اجرا شده است؛ برنامه تازه در تلاش بعدی (بازبینی یا انجام دوباره) به کار می‌رود.',
     webOff: 'جستجوی وب خاموش است؛ پرسش‌های «وب» و «هر دو» فقط از دانش داخلی جواب می‌گیرند.',
     empty: 'هنوز پرسشی ندارید.',
     emptyConfirmed: 'این برنامه پرسشی ندارد؛ تحقیق مثل قبل از روی تعریف مسئله انجام می‌شود.',
-    version: 'نسخهٔ {n}',
+    version: 'نسخه {n}',
     sources: { system: 'خالی', ai: 'پیشنهاد هوش مصنوعی', admin: 'ویرایش ادمین' },
     confirmed: 'تأییدشده در {at}',
     unconfirmed: 'تأیید نشده',
@@ -58,11 +59,11 @@ const copy = {
     channel: 'منبع جواب',
     propose: 'پیشنهاد با هوش مصنوعی',
     proposing: 'در حال نوشتن پیشنهاد…',
-    proposeNote: 'پیشنهاد تازه نسخهٔ جدیدی می‌سازد و باید دوباره تأیید شود.',
+    proposeNote: 'پیشنهاد تازه نسخه جدیدی می‌سازد و باید دوباره تأیید شود.',
     edit: 'ویرایش برنامه',
     add: 'افزودن پرسش',
     remove: 'حذف',
-    save: 'ذخیرهٔ نسخهٔ جدید',
+    save: 'ذخیره نسخه جدید',
     cancel: 'انصراف',
     confirm: 'تأیید برنامه',
     confirmStart: 'تأیید و شروع تحقیق',
@@ -72,11 +73,11 @@ const copy = {
       AI_NOT_CONFIGURED: 'هوش مصنوعی هنوز تنظیم نشده است.',
       RESEARCH_PLAN_PROPOSAL_FAILED: 'پیشنهاد ساخته نشد. دوباره تلاش کنید یا خودتان بنویسید.',
       RESEARCH_PLAN_VERSION_CONFLICT: 'برنامه در این فاصله تغییر کرد؛ صفحه را تازه کنید.',
-      RESEARCH_PLAN_ALREADY_CONFIRMED: 'این برنامه قبلاً تأیید شده است.',
+      RESEARCH_PLAN_ALREADY_CONFIRMED: 'این برنامه قبلا تأیید شده است.',
       RESEARCH_PLAN_INVALID_REQUEST: 'هر پرسش متنی دست‌کم پنج‌حرفی و غیرتکراری لازم دارد.',
     } as Record<string, string>,
     generic: 'انجام نشد. دوباره تلاش کنید.',
-    loadFailed: 'برنامهٔ تحقیق بارگذاری نشد.',
+    loadFailed: 'برنامه تحقیق بارگذاری نشد.',
   },
   en: {
     title: 'Research plan',
@@ -209,8 +210,9 @@ export function ResearchPlanPanel({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`}>{text.title}</h2>
-      <p className="muted">{text.help}</p>
+      <SectionTitle id={`${id}-title`} help={text.help}>
+        {text.title}
+      </SectionTitle>
       {data.waiting && !confirmed && (
         <p className="notice" role="status">
           {text.waiting}

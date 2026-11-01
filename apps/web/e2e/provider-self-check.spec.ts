@@ -43,7 +43,7 @@ test.describe('model self-check (AI-006)', () => {
     for (const label of Object.values(text.steps)) {
       await expect(table.getByRole('rowheader', { name: label })).toBeVisible();
     }
-    await expect(page.getByText(/همهٔ .* مرحله موفق بود/u)).toBeVisible({ timeout: 150_000 });
+    await expect(page.getByText(/همه .* مرحله موفق بود/u)).toBeVisible({ timeout: 150_000 });
     await expect(table.locator('.badge.state-failed')).toHaveCount(0);
     await expect(table.locator('.badge.state-passed')).toHaveCount(Object.keys(text.steps).length);
 

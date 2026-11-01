@@ -18,22 +18,22 @@ test.describe('the project list filters and extra columns (UX §4)', () => {
     await signInWithKeyboard(page);
     const topicA = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
       code: `pl-a-${stamp}`,
-      title: `حوزهٔ الف ${stamp}`,
+      title: `حوزه الف ${stamp}`,
     });
     const topicB = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
       code: `pl-b-${stamp}`,
-      title: `حوزهٔ ب ${stamp}`,
+      title: `حوزه ب ${stamp}`,
     });
     const make = (code: string, title: string, topicId: string, outputLanguage: 'fa' | 'en') =>
       createViaApi(page, '/projects', {
         code,
         title,
-        initialProblem: 'مسئلهٔ آزمون پالایش فهرست',
+        initialProblem: 'مسئله آزمون پالایش فهرست',
         outputLanguage,
         topics: [{ topicId }],
       });
-    await make(`plf-${stamp}`, 'پروژهٔ فارسی الف', topicA.topic.id, 'fa');
-    await make(`ple-${stamp}`, 'پروژهٔ انگلیسی ب', topicB.topic.id, 'en');
+    await make(`plf-${stamp}`, 'پروژه فارسی الف', topicA.topic.id, 'fa');
+    await make(`ple-${stamp}`, 'پروژه انگلیسی ب', topicB.topic.id, 'en');
 
     await page.goto('/fa/projects');
     const rows = page.getByRole('table').locator('tbody tr');
@@ -44,7 +44,7 @@ test.describe('the project list filters and extra columns (UX §4)', () => {
     await expect(rows.filter({ hasText: `plf-${stamp}` })).toContainText('E2E Admin');
     await expectNoSeriousA11yViolations(page);
 
-    await filters.getByLabel(text.topicFilter).selectOption({ label: `حوزهٔ ب ${stamp}` });
+    await filters.getByLabel(text.topicFilter).selectOption({ label: `حوزه ب ${stamp}` });
     await expect(page.getByRole('rowheader', { name: `ple-${stamp}` })).toBeVisible();
     await expect(page.getByRole('rowheader', { name: `plf-${stamp}` })).toHaveCount(0);
 

@@ -112,7 +112,7 @@ export function PatternSelection({
               disabled={busy || !loaded}
               onClick={() => void save()}
             >
-              {fa ? 'ذخیرهٔ انتخاب الگو' : 'Save pattern selection'}
+              {fa ? 'ذخیره انتخاب الگو' : 'Save pattern selection'}
             </button>
           </div>
         </>

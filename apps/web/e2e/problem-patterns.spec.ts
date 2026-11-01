@@ -165,11 +165,11 @@ for (const locale of ['fa', 'en'] as const) {
       })
       .click();
     await page
-      .getByLabel(locale === 'fa' ? 'نقطهٔ شروع' : 'Starting point')
+      .getByLabel(locale === 'fa' ? 'نقطه شروع' : 'Starting point')
       .selectOption('meeting');
     await page
       .getByLabel(
-        locale === 'fa' ? 'شناسهٔ الگو برای ساخت دستی' : 'Pattern identifier for manual creation',
+        locale === 'fa' ? 'شناسه الگو برای ساخت دستی' : 'Pattern identifier for manual creation',
       )
       .fill('meeting-test');
     await page
@@ -204,14 +204,14 @@ for (const locale of ['fa', 'en'] as const) {
     expect(pattern!.definition.purpose).toBe(meetingProblemPattern.purpose);
     await page
       .getByRole('button', {
-        name: locale === 'fa' ? 'پذیرش و ذخیرهٔ الگو' : 'Accept and save pattern',
+        name: locale === 'fa' ? 'پذیرش و ذخیره الگو' : 'Accept and save pattern',
         exact: true,
       })
       .click();
     await expect(publish).toBeDisabled();
     expect(pattern!.definition.purpose).toBe('A clearer preparation goal');
     await page
-      .getByLabel(locale === 'fa' ? 'مسئلهٔ نمونه برای آزمایش' : 'Sample problem for preview', {
+      .getByLabel(locale === 'fa' ? 'مسئله نمونه برای آزمایش' : 'Sample problem for preview', {
         exact: false,
       })
       .fill('A salary conversation with my manager');

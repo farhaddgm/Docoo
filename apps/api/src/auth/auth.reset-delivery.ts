@@ -38,9 +38,9 @@ export function resetUrl(webOrigin: string, token: string): string {
 /** Bilingual plain-text message; the link carries the token in the fragment only. */
 export function resetMail(message: PasswordResetMessage): { subject: string; text: string } {
   return {
-    subject: 'بازنشانی گذرواژهٔ Docoo / Docoo password reset',
+    subject: 'بازنشانی گذرواژه Docoo / Docoo password reset',
     text: [
-      'برای تعیین گذرواژهٔ جدید روی پیوند زیر بزنید. پیوند یک‌بارمصرف است و پس از مدت کوتاهی منقضی می‌شود.',
+      'برای تعیین گذرواژه جدید روی پیوند زیر بزنید. پیوند یک‌بارمصرف است و پس از مدت کوتاهی منقضی می‌شود.',
       'اگر شما درخواست نداده‌اید، این پیام را نادیده بگیرید.',
       '',
       'Open the link below to choose a new password. It works once and expires soon.',

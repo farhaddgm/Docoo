@@ -179,7 +179,7 @@ describe.skipIf(!adminUrl)('Smart: errors, chat, walker and ledger (SMT-001..004
     conversationId = started.json<{ conversation: { id: string } }>().conversation.id;
 
     const sent = await post(smart(`/conversations/${conversationId}/messages`), {
-      content: 'مرحلهٔ بعدی چیست؟',
+      content: 'مرحله بعدی چیست؟',
       route: `/fa/projects/${projectId}`,
       locale: 'fa',
       projectId,
@@ -192,7 +192,7 @@ describe.skipIf(!adminUrl)('Smart: errors, chat, walker and ledger (SMT-001..004
     }>();
     expect(userMessage).toMatchObject({
       role: 'user',
-      content: 'مرحلهٔ بعدی چیست؟',
+      content: 'مرحله بعدی چیست؟',
       status: 'done',
     });
     expect(assistantMessage).toMatchObject({ role: 'assistant', status: 'done' });
@@ -203,7 +203,7 @@ describe.skipIf(!adminUrl)('Smart: errors, chat, walker and ledger (SMT-001..004
     const request = invoke.mock.calls[0]![0];
     expect(request.model).toBe('fake-standard');
     expect(request.responseSchema).toBeUndefined();
-    expect(request.messages).toEqual([{ role: 'user', content: 'مرحلهٔ بعدی چیست؟' }]);
+    expect(request.messages).toEqual([{ role: 'user', content: 'مرحله بعدی چیست؟' }]);
     const instructions = request.instructions ?? '';
     expect(instructions).toContain('<context>');
     expect(instructions).toContain('"nextStep":"add_sources"');
@@ -239,7 +239,7 @@ describe.skipIf(!adminUrl)('Smart: errors, chat, walker and ledger (SMT-001..004
     expect(body.messages).toHaveLength(4);
     expect(body.conversation).toMatchObject({
       kind: 'walker',
-      title: 'مرحلهٔ بعدی چیست؟',
+      title: 'مرحله بعدی چیست؟',
       projectId,
     });
     expect(

@@ -11,7 +11,7 @@ const labels = {
   fa: {
     nav: 'صفحه‌بندی جدول',
     range: (from: string, to: string, total: string) => `نمایش ${from} تا ${to} از ${total}`,
-    page: (page: string, pages: string) => `صفحهٔ ${page} از ${pages}`,
+    page: (page: string, pages: string) => `صفحه ${page} از ${pages}`,
     previous: 'قبلی',
     next: 'بعدی',
     more: 'بارگذاری بیشتر',

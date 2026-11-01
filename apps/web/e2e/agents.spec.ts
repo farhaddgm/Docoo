@@ -121,7 +121,7 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     await fillReason(
       page,
       page.getByLabel(text.activateReason).and(page.locator('input')).first(),
-      'فعال‌سازی نسخهٔ تازه',
+      'فعال‌سازی نسخه تازه',
     );
     await page.getByRole('button', { name: fill(text.activateNow, { n: digits(after) }) }).click();
     await expect(headerBadge).toContainText(versionLabel(after));
@@ -133,7 +133,7 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     ).toBeVisible();
 
     // Roll back: activating the earlier version, which stays in the history unchanged.
-    await fillReason(page, history.getByLabel(text.activateReason), 'بازگشت به نسخهٔ قبلی');
+    await fillReason(page, history.getByLabel(text.activateReason), 'بازگشت به نسخه قبلی');
     await history
       .getByRole('button', { name: `${text.restore}: ${versionLabel(before)}`, exact: true })
       .click();
@@ -218,11 +218,11 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
   test('a project copies a role, edits only its copy and moves back to the default', async () => {
     const topic = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
       code: `agt-${stamp}`,
-      title: `حوزهٔ ایجنت ${stamp}`,
+      title: `حوزه ایجنت ${stamp}`,
     });
     const created = await createViaApi<{ project: { id: string } }>(page, '/projects', {
       code: `agt-${stamp}`,
-      title: `پروژهٔ ایجنت ${stamp}`,
+      title: `پروژه ایجنت ${stamp}`,
       initialProblem: 'کاهش ریزش مشتریان تکراری تا ۲۰ درصد.',
       topics: [{ topicId: topic.topic.id }],
     });
@@ -247,7 +247,7 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     await fillReason(
       page,
       row.getByLabel(text.copyReason),
-      'این پروژه تحقیق‌کنندهٔ مخصوص می‌خواهد',
+      'این پروژه تحقیق‌کننده مخصوص می‌خواهد',
     );
     await row.getByRole('button', { name: text.copyConfirm }).click();
     await expect(page.getByRole('status').filter({ hasText: text.copied })).toBeVisible();
@@ -256,8 +256,8 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     // The editor of the copy opens; an edit saves a new version of the copy only.
     const duties = row.getByRole('group', { name: text.sections.duties });
     await duties.getByRole('button', { name: text.addDuty }).click();
-    await duties.getByRole('textbox').last().fill(`وظیفهٔ این پروژه ${stamp}`);
-    await fillReason(page, row.getByLabel(text.reasonLabel, { exact: true }), 'وظیفهٔ اختصاصی');
+    await duties.getByRole('textbox').last().fill(`وظیفه این پروژه ${stamp}`);
+    await fillReason(page, row.getByLabel(text.reasonLabel, { exact: true }), 'وظیفه اختصاصی');
     await row.getByRole('button', { name: text.saveProject }).click();
     await expect(
       page.getByRole('status').filter({ hasText: 'برای همین پروژه فعال شد' }),
@@ -267,7 +267,7 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     // The copy differs from the default, and the comparison says how.
     await row.getByText(text.compare).click();
     await expect(
-      row.locator('.diff-added').filter({ hasText: `وظیفهٔ این پروژه ${stamp}` }),
+      row.locator('.diff-added').filter({ hasText: `وظیفه این پروژه ${stamp}` }),
     ).toBeVisible();
 
     // Back to the default is a decision with a reason; the copy stays in the history.

@@ -25,11 +25,11 @@ test('an optional quick draft continues to full analysis with the original answe
   const stamp = Date.now().toString(36);
   const topic = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
     code: `qd-t-${stamp}`,
-    title: `حوزهٔ پیش‌نویس سریع ${stamp}`,
+    title: `حوزه پیش‌نویس سریع ${stamp}`,
   });
   await page.goto('/fa/projects/new');
   await page.locator('#project-code').fill(`qd-${stamp}`);
-  await page.locator('#project-title').fill(`آزمون ادامهٔ پیش‌نویس ${stamp}`);
+  await page.locator('#project-title').fill(`آزمون ادامه پیش‌نویس ${stamp}`);
   await page.locator('#project-problem').fill('چگونه مشتریان تکراری را حفظ کنیم؟');
   const wizard = wizardMessages('fa');
   // The kind of analysis is chosen on the second step, with the business and the topics.
