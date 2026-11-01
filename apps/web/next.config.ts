@@ -3,7 +3,8 @@ import type { NextConfig } from 'next';
 /** The Content-Security-Policy is set per request in `proxy.ts`, because it names the deployment's files host. */
 const nextConfig: NextConfig = {
   output: 'standalone',
-  experimental: { useTypeScriptCli: false },
+  // The answer suggestion may search the web before it replies, which takes longer than the 30 s default.
+  experimental: { useTypeScriptCli: false, proxyTimeout: 90_000 },
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,

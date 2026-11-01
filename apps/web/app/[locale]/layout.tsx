@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import '@fontsource-variable/vazirmatn/wght.css';
 
 import '../globals.css';
+import { AiActivityIndicator } from '../ai-activity';
 import { InfoTipHost } from '../info-tip';
 import { direction, isLocale } from '../i18n';
 import { LocaleProvider } from '../locale-context';
@@ -45,6 +46,7 @@ export default async function RootLayout({
         <LocaleProvider locale={locale}>
           {children}
           <InfoTipHost />
+          <AiActivityIndicator />
         </LocaleProvider>
       </body>
     </html>

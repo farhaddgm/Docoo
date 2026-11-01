@@ -1,6 +1,5 @@
 'use client';
 import Link from 'next/link';
-import type { Route } from 'next';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   isGmail,
@@ -184,9 +183,12 @@ async function api<T>(url: string, method = 'GET', body?: unknown): Promise<T> {
 export function AccountsScreen({
   locale,
   initialTab = 'users',
+  embedded = false,
 }: {
   locale: Locale;
   initialTab?: 'users' | 'google';
+  /** Render only the content (no app shell), for use inside another page. */
+  embedded?: boolean;
 }) {
   const t = labels[locale];
   // One page for everything about who may sign in: the accounts, and (owner only) the Gmail list.
@@ -217,6 +219,7 @@ export function AccountsScreen({
       .then(async (r) => {
         if (r.status === 401) {
           setGuest(true);
+          window.location.replace(`/${locale}/auth/login`);
           return;
         }
         if (!r.ok) throw new Error();
@@ -230,7 +233,7 @@ export function AccountsScreen({
         if (!controller.signal.aborted) setError(t.failure);
       });
     return () => controller.abort();
-  }, [initialTab, t.failure]);
+  }, [initialTab, locale, t.failure]);
   useEffect(() => {
     if (!identity || denied) return;
     let cancelled = false;
@@ -265,27 +268,22 @@ export function AccountsScreen({
       setBusy(false);
     }
   }
-  const shell = (body: ReactNode) => (
-    <AppShell
-      locale={locale}
-      title={t.pageTitle}
-      subtitle={t.pageHelp}
-      identity={identity && !denied ? identity : undefined}
-      showNavigation={Boolean(identity) && !denied}
-      workspaceId={identity && !denied ? identity.workspaces[0]?.id : undefined}
-    >
-      {body}
-    </AppShell>
-  );
-  if (guest)
-    return shell(
-      <section className="auth-card">
-        <p>{t.denied}</p>
-        <Link className="primary-button link-button" href={`/${locale}/auth/login` as Route}>
-          {t.login}
-        </Link>
-      </section>,
+  const shell = (body: ReactNode) =>
+    embedded ? (
+      body
+    ) : (
+      <AppShell
+        locale={locale}
+        title={t.pageTitle}
+        subtitle={t.pageHelp}
+        identity={identity && !denied ? identity : undefined}
+        showNavigation={Boolean(identity) && !denied}
+        workspaceId={identity && !denied ? identity.workspaces[0]?.id : undefined}
+      >
+        {body}
+      </AppShell>
     );
+  if (guest) return shell(<p role="status">{t.loading}</p>);
   if (denied)
     return shell(
       <section className="auth-card">

@@ -4,6 +4,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
+import { watchWorkflow } from '../../../ai-activity-store';
 import { apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, messagesFor, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
@@ -139,6 +140,8 @@ export function WorkflowPanel({
     const { workflow } = await apiGet<{ workflow: Overview }>(`${base}/workflow`);
     setOverview(workflow);
     setFailed(false);
+    // Keep the floating "AI is working" notice alive when the administrator leaves this page.
+    if (workflow.run && ['starting', 'running'].includes(workflow.run.status)) watchWorkflow(base);
     setTick((value) => value + 1);
     // A paused project says why: the provider's own reason for its latest refusal.
     if (workflow.humanTasks.some((task) => task.kind === 'provider_failure')) {
