@@ -413,7 +413,6 @@ export function ManualKnowledgePanel({
                   >
                     {fill(manual.addCitation, { c: n })}
                   </button>
-                  <InfoTip text={help.manual.addCitation} />
                   <button
                     type="button"
                     className="secondary-button"
@@ -435,8 +434,7 @@ export function ManualKnowledgePanel({
             onClick={() => setClaims([...claims, { text: '', kind: 'statement', citations: [] }])}
           >
             {manual.addClaim}
-          </button>{' '}
-          <InfoTip text={help.manual.addClaim} />
+          </button>
         </p>
       </fieldset>
 
