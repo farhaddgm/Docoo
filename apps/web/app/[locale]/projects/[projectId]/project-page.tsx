@@ -429,6 +429,7 @@ function ProjectView({
           workspaceId={workspaceId}
           projectId={projectId}
           readOnly={accessReadOnly || project.status === 'archived' || project.status === 'deleted'}
+          kind={project.kind ?? 'standard'}
           onChanged={changed}
         />
       )}

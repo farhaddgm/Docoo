@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
-import { criteriaProblem, type Criterion } from '@docoo/documents';
+import { criteriaProblem, EXPLORATION_CRITERIA, type Criterion } from '@docoo/documents';
 import {
   availableProjectCommands,
   InvalidProjectTransitionError,
@@ -497,7 +497,9 @@ export class ProjectsService {
   }
 
   async create(context: WorkspaceRequestContext, input: CreateProjectInput): Promise<Project> {
-    const criteria = input.solutionCriteria;
+    // An exploration starts with the criteria that judge dimensions (ADR-0045).
+    const criteria =
+      input.solutionCriteria ?? (input.kind === 'exploration' ? EXPLORATION_CRITERIA : undefined);
     const criteriaIssue = criteria ? criteriaProblem(criteria) : null;
     if (criteriaIssue) throw badRequest('SOLUTION_CRITERIA_INVALID', criteriaIssue);
     const problemTemplate = input.problemTemplateId

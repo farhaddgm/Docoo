@@ -60,15 +60,19 @@ export function SolutionsPanel({
   workspaceId,
   projectId,
   readOnly,
+  kind = 'standard',
   onChanged,
 }: {
   locale: Locale;
   workspaceId: string;
   projectId: string;
   readOnly: boolean;
+  /** An exploration's rows are dimensions of a topic (ADR-0045). */
+  kind?: 'standard' | 'exploration';
   onChanged: () => void;
 }) {
-  const text = solutionMessages(locale);
+  const messages = solutionMessages(locale);
+  const text = kind === 'exploration' ? { ...messages, ...messages.exploration } : messages;
   const common = reportMessagesFor(locale);
   const base = `/workspaces/${workspaceId}/projects/${projectId}`;
   const [set, setSet] = useState<SolutionSet | null>(null);

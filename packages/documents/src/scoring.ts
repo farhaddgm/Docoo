@@ -18,6 +18,17 @@ export const DEFAULT_CRITERIA: readonly Criterion[] = [
   { key: 'time', label: 'Time to value', weight: 10, enabled: true },
 ];
 
+/**
+ * The criteria an exploration starts with (ADR-0045): they judge how much a dimension of a topic
+ * deserves its own project. The administrator can still change them like any project's criteria.
+ */
+export const EXPLORATION_CRITERIA: readonly Criterion[] = [
+  { key: 'importance', label: 'Importance of the dimension', weight: 35, enabled: true },
+  { key: 'urgency', label: 'Urgency', weight: 25, enabled: true },
+  { key: 'clarity', label: 'Clarity: ready to define as a project', weight: 20, enabled: true },
+  { key: 'independence', label: 'Independence from other dimensions', weight: 20, enabled: true },
+];
+
 export function criteriaProblem(criteria: readonly Criterion[]): string | null {
   const keys = new Set<string>();
   for (const criterion of criteria) {
