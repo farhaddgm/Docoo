@@ -1,11 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import type { AccountRole, EffectiveAccess } from '@docoo/contracts';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { messagesFor, type Locale } from '../i18n';
-import { reportMessagesFor } from '../report-messages';
 import { AppShell } from './app-shell';
 import { cachedSession, rememberSession } from './session-cache';
 
@@ -48,7 +46,6 @@ export function SignedIn({
   readonly children: (identity: SessionIdentity) => ReactNode;
 }) {
   const shell = messagesFor(locale);
-  const content = reportMessagesFor(locale);
   const [state, setState] = useState<State>(() => {
     const known = cachedSession();
     return known ? { kind: 'ready', identity: known } : { kind: 'loading' };
@@ -65,6 +62,8 @@ export function SignedIn({
         if (response.status === 401) {
           rememberSession(null);
           setState({ kind: 'guest' });
+          // Expired or missing session: go straight to the sign-in page, no intermediate screen.
+          window.location.replace(`/${locale}/auth/login`);
         } else if (response.ok) {
           const identity = (await response.json()) as SessionIdentity;
           rememberSession(identity);
@@ -75,7 +74,7 @@ export function SignedIn({
         if (!controller.signal.aborted) setState({ kind: 'unavailable' });
       });
     return () => controller.abort();
-  }, []);
+  }, [locale]);
 
   return (
     <AppShell
@@ -88,14 +87,7 @@ export function SignedIn({
     >
       {state.kind === 'loading' && <p role="status">{shell.checkingSession}</p>}
       {state.kind === 'unavailable' && <p className="notice error">{shell.unavailable}</p>}
-      {state.kind === 'guest' && (
-        <section className="auth-card">
-          <p>{content.signInFirst}</p>
-          <Link className="primary-button link-button" href={`/${locale}`}>
-            {content.goToSignIn}
-          </Link>
-        </section>
-      )}
+      {state.kind === 'guest' && <p role="status">{shell.checkingSession}</p>}
       {state.kind === 'ready' && (
         <SessionContext.Provider value={state.identity}>
           {children(state.identity)}

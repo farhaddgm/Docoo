@@ -220,6 +220,7 @@ export function AccountsScreen({
       .then(async (r) => {
         if (r.status === 401) {
           setGuest(true);
+          window.location.replace(`/${locale}/auth/login`);
           return;
         }
         if (!r.ok) throw new Error();
@@ -233,7 +234,7 @@ export function AccountsScreen({
         if (!controller.signal.aborted) setError(t.failure);
       });
     return () => controller.abort();
-  }, [initialTab, t.failure]);
+  }, [initialTab, locale, t.failure]);
   useEffect(() => {
     if (!identity || denied) return;
     let cancelled = false;
@@ -283,15 +284,7 @@ export function AccountsScreen({
         {body}
       </AppShell>
     );
-  if (guest)
-    return shell(
-      <section className="auth-card">
-        <p>{t.denied}</p>
-        <Link className="primary-button link-button" href={`/${locale}/auth/login` as Route}>
-          {t.login}
-        </Link>
-      </section>,
-    );
+  if (guest) return shell(<p role="status">{t.loading}</p>);
   if (denied)
     return shell(
       <section className="auth-card">
