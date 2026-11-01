@@ -10,7 +10,7 @@ export const meetingProblemPattern = problemPatternDefinitionSchema.parse({
   inputs: [
     {
       key: 'context',
-      question: 'با چه کسی، با چه رابطه‌ای و دربارهٔ چه چیزی ملاقات داری؟',
+      question: 'با چه کسی، با چه رابطه‌ای و درباره چه چیزی ملاقات داری؟',
       required: true,
     },
     { key: 'goal', question: 'اگر ملاقات خوب پیش برود چه چیزی فرق کرده است؟', required: true },
@@ -48,10 +48,10 @@ export const meetingProblemPattern = problemPatternDefinitionSchema.parse({
     },
     {
       key: 'brief',
-      title: 'برگهٔ آمادگی',
+      title: 'برگه آمادگی',
       activity: 'produce',
       inputKeys: ['goal', 'boundaries'],
-      guidance: ['برگهٔ کوتاه و قابل ویرایش بساز؛ اطلاعات نامعلوم را جعل نکن.'],
+      guidance: ['برگه کوتاه و قابل ویرایش بساز؛ اطلاعات نامعلوم را جعل نکن.'],
     },
     {
       key: 'reflection',
@@ -59,23 +59,23 @@ export const meetingProblemPattern = problemPatternDefinitionSchema.parse({
       activity: 'reflect',
       inputKeys: [],
       guidance: [
-        'پس از اعلام برگزاری ملاقات بپرس چه شد، چه چیزی غافلگیرکننده بود و دفعهٔ بعد چه تغییری لازم است.',
+        'پس از اعلام برگزاری ملاقات بپرس چه شد، چه چیزی غافلگیرکننده بود و دفعه بعد چه تغییری لازم است.',
       ],
     },
   ],
   research: {
     mode: 'when-needed',
-    triggers: ['کاربر به اطلاعات قابل بررسی دربارهٔ موضوع مذاکره نیاز دارد'],
+    triggers: ['کاربر به اطلاعات قابل بررسی درباره موضوع مذاکره نیاز دارد'],
   },
   outputs: [
     {
       key: 'preparation-brief',
-      title: 'برگهٔ آمادگی',
+      title: 'برگه آمادگی',
       sections: [
         'هدف اصلی من',
-        'جملهٔ پیشنهادی شروع',
+        'جمله پیشنهادی شروع',
         'سه نکته یا سؤال مهم',
-        'بخش سخت و نحوهٔ مواجهه',
+        'بخش سخت و نحوه مواجهه',
         'مرز یا نکته‌ای که نمی‌خواهم فراموش کنم',
       ],
     },
@@ -96,11 +96,11 @@ export const marketingExperimentProblemPattern = problemPatternDefinitionSchema.
   schemaVersion: 1,
   key: 'marketing-experiment',
   title: 'طراحی آزمایش مارکتینگ',
-  purpose: 'تبدیل ایدهٔ رشد به آزمایشی قابل سنجش',
-  applicability: ['آزمایش یک فرضیه دربارهٔ مخاطب، پیام یا کانال'],
+  purpose: 'تبدیل ایده رشد به آزمایشی قابل سنجش',
+  applicability: ['آزمایش یک فرضیه درباره مخاطب، پیام یا کانال'],
   inputs: [
     { key: 'hypothesis', question: 'کدام فرضیه را برای کدام مخاطب می‌آزماییم؟', required: true },
-    { key: 'constraints', question: 'بودجه، زمان و دادهٔ پایه چیست؟', required: true },
+    { key: 'constraints', question: 'بودجه، زمان و داده پایه چیست؟', required: true },
   ],
   stages: [
     {
@@ -122,10 +122,10 @@ export const marketingExperimentProblemPattern = problemPatternDefinitionSchema.
       title: 'طراحی آزمایش',
       activity: 'produce',
       inputKeys: ['hypothesis', 'constraints'],
-      guidance: ['اقدام، معیار، بازهٔ زمانی و شرط توقف را مشخص کن.'],
+      guidance: ['اقدام، معیار، بازه زمانی و شرط توقف را مشخص کن.'],
     },
   ],
-  research: { mode: 'when-needed', triggers: ['نبود شواهد دربارهٔ مخاطب یا کانال منتخب'] },
+  research: { mode: 'when-needed', triggers: ['نبود شواهد درباره مخاطب یا کانال منتخب'] },
   outputs: [
     {
       key: 'experiment-plan',

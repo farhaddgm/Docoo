@@ -121,7 +121,7 @@ export function fakeAnalystResponder(request: NormalizedModelRequest): unknown {
       : 'The success measure is the main open point.',
     sufficient: sufficient || (rejected && asked >= 30),
     sufficiencyReason: persian
-      ? 'پوشش همهٔ ابعاد لازم کافی است.'
+      ? 'پوشش همه ابعاد لازم کافی است.'
       : 'Every required dimension is covered.',
     categoryNotes: [],
     contradictions: [],

@@ -36,7 +36,7 @@ const SECTIONS: Readonly<Record<SectionSource, TemplateSection>> = {
     label: { fa: 'فرض‌ها', en: 'Assumptions' },
   },
   evidence: { key: 'evidence', source: 'evidence', label: { fa: 'شواهد', en: 'Evidence' } },
-  plan: { key: 'plan', source: 'plan', label: { fa: 'برنامهٔ اجرا', en: 'Implementation plan' } },
+  plan: { key: 'plan', source: 'plan', label: { fa: 'برنامه اجرا', en: 'Implementation plan' } },
   risks: { key: 'risks', source: 'risks', label: { fa: 'ریسک‌ها', en: 'Risks' } },
   scores: {
     key: 'scores',

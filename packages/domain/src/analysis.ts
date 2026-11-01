@@ -114,7 +114,7 @@ export function normalizeQuestionText(text: string): string {
     .replace(/[يىكةؤأإ]/gu, (letter) => ARABIC_FORMS[letter] ?? letter)
     .replace(/[۰-۹]/gu, (digit) => String(digit.charCodeAt(0) - 0x06f0))
     .replace(/[٠-٩]/gu, (digit) => String(digit.charCodeAt(0) - 0x0660))
-    .replace(/[ً-ٰٟـ]/gu, '')
+    .replace(/[-ٰٟـ]/gu, '')
     .replace(/‌|‍|‎|‏/gu, ' ')
     .replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ')
     .replace(/\s+/gu, ' ')
