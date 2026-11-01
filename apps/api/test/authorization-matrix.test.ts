@@ -191,18 +191,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/question-batches/:batchId/answers': 'analysis.answer',
   'POST workspaces/:workspaceId/analysis-questions/:questionId/suggest-answer': 'analysis.answer',
   'GET workspaces/:workspaceId/explorations': 'exploration.read',
-  'POST workspaces/:workspaceId/explorations': 'exploration.update',
   'GET workspaces/:workspaceId/explorations/:explorationId': 'exploration.read',
-  'PATCH workspaces/:workspaceId/explorations/:explorationId': 'exploration.update',
-  'POST workspaces/:workspaceId/explorations/:explorationId/archive': 'exploration.update',
-  'POST workspaces/:workspaceId/explorations/:explorationId/reopen': 'exploration.update',
-  'POST workspaces/:workspaceId/explorations/:explorationId/messages': 'exploration.run',
-  'POST workspaces/:workspaceId/explorations/:explorationId/propose': 'exploration.run',
-  'POST workspaces/:workspaceId/explorations/:explorationId/candidates': 'exploration.update',
-  'PATCH workspaces/:workspaceId/explorations/:explorationId/candidates/:candidateKey':
-    'exploration.update',
-  'POST workspaces/:workspaceId/explorations/:explorationId/candidates/:candidateKey/decision':
-    'exploration.update',
   'GET workspaces/:workspaceId/projects/:projectId/deliverables': 'project.read',
   'PUT workspaces/:workspaceId/projects/:projectId/deliverables': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/deliverables/propose': 'project.run',

@@ -2,7 +2,7 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { apiGet, apiSend, query } from '../../api-client';
 import { formatDateTime, type Locale, textDir } from '../../i18n';
@@ -67,24 +67,49 @@ function ClippedCell({ value, dir }: { value: string; dir?: 'rtl' | 'ltr' | 'aut
   );
 }
 
-export function ProjectsPage({ locale }: { locale: Locale }) {
+/**
+ * The projects of the workspace. With `kind="exploration"` it is the list of explorations: the same
+ * projects, only the ones of that kind (ADR-0045 step F).
+ */
+export function ProjectsPage({
+  locale,
+  kind,
+}: {
+  locale: Locale;
+  kind?: 'exploration' | undefined;
+}) {
   const text = projectMessages(locale);
+  const exploring = kind === 'exploration';
   return (
-    <WorkspacePage locale={locale} title={text.title} subtitle={text.subtitle}>
-      {(workspaceId) => <Projects locale={locale} workspaceId={workspaceId} />}
+    <WorkspacePage
+      locale={locale}
+      title={exploring ? text.explorationsTitle : text.title}
+      subtitle={exploring ? text.explorationsSubtitle : text.subtitle}
+    >
+      {(workspaceId) => <Projects locale={locale} workspaceId={workspaceId} kind={kind} />}
     </WorkspacePage>
   );
 }
 
 /** PRJ-001 in the backoffice: every project of the workspace with its status and stage. */
-function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
+function Projects({
+  locale,
+  workspaceId,
+  kind,
+}: {
+  locale: Locale;
+  workspaceId: string;
+  kind?: 'exploration' | undefined;
+}) {
+  // The list of explorations starts, and stays, filtered to that kind.
+  const initial = useMemo<Filters>(() => ({ ...noFilters, kind: kind ?? '' }), [kind]);
   const identity = useSessionIdentity();
   const text = projectMessages(locale);
   const common = reportMessagesFor(locale);
   const base = `/workspaces/${workspaceId}/projects`;
   const [view, setView] = useState<View>('current');
-  const [filters, setFilters] = useState<Filters>(noFilters);
-  const [applied, setApplied] = useState<Filters>(noFilters);
+  const [filters, setFilters] = useState<Filters>(initial);
+  const [applied, setApplied] = useState<Filters>(initial);
   const [topics, setTopics] = useState<{ id: string; title: string }[]>([]);
   const [items, setItems] = useState<ProjectSummary[] | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -159,7 +184,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
     }, pageText.done[target.command] ?? text.saved);
   }
 
-  const filtered = JSON.stringify(applied) !== JSON.stringify(noFilters);
+  const filtered = JSON.stringify(applied) !== JSON.stringify(initial);
 
   return (
     <div className="stack">
@@ -167,7 +192,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
         <div className="toolbar spread">
           <h2 id="project-list-title">{text.list}</h2>
           <div className="toolbar">
-            {canCreateProjects(identity) && (
+            {canCreateProjects(identity) && kind !== 'exploration' && (
               <Link
                 className="primary-button link-button"
                 href={`/${locale}/projects/new` as Route}
@@ -177,7 +202,7 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
             )}
             {canCreateProjects(identity) && (
               <Link
-                className="secondary-button link-button"
+                className={`${kind === 'exploration' ? 'primary-button' : 'secondary-button'} link-button`}
                 href={`/${locale}/projects/new?kind=exploration` as Route}
               >
                 {text.newExploration}
@@ -242,18 +267,20 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
               <option value="en">{text.languages.en}</option>
             </select>
           </div>
-          <div className="field">
-            <label htmlFor="project-kind">{text.kindFilter}</label>
-            <select
-              id="project-kind"
-              value={filters.kind}
-              onChange={(event) => setFilters({ ...filters, kind: event.target.value })}
-            >
-              <option value="">{text.anyKind}</option>
-              <option value="standard">{text.kinds.standard}</option>
-              <option value="exploration">{text.kinds.exploration}</option>
-            </select>
-          </div>
+          {!kind && (
+            <div className="field">
+              <label htmlFor="project-kind">{text.kindFilter}</label>
+              <select
+                id="project-kind"
+                value={filters.kind}
+                onChange={(event) => setFilters({ ...filters, kind: event.target.value })}
+              >
+                <option value="">{text.anyKind}</option>
+                <option value="standard">{text.kinds.standard}</option>
+                <option value="exploration">{text.kinds.exploration}</option>
+              </select>
+            </div>
+          )}
           <div className="field">
             <label htmlFor="project-from">{text.fromLabel}</label>
             <input
@@ -281,8 +308,8 @@ function Projects({ locale, workspaceId }: { locale: Locale; workspaceId: string
                 type="button"
                 className="secondary-button"
                 onClick={() => {
-                  setFilters(noFilters);
-                  setApplied(noFilters);
+                  setFilters(initial);
+                  setApplied(initial);
                 }}
               >
                 {text.clearFilters}

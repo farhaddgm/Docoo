@@ -151,8 +151,6 @@ const messages = {
     criteriaNoneEnabled: 'دست‌کم یک معیار باید فعال باشد.',
     criteriaLoading: 'در حال خواندن معیارهای پیش‌فرض…',
     criteriaReset: 'بازگشت به معیارهای پیش‌فرض',
-    seedBanner:
-      'ساخت از مسئلهٔ «{candidate}» در کاوش «{exploration}». عنوان، مسئله و خروجی مورد انتظار از آن پر شده است؛ هر چیزی را می‌توانید عوض کنید.',
     explorationBanner:
       'این یک کاوش است: مثل یک پروژه همهٔ مرحله‌ها را می‌گذراند، اما به‌جای ایده، ابعاد مختلف موضوع را پیشنهاد می‌دهد؛ هر بعد می‌تواند پروژه‌ای جدا شود. موضوع یا رویداد را در «مسئله» بنویسید.',
     dimensionBanner:
@@ -160,12 +158,9 @@ const messages = {
     dimensionOpen: 'بازکردن کاوش',
     seedUnselected:
       'این بُعد هنوز در کاوش انتخاب نشده است. ابتدا آن را در تب راه‌حل‌های کاوش انتخاب کنید؛ فعلاً می‌توانید پروژه را دستی بسازید.',
-    seedOpen: 'بازکردن کاوش',
-    seedLoading: 'در حال خواندن مسئله از کاوش…',
-    seedFailed: 'مسئلهٔ کاوش خوانده نشد؛ می‌توانید پروژه را دستی بسازید.',
-    seedDropped:
-      'این مسئله در کاوش ردشده است. ابتدا آن را در کاوش برگردانید؛ فعلاً می‌توانید پروژه را دستی بسازید.',
-    seedMissing: 'این مسئله در کاوش پیدا نشد؛ می‌توانید پروژه را دستی بسازید.',
+    seedLoading: 'در حال خواندن بُعد از کاوش…',
+    seedFailed: 'بُعد کاوش خوانده نشد؛ می‌توانید پروژه را دستی بسازید.',
+    seedMissing: 'این بُعد در کاوش پیدا نشد؛ می‌توانید پروژه را دستی بسازید.',
     criteriaSummary: 'معیارهای راه‌حل',
     criteriaDefault: 'پیش‌فرض',
     criteriaCustom: '{n} معیار فعال با وزن دلخواه',
@@ -321,8 +316,6 @@ const messages = {
     criteriaNoneEnabled: 'At least one criterion must be enabled.',
     criteriaLoading: 'Reading the default criteria…',
     criteriaReset: 'Back to the default criteria',
-    seedBanner:
-      'Made from the problem “{candidate}” in the exploration “{exploration}”. The title, problem and expected output are filled in from it; you can change anything.',
     explorationBanner:
       'This is an exploration: like a project it goes through every stage, but instead of ideas it proposes the dimensions of the topic, and each dimension can become a project of its own. Write the topic or event in the problem field.',
     dimensionBanner:
@@ -330,14 +323,11 @@ const messages = {
     dimensionOpen: 'Open the exploration',
     seedUnselected:
       'This dimension is not selected in the exploration yet. Select it in the exploration’s solutions tab first; for now you can make the project by hand.',
-    seedOpen: 'Open the exploration',
-    seedLoading: 'Reading the problem from the exploration…',
+    seedLoading: 'Reading the dimension from the exploration…',
     seedFailed:
-      'The problem could not be read from the exploration; you can create the project by hand.',
-    seedDropped:
-      'This problem was dropped in the exploration. Bring it back there first; for now you can create the project by hand.',
+      'The dimension could not be read from the exploration; you can create the project by hand.',
     seedMissing:
-      'This problem was not found in the exploration; you can create the project by hand.',
+      'This dimension was not found in the exploration; you can create the project by hand.',
     criteriaSummary: 'Solution criteria',
     criteriaDefault: 'Default',
     criteriaCustom: '{n} enabled criteria with chosen weights',

@@ -10,10 +10,9 @@ import type { Locale } from '../../../i18n';
 import { WorkspacePage } from '../../workspace-page';
 import { canCreateProjects } from '../../access';
 import { useSessionIdentity } from '../../signed-in';
-import type { ExplorationDetail } from '../../explorations/exploration-model';
 import { projectMessages } from '../messages';
 import { ProjectWizard } from './project-wizard';
-import { candidateSeed, dimensionSeed, type CandidateSeed } from './wizard-model';
+import { dimensionSeed, type CandidateSeed } from './wizard-model';
 import { wizardMessages } from './wizard-messages';
 
 export function NewProjectPage({ locale }: { locale: Locale }) {
@@ -36,22 +35,19 @@ type SeedState =
   | {
       status: 'ready';
       seed: CandidateSeed | null;
-      problem: 'failed' | 'dropped' | 'missing' | 'unselected' | null;
+      problem: 'failed' | 'missing' | 'unselected' | null;
     };
 
 /**
- * `?exploration=…&candidate=…` makes the project from a candidate problem (ADR-0044): its title,
- * problem and expected output fill the first step. If it cannot be read or was dropped, the page
- * says so and the wizard works as it always did.
+ * `?dimensionProject=…&dimension=…` makes the project from a selected dimension of an exploration
+ * (ADR-0045): its title and draft problem statement fill the first step. If it cannot be read or
+ * is not selected, the page says so and the wizard works as it always did.
  */
-function useCandidateSeed(workspaceId: string): SeedState {
+function useDimensionSeed(workspaceId: string): SeedState {
   const params = useSearchParams();
-  const explorationId = params.get('exploration');
-  const candidateKey = params.get('candidate');
-  // `?dimensionProject=…&dimension=…` makes it from a selected dimension (ADR-0045).
   const dimensionProject = params.get('dimensionProject');
   const dimensionId = params.get('dimension');
-  const wanted = Boolean((explorationId && candidateKey) || (dimensionProject && dimensionId));
+  const wanted = Boolean(dimensionProject && dimensionId);
   const [state, setState] = useState<SeedState>(
     wanted ? { status: 'loading' } : { status: 'ready', seed: null, problem: null },
   );
@@ -91,25 +87,9 @@ function useCandidateSeed(workspaceId: string): SeedState {
         current = false;
       };
     }
-    if (!explorationId || !candidateKey) {
-      setState({ status: 'ready', seed: null, problem: null });
-      return;
-    }
-    let current = true;
-    setState({ status: 'loading' });
-    apiGet<ExplorationDetail>(`/workspaces/${workspaceId}/explorations/${explorationId}`)
-      .then((detail) => {
-        if (!current) return;
-        const { seed, reason } = candidateSeed(detail, candidateKey);
-        setState({ status: 'ready', seed, problem: reason });
-      })
-      .catch(() => {
-        if (current) setState({ status: 'ready', seed: null, problem: 'failed' });
-      });
-    return () => {
-      current = false;
-    };
-  }, [workspaceId, explorationId, candidateKey, dimensionProject, dimensionId]);
+    setState({ status: 'ready', seed: null, problem: null });
+    return undefined;
+  }, [workspaceId, dimensionProject, dimensionId]);
 
   return state;
 }
@@ -120,7 +100,7 @@ function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: stri
   const wizard = wizardMessages(locale);
   const router = useRouter();
   const identity = useSessionIdentity();
-  const seedState = useCandidateSeed(workspaceId);
+  const seedState = useDimensionSeed(workspaceId);
   const params = useSearchParams();
   if (!canCreateProjects(identity))
     return (
@@ -146,13 +126,11 @@ function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: stri
       </p>
       {seedState.problem && (
         <p className="notice warn" role="status">
-          {seedState.problem === 'dropped'
-            ? wizard.seedDropped
-            : seedState.problem === 'unselected'
-              ? wizard.seedUnselected
-              : seedState.problem === 'missing'
-                ? wizard.seedMissing
-                : wizard.seedFailed}
+          {seedState.problem === 'unselected'
+            ? wizard.seedUnselected
+            : seedState.problem === 'missing'
+              ? wizard.seedMissing
+              : wizard.seedFailed}
         </p>
       )}
       <ProjectWizard

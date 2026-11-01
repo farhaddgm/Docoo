@@ -903,16 +903,8 @@ describe.skipIf(!adminUrl)('solutions, documents and evaluation (SOL-*, DOC-*, E
       dimension: { projectId: ordinary, solutionId: items[0]!.id },
     });
     expect(wrongKind.statusCode).toBe(404);
-    const both = await make('from-dim-5', {
-      dimension: { projectId: explorationId, solutionId: items[0]!.id },
-      explorationCandidate: {
-        explorationId: items[0]!.id,
-        candidateKey: items[0]!.id,
-      },
-    });
-    expect(both.statusCode).toBe(400);
     const missing = await h.admin.query(
-      `select 1 from projects where code in ('from-dim-3','from-dim-4','from-dim-5','from-dim-early')`,
+      `select 1 from projects where code in ('from-dim-3','from-dim-4','from-dim-early')`,
     );
     expect(missing.rowCount).toBe(0);
 

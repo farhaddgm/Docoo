@@ -220,9 +220,7 @@ export function ExplorationOriginNote({
       {text.fromProblem}{' '}
       <strong dir={textDir(locale)}>{origin.candidateTitle ?? origin.candidateKey}</strong>{' '}
       {text.inExploration}{' '}
-      <Link href={`/${locale}/explorations/${origin.explorationId}` as Route}>
-        <span dir={textDir(locale)}>{origin.explorationTitle ?? origin.explorationId}</span>
-      </Link>
+      <span dir={textDir(locale)}>{origin.explorationTitle ?? origin.explorationId}</span>
     </p>
   );
 }

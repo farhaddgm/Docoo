@@ -5,7 +5,6 @@ import {
   CONTEXT_STEP,
   PROBLEM_STEP,
   REVIEW_STEP,
-  candidateSeed,
   dimensionSeed,
   changedInSection,
   migrateDraftStep,
@@ -65,56 +64,8 @@ describe('wizard model', () => {
   });
 });
 
-describe('making a project from a candidate problem (ADR-0044)', () => {
-  const detail = {
-    exploration: { id: 'e1', title: 'Large clients left', outputLanguage: 'en' as const },
-    candidates: [
-      {
-        candidateKey: 'k1',
-        title: ' Slow onboarding ',
-        problemDraft: ' Clients wait. ',
-        expectedOutput: ' A plan ',
-        state: 'proposed',
-      },
-      {
-        candidateKey: 'k2',
-        title: 'Old idea',
-        problemDraft: 'x',
-        expectedOutput: '',
-        state: 'dropped',
-      },
-      {
-        candidateKey: 'k3',
-        title: 'Already a project',
-        problemDraft: 'y',
-        expectedOutput: '',
-        state: 'promoted',
-      },
-    ],
-  };
-
-  it('turns a usable candidate into the fields of the first step, trimmed', () => {
-    const { seed, reason } = candidateSeed(detail, 'k1');
-    expect(reason).toBeNull();
-    expect(seed).toMatchObject({
-      explorationTitle: 'Large clients left',
-      candidateTitle: ' Slow onboarding ',
-    });
-    expect(seedFields(seed!)).toEqual({
-      title: 'Slow onboarding',
-      initialProblem: 'Clients wait.',
-      expectedOutput: 'A plan',
-      outputLanguage: 'en',
-    });
-  });
-
-  it('allows a promoted candidate (it can give another project) but not a dropped or missing one', () => {
-    expect(candidateSeed(detail, 'k3').seed).not.toBeNull();
-    expect(candidateSeed(detail, 'k2')).toEqual({ seed: null, reason: 'dropped' });
-    expect(candidateSeed(detail, 'nope')).toEqual({ seed: null, reason: 'missing' });
-  });
-
-  it('replaces any draft except one already started from the same candidate', () => {
+describe('which draft a dimension replaces', () => {
+  it('replaces any draft except one already started from the same dimension', () => {
     const seed = { explorationId: 'e1', candidateKey: 'k1' };
     expect(shouldApplySeed(null, seed)).toBe(true);
     expect(shouldApplySeed(undefined, seed)).toBe(true);
