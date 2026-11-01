@@ -14,10 +14,12 @@ import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
 
 type Kind = 'openai' | 'gemini' | 'anthropic';
+/** ElevenLabs only speaks (ADR-0046): it is a connection for voice, never for running a stage. */
+type FormKind = Kind | 'elevenlabs';
 
 interface Connection {
   id: string;
-  provider: Kind | 'fake';
+  provider: FormKind | 'fake';
   name: string;
   status: string;
   lastCheckedAt: string | null;
@@ -33,10 +35,11 @@ interface Model {
   capabilities: { structuredOutput: boolean };
 }
 
-const kinds: { kind: Kind; label: string }[] = [
+const kinds: { kind: FormKind; label: string }[] = [
   { kind: 'openai', label: 'OpenAI' },
   { kind: 'gemini', label: 'Google Gemini' },
   { kind: 'anthropic', label: 'Anthropic Claude' },
+  { kind: 'elevenlabs', label: 'ElevenLabs (Voice)' },
 ];
 
 export function ProvidersPage({ locale }: { locale: Locale }) {
@@ -63,7 +66,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
     connectionId: '',
     model: '',
   });
-  const [kind, setKind] = useState<Kind>('openai');
+  const [kind, setKind] = useState<FormKind>('openai');
   const [name, setName] = useState('');
   const [secret, setSecret] = useState('');
   const [maxConcurrent, setMaxConcurrent] = useState('4');
@@ -104,7 +107,12 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
     ).items.filter((item) => item.status !== 'disabled');
     if (mine !== latestLoad.current) return;
     setConnections(items);
-    await Promise.all(items.map((item) => loadModels(item.id).catch(() => undefined)));
+    // A speech-only connection lists voice models, not the text models the pickers below show.
+    await Promise.all(
+      items
+        .filter((item) => item.provider !== 'elevenlabs')
+        .map((item) => loadModels(item.id).catch(() => undefined)),
+    );
     const effective = (
       await apiGet<{ config: { values: Record<string, unknown> } }>(
         `${base}/settings/effective?scopeType=workspace&scopeId=${workspaceId}`,
@@ -201,6 +209,8 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
   const usable = (models[choice.connectionId] ?? []).filter(
     (model) => model.capabilities.structuredOutput,
   );
+  /** The connections that can run a stage; the speech-only ones are for voice. */
+  const modelConnections = (connections ?? []).filter((item) => item.provider !== 'elevenlabs');
   const nameOf = (id: string) => connections?.find((item) => item.id === id)?.name ?? id;
 
   return (
@@ -389,7 +399,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
             <select
               id="provider-kind"
               value={kind}
-              onChange={(event) => setKind(event.target.value as Kind)}
+              onChange={(event) => setKind(event.target.value as FormKind)}
             >
               {kinds.map((item) => (
                 <option key={item.kind} value={item.kind}>
@@ -397,6 +407,11 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
                 </option>
               ))}
             </select>
+            {kind === 'elevenlabs' && (
+              <p className="muted" id="provider-voice-only">
+                {text.voiceOnly}
+              </p>
+            )}
             <label htmlFor="provider-name">{text.name}</label>
             <input
               id="provider-name"
@@ -473,7 +488,7 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
               required
             >
               <option value="">—</option>
-              {(connections ?? []).map((item) => (
+              {modelConnections.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -510,13 +525,13 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
           embedded
           locale={locale}
           workspaceId={workspaceId}
-          connections={(connections ?? []).map((item) => ({
+          connections={modelConnections.map((item) => ({
             id: item.id,
             name: item.name,
             provider: item.provider,
           }))}
           modelIds={Object.fromEntries(
-            (connections ?? []).map((item) => [
+            modelConnections.map((item) => [
               item.id,
               (models[item.id] ?? [])
                 .filter((model) => model.capabilities.structuredOutput)
@@ -530,10 +545,10 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
       <ModelPrices
         locale={locale}
         workspaceId={workspaceId}
-        kinds={[...new Set((connections ?? []).map((item) => item.provider))].filter(
-          (item): item is Kind => item !== 'fake',
+        kinds={[...new Set(modelConnections.map((item) => item.provider))].filter(
+          (item): item is Kind => item !== 'fake' && item !== 'elevenlabs',
         )}
-        modelIds={(connections ?? []).reduce<Record<string, string[]>>((all, item) => {
+        modelIds={modelConnections.reduce<Record<string, string[]>>((all, item) => {
           // Several connections of one provider offer their models together.
           all[item.provider] = [
             ...(all[item.provider] ?? []),

@@ -46,6 +46,20 @@ export class AccountPolicyService {
       total.monthTokens += rows[0]?.tokens ?? 0;
       total.monthCostUsd += rows[0]?.cost ?? 0;
       total.todayCalls += rows[0]?.calls ?? 0;
+      // Voice calls (ADR-0046) count against the same allowance as text calls.
+      const voice = await client.query<{ tokens: number; cost: number; calls: number }>(
+        `select coalesce(sum(input_tokens + output_tokens), 0)::float8 as tokens,
+                coalesce(sum(cost_usd), 0)::float8 as cost,
+                (count(*) filter (where created_at >=
+                  (date_trunc('day', now() at time zone 'utc') at time zone 'utc')))::int as calls
+           from voice_invocations
+          where workspace_id = $1 and actor_id = $2
+            and created_at >= (date_trunc('month', now() at time zone 'utc') at time zone 'utc')`,
+        [workspaceId, userId],
+      );
+      total.monthTokens += voice.rows[0]?.tokens ?? 0;
+      total.monthCostUsd += voice.rows[0]?.cost ?? 0;
+      total.todayCalls += voice.rows[0]?.calls ?? 0;
     }
     return total;
   }

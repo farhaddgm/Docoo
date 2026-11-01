@@ -5,6 +5,7 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { existsSync } from 'node:fs';
 import { HttpException, ValidationPipe } from '@nestjs/common';
+import { registerAudioBodyParser } from './voice/audio-body.js';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -96,6 +97,7 @@ app
     done();
   });
 
+registerAudioBodyParser(app.getHttpAdapter().getInstance());
 await app.register(cookie, { secret: config.SESSION_PEPPER });
 await app.register(
   helmet,

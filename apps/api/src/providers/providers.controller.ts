@@ -22,6 +22,8 @@ import { isUuid, workspaceContext } from '../common/request-context.js';
 import { ProvidersService } from './providers.service.js';
 
 const providerSchema = z.enum(['openai', 'gemini', 'anthropic', 'fake']);
+/** A connection may also be ElevenLabs, which only speaks (ADR-0046); prices stay for models. */
+const connectionBrandSchema = z.enum(['openai', 'gemini', 'anthropic', 'fake', 'elevenlabs']);
 const nameSchema = z.string().trim().min(1).max(100);
 const baseUrlSchema = z.url({ protocol: /^https?$/u }).max(500);
 const secretSchema = z.string().min(8).max(4096);
@@ -29,7 +31,7 @@ const reasonSchema = z.string().trim().min(3).max(1000);
 
 const createSchema = z
   .object({
-    provider: providerSchema,
+    provider: connectionBrandSchema,
     name: nameSchema,
     baseUrl: baseUrlSchema.optional(),
     secret: secretSchema.optional(),

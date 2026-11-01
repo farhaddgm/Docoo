@@ -415,6 +415,7 @@ export function ProblemPanel({
                 onStopEditing={() => forget([question.id])}
                 onUpload={upload}
                 onSuggest={() => suggest(question)}
+                dictationWorkspaceId={workspaceId}
               />
             ))}
           </ol>
@@ -513,6 +514,7 @@ export function ProblemPanel({
                 onStopEditing={() => forget([question.id])}
                 onUpload={upload}
                 onSuggest={() => suggest(question)}
+                dictationWorkspaceId={workspaceId}
                 footer={
                   drafts[question.id] ? (
                     <button

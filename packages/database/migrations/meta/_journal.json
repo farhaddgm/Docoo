@@ -533,6 +533,20 @@
       "when": 1793808759919,
       "tag": "0075_project_dimension_origin",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1793808760919,
+      "tag": "0076_voice",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1793808761919,
+      "tag": "0077_voice_audio_manager",
+      "breakpoints": true
     }
   ]
 }

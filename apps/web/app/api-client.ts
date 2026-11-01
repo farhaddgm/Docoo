@@ -126,6 +126,25 @@ export async function apiSend<T = unknown>(
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+/** Sends a recording as the raw request body and returns the parsed JSON answer. */
+export async function apiPostBinary<T>(path: string, body: Blob, contentType: string): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      method: 'POST',
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: { 'content-type': contentType, 'x-request-id': crypto.randomUUID() },
+      body,
+    });
+  } catch (error) {
+    reportNetworkFailure(error, 'POST', path);
+    throw error;
+  }
+  if (!response.ok) throw await failure(response, 'POST', path);
+  return (await response.json()) as T;
+}
+
 /** A fresh key per user action so a repeated click or retry cannot apply a command twice. */
 export function idempotencyKey(): string {
   return `web-${crypto.randomUUID()}`;

@@ -34,6 +34,7 @@ import { ProjectsController } from '../src/projects/projects.controller.js';
 import { ProvidersController } from '../src/providers/providers.controller.js';
 import { StageChatController } from '../src/stage-chat/stage-chat.controller.js';
 import { SmartController } from '../src/smart/smart.controller.js';
+import { VoiceController } from '../src/voice/voice.controller.js';
 import { SourcesController } from '../src/sources/sources.controller.js';
 import { TopicsController } from '../src/topics/topics.controller.js';
 import { WorkflowController } from '../src/workflow/workflow.controller.js';
@@ -294,6 +295,24 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/smart/issues/:issueId': 'smart.read',
   'PATCH workspaces/:workspaceId/smart/issues/:issueId': 'smart.manage',
   'DELETE workspaces/:workspaceId/smart/issues/:issueId': 'smart.manage',
+  'GET workspaces/:workspaceId/voice/config': 'voice.use',
+  'GET workspaces/:workspaceId/voice/preferences': 'voice.use',
+  'PUT workspaces/:workspaceId/voice/preferences': 'voice.use',
+  'GET workspaces/:workspaceId/voice/catalog': 'voice.manage',
+  'POST workspaces/:workspaceId/voice/preview': 'voice.manage',
+  'POST workspaces/:workspaceId/voice/transcribe': 'voice.use',
+  'POST workspaces/:workspaceId/voice/speak': 'voice.use',
+  'GET workspaces/:workspaceId/voice/audio': 'voice.use',
+  'GET workspaces/:workspaceId/voice/audio/:audioId': 'voice.use',
+  'POST workspaces/:workspaceId/voice/audio/:audioId/attach': 'voice.use',
+  'DELETE workspaces/:workspaceId/voice/audio/:audioId': 'voice.use',
+  'DELETE workspaces/:workspaceId/voice/audio': 'voice.use',
+  'DELETE workspaces/:workspaceId/voice/workspace-audio': 'voice.manage',
+  'POST workspaces/:workspaceId/voice/workspace-audio/purge-expired': 'voice.manage',
+  'GET workspaces/:workspaceId/voice/usage': 'voice.use',
+  'GET workspaces/:workspaceId/voice/usage/all': 'voice.manage',
+  'GET workspaces/:workspaceId/voice/prices': 'voice.manage',
+  'POST workspaces/:workspaceId/voice/prices': 'voice.manage',
 };
 
 const controllers = [
@@ -319,6 +338,7 @@ const controllers = [
   DocumentsController,
   ReportsController,
   SmartController,
+  VoiceController,
   NotificationsController,
 ];
 
