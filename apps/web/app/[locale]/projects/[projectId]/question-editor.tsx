@@ -1,6 +1,8 @@
 'use client';
 
 import { InfoTip } from '../../../info-tip';
+import { DictateButton } from '../../../voice/dictate-button';
+import { appendTranscript } from '../../../voice/voice-helpers';
 import { useId, useRef, useState, type ReactNode } from 'react';
 
 import { formatNumber, type Locale, textDir } from '../../../i18n';
@@ -41,6 +43,7 @@ export function QuestionEditor({
   onStopEditing,
   onUpload,
   onSuggest,
+  dictationWorkspaceId,
   footer = null,
 }: {
   locale: Locale;
@@ -58,6 +61,8 @@ export function QuestionEditor({
   onUpload: (file: File) => Promise<Attachment>;
   /** Asks the model for a draft answer; the text lands in the field and is never saved by itself. */
   onSuggest?: () => Promise<string>;
+  /** When given, the answer can also be dictated (ADR-0046); the text lands in the field to be checked. */
+  dictationWorkspaceId?: string;
   /** Extra controls under the question, such as a button that saves only this one. */
   footer?: ReactNode;
 }) {
@@ -237,6 +242,20 @@ export function QuestionEditor({
             }));
           }}
         />
+        {dictationWorkspaceId && (
+          <DictateButton
+            locale={locale}
+            workspaceId={dictationWorkspaceId}
+            disabled={disabled}
+            onText={(heard) =>
+              patch((current) => ({
+                ...current,
+                text: appendTranscript(current.text, heard).slice(0, 8000),
+                mode: current.mode ?? 'answered',
+              }))
+            }
+          />
+        )}
         {onSuggest && !noteOnly && (
           <div className="toolbar">
             <button

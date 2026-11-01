@@ -14,7 +14,10 @@ const messages = {
       openai: 'از platform.openai.com ← API keys ← Create new secret key',
       gemini: 'از aistudio.google.com ← Get API key',
       anthropic: 'از console.anthropic.com ← API Keys ← Create Key',
+      elevenlabs: 'از elevenlabs.io ← Developers ← API Keys',
     },
+    voiceOnly:
+      'ElevenLabs فقط برای گفتگوی صوتی است؛ برای اجرای مرحله‌ها یا مدل پیش‌فرض انتخاب نمی‌شود. انتخابش در تنظیمات سامانه ← گفتگوی صوتی است.',
     save: 'ذخیره و بررسی اتصال',
     saving: 'در حال ذخیره و بررسی…',
     check: 'بررسی سلامت',
@@ -67,7 +70,10 @@ const messages = {
       openai: 'platform.openai.com → API keys → Create new secret key',
       gemini: 'aistudio.google.com → Get API key',
       anthropic: 'console.anthropic.com → API Keys → Create Key',
+      elevenlabs: 'elevenlabs.io → Developers → API Keys',
     },
+    voiceOnly:
+      'ElevenLabs is for voice conversation only; it is not used to run stages or as the default model. Choose it under System settings → Voice conversation.',
     save: 'Save and check',
     saving: 'Saving and checking…',
     check: 'Check health',

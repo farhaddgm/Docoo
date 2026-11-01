@@ -1,5 +1,6 @@
 import {
   createAdapter,
+  createSpeechAdapter,
   decryptSecret,
   FakeAdapter,
   estimateCostUsd,
@@ -13,6 +14,8 @@ import {
   type NormalizedModelResponse,
   type PriceSnapshot,
   type ProviderKind,
+  type SpeechProviderAdapter,
+  type SpeechProviderKind,
 } from '@docoo/providers';
 import type { Pool, PoolClient } from 'pg';
 import { correlatedSpan, logCorrelation } from '@docoo/observability';
@@ -48,7 +51,8 @@ export interface InvocationScope {
 
 interface ConnectionRow {
   id: string;
-  provider: ProviderKind;
+  /** A model brand, or `elevenlabs`, which only speaks (ADR-0046). */
+  provider: ProviderKind | 'elevenlabs';
   base_url: string | null;
   status: string;
   disabled_at: string | null;
@@ -71,6 +75,15 @@ export type AdapterFactory = (
   kind: ProviderKind,
   options: { apiKey: string; baseUrl?: string | undefined },
 ) => ModelProviderAdapter;
+
+/** Builds a speech adapter; tests replace this to script a speech provider. */
+export type SpeechAdapterFactory = (
+  kind: SpeechProviderKind,
+  options: { apiKey: string; baseUrl?: string | undefined },
+) => SpeechProviderAdapter;
+
+export const defaultSpeechAdapters: SpeechAdapterFactory = (kind, options) =>
+  createSpeechAdapter(kind, options);
 
 /**
  * Production adapters. The deterministic `fake` provider (never allowed in production) also
@@ -96,12 +109,10 @@ export class ProviderRuntime {
     private readonly masterKey: MasterKey | null,
     private readonly adapters: AdapterFactory = defaultAdapters,
     private readonly capacity: ProviderCapacityOptions = {},
+    private readonly speechAdapters: SpeechAdapterFactory = defaultSpeechAdapters,
   ) {}
 
-  async adapterFor(
-    client: PoolClient,
-    connectionId: string,
-  ): Promise<{ adapter: ModelProviderAdapter; connection: ConnectionRow }> {
+  private async loadConnection(client: PoolClient, connectionId: string): Promise<ConnectionRow> {
     const connection = (
       await client.query<ConnectionRow>(
         `select id, provider, base_url, status, disabled_at, current_secret_version
@@ -111,8 +122,11 @@ export class ProviderRuntime {
     ).rows[0];
     if (!connection || connection.disabled_at)
       throw new ProviderError('permanent', 'ai_connection_unavailable');
-    if (connection.provider === 'fake')
-      return { adapter: this.adapters('fake', { apiKey: 'fake' }), connection };
+    return connection;
+  }
+
+  /** The key of a connection, decrypted only in memory for the call that needs it. */
+  private async decryptKey(client: PoolClient, connection: ConnectionRow): Promise<string> {
     if (!this.masterKey) throw new ProviderError('permanent', 'secret_master_key_missing');
     const secret = (
       await client.query<SecretRow>(
@@ -122,7 +136,7 @@ export class ProviderRuntime {
       )
     ).rows[0];
     if (!secret) throw new ProviderError('auth', 'ai_secret_missing');
-    const apiKey = decryptSecret(
+    return decryptSecret(
       {
         ciphertext: secret.ciphertext,
         iv: secret.iv,
@@ -136,11 +150,43 @@ export class ProviderRuntime {
       this.masterKey,
       secretContext(connection.id, connection.current_secret_version),
     );
+  }
+
+  async adapterFor(
+    client: PoolClient,
+    connectionId: string,
+  ): Promise<{
+    adapter: ModelProviderAdapter;
+    connection: ConnectionRow & { provider: ProviderKind };
+  }> {
+    const loaded = await this.loadConnection(client, connectionId);
+    // A speech-only brand never answers a prompt; it is chosen for voice, not for stage runs.
+    if (loaded.provider === 'elevenlabs')
+      throw new ProviderError('permanent', 'ai_connection_speech_only');
+    const kind = loaded.provider;
+    const connection = { ...loaded, provider: kind };
+    if (kind === 'fake') return { adapter: this.adapters('fake', { apiKey: 'fake' }), connection };
+    const apiKey = await this.decryptKey(client, connection);
     return {
-      adapter: this.adapters(connection.provider, {
-        apiKey,
-        baseUrl: connection.base_url ?? undefined,
-      }),
+      adapter: this.adapters(kind, { apiKey, baseUrl: connection.base_url ?? undefined }),
+      connection,
+    };
+  }
+
+  /** The speech side of a connection (ADR-0046): OpenAI and ElevenLabs keys serve voice. */
+  async speechAdapterFor(
+    client: PoolClient,
+    connectionId: string,
+  ): Promise<{ adapter: SpeechProviderAdapter; connection: ConnectionRow }> {
+    const connection = await this.loadConnection(client, connectionId);
+    const kind = connection.provider;
+    if (kind !== 'openai' && kind !== 'elevenlabs' && kind !== 'fake')
+      throw new ProviderError('permanent', 'ai_connection_no_speech');
+    if (kind === 'fake')
+      return { adapter: this.speechAdapters('fake', { apiKey: 'fake' }), connection };
+    const apiKey = await this.decryptKey(client, connection);
+    return {
+      adapter: this.speechAdapters(kind, { apiKey, baseUrl: connection.base_url ?? undefined }),
       connection,
     };
   }

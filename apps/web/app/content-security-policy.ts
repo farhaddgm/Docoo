@@ -32,6 +32,8 @@ export function contentSecurityPolicy(
       .join(' '),
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
+    // Spoken answers (ADR-0046) are played from a blob URL made in the page; nothing else is media.
+    "media-src 'self' blob:",
     "font-src 'self' data:",
     ["connect-src 'self'", files].filter(Boolean).join(' '),
     "object-src 'none'",

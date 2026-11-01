@@ -4,6 +4,9 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 
 import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
+import { useVoice } from '../../../voice/use-voice';
+import { appendTranscript } from '../../../voice/voice-helpers';
+import { SpeakButton, VoiceBar } from '../../../voice/voice-bar';
 import { useReadOnlyAccess } from '../../resource-access';
 import type { Attachment } from './problem-types';
 import type { RequirementKind, RequirementsData } from './requirements-panel';
@@ -297,6 +300,28 @@ export function StageChat({
   const projectBase = stageBase.replace(/\/stages\/[^/]+$/, '');
   const [, workspaceBase = '', projectId = ''] =
     /^(.*)\/projects\/([^/]+)$/.exec(projectBase) ?? [];
+  const workspaceId = /^\/workspaces\/([^/]+)/.exec(stageBase)?.[1] ?? '';
+  const stageRunId = /\/stages\/([^/]+)$/.exec(stageBase)?.[1] ?? '';
+  const inputRef = useRef('');
+  inputRef.current = input;
+  const postRef = useRef<(kind: 'ask' | 'revision_request', override?: string) => Promise<void>>(
+    () => Promise.resolve(),
+  );
+  /** The stored recording of the message being written, linked to it once it is posted. */
+  const pendingAudio = useRef<string | null>(null);
+  const voice = useVoice({
+    locale,
+    workspaceId,
+    scope: stageRunId ? { conversationKind: 'stage', conversationId: stageRunId } : null,
+    onTranscript: ({ text: heard, sendNow, audioId }) => {
+      pendingAudio.current = audioId;
+      const next = appendTranscript(inputRef.current, heard);
+      setInput(next);
+      if (sendNow) void postRef.current('ask', next);
+    },
+  });
+  /** The newest answer already seen: a later one is read aloud, the ones loaded with the page are not. */
+  const lastAgentId = useRef<string | null | undefined>(undefined);
 
   const loadRequirements = useCallback(async () => {
     try {
@@ -327,8 +352,8 @@ export function StageChat({
     return (caught instanceof ApiError && caught.code && text.errors[caught.code]) || text.generic;
   }
 
-  async function post(kind: 'ask' | 'revision_request') {
-    const content = input.trim();
+  async function post(kind: 'ask' | 'revision_request', override?: string) {
+    const content = (override ?? input).trim();
     if (!content || busy) return;
     setBusy(true);
     setError('');
@@ -349,6 +374,23 @@ export function StageChat({
       await load();
     }
   }
+  postRef.current = post;
+
+  // A new answer is read aloud when the account chose a spoken reply (ADR-0046).
+  const newestAgent = data?.items.findLast(
+    (message) => message.role === 'agent' && message.status === 'done',
+  );
+  useEffect(() => {
+    if (!data) return;
+    const id = newestAgent?.id ?? null;
+    if (lastAgentId.current === undefined) {
+      lastAgentId.current = id;
+      return;
+    }
+    if (id && id !== lastAgentId.current && voice.autoSpeak && newestAgent)
+      void voice.speak(id, newestAgent.content);
+    lastAgentId.current = id;
+  }, [data, newestAgent?.id]);
 
   async function attach(chosen: FileList | null) {
     if (!chosen || chosen.length === 0 || uploading) return;
@@ -553,6 +595,14 @@ export function StageChat({
                     <time className="chat-time" dateTime={message.createdAt}>
                       {formatDateTime(locale, message.createdAt)}
                     </time>
+                    {message.status !== 'failed' && message.role === 'agent' && !readOnly && (
+                      <SpeakButton
+                        locale={locale}
+                        voice={voice}
+                        id={message.id}
+                        content={message.content}
+                      />
+                    )}
                     {message.status !== 'failed' && (
                       <button
                         className="chat-icon-button"
@@ -676,6 +726,15 @@ export function StageChat({
           )}
           {!readOnly && (
             <div className="field-stack">
+              <VoiceBar
+                locale={locale}
+                workspaceId={workspaceId}
+                voice={voice}
+                disabled={busy || full}
+                scope={
+                  stageRunId ? { conversationKind: 'stage', conversationId: stageRunId } : null
+                }
+              />
               <label htmlFor={`${id}-input`} className="visually-hidden">
                 {text.placeholder}
               </label>

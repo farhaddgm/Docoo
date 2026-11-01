@@ -74,6 +74,8 @@ export const WORKSPACE_PERMISSIONS = [
   'smart.read',
   'smart.chat',
   'smart.manage',
+  'voice.use',
+  'voice.manage',
 ] as const;
 
 export type WorkspacePermission = (typeof WORKSPACE_PERMISSIONS)[number];
@@ -101,10 +103,14 @@ export const ROLE_PERMISSIONS: Readonly<Record<MembershipRole, ReadonlySet<Works
   {
     super_admin: new Set(WORKSPACE_PERMISSIONS),
     editor: new Set(
-      WORKSPACE_PERMISSIONS.filter((p) => !/^(provider|retention|smart|integration)\./.test(p)),
+      WORKSPACE_PERMISSIONS.filter(
+        (p) => !/^(provider|retention|smart|integration)\.|^voice\.manage$/.test(p),
+      ),
     ),
     viewer: new Set(
-      WORKSPACE_PERMISSIONS.filter((p) => !/^(provider|retention|smart|integration)\./.test(p)),
+      WORKSPACE_PERMISSIONS.filter(
+        (p) => !/^(provider|retention|smart|integration)\.|^voice\.manage$/.test(p),
+      ),
     ),
   };
 
