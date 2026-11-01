@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Changed
+
+- **Explorations are now projects of kind exploration; the earlier explorations page is gone** ([ADR-0045](docs/adr/0045-exploration-as-a-project-kind.md) step F). The **Explorations** entry in the menu now lists the projects of kind exploration (with a **New exploration** button), and the projects list keeps both kinds with a **Kind** filter. The earlier explorations of 0.47.0 (event, free conversation, candidate problems) have no screens any more: their data stays in the database and can still be read through `GET /explorations` and `GET /explorations/{id}`, but every write route is removed, the permissions `exploration.update` and `exploration.run` are gone, and `POST /projects` no longer takes `explorationCandidate` (use `dimension` to make a project from a selected dimension of an exploration). Projects that were made from a candidate before still show where they came from.
+
 ### Added
 
 - **Make projects from the selected dimensions of an exploration** ([ADR-0045](docs/adr/0045-exploration-as-a-project-kind.md) step E). In the solutions tab of an exploration, every selected dimension has a **Make a project from this dimension** button. It opens the new-project wizard with the dimension's title and its draft problem statement filled in and says where they came from. Creating the project links it to that dimension for good: the project page shows which dimension and exploration it came from, the dimension lists the projects made from it, and you can make more than one project from the same dimension. A dimension that is not selected, or a project that is not an exploration, cannot be used, and a failed creation changes nothing. The exploration itself ends like any project: complete it once the selection and the report are approved. API: `dimension` on `POST /projects`, `dimensionOrigin` on a project, `projects` on each row of the solutions list. Migration 0075.

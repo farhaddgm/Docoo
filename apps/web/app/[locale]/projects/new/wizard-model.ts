@@ -147,41 +147,6 @@ export function seedFields(seed: CandidateSeed) {
 }
 
 /**
- * Builds the seed from the exploration the page loaded, or null when the candidate cannot be
- * used: it is not there, or it was dropped (the API refuses a project from a dropped one).
- */
-export function candidateSeed(
-  detail: {
-    exploration: { id: string; title: string; outputLanguage: 'fa' | 'en' };
-    candidates: readonly {
-      candidateKey: string;
-      title: string;
-      problemDraft: string;
-      expectedOutput: string;
-      state: string;
-    }[];
-  },
-  candidateKey: string,
-): { seed: CandidateSeed | null; reason: 'missing' | 'dropped' | null } {
-  const candidate = detail.candidates.find((item) => item.candidateKey === candidateKey);
-  if (!candidate) return { seed: null, reason: 'missing' };
-  if (candidate.state === 'dropped') return { seed: null, reason: 'dropped' };
-  return {
-    seed: {
-      explorationId: detail.exploration.id,
-      candidateKey: candidate.candidateKey,
-      explorationTitle: detail.exploration.title,
-      candidateTitle: candidate.title,
-      title: candidate.title,
-      initialProblem: candidate.problemDraft,
-      expectedOutput: candidate.expectedOutput,
-      outputLanguage: detail.exploration.outputLanguage,
-    },
-    reason: null,
-  };
-}
-
-/**
  * Builds the seed from a selected dimension of an exploration project (ADR-0045): the dimension's
  * title and its draft problem statement fill the first step. A dimension that was not selected
  * cannot start a project (the API refuses it), so it gives no seed.

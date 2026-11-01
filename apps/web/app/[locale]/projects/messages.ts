@@ -24,6 +24,9 @@ const messages = {
     rowActionsFor: 'اقدام‌های پروژه {code}',
     newProject: 'پروژهٔ جدید',
     newExploration: 'کاوش جدید',
+    explorationsTitle: 'کاوش‌ها',
+    explorationsSubtitle:
+      'هر کاوش مثل یک پروژه همهٔ مرحله‌ها را می‌گذراند، اما به‌جای ایده، ابعاد مختلف یک موضوع یا رویداد را پیشنهاد می‌دهد؛ هر بُعد می‌تواند پروژه‌ای جدا شود.',
     code: 'کد',
     projectTitle: 'عنوان',
     topics: 'حوزه‌ها',
@@ -169,6 +172,9 @@ const messages = {
     rowActionsFor: 'Actions for project {code}',
     newProject: 'New project',
     newExploration: 'New exploration',
+    explorationsTitle: 'Explorations',
+    explorationsSubtitle:
+      'An exploration goes through every stage like a project, but instead of ideas it proposes the dimensions of a topic or event; each dimension can become a project of its own.',
     code: 'Code',
     projectTitle: 'Title',
     topics: 'Topics',

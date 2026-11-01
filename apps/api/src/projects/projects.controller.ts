@@ -101,11 +101,6 @@ const createSchema = z
     expectedOutput: expectedOutputSchema.default(''),
     problemTemplateId: problemTemplateIdSchema.optional(),
     problemPatternVersionId: z.uuid().optional(),
-    // The candidate problem of an exploration this project is made from (ADR-0044).
-    explorationCandidate: z
-      .object({ explorationId: z.uuid(), candidateKey: z.uuid() })
-      .strict()
-      .optional(),
     // A selected dimension of an exploration project this project is made from (ADR-0045).
     dimension: z.object({ projectId: z.uuid(), solutionId: z.uuid() }).strict().optional(),
     outputLanguage: languageSchema.default('fa'),

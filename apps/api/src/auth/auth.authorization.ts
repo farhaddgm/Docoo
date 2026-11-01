@@ -62,8 +62,6 @@ export const WORKSPACE_PERMISSIONS = [
   'business.link',
   'analysis.answer',
   'exploration.read',
-  'exploration.update',
-  'exploration.run',
   'workflow.approve',
   'workflow.reject',
   'workflow.override',

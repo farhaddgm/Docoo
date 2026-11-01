@@ -433,16 +433,9 @@ export function ProjectWizard({
           ...(values.expectedOutput.trim() ? { expectedOutput: values.expectedOutput.trim() } : {}),
           ...(problemTemplateId ? { problemTemplateId } : {}),
           ...(problemPatternVersionId ? { problemPatternVersionId } : {}),
-          ...(seed && seed.origin === 'dimension'
+          ...(seed
             ? { dimension: { projectId: seed.explorationId, solutionId: seed.candidateKey } }
-            : seed
-              ? {
-                  explorationCandidate: {
-                    explorationId: seed.explorationId,
-                    candidateKey: seed.candidateKey,
-                  },
-                }
-              : {}),
+            : {}),
           outputLanguage: values.outputLanguage,
           analysisProfile: values.analysisProfile ?? 'full',
           ...(kind === 'exploration' ? { kind } : {}),
@@ -665,18 +658,12 @@ export function ProjectWizard({
             )}
             {seed && (
               <p className="notice" role="note">
-                {fill(seed.origin === 'dimension' ? text.dimensionBanner : text.seedBanner, {
+                {fill(text.dimensionBanner, {
                   candidate: seed.candidateTitle,
                   exploration: seed.explorationTitle,
                 })}{' '}
-                <Link
-                  href={
-                    seed.origin === 'dimension'
-                      ? (`/${locale}/projects/${seed.explorationId}` as Route)
-                      : (`/${locale}/explorations/${seed.explorationId}` as Route)
-                  }
-                >
-                  {seed.origin === 'dimension' ? text.dimensionOpen : text.seedOpen}
+                <Link href={`/${locale}/projects/${seed.explorationId}` as Route}>
+                  {text.dimensionOpen}
                 </Link>
               </p>
             )}
