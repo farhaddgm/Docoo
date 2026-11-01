@@ -25,3 +25,4 @@ export function createAdapter(kind: ProviderKind, options: AdapterOptions): Mode
 }
 export * from './schema-compat.js';
 export * from './openai-embedding-adapter.js';
+export * from './speech.js';

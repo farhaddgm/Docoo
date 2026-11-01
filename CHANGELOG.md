@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **Voice conversation, step 1: contracts and data** ([ADR-0046](docs/adr/0046-voice-conversation.md)). The base for talking to Docoo by voice: a speech provider contract (speech to text, text to speech, models, voices) with a fake adapter, the voice modes (text or voice in, text or voice out), and migration 0076 with a separate usage ledger for voice (`voice_invocations`), voice prices, optional stored recordings of an administrator, each administrator's chosen mode, the `elevenlabs` provider brand and the `voice.*` system settings (all off by default). Nothing is visible yet; the provider adapters, the API and the chat buttons follow in the next steps.
+
 ## [0.48.0] — 2026-11-01
 
 An exploration is now a kind of project (ADR-0045). It goes through the same stages as a project — analysis, research, ideation, documents, evaluation — with three differences: the analysis is about an event or topic, research is off unless you confirm a research plan, and ideation proposes the **dimensions** of the topic (each a problem that can become a project of its own). The **Explorations** screens of 0.47.0 are replaced by this.

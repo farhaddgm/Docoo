@@ -777,7 +777,13 @@ export const retrievalSnapshots = pgTable(
 
 // Phase 3: provider orchestration (AI-*) and project workflows (WF-*).
 
-export const providerKind = pgEnum('provider_kind', ['openai', 'gemini', 'anthropic', 'fake']);
+export const providerKind = pgEnum('provider_kind', [
+  'openai',
+  'gemini',
+  'anthropic',
+  'fake',
+  'elevenlabs',
+]);
 export const providerStatus = pgEnum('provider_status', [
   'unconfigured',
   'configured',
@@ -2929,3 +2935,110 @@ export const projectMeetingRuns = pgTable(
     ),
   ],
 );
+
+/** ADR-0046: the usage ledger of voice calls, apart from model_invocations; append-only. */
+export const voiceInvocations = pgTable(
+  'voice_invocations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id),
+    connectionId: uuid('connection_id').references(() => providerConnections.id, {
+      onDelete: 'set null',
+    }),
+    provider: providerKind('provider').notNull(),
+    /** `stt` is speech to text (measured in seconds), `tts` text to speech (in characters). */
+    kind: text('kind').notNull(),
+    model: text('model').notNull(),
+    voiceId: text('voice_id'),
+    actorId: uuid('actor_id'),
+    conversationKind: text('conversation_kind'),
+    conversationId: uuid('conversation_id'),
+    messageId: uuid('message_id'),
+    status: invocationStatus('status').notNull(),
+    audioSeconds: real('audio_seconds'),
+    characters: integer('characters'),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    costUsd: real('cost_usd'),
+    priceId: uuid('price_id'),
+    latencyMs: integer('latency_ms'),
+    providerRequestId: text('provider_request_id'),
+    errorCode: text('error_code'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('voice_invocations_workspace_idx').on(table.workspaceId, table.createdAt)],
+);
+
+/** ADR-0046: price of a voice model per minute, per thousand characters or per million tokens. */
+export const voicePrices = pgTable(
+  'voice_prices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id),
+    provider: providerKind('provider').notNull(),
+    model: text('model').notNull(),
+    kind: text('kind').notNull(),
+    perMinute: real('per_minute'),
+    per1kCharacters: real('per_1k_characters'),
+    inputPerMillion: real('input_per_million'),
+    outputPerMillion: real('output_per_million'),
+    effectiveFrom: timestamp('effective_from', { withTimezone: true }).notNull(),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('voice_prices_lookup_idx').on(
+      table.workspaceId,
+      table.provider,
+      table.model,
+      table.kind,
+      table.effectiveFrom,
+    ),
+  ],
+);
+
+/** ADR-0046: the stored recording of an administrator message (only when the setting is on). */
+export const conversationAudio = pgTable(
+  'conversation_audio',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    conversationKind: text('conversation_kind').notNull(),
+    conversationId: uuid('conversation_id').notNull(),
+    messageId: uuid('message_id'),
+    objectKey: text('object_key').notNull().unique(),
+    mime: text('mime').notNull(),
+    bytes: integer('bytes').notNull(),
+    durationMs: integer('duration_ms').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('conversation_audio_conversation_idx').on(
+      table.userId,
+      table.conversationKind,
+      table.conversationId,
+    ),
+  ],
+);
+
+/** ADR-0046: how an administrator speaks (input) and hears Docoo (output) by default. */
+export const voicePreferences = pgTable('voice_preferences', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  inputMode: text('input_mode').notNull().default('text'),
+  outputMode: text('output_mode').notNull().default('text'),
+  autoSend: boolean('auto_send').notNull().default(false),
+  volume: real('volume').notNull().default(1),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
