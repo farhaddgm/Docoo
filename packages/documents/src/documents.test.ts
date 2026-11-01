@@ -19,6 +19,7 @@ import {
   scoreSolution,
   signManifest,
   SlideOverflowError,
+  EXPLORATION_RUBRIC,
   SYSTEM_RUBRIC,
   validateDocument,
   verifyArtifact,
@@ -387,6 +388,24 @@ describe('evaluation (EVA-001/002)', () => {
 
   it('has a valid system rubric', () => {
     expect(rubricProblem(SYSTEM_RUBRIC)).toBeNull();
+  });
+
+  it('has a valid exploration rubric that keeps format compliance deterministic (ADR-0045)', () => {
+    expect(rubricProblem(EXPLORATION_RUBRIC)).toBeNull();
+    expect(EXPLORATION_RUBRIC.criteria.map((criterion) => criterion.key)).toContain(
+      'format_compliance',
+    );
+    const scores = EXPLORATION_RUBRIC.criteria.map((criterion) => ({
+      criterion: criterion.key,
+      score: 90,
+      evidence: `evidence for ${criterion.key}`,
+    }));
+    const result = decideEvaluation(EXPLORATION_RUBRIC, scores, [], {
+      ok: true,
+      problems: [],
+      location: 'version 1',
+    });
+    expect(result.status).toBe('passed');
   });
 
   it('passes good work and records evidence per dimension', () => {

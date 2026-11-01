@@ -786,6 +786,16 @@
       ],
       "note": "Ideation of an exploration asks for dimensions and the solutions step scores them on importance, urgency, clarity and independence (a new exploration starts with those criteria); an ordinary project keeps its ideation prompt, its solutions prompt and its six default criteria."
     },
+    "FR-EXP-012": {
+      "status": "tested",
+      "evidence": [
+        "packages/orchestration/src/writing.test.ts",
+        "packages/orchestration/src/analysis.test.ts",
+        "packages/documents/src/documents.test.ts",
+        "apps/api/test/documents.integration.test.ts"
+      ],
+      "note": "The documenter of an exploration is asked for a report on the selected dimension and the evaluator uses the exploration rubric and its instruction; the prompts and the system rubric of an ordinary project are equal to the ones before."
+    },
     "FR-AUD-001": {
       "status": "tested",
       "evidence": [
