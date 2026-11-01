@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "c43b666683fc50d9677b7de3b8f143b1a279e5f8"
+    "source_commit": "00b3fc5deb0bb22d6a25bb6639319733d8e4b1a7"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-10-31T20:16:21.719Z",
+    "synced_at": "2026-11-01T04:03:29.517Z",
     "created": 0,
-    "updated": 2,
-    "unchanged": 72,
+    "updated": 1,
+    "unchanged": 73,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -137,13 +137,13 @@
       "version": "1.2.0",
       "status": "proposed",
       "owner": "Product Engineering",
-      "checksum_sha256": "afa092939d70d1754ef71825f9376f6d5cf8e2ea25dfda5629dfecc285f83148",
+      "checksum_sha256": "c9ac11dd540801f59527512f8b49775aaaf8c0d9f26a297dd25c2ffd23910dd2",
       "notion_page_id": "3e55a24a-6668-81ff-aacf-de5e02637357",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881ffaacfde5e02637357?pvs=204",
       "index_row_page_id": "3e55a24a-6668-8144-aa3f-deadfcb6207b",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a66688144aa3fdeadfcb6207b",
-      "synced_commit": "c43b666683fc50d9677b7de3b8f143b1a279e5f8",
-      "synced_at": "2026-10-31T20:16:21.719Z"
+      "synced_commit": "00b3fc5deb0bb22d6a25bb6639319733d8e4b1a7",
+      "synced_at": "2026-11-01T04:03:29.517Z"
     },
     "DOCOO-NONFUNCTIONAL-REQUIREMENTS": {
       "path": "docs/01-product/03-non-functional-requirements.md",
