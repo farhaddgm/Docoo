@@ -195,6 +195,15 @@ const messages = {
         'دانش تأییدشده‌ای برای این تحقیق پیدا نشد؛ یافته‌ها فقط بر دانش عمومی مدل تکیه دارند.',
       webOff:
         'جستجوی زندهٔ وب در این تحقیق انجام نشده است؛ منبع آن فقط دانش تأییدشدهٔ داخلی است (اگر چیزی پیدا شده باشد). تنظیم «research.web_enabled» آن را روشن می‌کند.',
+      webLoop: '{rounds} دور جست‌وجو؛ پایان: {reason}',
+      webStop: {
+        target_reached: 'به هدف تعداد منبع رسید',
+        max_searches: 'به حداکثر تعداد جست‌وجو رسید',
+        max_rounds: 'به حداکثر تعداد دور رسید',
+        no_new_findings: 'دور آخر یافتهٔ تازه‌ای نیاورد',
+        cost_limit: 'سقف هزینه',
+        failed: 'یکی از دورها شکست خورد؛ یافته‌های دورهای قبل نگه داشته شد',
+      } as Record<string, string>,
       webHeading: 'جستجوی وب',
       webUsed:
         '{queries} جست‌وجو انجام شد و {pages} صفحه به مدل داده شد. این صفحه‌ها دانش تأییدشده نیستند.',
@@ -478,6 +487,15 @@ const messages = {
         'No approved knowledge was found for this research; the findings rest on the model’s general knowledge only.',
       webOff:
         'No live web search was made for this research; its only source is approved internal knowledge, if any was found. The setting "research.web_enabled" turns it on.',
+      webLoop: '{rounds} search round(s); ended because: {reason}',
+      webStop: {
+        target_reached: 'the source target was reached',
+        max_searches: 'the maximum number of searches was reached',
+        max_rounds: 'the maximum number of rounds was reached',
+        no_new_findings: 'the last round found nothing new',
+        cost_limit: 'the cost limit',
+        failed: 'a round failed; what earlier rounds found was kept',
+      } as Record<string, string>,
       webHeading: 'Web search',
       webUsed:
         '{queries} search(es) ran and {pages} page(s) were given to the model. These pages are not approved knowledge.',

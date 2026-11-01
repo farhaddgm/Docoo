@@ -48,6 +48,14 @@ function WebBlock({
     return (
       <Block title={text.webHeading}>
         <p>{fill(text.webUsed, { queries: num(queries.length), pages: num(pages.length) })}</p>
+        {typeof web?.['rounds'] === 'number' && (
+          <p className="muted">
+            {fill(text.webLoop, {
+              rounds: num(web['rounds']),
+              reason: text.webStop[asText(web['stop'])] ?? asText(web['stop']),
+            })}
+          </p>
+        )}
         {queries.length > 0 && (
           <>
             <h5>{text.webQueries}</h5>
