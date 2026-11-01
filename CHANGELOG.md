@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **Bounded web research loop.** The web side of the research stage now runs in rounds. Each later round is told which searches and pages the earlier ones used and looks for what is still missing. The administrator sets the least and the most searches (`research.web_min_searches`, `research.web_max_searches`, now up to 50), the least and the most rounds (`research.web_min_rounds`, `research.web_max_rounds`), the number of pages that ends the loop early (`research.web_target_sources`, 0 = never) and how many pages are kept for the prompt (`research.web_source_limit`, default 12, up to 100). A maximum always wins over a minimum. The research view shows the rounds and why the loop ended (target reached, maximum searches, maximum rounds, nothing new, cost limit, or a failed round whose earlier findings are kept). **Migration 0078 runs on update.**
+
 ## [0.49.0] — 2026-11-01
 
 Docoo can be talked to by voice (ADR-0046). In every chat box you can record your voice and hear the answer: you speak and read, you speak and hear, or you type and hear, with OpenAI (ChatGPT) or ElevenLabs as the voice provider. The system settings choose the brand, the model versions and the voice (with a sample to hear), voice usage has its own section on the costs page, and whether the administrator's voice is stored — and the button to delete it — is under the owner's control. Voice is off until the owner switches it on. **Migrations 0076 and 0077 run on update**; they add the voice ledger, prices, stored recordings and preferences tables, the `elevenlabs` provider brand and the `voice.*` settings.

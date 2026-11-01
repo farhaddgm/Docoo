@@ -260,6 +260,9 @@ export interface WebRun {
   readonly code: string | null;
   readonly queries: readonly string[];
   readonly sources: readonly WebPassage[];
+  /** Rounds of the search loop and why it stopped; absent in older outputs and single searches. */
+  readonly rounds?: number | undefined;
+  readonly stop?: string | undefined;
 }
 
 export const NO_WEB: WebRun = { status: 'off', code: null, queries: [], sources: [] };
@@ -287,6 +290,8 @@ export interface ResearchWebInfo {
   readonly status: WebRun['status'];
   readonly code: string | null;
   readonly queries: readonly string[];
+  readonly rounds?: number | undefined;
+  readonly stop?: string | undefined;
   readonly sources: readonly {
     readonly ref: string;
     readonly url: string;
@@ -640,6 +645,8 @@ export function verifyResearch(input: {
         status: web.status,
         code: web.code,
         queries: web.queries,
+        ...(web.rounds !== undefined ? { rounds: web.rounds } : {}),
+        ...(web.stop !== undefined ? { stop: web.stop } : {}),
         sources: web.sources.map((source) => ({
           ref: source.ref,
           url: source.url,
