@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.49.0] — 2026-11-01
+
+Docoo can be talked to by voice (ADR-0046). In every chat box you can record your voice and hear the answer: you speak and read, you speak and hear, or you type and hear, with OpenAI (ChatGPT) or ElevenLabs as the voice provider. The system settings choose the brand, the model versions and the voice (with a sample to hear), voice usage has its own section on the costs page, and whether the administrator's voice is stored — and the button to delete it — is under the owner's control. Voice is off until the owner switches it on. **Migrations 0076 and 0077 run on update**; they add the voice ledger, prices, stored recordings and preferences tables, the `elevenlabs` provider brand and the `voice.*` settings.
+
 ### Added
 
 - **Voice conversation, step 1: contracts and data** ([ADR-0046](docs/adr/0046-voice-conversation.md)). The base for talking to Docoo by voice: a speech provider contract (speech to text, text to speech, models, voices) with a fake adapter, the voice modes (text or voice in, text or voice out), and migration 0076 with a separate usage ledger for voice (`voice_invocations`), voice prices, optional stored recordings of an administrator, each administrator's chosen mode, the `elevenlabs` provider brand and the `voice.*` system settings (all off by default). Nothing is visible yet; the provider adapters, the API and the chat buttons follow in the next steps.
