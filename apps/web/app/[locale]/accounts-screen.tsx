@@ -184,9 +184,12 @@ async function api<T>(url: string, method = 'GET', body?: unknown): Promise<T> {
 export function AccountsScreen({
   locale,
   initialTab = 'users',
+  embedded = false,
 }: {
   locale: Locale;
   initialTab?: 'users' | 'google';
+  /** Render only the content (no app shell), for use inside another page. */
+  embedded?: boolean;
 }) {
   const t = labels[locale];
   // One page for everything about who may sign in: the accounts, and (owner only) the Gmail list.
@@ -265,18 +268,21 @@ export function AccountsScreen({
       setBusy(false);
     }
   }
-  const shell = (body: ReactNode) => (
-    <AppShell
-      locale={locale}
-      title={t.pageTitle}
-      subtitle={t.pageHelp}
-      identity={identity && !denied ? identity : undefined}
-      showNavigation={Boolean(identity) && !denied}
-      workspaceId={identity && !denied ? identity.workspaces[0]?.id : undefined}
-    >
-      {body}
-    </AppShell>
-  );
+  const shell = (body: ReactNode) =>
+    embedded ? (
+      body
+    ) : (
+      <AppShell
+        locale={locale}
+        title={t.pageTitle}
+        subtitle={t.pageHelp}
+        identity={identity && !denied ? identity : undefined}
+        showNavigation={Boolean(identity) && !denied}
+        workspaceId={identity && !denied ? identity.workspaces[0]?.id : undefined}
+      >
+        {body}
+      </AppShell>
+    );
   if (guest)
     return shell(
       <section className="auth-card">
