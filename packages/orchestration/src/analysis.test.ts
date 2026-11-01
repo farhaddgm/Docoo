@@ -251,6 +251,48 @@ describe('analyst prompts', () => {
     expect(prompt.instructions).toContain('At least 30 questions');
   });
 
+  describe('exploration kind (ADR-0045)', () => {
+    const base = {
+      definition: defaultDefinition('analyst'),
+      language: 'en' as const,
+      projectTitle: 'p',
+      problem: 'A new regulation was announced',
+      topics: [],
+      feedback: [],
+      analysis: context(),
+    };
+
+    it('leaves the prompts of an ordinary project byte for byte as before', () => {
+      const round = roundPrompt(base);
+      expect(roundPrompt({ ...base, kind: 'standard' })).toEqual(round);
+      expect(round.instructions).not.toContain('This project is an exploration');
+      const stage = stagePrompt({ ...base, stage: 'analysis', previous: [] });
+      expect(stagePrompt({ ...base, stage: 'analysis', previous: [], kind: 'standard' })).toEqual(
+        stage,
+      );
+      expect(stage.instructions).not.toContain('This project is an exploration');
+    });
+
+    it('asks the analyst about an event or topic, in every round and in the definition', () => {
+      const round = roundPrompt({ ...base, kind: 'exploration' });
+      expect(round.instructions).toContain('This project is an exploration');
+      const definition = stagePrompt({
+        ...base,
+        stage: 'analysis',
+        previous: [],
+        kind: 'exploration',
+      });
+      expect(definition.instructions).toContain('This project is an exploration');
+    });
+
+    it('adds nothing to the other stages', () => {
+      for (const stage of ['research', 'ideation', 'documentation', 'evaluation'] as const) {
+        const plain = stagePrompt({ ...base, stage, previous: [] });
+        expect(stagePrompt({ ...base, stage, previous: [], kind: 'exploration' })).toEqual(plain);
+      }
+    });
+  });
+
   describe('expected output (ADR-0043)', () => {
     const base = {
       definition: defaultDefinition('analyst'),

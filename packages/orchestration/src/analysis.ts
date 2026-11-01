@@ -2,6 +2,7 @@ import type { ProblemPatternDefinition } from '@docoo/contracts';
 import {
   ANALYSIS_LIMITS,
   EXPECTED_OUTPUT_ANALYST_RULES,
+  EXPLORATION_ANALYST_RULES,
   type AnalysisLimits,
   type AnalysisProfile,
   composeInstructions,
@@ -278,6 +279,8 @@ export interface RoundRequestInput {
   readonly problem: string;
   /** What the administrator expects to receive (ADR-0043); empty or absent when not said. */
   readonly expectedOutput?: string | undefined;
+  /** `exploration` asks about an event or topic (ADR-0045); absent or `standard` changes nothing. */
+  readonly kind?: 'standard' | 'exploration' | undefined;
   readonly topics: readonly string[];
   /** Reviewer feedback on rejected problem definitions. */
   readonly feedback: readonly string[];
@@ -325,6 +328,7 @@ export function roundPrompt(input: RoundRequestInput): { instructions: string; m
       'In "understood" summarise what is now clear; in "nextAmbiguity" name the most important open point.',
       'Use followUpOf with the number of an earlier question when a new question follows from its answer, otherwise 0.',
       ...(input.expectedOutput?.trim() ? EXPECTED_OUTPUT_ANALYST_RULES : []),
+      ...(input.kind === 'exploration' ? EXPLORATION_ANALYST_RULES : []),
       ...(input.business
         ? [
             'businessProfile already tells you about the company: do not ask what it answers, and ask instead what it leaves open for this problem.',

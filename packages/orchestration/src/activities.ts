@@ -233,10 +233,11 @@ export function createOrchestrationActivities(
             project_title: string;
             problem: string;
             expected_output: string;
+            kind: 'standard' | 'exploration';
             language: 'fa' | 'en';
             problem_pattern_snapshot: unknown;
           }>(
-            `select s.stage, p.title as project_title, p.initial_problem as problem, p.expected_output, p.output_language as language, p.problem_pattern_snapshot
+            `select s.stage, p.title as project_title, p.initial_problem as problem, p.expected_output, p.kind, p.output_language as language, p.problem_pattern_snapshot
                from stage_runs s join projects p on p.id = s.project_id where s.id = $1`,
             [ref.stageRunId],
           )
@@ -399,10 +400,17 @@ export function createOrchestrationActivities(
           : stage.stage === 'research'
             ? await confirmedResearchPlan(client, ref.projectId)
             : null;
-        const patternResearchBlocked =
+        // An exploration needs no research unless the administrator confirmed a research plan
+        // (ADR-0045): without one the stage ends with zero sources and says so.
+        const explorationResearchOff =
           stage.stage === 'research' &&
-          !!problemPattern &&
-          (problemPattern.research.mode === 'never' || !researchPlan?.questions.length);
+          stage.kind === 'exploration' &&
+          !researchPlan?.questions.length;
+        const patternResearchBlocked =
+          explorationResearchOff ||
+          (stage.stage === 'research' &&
+            !!problemPattern &&
+            (problemPattern.research.mode === 'never' || !researchPlan?.questions.length));
         const offsets = followup ? refOffsetsOf(followup.previous) : { knowledge: 0, web: 0 };
         const research: ResearchRun | null =
           stage.stage === 'research' && !patternResearchBlocked
@@ -433,6 +441,7 @@ export function createOrchestrationActivities(
           projectTitle: stage.project_title,
           problem: stage.problem,
           expectedOutput: stage.expected_output,
+          ...(stage.kind === 'exploration' ? { kind: stage.kind } : {}),
           topics: topics.rows.map((row) => row.title),
           // Later stages see the research as claims with their support, not as raw evidence.
           previous: previous.rows.map((row) =>
