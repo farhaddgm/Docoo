@@ -32,7 +32,7 @@ describe('password reset mail (AUTH-002)', () => {
     };
     expect(body.from.address).toBe('no-reply@docoo.example');
     expect(body.subject).toContain('password reset');
-    expect(body.text).toContain('گذرواژهٔ جدید');
+    expect(body.text).toContain('گذرواژه جدید');
     expect(body.text).toContain(
       'https://docoo.example/fa/reset-password#token=secret-token%2B%2F%3D',
     );

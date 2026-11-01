@@ -107,10 +107,10 @@ function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: stri
       <p role="alert">
         {identity?.user.role === 'viewer'
           ? locale === 'fa'
-            ? 'نقش مشاهده‌گر اجازهٔ ساخت پروژه ندارد.'
+            ? 'نقش مشاهده‌گر اجازه ساخت پروژه ندارد.'
             : 'Viewers cannot create projects.'
           : locale === 'fa'
-            ? 'این حساب اجازهٔ ساخت پروژه ندارد. از مالک بخواهید آن را فعال کند.'
+            ? 'این حساب اجازه ساخت پروژه ندارد. از مالک بخواهید آن را فعال کند.'
             : 'This account may not create projects. Ask the owner to allow it.'}
       </p>
     );

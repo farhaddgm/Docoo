@@ -6,7 +6,13 @@ import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../i18n';
 import { useVoice } from '../../../voice/use-voice';
 import { appendTranscript } from '../../../voice/voice-helpers';
-import { SpeakButton, VoiceBar } from '../../../voice/voice-bar';
+import {
+  MicButton,
+  SpeakButton,
+  SpeakerMenu,
+  VoiceModes,
+  VoiceStatus,
+} from '../../../voice/voice-bar';
 import { useReadOnlyAccess } from '../../resource-access';
 import type { Attachment } from './problem-types';
 import type { RequirementKind, RequirementsData } from './requirements-panel';
@@ -76,8 +82,6 @@ const copy = {
     attachRemove: 'برداشتن {name}',
     attachUploading: 'در حال بارگذاری فایل…',
     attachLimit: 'حداکثر {n} فایل را می‌توان با یک پیام فرستاد.',
-    attachHint:
-      'ایجنت متن فایل‌های پیوست را هم می‌خواند؛ فایلی که هنوز پردازش نشده باشد را نمی‌بیند.',
     copy: 'کپی',
     copied: 'کپی شد',
     copyFailed: 'کپی انجام نشد.',
@@ -97,15 +101,15 @@ const copy = {
       '{n} الزام خروجی بعد از ساخته شدن این خروجی ثبت شده است و ممکن است در آن لحاظ نشده باشد.',
     behindAction: 'پیشنهاد متن درخواست بازبینی',
     behindNoGate: 'این مرحله اکنون منتظر بازبینی نیست؛ برای اعمال آن‌ها مرحله را از نو اجرا کنید.',
-    behindPrefix: 'لطفاً خروجی را با این الزام‌های تازه بازبینی کن:',
+    behindPrefix: 'لطفا خروجی را با این الزام‌های تازه بازبینی کن:',
     behindMust: 'باید داشته باشد',
     behindMustNot: 'نباید داشته باشد',
     presetsLabel: 'پیام‌های آماده',
-    title: 'گفتگو با ایجنت این مرحله',
-    askOnly: 'این مرحله اکنون منتظر بازبینی شما نیست؛ فقط می‌توانید دربارهٔ خروجی بپرسید.',
-    help: 'می‌توانید دربارهٔ همین خروجی بپرسید. ایجنت فقط توضیح می‌دهد و خروجی را تغییر نمی‌دهد؛ برای اصلاح، «درخواست بازبینی» بفرستید و سپس آن را به‌عنوان رد، برای تلاش بعدی ارسال کنید.',
+    title: 'گفتگو با ایجنت',
+    askOnly: 'این مرحله اکنون منتظر بازبینی شما نیست؛ فقط می‌توانید درباره خروجی بپرسید.',
+    help: 'می‌توانید درباره همین خروجی بپرسید. ایجنت فقط توضیح می‌دهد و خروجی را تغییر نمی‌دهد؛ برای اصلاح، «درخواست بازبینی» بفرستید و سپس آن را به‌عنوان رد، برای تلاش بعدی ارسال کنید.',
     placeholder: 'پیام شما به ایجنت…',
-    ask: 'پرسش',
+    ask: 'ارسال',
     revise: 'درخواست بازبینی',
     sending: 'ایجنت در حال پاسخ است…',
     you: 'شما',
@@ -124,12 +128,12 @@ const copy = {
       STAGE_CHAT_LIMIT: 'سقف پیام‌های این مرحله پر شده است.',
       AI_NOT_CONFIGURED: 'هوش مصنوعی هنوز تنظیم نشده است.',
       WORKFLOW_OUTPUT_SUPERSEDED: 'این نسخه از خروجی عوض شده است؛ صفحه را تازه کنید.',
-      STAGE_CHAT_ALREADY_SENT: 'این درخواست قبلاً فرستاده شده است.',
+      STAGE_CHAT_ALREADY_SENT: 'این درخواست قبلا فرستاده شده است.',
       ANALYSIS_UPLOAD_FAILED: 'بارگذاری فایل انجام نشد.',
-      SOURCE_INVALID_REQUEST: 'این نوع یا اندازهٔ فایل پذیرفته نمی‌شود.',
+      SOURCE_INVALID_REQUEST: 'این نوع یا اندازه فایل پذیرفته نمی‌شود.',
       STAGE_CHAT_ATTACHMENT_UNUSABLE: 'یکی از فایل‌های پیوست رد شده یا پردازش نشده است.',
       STAGE_CHAT_ATTACHMENT_NOT_READY: 'یکی از فایل‌های پیوست هنوز بارگذاری نشده است.',
-      OUTPUT_REQUIREMENT_DUPLICATE: 'این الزام قبلاً ثبت شده است.',
+      OUTPUT_REQUIREMENT_DUPLICATE: 'این الزام قبلا ثبت شده است.',
       OUTPUT_REQUIREMENT_LIMIT:
         'به سقف الزام‌های فعال رسیده‌اید؛ در تب «الزامات خروجی» یکی را بردارید.',
       OUTPUT_REQUIREMENT_INVALID_REQUEST: 'نوع و متنی دست‌کم سه حرفی لازم است.',
@@ -142,8 +146,6 @@ const copy = {
     attachRemove: 'Remove {name}',
     attachUploading: 'Uploading the file…',
     attachLimit: 'At most {n} files can go with one message.',
-    attachHint:
-      'The agent also reads the text of attached files; it cannot see a file that is still being processed.',
     copy: 'Copy',
     copied: 'Copied',
     copyFailed: 'Could not copy.',
@@ -167,11 +169,11 @@ const copy = {
     behindMust: 'Must have',
     behindMustNot: 'Must not have',
 
-    title: 'Talk to the agent of this stage',
+    title: 'Talk to the agent',
     askOnly: 'This stage is not waiting for your review now; you can only ask about its output.',
     help: 'Ask about this output. The agent only explains and never changes it. To get it corrected, send a revision request, then send it back as a rejection for the next attempt.',
     placeholder: 'Your message to the agent…',
-    ask: 'Ask',
+    ask: 'Send',
     revise: 'Revision request',
     sending: 'The agent is answering…',
     you: 'You',
@@ -726,15 +728,6 @@ export function StageChat({
           )}
           {!readOnly && (
             <div className="field-stack">
-              <VoiceBar
-                locale={locale}
-                workspaceId={workspaceId}
-                voice={voice}
-                disabled={busy || full}
-                scope={
-                  stageRunId ? { conversationKind: 'stage', conversationId: stageRunId } : null
-                }
-              />
               <label htmlFor={`${id}-input`} className="visually-hidden">
                 {text.placeholder}
               </label>
@@ -788,7 +781,6 @@ export function StageChat({
                   type="button"
                   aria-label={text.attach}
                   title={text.attach}
-                  aria-describedby={`${id}-attach-hint`}
                   disabled={busy || full || uploading || files.length >= MAX_ATTACHMENTS}
                   onClick={() => picker.current?.click()}
                 >
@@ -814,6 +806,7 @@ export function StageChat({
                     {text.revise}
                   </button>
                 )}
+                <MicButton locale={locale} voice={voice} disabled={busy || full} />
                 {data && (
                   <small className="muted">
                     {fill(text.used, {
@@ -822,6 +815,18 @@ export function StageChat({
                     })}
                   </small>
                 )}
+                <VoiceModes locale={locale} voice={voice} />
+                <SpeakerMenu
+                  locale={locale}
+                  workspaceId={workspaceId}
+                  voice={voice}
+                  scope={
+                    stageRunId ? { conversationKind: 'stage', conversationId: stageRunId } : null
+                  }
+                />
+              </div>
+              <div className="toolbar">
+                <VoiceStatus locale={locale} voice={voice} />
               </div>
               {quick.length > 0 && (
                 <div className="toolbar" role="group" aria-label={text.presetsLabel}>
@@ -838,9 +843,6 @@ export function StageChat({
                   ))}
                 </div>
               )}
-              <small id={`${id}-attach-hint`} className="muted">
-                {text.attachHint}
-              </small>
               {uploading && (
                 <p className="muted" role="status">
                   {text.attachUploading}

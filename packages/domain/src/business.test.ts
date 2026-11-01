@@ -37,7 +37,7 @@ const exportOf = (overrides: Record<string, unknown> = {}) => ({
   sections: [
     {
       key: 'OVERVIEW',
-      content: 'ویپاد شعبهٔ دیجیتال است.',
+      content: 'ویپاد شعبه دیجیتال است.',
       source: 'ADMIN',
       reviewedAt: '2026-10-01T00:00:00.000Z',
     },
@@ -67,7 +67,7 @@ const exportOf = (overrides: Record<string, unknown> = {}) => ({
   ],
   terms: [
     { term: 'ویپاد', kind: 'USE', alternatives: ['وی پاد', 'WePod'], isActive: true },
-    { term: 'بانک ویپاد', kind: 'AVOID', alternatives: ['شعبهٔ دیجیتال'], isActive: true },
+    { term: 'بانک ویپاد', kind: 'AVOID', alternatives: ['شعبه دیجیتال'], isActive: true },
   ],
   notes: [
     {
@@ -82,7 +82,7 @@ const exportOf = (overrides: Record<string, unknown> = {}) => ({
     {
       kind: 'URL',
       url: 'https://example.com/about',
-      title: 'دربارهٔ ما',
+      title: 'درباره ما',
       status: 'READY',
       contentChars: 5000,
       excerpt: 'متن',
@@ -98,7 +98,7 @@ const exportOf = (overrides: Record<string, unknown> = {}) => ({
   ],
   audit: {
     score: 71,
-    summary: 'نسبتاً کامل',
+    summary: 'نسبتا کامل',
     strengths: ['لحن روشن'],
     issues: [
       { severity: 'HIGH', status: 'OPEN', type: 'MISSING', target: 'PERSONAS', title: 'پرسونا' },
@@ -229,7 +229,7 @@ describe('what each agent receives', () => {
     const writer = businessPrompt(content(), { role: 'documenter', now })!;
     expect(writer.data.terminology).toEqual([
       { term: 'ویپاد', rule: 'always write exactly', alternatives: ['وی پاد', 'WePod'] },
-      { term: 'بانک ویپاد', rule: 'never write', alternatives: ['شعبهٔ دیجیتال'] },
+      { term: 'بانک ویپاد', rule: 'never write', alternatives: ['شعبه دیجیتال'] },
     ]);
     expect(writer.data.adminNotes).toEqual(['همیشه خطاب را محترمانه بنویس.']);
   });
@@ -289,7 +289,7 @@ describe('brand terminology check', () => {
   });
 
   it('finds nothing in clean text, matches whole words only and ignores inactive terms', () => {
-    expect(checkTerms('ویپاد شعبهٔ دیجیتال است', terms)).toEqual([]);
+    expect(checkTerms('ویپاد شعبه دیجیتال است', terms)).toEqual([]);
     expect(checkTerms('سویی پادشاه', terms)).toEqual([]);
     expect(checkTerms('', terms)).toEqual([]);
     expect(

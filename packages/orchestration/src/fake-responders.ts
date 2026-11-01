@@ -45,7 +45,7 @@ export function fakeResearchResponder(request: NormalizedModelRequest): unknown 
     const sentence = page['text'].split(/(?<=[.!؟?])\s/u)[0] ?? page['text'];
     findings.push({
       claim: persian
-        ? `صفحهٔ وب «${String(page['title'])}» به این مسئله مربوط است.`
+        ? `صفحه وب «${String(page['title'])}» به این مسئله مربوط است.`
         : `The web page "${String(page['title'])}" bears on this problem.`,
       source: String(page['url']),
       evidence: [{ ref: page['ref'], quote: sentence.slice(0, 200) }],
@@ -62,7 +62,7 @@ export function fakeResearchResponder(request: NormalizedModelRequest): unknown 
     findings,
     gaps: [
       persian
-        ? 'هزینهٔ اجرای هر روش هنوز مشخص نیست.'
+        ? 'هزینه اجرای هر روش هنوز مشخص نیست.'
         : 'The running cost of each approach is not yet known.',
     ],
     conflicts: [],
@@ -85,11 +85,11 @@ export function fakeExplorationResponder(request: NormalizedModelRequest): unkno
       const n = existing + offset;
       return persian
         ? {
-            title: `مسئلهٔ کاندید ${n}`,
+            title: `مسئله کاندید ${n}`,
             problemDraft: `مسئله‌ای که از این اتفاق بیرون می‌آید (${n}): ${event}`,
             why: 'اگر رها شود، اثرش روی کسب‌وکار ادامه پیدا می‌کند.',
             assumptions: 'فرض شده است که علت اصلی هنوز روشن نیست.',
-            expectedOutput: 'یک برنامهٔ اقدام کوتاه',
+            expectedOutput: 'یک برنامه اقدام کوتاه',
           }
         : {
             title: `Candidate problem ${n}`,
@@ -180,7 +180,7 @@ export function fakeRoleEvaluationResponder(request: NormalizedModelRequest): un
             kind: 'deviation',
             severity: 'medium',
             detail: persian
-              ? 'وظیفهٔ اول فقط تا حدی در خروجی دیده می‌شود.'
+              ? 'وظیفه اول فقط تا حدی در خروجی دیده می‌شود.'
               : 'The first duty is only partly visible in the output.',
             recommendation: persian
               ? 'دستور مرحله را برای پوشش کامل این وظیفه دقیق‌تر کنید.'
@@ -241,7 +241,7 @@ export function fakeDocumenterResponder(request: NormalizedModelRequest): unknow
               ? `${asString(section['label'])}؛ بخش ${index + 1}`
               : `${asString(section['label'])}: part ${index + 1}`,
             focus: persian
-              ? `جنبهٔ ${index + 1} از «${asString(section['label'])}» بدون تکرار بخش‌های دیگر.`
+              ? `جنبه ${index + 1} از «${asString(section['label'])}» بدون تکرار بخش‌های دیگر.`
               : `Aspect ${index + 1} of "${asString(section['label'])}", not repeating the other parts.`,
           }),
         ),
@@ -268,10 +268,10 @@ export function fakeDocumenterResponder(request: NormalizedModelRequest): unknow
 
   const fa = [
     (i: number) =>
-      `در بخش «${heading}»، نکتهٔ ${i} دربارهٔ «${title}» این است که اجرای آن باید با شرایط مسئله هم‌خوان بماند.`,
+      `در بخش «${heading}»، نکته ${i} درباره «${title}» این است که اجرای آن باید با شرایط مسئله هم‌خوان بماند.`,
     (i: number) =>
-      `برای مورد ${i}، پیش‌نیازها و دامنهٔ کار روشن می‌شود تا تصمیم‌گیری دربارهٔ «${title}» ساده‌تر شود.`,
-    (i: number) => `گام ${i} تأثیر مستقیم بر نتیجه دارد و باید پیش از شروع مرحلهٔ بعد بررسی شود.`,
+      `برای مورد ${i}، پیش‌نیازها و دامنه کار روشن می‌شود تا تصمیم‌گیری درباره «${title}» ساده‌تر شود.`,
+    (i: number) => `گام ${i} تأثیر مستقیم بر نتیجه دارد و باید پیش از شروع مرحله بعد بررسی شود.`,
     (i: number) =>
       `در بند ${i} هزینه، زمان و منابع لازم با هم سنجیده می‌شوند و هیچ‌کدام جداگانه تصمیم‌ساز نیست.`,
   ];

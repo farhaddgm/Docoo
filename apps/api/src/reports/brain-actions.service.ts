@@ -275,7 +275,7 @@ export class BrainActionsService {
           action: 'reject',
           comment: text(
             language,
-            `درخواست بازبینی از Brain: در این مرحله اخیراً ${percent}٪ موارد مشکل داشته‌اند. این خروجی را دقیق‌تر با اصول و وظایف نقش و الزام‌های مرحله بسنجید و نسخهٔ بهتری بنویسید.`,
+            `درخواست بازبینی از Brain: در این مرحله اخیرا ${percent}٪ موارد مشکل داشته‌اند. این خروجی را دقیق‌تر با اصول و وظایف نقش و الزام‌های مرحله بسنجید و نسخه بهتری بنویسید.`,
             `Revision requested by Brain: recently ${percent}% of this stage's work had problems. Check this output again against the role's principles and the stage requirements, and write a better version.`,
           ),
           idempotencyKey: `brain-action:${decisionId}`,
@@ -293,7 +293,7 @@ export class BrainActionsService {
           note ||
           text(
             language,
-            'توقف با تأیید ادمین بر پایهٔ پیشنهاد Brain (افزایش هزینه).',
+            'توقف با تأیید ادمین بر پایه پیشنهاد Brain (افزایش هزینه).',
             'Paused by the administrator on a Brain proposal (cost increase).',
           ),
       },

@@ -68,8 +68,8 @@ export function QuestionEditor({
 }) {
   const text = problemMessages(locale);
   const priorities: Record<string, [string, string]> = {
-    unresolved_area: ['حوزهٔ بی‌پاسخ', 'Unanswered area'],
-    area_already_covered: ['حوزهٔ پاسخ‌داده‌شده', 'Area already covered'],
+    unresolved_area: ['حوزه بی‌پاسخ', 'Unanswered area'],
+    area_already_covered: ['حوزه پاسخ‌داده‌شده', 'Area already covered'],
     decision_criterion: ['مرتبط با معیار تصمیم', 'Matches decision criterion'],
     decision_assumption: ['مرتبط با فرض تصمیم', 'Matches decision assumption'],
     duplicate_answered_question: ['مشابه پرسش پاسخ‌داده‌شده', 'Duplicates answered question'],

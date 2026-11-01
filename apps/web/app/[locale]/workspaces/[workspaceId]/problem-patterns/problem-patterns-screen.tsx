@@ -127,11 +127,11 @@ export function ProblemPatternsScreen({
                     : 'A request is running. Refresh shortly.'
                   : code === 'PATTERN_KEY_EXISTS' || code === 'PATTERN_DUPLICATE'
                     ? fa
-                      ? 'این شناسه قبلاً استفاده شده است.'
+                      ? 'این شناسه قبلا استفاده شده است.'
                       : 'This key is already in use.'
                     : response.status === 409
                       ? fa
-                        ? 'وضعیت تغییر کرده یا درخواست با نسخهٔ فعلی سازگار نیست. تازه‌سازی کنید؛ ممکن است نیاز به آزمایش دوباره باشد.'
+                        ? 'وضعیت تغییر کرده یا درخواست با نسخه فعلی سازگار نیست. تازه‌سازی کنید؛ ممکن است نیاز به آزمایش دوباره باشد.'
                         : 'The state changed or the request conflicts with this revision. Refresh; another preview may be needed.'
                       : response.status === 422
                         ? fa
@@ -378,7 +378,7 @@ export function ProblemPatternsScreen({
       (
         {
           draft: t('پیش‌نویس', 'Draft'),
-          published: t('دارای نسخهٔ منتشرشده', 'Has published version'),
+          published: t('دارای نسخه منتشرشده', 'Has published version'),
           archived: t('بایگانی‌شده', 'Archived'),
           complete: t('کامل', 'Complete'),
           pending: t('در انتظار پاسخ', 'Pending'),
@@ -448,17 +448,17 @@ export function ProblemPatternsScreen({
             <fieldset disabled={busy || dirty}>
               <legend>{t('الگوی تازه', 'New pattern')}</legend>
               <label>
-                {t('نقطهٔ شروع', 'Starting point')}
+                {t('نقطه شروع', 'Starting point')}
                 <select value={seed} onChange={(event) => setSeed(event.target.value)}>
-                  <option value="blank">{t('ایدهٔ تازه', 'New idea')}</option>
-                  <option value="meeting">{t('نمونهٔ جلسه', 'Meeting example')}</option>
+                  <option value="blank">{t('ایده تازه', 'New idea')}</option>
+                  <option value="meeting">{t('نمونه جلسه', 'Meeting example')}</option>
                   <option value="marketing">
-                    {t('نمونهٔ آزمایش مارکتینگ', 'Marketing experiment example')}
+                    {t('نمونه آزمایش مارکتینگ', 'Marketing experiment example')}
                   </option>
                 </select>
               </label>
               <label>
-                {t('شناسهٔ الگو برای ساخت دستی', 'Pattern identifier for manual creation')}
+                {t('شناسه الگو برای ساخت دستی', 'Pattern identifier for manual creation')}
                 <input
                   dir="ltr"
                   placeholder="my-pattern"
@@ -500,7 +500,7 @@ export function ProblemPatternsScreen({
                 disabled={busy || !dirty || archived}
                 onClick={() => void action(() => save())}
               >
-                {t('ذخیرهٔ تغییرات', 'Save changes')}
+                {t('ذخیره تغییرات', 'Save changes')}
               </button>
               <button disabled={busy || !dirty} onClick={() => setDraft(detail.pattern.definition)}>
                 {t('کنار گذاشتن تغییرات', 'Discard changes')}
@@ -539,12 +539,12 @@ export function ProblemPatternsScreen({
                 <h3>{t('گفتگو برای ساخت الگو', 'Authoring conversation')}</h3>
                 <div
                   className="pattern-history"
-                  aria-label={t('تاریخچهٔ گفتگو و آزمایش', 'Conversation and preview history')}
+                  aria-label={t('تاریخچه گفتگو و آزمایش', 'Conversation and preview history')}
                 >
                   {detail.runs.length === 0 && (
                     <p>
                       {t(
-                        'ایده، تغییر دلخواه یا نمونهٔ مسئله را مطرح کنید.',
+                        'ایده، تغییر دلخواه یا نمونه مسئله را مطرح کنید.',
                         'Describe your idea, desired change or example problem.',
                       )}
                     </p>
@@ -572,7 +572,7 @@ export function ProblemPatternsScreen({
                               </p>
                               <details>
                                 <summary>
-                                  {t('مقایسهٔ پیشنهاد و پیش‌نویس', 'Compare proposal and draft')}
+                                  {t('مقایسه پیشنهاد و پیش‌نویس', 'Compare proposal and draft')}
                                 </summary>
                                 {(
                                   [
@@ -640,7 +640,7 @@ export function ProblemPatternsScreen({
                                   )
                                 }
                               >
-                                {t('پذیرش و ذخیرهٔ الگو', 'Accept and save pattern')}
+                                {t('پذیرش و ذخیره الگو', 'Accept and save pattern')}
                               </button>
                             </div>
                           )}
@@ -724,7 +724,7 @@ export function ProblemPatternsScreen({
                       onChange={(event) => setConsent(event.target.checked)}
                     />
                     {t(
-                      'اجازه می‌دهم پیام یا نمونه، تعریف ذخیره‌شدهٔ الگو و بخش محدودی از تاریخچه برای پاسخ‌گویی به سرویس AI تنظیم‌شده ارسال شود.',
+                      'اجازه می‌دهم پیام یا نمونه، تعریف ذخیره‌شده الگو و بخش محدودی از تاریخچه برای پاسخ‌گویی به سرویس AI تنظیم‌شده ارسال شود.',
                       'I consent to sending my message or sample, the saved definition and limited history to the configured AI provider.',
                     )}
                   </label>
@@ -736,7 +736,7 @@ export function ProblemPatternsScreen({
                   </button>
                   <label>
                     {t(
-                      'مسئلهٔ نمونه برای آزمایش — اطلاعات حساس وارد نکنید',
+                      'مسئله نمونه برای آزمایش — اطلاعات حساس وارد نکنید',
                       'Sample problem for preview — avoid sensitive data',
                     )}
                     <textarea
@@ -782,7 +782,7 @@ export function ProblemPatternsScreen({
                           })
                         }
                       >
-                        {t('مشاهدهٔ نسخه', 'View version')}
+                        {t('مشاهده نسخه', 'View version')}
                       </button>
                     </li>
                   ))}
@@ -790,7 +790,7 @@ export function ProblemPatternsScreen({
                 {published && (
                   <section className="pattern-box">
                     <h3>
-                      {t('نسخهٔ منتشرشده', 'Published version')} {published.version}
+                      {t('نسخه منتشرشده', 'Published version')} {published.version}
                     </h3>
                     <button onClick={() => setPublished(null)}>{t('بستن', 'Close')}</button>
                     <PatternEditor
@@ -889,7 +889,7 @@ export function ProblemPatternsScreen({
                 />
               </label>
               <label>
-                {t('شناسهٔ پیشنهادی الگو', 'Suggested pattern identifier')}
+                {t('شناسه پیشنهادی الگو', 'Suggested pattern identifier')}
                 <input
                   dir="ltr"
                   value={key}

@@ -99,7 +99,7 @@ export const candidateProblemTemplates = [
         id: 'value',
         label: { fa: 'ارزش پیشنهادی', en: 'Value proposition' },
         guidance: {
-          fa: 'نتیجهٔ قابل مشاهده و جایگزین‌های فعلی را بیان کنید.',
+          fa: 'نتیجه قابل مشاهده و جایگزین‌های فعلی را بیان کنید.',
           en: 'State the observable outcome and current alternatives.',
         },
       },
@@ -162,7 +162,7 @@ export const candidateProblemTemplates = [
         },
         {
           key: 'execution_plan',
-          label: { fa: 'برنامهٔ اجرا', en: 'Execution plan' },
+          label: { fa: 'برنامه اجرا', en: 'Execution plan' },
           weight: 10,
           targetStage: 'documentation',
         },
@@ -294,7 +294,7 @@ export const candidateProblemTemplates = [
     lifecycle: 'candidate',
     name: { fa: 'بازطراحی محصول', en: 'Product redesign' },
     description: {
-      fa: 'برای بررسی تجربهٔ فعلی، نیازها، محدودیت‌ها و تغییرات محصول.',
+      fa: 'برای بررسی تجربه فعلی، نیازها، محدودیت‌ها و تغییرات محصول.',
       en: 'For examining the current experience, needs, constraints, and product changes.',
     },
     prompts: [

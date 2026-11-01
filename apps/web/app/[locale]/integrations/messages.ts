@@ -5,14 +5,14 @@ import { businessMessages } from '../projects/business-messages';
 const messages = {
   fa: {
     title: 'اتصال‌ها',
-    subtitle: 'اتصال Docoo به سرویس‌های دیگر؛ فعلاً Contenter برای اطلاعات کسب‌وکار.',
+    subtitle: 'اتصال Docoo به سرویس‌های دیگر؛ فعلا Contenter برای اطلاعات کسب‌وکار.',
     contenter: 'Contenter — اطلاعات کسب‌وکار',
     intro:
       'Docoo اطلاعات کسب‌وکارها را از Contenter می‌خواند (فقط خواندن) و ایجنت‌های هر پروژه بر اساس کسب‌وکار وصل‌شده کار می‌کنند. پروفایل کسب‌وکار فقط در Contenter ویرایش می‌شود تا در دو برنامه یکسان بماند.',
     stepsTitle: 'راه‌اندازی در سه قدم',
     steps: [
-      'در سرور Contenter فایل apps/api/.env را باز کنید و یک مقدار تصادفی دست‌کم ۳۲ نویسه‌ای را با نام INTEGRATION_TOKEN بنویسید (مثلاً خروجی openssl rand -hex 32)، سپس Contenter را دوباره راه بیندازید.',
-      'همان مقدار را پایین به‌عنوان «توکن سرویس» وارد کنید و نشانی API را بنویسید (مثلاً https://contenter.beeproject.ir/api).',
+      'در سرور Contenter فایل apps/api/.env را باز کنید و یک مقدار تصادفی دست‌کم ۳۲ نویسه‌ای را با نام INTEGRATION_TOKEN بنویسید (مثلا خروجی openssl rand -hex 32)، سپس Contenter را دوباره راه بیندازید.',
+      'همان مقدار را پایین به‌عنوان «توکن سرویس» وارد کنید و نشانی API را بنویسید (مثلا https://contenter.beeproject.ir/api).',
       'در ساخت پروژه (یا در تب «کسب‌وکار» هر پروژه) کسب‌وکار را انتخاب کنید.',
     ],
     status: 'وضعیت اتصال',
@@ -32,9 +32,9 @@ const messages = {
       business_not_found: 'کسب‌وکار پیدا نشد.',
     } as Record<string, string>,
     apiUrl: 'نشانی API Contenter',
-    apiUrlHelp: 'نشانی کامل تا /api، مثلاً https://contenter.beeproject.ir/api',
+    apiUrlHelp: 'نشانی کامل تا /api، مثلا https://contenter.beeproject.ir/api',
     webUrl: 'نشانی سایت Contenter (اختیاری)',
-    webUrlHelp: 'برای دکمهٔ «باز کردن در Contenter»؛ مثلاً https://contenter.beeproject.ir',
+    webUrlHelp: 'برای دکمه «باز کردن در Contenter»؛ مثلا https://contenter.beeproject.ir',
     token: 'توکن سرویس',
     tokenHelp:
       'همان INTEGRATION_TOKEN در Contenter. یک بار وارد می‌شود، رمز ذخیره می‌شود و دیگر نمایش داده نمی‌شود.',
@@ -51,14 +51,14 @@ const messages = {
     remove: 'حذف اتصال',
     removeTitle: 'حذف اتصال به Contenter؟',
     removeHelp:
-      'پروژه‌ها به کسب‌وکارشان وصل می‌مانند و آخرین نسخهٔ ذخیره‌شده را نگه می‌دارند، اما تا اتصال دوباره تنظیم نشود همگام‌سازی و انتخاب کسب‌وکار کار نمی‌کند.',
+      'پروژه‌ها به کسب‌وکارشان وصل می‌مانند و آخرین نسخه ذخیره‌شده را نگه می‌دارند، اما تا اتصال دوباره تنظیم نشود همگام‌سازی و انتخاب کسب‌وکار کار نمی‌کند.',
     removeConfirm: 'حذف اتصال',
     removed: 'اتصال حذف شد.',
     cancel: 'انصراف',
     working: 'در حال انجام…',
-    privacyTitle: 'یک نکتهٔ امنیتی',
+    privacyTitle: 'یک نکته امنیتی',
     privacy:
-      'اطلاعات کسب‌وکار هنگام کار ایجنت‌ها به ارائه‌دهندهٔ مدل هوش مصنوعی ارسال می‌شود (فقط بخش‌های لازم برای هر نقش). چیزی را که نباید به آنجا برسد در Contenter ننویسید.',
+      'اطلاعات کسب‌وکار هنگام کار ایجنت‌ها به ارائه‌دهنده مدل هوش مصنوعی ارسال می‌شود (فقط بخش‌های لازم برای هر نقش). چیزی را که نباید به آنجا برسد در Contenter ننویسید.',
     loadFailed: 'بارگذاری اتصال انجام نشد. دوباره تلاش کنید.',
   },
   en: {

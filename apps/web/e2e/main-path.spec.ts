@@ -168,7 +168,7 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
 
     await page.getByLabel('اتصال', { exact: true }).selectOption(connection.id);
     await page.getByLabel('مدل', { exact: true }).selectOption('fake-standard');
-    await page.getByRole('button', { name: 'ذخیرهٔ مدل پیش‌فرض' }).click();
+    await page.getByRole('button', { name: 'ذخیره مدل پیش‌فرض' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'ذخیره شد' })).toBeVisible();
     await expect(page.getByText(`${connection.name} · fake-standard`)).toBeVisible();
 

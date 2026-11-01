@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useState } from 'react';
 
+import { SectionTitle } from '../../../info-tip';
 import { ApiError, apiGet, apiSend, idempotencyKey } from '../../../api-client';
 import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { useReadOnlyAccess } from '../../resource-access';
@@ -52,7 +53,7 @@ const copy = {
       'این تحقیق بدون برنامه انجام شده؛ برای دور تکمیلی ابتدا برنامه بنویسید و تحقیق را از نو اجرا کنید.',
     planChanged:
       'برنامه بعد از این خروجی بازنویسی شده است. برای اعمالش «درخواست بازبینی» بفرستید یا مرحله را از نو اجرا کنید.',
-    unconfirmed: 'برنامهٔ تازه‌ای تأیید نشده؛ پس از تأییدش پرسش‌های تازه هم اینجا می‌آیند.',
+    unconfirmed: 'برنامه تازه‌ای تأیید نشده؛ پس از تأییدش پرسش‌های تازه هم اینجا می‌آیند.',
     rounds: '{n} دور تکمیلی تاکنون انجام شده است.',
     gapsTitle: 'پوشش الزامات خروجی در تحقیق',
     gapsHelp:
@@ -66,9 +67,8 @@ const copy = {
       unchecked: 'سنجیده نشد',
     },
     suggested: 'پرسش پیشنهادی',
-    addToPlan: 'افزودن به برنامهٔ تحقیق',
-    added:
-      'به برنامه افزوده شد؛ نسخهٔ تازه را در «برنامهٔ تحقیق» تأیید کنید، سپس دور تکمیلی بگیرید.',
+    addToPlan: 'افزودن به برنامه تحقیق',
+    added: 'به برنامه افزوده شد؛ نسخه تازه را در «برنامه تحقیق» تأیید کنید، سپس دور تکمیلی بگیرید.',
     errors: {
       RESEARCH_FOLLOWUP_NOT_AT_GATE: 'خروجی اکنون منتظر بازبینی شما نیست.',
       RESEARCH_FOLLOWUP_PLAN_CHANGED: 'برنامه بعد از این خروجی بازنویسی شده است.',
@@ -212,8 +212,9 @@ export function ResearchFollowupPanel({
 
   return (
     <section className="card stack" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`}>{text.title}</h2>
-      <p className="muted">{text.help}</p>
+      <SectionTitle id={`${id}-title`} help={text.help}>
+        {text.title}
+      </SectionTitle>
       {followup.rounds > 0 && (
         <p className="muted">{fill(text.rounds, { n: formatNumber(locale, followup.rounds) })}</p>
       )}
@@ -291,8 +292,9 @@ export function ResearchFollowupPanel({
       )}
 
       <hr />
-      <h3>{text.gapsTitle}</h3>
-      <p className="muted">{text.gapsHelp}</p>
+      <SectionTitle as="h3" help={text.gapsHelp}>
+        {text.gapsTitle}
+      </SectionTitle>
       {!readOnly && (
         <div className="toolbar">
           <button

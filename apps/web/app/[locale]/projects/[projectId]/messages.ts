@@ -27,7 +27,7 @@ const messages = {
     noBusiness: 'وصل نشده',
     topicsShort: 'حوزه‌ها',
     noTopicsShort: 'حوزه‌ای انتخاب نشده',
-    stage: 'مرحلهٔ جاری',
+    stage: 'مرحله جاری',
     nextAction: 'قدم بعدی',
     language: 'زبان خروجی',
     version: 'نسخه',
@@ -97,7 +97,7 @@ const messages = {
       restore: 'پروژه بازیابی شد.',
     } as Record<string, string>,
     // Overview
-    problem: 'مسئلهٔ اولیه',
+    problem: 'مسئله اولیه',
     expectedOutput: 'خروجی مورد انتظار',
     description: 'توضیح',
     topics: 'حوزه‌ها (به ترتیب اولویت)',
@@ -106,7 +106,7 @@ const messages = {
     editTitle: 'ویرایش پروژه',
     archivedTopic: 'بایگانی‌شده',
     // Timeline
-    timelineTitle: 'تاریخچهٔ پروژه',
+    timelineTitle: 'تاریخچه پروژه',
     timelineEmpty: 'هنوز رویدادی ثبت نشده است.',
     when: 'زمان',
     action: 'رویداد',

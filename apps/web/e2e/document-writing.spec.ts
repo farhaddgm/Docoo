@@ -20,7 +20,7 @@ const failureNotice = (page: Page) => page.locator('.notice.error[role="alert"]'
 async function projectWithDocument(page: Page, prefix: string) {
   const topic = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
     code: `${prefix}-t-${stamp}`,
-    title: `حوزهٔ نگارش ${prefix} ${stamp}`,
+    title: `حوزه نگارش ${prefix} ${stamp}`,
   });
   const created = await createViaApi<{ project: { id: string } }>(page, '/projects', {
     code: `${prefix}-${stamp}`,
@@ -36,7 +36,7 @@ async function projectWithDocument(page: Page, prefix: string) {
   );
   await createViaApi(page, `/projects/${projectId}/solution-selections`, {
     solutionIds: [generated.solutionSet.items[0]!.id],
-    reason: 'گزینهٔ برتر',
+    reason: 'گزینه برتر',
   });
   return projectId;
 }
@@ -93,7 +93,7 @@ test.describe('the documenter writes and the structured editor changes a documen
     await expect(report).toBeVisible();
     await expect(report.getByText(editor.reportWithin)).toBeVisible();
     await expect(page.locator('.document-view')).toContainText('خلاصه');
-    await expect(page.locator('.document-view')).toContainText('برنامهٔ اجرا');
+    await expect(page.locator('.document-view')).toContainText('برنامه اجرا');
     // The writing became a normal, immutable version of the document.
     await expect(versionRows).toHaveCount(2);
     await expect(versionRows.first().getByRole('cell').first()).toContainText(
@@ -111,7 +111,7 @@ test.describe('the documenter writes and the structured editor changes a documen
     await expect(outline.getByRole('button').first()).toBeVisible();
     await expect(page.getByRole('button', { name: editor.save, exact: true })).toBeDisabled(); // nothing changed yet
 
-    await page.getByLabel(editor.headingText).first().fill('خلاصهٔ اجرایی تازه');
+    await page.getByLabel(editor.headingText).first().fill('خلاصه اجرایی تازه');
     await page.locator('#add-type-0').selectOption('list');
     await page.getByRole('button', { name: editor.addBlock, exact: true }).click();
     const items = page.getByLabel(editor.items).last();
@@ -128,7 +128,7 @@ test.describe('the documenter writes and the structured editor changes a documen
     await save.click();
     await expect(page.getByRole('status').filter({ hasText: editor.saved })).toBeVisible();
     await expect(page.getByRole('heading', { name: editor.editorTitle })).toHaveCount(0);
-    await expect(page.locator('.document-view')).toContainText('خلاصهٔ اجرایی تازه');
+    await expect(page.locator('.document-view')).toContainText('خلاصه اجرایی تازه');
     await expect(page.locator('.document-view')).toContainText('مورد نخست');
     await expect(versionRows).toHaveCount(3);
     await expect(versionRows.first().getByRole('cell').first()).toContainText(

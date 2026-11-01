@@ -301,7 +301,7 @@ for (const locale of ['fa', 'en'] as const) {
     await page.goto(`/${locale}/projects/${projectId}/evaluation-lab?workspaceId=${workspaceId}`);
     const review = locale === 'fa' ? 'بازبینی بدون نمایش مدل' : 'Review with model names hidden';
     const submit =
-      locale === 'fa' ? 'ثبت بازبینی و محاسبهٔ مقایسه' : 'Save review and calculate comparison';
+      locale === 'fa' ? 'ثبت بازبینی و محاسبه مقایسه' : 'Save review and calculate comparison';
     await page.getByRole('button', { name: review, exact: true }).click();
     await expect(page.getByText(hostileOutput, { exact: true })).toBeVisible();
     await expect(page.locator('.evaluation-lab-outputs img')).toHaveCount(0);
