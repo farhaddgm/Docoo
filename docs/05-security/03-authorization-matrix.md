@@ -246,6 +246,23 @@ notion_sync: true
 | `PATCH /smart/issues/{id}`                                                  | `smart.manage`              |
 | `DELETE /smart/issues/{id}`                                                 | `smart.manage`              |
 
+## گفتگوی صوتی ([ADR-0046](../adr/0046-voice-conversation.md))
+
+دو permission تازه: `voice.use` (ضبط، پخش، ترجیح‌ها، صداهای خود و مصرف خود؛ برای مالک، ویرایشگر و مشاهده‌گر، ولی مشاهده‌گر مثل همه‌جا هیچ درخواست تغییردهنده‌ای نمی‌فرستد) و `voice.manage` (فقط مالک: کاتالوگ و پیش‌شنیدن صداها، قیمت‌ها، مصرف همهٔ حساب‌ها، پاک‌کردن همهٔ صداهای سامانه). مسیرهای `transcribe`، `speak` و `preview` علامت `@UsesAi()` دارند و مشمول سقف‌های ADR-0042 هستند.
+
+| مسیر                                                                         | permission     |
+| ---------------------------------------------------------------------------- | -------------- |
+| `GET /voice/config`، `GET\|PUT /voice/preferences`                           | `voice.use`    |
+| `POST /voice/transcribe`، `POST /voice/speak`                                | `voice.use`    |
+| `GET /voice/audio`، `GET\|DELETE /voice/audio/{id}`                          | `voice.use`    |
+| `POST /voice/audio/{id}/attach`، `DELETE /voice/audio`                       | `voice.use`    |
+| `GET /voice/usage`                                                           | `voice.use`    |
+| `GET /voice/catalog`، `POST /voice/preview`                                  | `voice.manage` |
+| `GET\|POST /voice/prices`، `GET /voice/usage/all`                            | `voice.manage` |
+| `DELETE /voice/workspace-audio`، `POST /voice/workspace-audio/purge-expired` | `voice.manage` |
+
+صدای ضبط‌شده را فقط خودِ گوینده می‌شنود (RLS روی `conversation_audio`)؛ مالک فقط فراداده را می‌بیند و می‌تواند حذف کند.
+
 ## endpointهای هویت
 
 `/v1/auth/*` و `/v1/me*` به workspace وابسته نیستند و فقط نشست خود کاربر را مدیریت می‌کنند: ورود، خروج، درخواست و انجام reset، تغییر گذرواژه و لغو همهٔ نشست‌ها. همهٔ عملیات تغییر‌دهندهٔ آن‌ها بررسی Origin دارند و ورود/reset محدودیت نرخ جداگانهٔ ۱۰ درخواست در دقیقه دارند.

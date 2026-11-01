@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import { HttpException } from '@nestjs/common';
+import { registerAudioBodyParser } from '../../src/voice/audio-body.js';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import type { InjectOptions, LightMyRequestResponse } from 'fastify';
@@ -535,6 +536,7 @@ export async function createHarness(
       done();
     });
   }
+  registerAudioBodyParser(adapter.getInstance());
   await app.register(cookie, { secret: testPepper });
   await app.register(rateLimit, {
     max: 1000,
