@@ -1,7 +1,10 @@
 import {
+  aggregateModes,
   MIN_ESTIMATE_SAMPLE,
   researchUnits,
   researchValuesOf,
+  type ModeQuality,
+  type ResearchRunRow,
   type ResearchUnitCost,
 } from '@docoo/contracts';
 import { learnedDomains, normalizeOfficialDomains, type LearnedDomain } from '@docoo/domain';
@@ -236,6 +239,38 @@ export class ConfigService {
     };
     if (usd.length < MIN_ESTIMATE_SAMPLE || seconds.length === 0) return null;
     return { usd: median(usd), seconds: median(seconds), sample: usd.length };
+  }
+
+  /**
+   * How each research mode has fared here (ADR-0052): the last 200 completed research stages that
+   * have an output, grouped by the mode their own settings amounted to. Only the few small parts of
+   * each output the report reads are fetched, never the findings themselves.
+   */
+  async researchQuality(context: WorkspaceRequestContext): Promise<ModeQuality[]> {
+    const rows = await this.database.run(context, async (client) => {
+      const result = await client.query<ResearchRunRow>(
+        `select (select sum(i.cost_usd) from model_invocations i where i.stage_run_id = s.id)::float8 as "costUsd",
+                (select extract(epoch from sum(a.finished_at - a.started_at))
+                   from stage_attempts a where a.stage_run_id = s.id and a.status = 'succeeded')::float8 as seconds,
+                c.resolved,
+                jsonb_build_object(
+                  'summary', o.content -> 'summary',
+                  'verification', o.content -> 'verification',
+                  'web', jsonb_build_object('rounds', o.content #> '{web,rounds}', 'gaps', o.content #> '{web,gaps}'),
+                  'conflicts', case when jsonb_typeof(o.content -> 'conflicts') = 'array'
+                                    then jsonb_array_length(o.content -> 'conflicts') else 0 end
+                ) as quality
+           from stage_runs s
+           join workflow_runs r on r.id = s.run_id
+           left join config_snapshots c on c.id = r.config_snapshot_id
+           join stage_outputs o on o.id = s.latest_output_id
+          where s.stage = 'research' and s.status = 'completed'
+          order by s.updated_at desc
+          limit 200`,
+      );
+      return result.rows;
+    });
+    return aggregateModes(rows);
   }
 
   /**

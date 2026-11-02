@@ -2,17 +2,19 @@
 
 import {
   estimateResearch,
+  MIN_QUALITY_RUNS,
   presetOf,
   RESEARCH_PRESET_IDS,
   RESEARCH_PRESETS,
   researchValuesOf,
+  type ModeQuality,
   type ResearchPresetId,
   type ResearchUnitCost,
 } from '@docoo/contracts';
 import { useEffect, useId, useState } from 'react';
 
 import { apiGet, apiSend } from '../../api-client';
-import { formatNumber, formatUsd, textDir, type Locale } from '../../i18n';
+import { formatNumber, formatPercent, formatUsd, textDir, type Locale } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { Notice, useAction } from '../use-action';
 import { ModelPicker } from './model-picker';
@@ -66,6 +68,7 @@ export function ResearchPresetPicker({
   const id = useId();
   const action = useAction(() => t.failed);
   const [unit, setUnit] = useState<ResearchUnitCost | null>(null);
+  const [quality, setQuality] = useState<ModeQuality[]>([]);
   const current = presetOf(values);
   const [chosen, setChosen] = useState<ResearchPresetId | null>(
     current === 'custom' ? null : current,
@@ -82,6 +85,9 @@ export function ResearchPresetPicker({
     )
       .then((result) => active && setUnit(result.unit))
       .catch(() => active && setUnit(null));
+    apiGet<{ modes: ModeQuality[] }>(`/workspaces/${workspaceId}/settings/research-quality`)
+      .then((result) => active && setQuality(result.modes))
+      .catch(() => active && setQuality([]));
     return () => {
       active = false;
     };
@@ -165,6 +171,11 @@ export function ResearchPresetPicker({
               </strong>
               <span dir={textDir(locale)}>{t.blurbs[preset]}</span>
               <small className="muted">{factorLine(t, locale, estimate.factor)}</small>
+              <ExperienceLines
+                locale={locale}
+                t={t}
+                found={quality.find((item) => item.mode === preset)}
+              />
               {estimate.usd && estimate.seconds && (
                 <small className="muted">
                   {fill(t.cost, {
@@ -183,6 +194,7 @@ export function ResearchPresetPicker({
         })}
       </div>
       {unit === null && <p className="muted">{t.noHistory}</p>}
+      <QualityTable locale={locale} t={t} modes={quality} />
       {current === 'custom' && <p className="notice">{t.custom}</p>}
       {needsSecond && (
         <div className="stack">
@@ -240,5 +252,116 @@ export function ResearchPresetPicker({
         </div>
       )}
     </fieldset>
+  );
+}
+
+/** A mode's own track record on its card: shown once there are enough researches to mean something. */
+function ExperienceLines({
+  locale,
+  t,
+  found,
+}: {
+  locale: Locale;
+  t: SettingsText['presets'];
+  found: ModeQuality | undefined;
+}) {
+  if (!found) return null;
+  if (found.runs < MIN_QUALITY_RUNS) {
+    return (
+      <small className="muted">
+        {fill(t.notEnoughRuns, {
+          runs: formatNumber(locale, found.runs),
+          min: formatNumber(locale, MIN_QUALITY_RUNS),
+        })}
+      </small>
+    );
+  }
+  const parts = [
+    found.answeredShare !== null
+      ? fill(t.experienceParts['answered']!, { p: formatPercent(locale, found.answeredShare) })
+      : null,
+    found.verifiedShare !== null
+      ? fill(t.experienceParts['verified']!, { p: formatPercent(locale, found.verifiedShare) })
+      : null,
+    found.solidShare !== null
+      ? fill(t.experienceParts['solid']!, { p: formatPercent(locale, found.solidShare) })
+      : null,
+    found.costPerSolidUsd !== null
+      ? fill(t.experienceParts['costPerSolid']!, { usd: formatUsd(locale, found.costPerSolidUsd) })
+      : null,
+  ].filter((part): part is string => part !== null);
+  return (
+    <small className="muted">
+      {fill(t.experience, { runs: formatNumber(locale, found.runs) })}{' '}
+      {parts.join(locale === 'fa' ? '؛ ' : '; ')}
+    </small>
+  );
+}
+
+/** Every measure of every mode that has runs, for the administrator who wants to compare (ADR-0052). */
+function QualityTable({
+  locale,
+  t,
+  modes,
+}: {
+  locale: Locale;
+  t: SettingsText['presets'];
+  modes: ModeQuality[];
+}) {
+  if (modes.length === 0) return null;
+  const dash = '—';
+  const share = (value: number | null) => (value === null ? dash : formatPercent(locale, value));
+  const money = (value: number | null) => (value === null ? dash : formatUsd(locale, value));
+  const number = (value: number) => formatNumber(locale, Math.round(value * 10) / 10);
+  const c = t.columns;
+  return (
+    <details>
+      <summary>{t.detailsTitle}</summary>
+      <p className="muted">{t.detailsHelp}</p>
+      <table>
+        <thead>
+          <tr>
+            {[
+              'mode',
+              'runs',
+              'answered',
+              'verified',
+              'solid',
+              'conflicts',
+              'unanswerable',
+              'rounds',
+              'cost',
+              'time',
+              'costPerSolid',
+            ].map((key) => (
+              <th key={key} scope="col">
+                {c[key]}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {modes.map((item) => (
+            <tr key={item.mode}>
+              <th scope="row">{t.names[item.mode] ?? item.mode}</th>
+              <td>{formatNumber(locale, item.runs)}</td>
+              <td>{share(item.answeredShare)}</td>
+              <td>{share(item.verifiedShare)}</td>
+              <td>{share(item.solidShare)}</td>
+              <td>{number(item.conflictsPerRun)}</td>
+              <td>{number(item.unanswerablePerRun)}</td>
+              <td>{number(item.roundsPerRun)}</td>
+              <td>{money(item.avgCostUsd)}</td>
+              <td>
+                {item.avgSeconds === null
+                  ? dash
+                  : formatNumber(locale, Math.max(1, Math.round(item.avgSeconds / 60)))}
+              </td>
+              <td>{money(item.costPerSolidUsd)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
   );
 }

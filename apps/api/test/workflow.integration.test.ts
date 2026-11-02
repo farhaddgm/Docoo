@@ -607,6 +607,11 @@ describe.skipIf(!adminUrl || !temporalAddress)(
       expect(gates.rows.every((gate) => gate.status === 'approved')).toBe(true);
       expect(gates.rows.filter((gate) => gate.mode === 'manual')).toHaveLength(1);
       expect(gates.rows.filter((gate) => gate.mode === 'automatic')).toHaveLength(4);
+      // The finished research counts in the quality report of its mode (ADR-0052), on the real schema.
+      const report = await h.request('GET', api('/settings/research-quality'), { cookie });
+      expect(report.statusCode, report.body).toBe(200);
+      const modes = report.json<{ modes: { mode: string; runs: number }[] }>().modes;
+      expect(modes.reduce((total, item) => total + item.runs, 0)).toBeGreaterThanOrEqual(1);
     }, 60_000);
 
     it('WF-007: redoing a finished stage starts a new run that carries the earlier stages and does the rest again', async () => {

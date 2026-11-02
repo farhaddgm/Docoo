@@ -167,6 +167,15 @@ export class ConfigController {
     return { unit: await this.configService.researchUnitCost(workspaceContext(request)) };
   }
 
+  @Get('research-quality')
+  @ApiOperation({
+    summary: 'How each research mode fared in this workspace, from its completed research stages',
+  })
+  @RequireWorkspacePermission('workspace.read')
+  async researchQuality(@Req() request: FastifyRequest) {
+    return { modes: await this.configService.researchQuality(workspaceContext(request)) };
+  }
+
   @Get('research-source-suggestions')
   @ApiOperation({
     summary: 'Domains trusted again and again in research conflicts, not yet on the official list',

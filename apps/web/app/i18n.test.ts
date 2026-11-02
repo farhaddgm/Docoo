@@ -5,6 +5,8 @@ import {
   errorMessage,
   formatDate,
   formatNumber,
+  formatPercent,
+  formatUsd,
   formatPrice,
   isLocale,
   localizedPath,
@@ -60,5 +62,13 @@ describe('i18n (FR-LOC-001..004)', () => {
     }
     expect(Object.keys(fa).sort()).toEqual(Object.keys(en).sort());
     expect(Object.keys(fa.errors).sort()).toEqual(Object.keys(en.errors).sort());
+  });
+
+  it('writes shares as whole percents and estimates as dollars, in either language', () => {
+    expect(formatPercent('en', 0.856)).toBe('86%');
+    expect(formatPercent('fa', 0.5)).toBe('۵۰٪');
+    expect(formatUsd('en', 0.4)).toBe('$0.40');
+    expect(formatUsd('en', 12.4)).toBe('$12');
+    expect(formatUsd('fa', 1.5)).toContain('۱٫۵۰');
   });
 });
