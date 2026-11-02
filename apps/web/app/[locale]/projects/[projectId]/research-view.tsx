@@ -1,3 +1,4 @@
+import { asOfYear, freshnessOf } from '@docoo/contracts';
 import type { Route } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -201,6 +202,79 @@ function levelOf(finding: Record<string, unknown>): Level {
   return support === 'knowledge' ? 'solid' : support === 'web' ? 'limited' : 'unverified';
 }
 
+/** The age of a finding and the numbers it rests on (ADR-0051). */
+function findingFreshness(finding: Record<string, unknown>) {
+  const asOf = asText(finding['asOf']);
+  if (asOf === '') return null;
+  const year = typeof finding['asOfYear'] === 'number' ? finding['asOfYear'] : asOfYear(asOf);
+  return {
+    asOf,
+    level: freshnessOf(year, finding['agesFast'] === true, new Date().getFullYear()),
+  };
+}
+
+function FindingFacts({
+  locale,
+  text,
+  finding,
+}: {
+  locale: Locale;
+  text: Text;
+  finding: Record<string, unknown>;
+}) {
+  const fresh = findingFreshness(finding);
+  const figures = records(finding['figures']);
+  if (!fresh && figures.length === 0) return null;
+  return (
+    <div className="stack">
+      {fresh && (
+        <p>
+          <small className="muted">{fill(text.asOf, { asOf: fresh.asOf })}</small>
+          {fresh.level !== 'unknown' && (
+            <span
+              className={`badge ${fresh.level === 'current' ? 'tone-ok' : fresh.level === 'aging' ? 'tone-warn' : 'tone-danger'}`}
+              title={text.freshnessHelp[fresh.level]}
+            >
+              {text.freshness[fresh.level]}
+            </span>
+          )}
+          {finding['agesFast'] === true && <small className="muted"> {text.fastAging}</small>}
+        </p>
+      )}
+      {figures.length > 0 && (
+        <table aria-label={text.figuresHeading}>
+          <tbody>
+            {figures.map((figure, index) => (
+              <tr key={index}>
+                <td dir={textDir(locale)}>
+                  {fill(text.figureLine, {
+                    label: asText(figure['label']),
+                    value: asText(figure['value']),
+                    unit: asText(figure['unit']),
+                  })}
+                  {asText(figure['period']) !== '' && (
+                    <small className="muted">
+                      {' '}
+                      ({fill(text.figurePeriod, { period: asText(figure['period']) })})
+                    </small>
+                  )}
+                </td>
+                <td>
+                  <span
+                    className={`badge ${figure['supported'] === true ? 'tone-ok' : 'tone-warn'}`}
+                  >
+                    {figure['supported'] === true ? text.figureSupported : text.figureUnsupported}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 function Finding({
   locale,
   text,
@@ -239,6 +313,7 @@ function Finding({
           </span>
         )}
       </p>
+      <FindingFacts locale={locale} text={text} finding={finding} />
       {evidence.length > 0 && (
         <ul className="plain-list" aria-label={text.citationsHeading}>
           {evidence.map((cite, citeIndex) => {
@@ -293,6 +368,7 @@ function Overview({
   summary,
   rounds,
   conflicts,
+  stale,
   num,
 }: {
   locale: Locale;
@@ -300,6 +376,8 @@ function Overview({
   summary: Record<string, unknown>;
   rounds: number;
   conflicts: number;
+  /** Findings whose information is old for its kind (ADR-0051). */
+  stale: number;
   num: (value: unknown) => string;
 }) {
   const questions =
@@ -326,6 +404,7 @@ function Overview({
             }),
             ...(conflicts > 0 ? [fill(text.overviewHeadlineConflicts, { n: num(conflicts) })] : []),
             ...(open > 0 ? [fill(text.overviewHeadlineOpen, { n: num(open) })] : []),
+            ...(stale > 0 ? [fill(text.overviewHeadlineStale, { n: num(stale) })] : []),
           ].join(locale === 'fa' ? '؛ ' : '; ')}
         </strong>
       </p>
@@ -421,6 +500,7 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
           summary={summary}
           rounds={records(data['rounds']).length}
           conflicts={conflicts.length}
+          stale={findings.filter((finding) => findingFreshness(finding)?.level === 'stale').length}
           num={num}
         />
       )}

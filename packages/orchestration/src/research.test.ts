@@ -592,3 +592,118 @@ describe('web pages in the research (ADR-0026)', () => {
     expect(withWeb.instructions).toContain('webSources lists pages found by a web search');
   });
 });
+
+describe('figures and freshness of a finding (ADR-0051)', () => {
+  // A passage with numbers in it, in English and in Persian digits.
+  const numeric = (): KnowledgePassage[] =>
+    assignReferences(
+      [
+        {
+          snapshotId: 's1',
+          results: [
+            passage({
+              chunkId: 'n',
+              text: 'The market reached 12,500 units in 2023, up 8.5 percent. بازار به ۱۲٬۵۰۰ واحد رسید.',
+            }),
+          ],
+        },
+      ],
+      5,
+    );
+  const run = (finding: Record<string, unknown>) =>
+    verifyResearch({
+      passages: numeric(),
+      queries: [],
+      snapshots: [],
+      excludedRestricted: true,
+      retrieveTool: 'allowed',
+      verifierTool: 'allowed',
+      output: { findings: [finding], gaps: [], conflicts: [] },
+    }).content.findings[0]!;
+  const cited = (quote: string) => [{ ref: 'K1', quote }];
+
+  it('marks a figure supported when its value is in a verified quote, in either digit script', () => {
+    const finding = run({
+      claim: 'The market grew',
+      source: 'Title n',
+      evidence: cited('The market reached 12,500 units in 2023, up 8.5 percent.'),
+      figures: [
+        { label: 'Units', value: '12500', unit: 'units', period: '2023' },
+        { label: 'Growth', value: '۸٫۵', unit: '%', period: '2023' },
+        { label: 'Invented', value: '87', unit: '%', period: '2023' },
+      ],
+    });
+    expect(finding.figures?.map((figure) => [figure.label, figure.supported])).toEqual([
+      ['Units', true],
+      ['Growth', true],
+      ['Invented', false],
+    ]);
+  });
+
+  it('does not support a figure when the citation itself did not verify', () => {
+    const finding = run({
+      claim: 'x',
+      source: 's',
+      evidence: cited('a sentence the passage never said 12,500'),
+      figures: [{ label: 'Units', value: '12500', unit: '', period: '' }],
+    });
+    expect(finding.figures?.[0]?.supported).toBe(false);
+  });
+
+  it('reads the date the information is about and the aging judgement, and leaves them out when absent', () => {
+    const quote = cited('The market reached 12,500 units in 2023, up 8.5 percent.');
+    const dated = run({
+      claim: 'x',
+      source: 's',
+      evidence: quote,
+      asOf: '۱۴۰۲/۰۵',
+      agesFast: true,
+    });
+    expect(dated).toMatchObject({ asOf: '1402/05', asOfYear: 2023, agesFast: true });
+    const plain = run({
+      claim: 'x',
+      source: 's',
+      evidence: quote,
+      asOf: '',
+      agesFast: false,
+      figures: [],
+    });
+    for (const key of ['asOf', 'agesFast', 'figures']) expect(plain).not.toHaveProperty(key);
+    expect(run({ claim: 'x', source: 's', evidence: quote, asOf: 'recently' })).toMatchObject({
+      asOf: 'recently',
+      asOfYear: null,
+    });
+  });
+
+  it('gives the writing stages only the supported figures, and the date', () => {
+    const { content } = verifyResearch({
+      passages: numeric(),
+      queries: [],
+      snapshots: [],
+      excludedRestricted: true,
+      retrieveTool: 'allowed',
+      verifierTool: 'allowed',
+      output: {
+        findings: [
+          {
+            claim: 'c',
+            source: 's',
+            evidence: cited('The market reached 12,500 units in 2023'),
+            figures: [
+              { label: 'Units', value: '12,500', unit: 'units', period: '2023' },
+              { label: 'Invented', value: '87', unit: '%', period: '' },
+            ],
+            asOf: '2023',
+          },
+        ],
+        gaps: [],
+        conflicts: [],
+      },
+    });
+    const compact = compactResearchForPrompt(content) as { findings: Record<string, unknown>[] };
+    expect(compact.findings[0]).toMatchObject({ asOf: '2023' });
+    expect(compact.findings[0]!['figures']).toEqual([
+      { label: 'Units', value: '12,500', unit: 'units', period: '2023', supported: true },
+    ]);
+  });
+});
