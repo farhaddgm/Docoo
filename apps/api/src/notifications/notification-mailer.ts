@@ -54,7 +54,7 @@ const KIND_TEXT: Readonly<Record<string, { fa: string; en: string }>> = {
   agent_question: { fa: 'یک ایجنت از شما سؤال پرسیده است', en: 'An agent asked you a question' },
   attempt_limit: { fa: 'سقف تلاش یک مرحله پر شده است', en: 'A stage reached its attempt limit' },
   provider_failure: {
-    fa: 'ارائه‌دهندهٔ AI پاسخ نداد و پروژه متوقف شد',
+    fa: 'ارائه‌دهنده AI پاسخ نداد و پروژه متوقف شد',
     en: 'The AI provider failed and the project paused',
   },
   configuration: {
@@ -62,7 +62,7 @@ const KIND_TEXT: Readonly<Record<string, { fa: string; en: string }>> = {
     en: 'No AI connection or model is set and the project paused',
   },
   cost_limit: {
-    fa: 'سقف هزینهٔ پروژه رسید و پروژه متوقف شد',
+    fa: 'سقف هزینه پروژه رسید و پروژه متوقف شد',
     en: 'The project reached its cost limit and paused',
   },
   run_completed: { fa: 'اجرای پروژه کامل شد', en: 'A project run completed' },

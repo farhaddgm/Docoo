@@ -322,7 +322,7 @@ function ProjectView({
       <p className="toolbar">
         {intelligenceLink}
         <a href={`/${locale}/projects/${projectId}/evaluation-lab?workspaceId=${workspaceId}`}>
-          {locale === 'fa' ? 'مقایسهٔ کیفیت ایجنت‌ها' : 'Compare agent quality'}
+          {locale === 'fa' ? 'مقایسه کیفیت ایجنت‌ها' : 'Compare agent quality'}
         </a>
       </p>
       <nav className="section-nav" aria-label={text.sections}>

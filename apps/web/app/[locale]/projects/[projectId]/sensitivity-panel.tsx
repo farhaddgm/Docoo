@@ -119,7 +119,7 @@ export function SensitivityPanel({
       {verdict?.kind === 'tie' && (
         <p role="status">
           {fa
-            ? 'در وزن‌های فعلی چند راه‌حل امتیاز برابر دارند و برندهٔ یکتا وجود ندارد.'
+            ? 'در وزن‌های فعلی چند راه‌حل امتیاز برابر دارند و برنده یکتا وجود ندارد.'
             : 'At the current weights several solutions tie, so there is no single winner.'}
         </p>
       )}
@@ -135,7 +135,7 @@ export function SensitivityPanel({
         <p role="status">
           <span className="badge state-failed">{fa ? 'شکننده' : 'Fragile'}</span>{' '}
           {fa
-            ? `برندهٔ فعلی «${name(verdict.winnerId)}» است، اما ${verdict.flips.slice(0, 3).map(flipText).join('، یا ')}، برنده عوض می‌شود.`
+            ? `برنده فعلی «${name(verdict.winnerId)}» است، اما ${verdict.flips.slice(0, 3).map(flipText).join('، یا ')}، برنده عوض می‌شود.`
             : `The current winner is “${name(verdict.winnerId)}”, but the winner changes ${verdict.flips.slice(0, 3).map(flipText).join(', or ')}.`}
           {verdict.flips.length > 3 &&
             (fa
@@ -227,7 +227,7 @@ export function SensitivityPanel({
               }}
             />
             <button type="submit" className="secondary-button" disabled={busy || !key}>
-              {fa ? 'محاسبهٔ رتبه‌ها' : 'Calculate ranks'}
+              {fa ? 'محاسبه رتبه‌ها' : 'Calculate ranks'}
             </button>
           </form>
           {error && (

@@ -4,7 +4,7 @@ import { rateLimitErrors } from '../../rate-limit-messages';
 const messages = {
   fa: {
     title: 'اعلان‌ها',
-    subtitle: 'کارهایی که منتظر شما هستند و نتیجهٔ کارهایی که تمام شده‌اند',
+    subtitle: 'کارهایی که منتظر شما هستند و نتیجه کارهایی که تمام شده‌اند',
     bell: 'اعلان‌ها',
     bellUnread: 'اعلان‌ها، {n} خوانده‌نشده',
     unread: 'خوانده‌نشده',
@@ -28,11 +28,11 @@ const messages = {
       analysis_answers: 'پرسش‌های تحلیلگر منتظر پاسخ شماست',
       agent_question: 'یک ایجنت از شما سؤال پرسیده است',
       deliverables_confirmation: 'خروجی‌های موردانتظار منتظر تأیید شماست',
-      research_plan_confirmation: 'برنامهٔ تحقیق منتظر تأیید شماست',
+      research_plan_confirmation: 'برنامه تحقیق منتظر تأیید شماست',
       attempt_limit: 'سقف تلاش یک مرحله پر شده است',
-      provider_failure: 'ارائه‌دهندهٔ AI پاسخ نداد و پروژه متوقف شد',
+      provider_failure: 'ارائه‌دهنده AI پاسخ نداد و پروژه متوقف شد',
       configuration: 'اتصال یا مدل AI تنظیم نشده و پروژه متوقف شد',
-      cost_limit: 'سقف هزینهٔ پروژه رسید و پروژه متوقف شد',
+      cost_limit: 'سقف هزینه پروژه رسید و پروژه متوقف شد',
       run_completed: 'اجرای پروژه کامل شد',
       writing_succeeded: 'نگارش سند تمام شد',
       writing_failed: 'نگارش سند ناموفق بود',

@@ -1,10 +1,8 @@
 'use client';
 
-import Link from 'next/link';
-import type { Route } from 'next';
-
 import { messagesFor, type Locale } from '../i18n';
 import { ThemePicker } from '../theme-toggle';
+import { AccountsScreen } from './accounts-screen';
 import { AccountSecurity } from './account-security';
 import { SignedIn } from './signed-in';
 
@@ -40,12 +38,10 @@ export function AccountSettings({ locale }: { readonly locale: Locale }) {
           </section>
           <AccountSecurity locale={locale} user={identity.user} />
           {identity.user.role === 'super_admin' && (
-            <section className="card">
-              <h2>{t.users}</h2>
-              <p>{t.usersHint}</p>
-              <Link className="button" href={`/${locale}/admin/users` as Route}>
-                {t.users}
-              </Link>
+            <section className="card stack" aria-labelledby="users-title">
+              <h2 id="users-title">{t.users}</h2>
+              <p className="muted">{t.usersHint}</p>
+              <AccountsScreen locale={locale} embedded />
             </section>
           )}
         </div>

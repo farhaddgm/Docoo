@@ -225,11 +225,11 @@ export function ProjectIntelligenceScreen({
         <p>{claim.text}</p>
         <blockquote>{claim.quote}</blockquote>
         <p>
-          {t('نسخهٔ دانش / منبع', 'Knowledge / source version')}:{' '}
+          {t('نسخه دانش / منبع', 'Knowledge / source version')}:{' '}
           <code>{claim.knowledgeVersionId}</code> / <code>{claim.sourceVersionId}</code>
         </p>
         <p>
-          {t('بازهٔ متن UTF-16', 'UTF-16 text range')}: {claim.startOffset}–{claim.endOffset} ·
+          {t('بازه متن UTF-16', 'UTF-16 text range')}: {claim.startOffset}–{claim.endOffset} ·
           SHA-256: <code>{claim.quoteHash}</code>
         </p>
         {claim.finalUrl && (
@@ -268,7 +268,7 @@ export function ProjectIntelligenceScreen({
         {report.truncated && (
           <p>
             {t(
-              'مجموعهٔ نامزدها به سقف رسید؛ نتیجه ممکن است کامل نباشد.',
+              'مجموعه نامزدها به سقف رسید؛ نتیجه ممکن است کامل نباشد.',
               'Candidate limit reached; results may be incomplete.',
             )}
           </p>
@@ -419,7 +419,7 @@ export function ProjectIntelligenceScreen({
               {search.items.length} {t('نتیجه', 'results')} ·{' '}
               {search.embeddingStatus === 'provider'
                 ? t('مدل معنایی', 'Semantic model')
-                : t('نمایهٔ مفهومی محلی', 'Local concept projection')}
+                : t('نمایه مفهومی محلی', 'Local concept projection')}
               : {search.model}
             </p>
             {search.truncated && (
@@ -482,7 +482,7 @@ export function ProjectIntelligenceScreen({
               .filter((edge) => edge.from === target.id && edge.relation === 'selected_for')
               .map((edge) => (
                 <p key={edge.to}>
-                  {t('در انتخاب ثبت‌شدهٔ راهکارها', 'Included in saved solution selection')} · v
+                  {t('در انتخاب ثبت‌شده راهکارها', 'Included in saved solution selection')} · v
                   {graph.decisions?.find((d) => d.id === edge.to)?.version}
                 </p>
               ))}
@@ -497,7 +497,7 @@ export function ProjectIntelligenceScreen({
                     claim && (
                       <div key={`${edge.from}:${i}`} className="intelligence-path">
                         <p>
-                          {t('نسخهٔ منبع ← ادعا ← تصمیم', 'Source version → claim → decision')} ·{' '}
+                          {t('نسخه منبع ← ادعا ← تصمیم', 'Source version → claim → decision')} ·{' '}
                           {label(edge.relation)}
                         </p>
                         {edge.assertion && <p>{edge.assertion}</p>}
@@ -547,7 +547,7 @@ export function ProjectIntelligenceScreen({
               });
             }}
           >
-            <h3>{t('اتصال شاهد به گزارهٔ تصمیم', 'Link evidence to a decision assertion')}</h3>
+            <h3>{t('اتصال شاهد به گزاره تصمیم', 'Link evidence to a decision assertion')}</h3>
             <p>
               {selectedClaim
                 ? selectedClaim.text
@@ -580,7 +580,7 @@ export function ProjectIntelligenceScreen({
             </label>
             <label>
               {t(
-                'گزاره؛ باید عیناً در متن مقصد باشد',
+                'گزاره؛ باید عینا در متن مقصد باشد',
                 'Assertion; must occur verbatim in target text',
               )}
               <textarea
@@ -626,7 +626,7 @@ export function ProjectIntelligenceScreen({
         {conflicts.length === 0 && (
           <p>
             {t(
-              'در مجموعهٔ بررسی‌شده پیشنهادی پیدا نشد.',
+              'در مجموعه بررسی‌شده پیشنهادی پیدا نشد.',
               'No suggestions found in the examined candidates.',
             )}
           </p>
@@ -695,7 +695,7 @@ export function ProjectIntelligenceScreen({
       <section className="panel">
         <SectionTitle
           help={t(
-            'هر خط یک پرسش است. موتور از دانش تأییدشدهٔ داخلی جست‌وجو می‌کند و با رسیدن به پوشش هدف یا سقف منابع متوقف می‌شود. نتیجهٔ پوشش معیار احتمال حقیقت نیست.',
+            'هر خط یک پرسش است. موتور از دانش تأییدشده داخلی جست‌وجو می‌کند و با رسیدن به پوشش هدف یا سقف منابع متوقف می‌شود. نتیجه پوشش معیار احتمال حقیقت نیست.',
             'One question per line. Searches approved internal knowledge and stops at target coverage or resource limits. Coverage is not a probability of truth.',
           )}
         >
@@ -711,7 +711,7 @@ export function ProjectIntelligenceScreen({
             <input type="number" name="maxRounds" defaultValue={10} min={1} max={20} required />
           </label>
           <label>
-            {t('بودجهٔ بررسی ادعا؛ حداکثر خروجی ۵۰', 'Claim visit budget; output capped at 50')}
+            {t('بودجه بررسی ادعا؛ حداکثر خروجی ۵۰', 'Claim visit budget; output capped at 50')}
             <input type="number" name="maxVisits" defaultValue={40} min={1} max={400} required />
           </label>
           <label>

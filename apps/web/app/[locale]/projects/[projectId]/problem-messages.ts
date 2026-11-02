@@ -5,7 +5,7 @@ const messages = {
   fa: {
     title: 'تحلیل مسئله',
     intro:
-      'تحلیلگر پرسش‌ها را در دسته‌های حداکثر ۴۰تایی می‌پرسد (کل پرسش‌ها از ۳۰ تا ۳۰۰). به هر پرسش پاسخ بنویسید، فایل پیوست کنید یا بگویید «بی‌پاسخ»، «نامربوط» یا «بعداً». در پایان تعریف مسئله را شما تأیید می‌کنید.',
+      'تحلیلگر پرسش‌ها را در دسته‌های حداکثر ۴۰تایی می‌پرسد (کل پرسش‌ها از ۳۰ تا ۳۰۰). به هر پرسش پاسخ بنویسید، فایل پیوست کنید یا بگویید «بی‌پاسخ»، «نامربوط» یا «بعدا». در پایان تعریف مسئله را شما تأیید می‌کنید.',
     phaseHeading: 'وضعیت تحلیل',
     phases: {
       not_started:
@@ -14,7 +14,7 @@ const messages = {
       analysing: 'تحلیلگر پاسخ‌ها را می‌خواند و گام بعدی را می‌سنجد…',
       answering: 'پرسش‌ها منتظر پاسخ شما هستند.',
       awaiting_approval: 'تعریف مسئله آماده است و منتظر تصمیم شماست.',
-      approved: 'تعریف مسئله تأیید شده و مرحلهٔ تحلیل بسته است.',
+      approved: 'تعریف مسئله تأیید شده و مرحله تحلیل بسته است.',
       cancelled: 'اجرای پروژه لغو شده است؛ تحلیل بسته می‌شود.',
     } as Record<string, string>,
     pausedNote:
@@ -30,7 +30,7 @@ const messages = {
       answered: 'پاسخ‌داده‌شده',
       unanswered: 'بی‌پاسخ',
       irrelevant: 'نامربوط',
-      later: 'بعداً',
+      later: 'بعدا',
       open: 'منتظر پاسخ',
     },
     // Understanding
@@ -70,18 +70,18 @@ const messages = {
       out_of_scope: 'خارج از دامنه',
     } as Record<string, string>,
     // Batch form
-    batchTitle: 'دستهٔ {n} — پرسش‌های منتظر پاسخ',
+    batchTitle: 'دسته {n} — پرسش‌های منتظر پاسخ',
     batchHelp:
-      'برای هر پرسش یکی را انتخاب کنید. می‌توانید پاسخ‌ها را بخش‌به‌بخش ذخیره کنید؛ وقتی همهٔ پرسش‌ها پاسخ یا وضعیت گرفتند، تحلیلگر ادامه می‌دهد.',
+      'برای هر پرسش یکی را انتخاب کنید. می‌توانید پاسخ‌ها را بخش‌به‌بخش ذخیره کنید؛ وقتی همه پرسش‌ها پاسخ یا وضعیت گرفتند، تحلیلگر ادامه می‌دهد.',
     questionLabel: 'پرسش {n}',
-    followUpOf: 'ادامهٔ پرسش {n}',
+    followUpOf: 'ادامه پرسش {n}',
     why: 'چرا این را می‌پرسم؟',
     kind: 'نوع پاسخ',
     modes: {
       answered: 'پاسخ می‌دهم',
       unanswered: 'بی‌پاسخ',
       irrelevant: 'نامربوط',
-      later: 'بعداً',
+      later: 'بعدا',
     } as Record<string, string>,
     answerLabel: 'پاسخ',
     noteLabel: 'توضیح (اختیاری)',
@@ -101,23 +101,23 @@ const messages = {
     cancelEdit: 'انصراف از ویرایش',
     bulkTitle: 'برای پرسش‌هایی که هنوز وضعیتی ندارند',
     bulk: {
-      later: 'همه را «بعداً» کن',
+      later: 'همه را «بعدا» کن',
       irrelevant: 'همه را «نامربوط» کن',
       unanswered: 'همه را «بی‌پاسخ» کن',
     },
     remaining: '{n} پرسش هنوز پاسخ یا وضعیتی ندارد.',
-    allSet: 'همهٔ پرسش‌ها وضعیت دارند.',
-    save: 'ذخیرهٔ پاسخ‌ها',
+    allSet: 'همه پرسش‌ها وضعیت دارند.',
+    save: 'ذخیره پاسخ‌ها',
     saveOne: 'ثبت',
     saving: 'در حال ذخیره…',
     nothingToSave: 'پاسخ تازه‌ای برای ذخیره نیست.',
     saved: {
       partial: '{saved} پاسخ ذخیره شد؛ {left} پرسش دیگر مانده است.',
-      complete: 'همهٔ پرسش‌های این دسته وضعیت گرفتند؛ تحلیلگر پاسخ‌ها را می‌خواند.',
+      complete: 'همه پرسش‌های این دسته وضعیت گرفتند؛ تحلیلگر پاسخ‌ها را می‌خواند.',
       single: 'پاسخ ثبت شد.',
     },
     // Follow-up queue
-    followUpsTitle: 'صف «بعداً»',
+    followUpsTitle: 'صف «بعدا»',
     followUpsHelp:
       'پرسش‌هایی که برای بعد گذاشتید. هر زمان پاسخشان را بدانید اینجا ثبت کنید؛ مانده‌هایشان در گزارش پایانی «حل‌نشده» نشان داده می‌شود.',
     followUpsNone: 'پرسشی برای بعد نمانده است.',
@@ -138,8 +138,8 @@ const messages = {
     working: 'در حال انجام…',
     // Definition
     definitionTitle: 'تعریف مسئله',
-    versionLabel: 'نسخهٔ {n}',
-    origins: { model: 'نوشتهٔ تحلیلگر', edit: 'ویرایش شما' } as Record<string, string>,
+    versionLabel: 'نسخه {n}',
+    origins: { model: 'نوشته تحلیلگر', edit: 'ویرایش شما' } as Record<string, string>,
     definitionStatuses: {
       draft: 'پیش‌نویس',
       awaiting_approval: 'منتظر تأیید',
@@ -149,8 +149,8 @@ const messages = {
     } as Record<string, string>,
     passedByDecision: 'با تصمیم شما از سقف تلاش عبور کرد.',
     unresolvedQuestionsTitle: 'پرسش‌هایی که حل نشدند',
-    unresolvedQuestionsHelp: 'این پرسش‌ها بی‌پاسخ یا برای «بعداً» ماندند و در گزارش برجسته‌اند.',
-    unresolvedNone: 'همهٔ پرسش‌ها پاسخ یا وضعیت نهایی دارند.',
+    unresolvedQuestionsHelp: 'این پرسش‌ها بی‌پاسخ یا برای «بعدا» ماندند و در گزارش برجسته‌اند.',
+    unresolvedNone: 'همه پرسش‌ها پاسخ یا وضعیت نهایی دارند.',
     openContradictionsTitle: 'تناقض‌های باز',
     approve: 'تأیید تعریف مسئله',
     reject: 'رد با بازخورد',
@@ -163,15 +163,15 @@ const messages = {
     versionsNone: 'نسخه‌ای نیست.',
     approvedMark: 'مورد تأیید',
     // History
-    historyTitle: 'تاریخچهٔ پرسش‌وپاسخ',
+    historyTitle: 'تاریخچه پرسش‌وپاسخ',
     historyNone: 'هنوز دسته‌ای نیست.',
-    batchSummary: 'دستهٔ {n} · {count} پرسش · {state}',
+    batchSummary: 'دسته {n} · {count} پرسش · {state}',
     batchStates: { open: 'منتظر پاسخ', submitted: 'کامل‌شده' } as Record<string, string>,
     noAnswer: 'بدون متن',
     attachmentLabel: 'پیوست',
     revisionsNote: '{n} بار ویرایش شد',
     done: {
-      approved: 'تعریف مسئله تأیید شد؛ گردش‌کار به مرحلهٔ بعد می‌رود.',
+      approved: 'تعریف مسئله تأیید شد؛ گردش‌کار به مرحله بعد می‌رود.',
       rejected: 'تعریف مسئله رد شد؛ تحلیلگر با بازخورد شما ادامه می‌دهد.',
     },
     errors: {
@@ -179,11 +179,11 @@ const messages = {
       ANALYSIS_INVALID_REQUEST: 'اطلاعات واردشده معتبر نیست؛ پاسخ‌ها را بررسی کنید.',
       ANALYSIS_BATCH_NOT_FOUND: 'این دسته پیدا نشد؛ صفحه را تازه کنید.',
       ANALYSIS_QUESTION_NOT_IN_BATCH: 'یکی از پرسش‌ها به این دسته تعلق ندارد؛ صفحه را تازه کنید.',
-      ANALYSIS_QUESTION_CLOSED: 'این پرسش دیگر قابل ویرایش نیست؛ فقط پرسش‌های «بعداً» بازند.',
+      ANALYSIS_QUESTION_CLOSED: 'این پرسش دیگر قابل ویرایش نیست؛ فقط پرسش‌های «بعدا» بازند.',
       ANALYSIS_AWAITING_APPROVAL:
-        'تعریف مسئله منتظر تصمیم است؛ برای ادامهٔ تحلیل ابتدا آن را رد کنید.',
+        'تعریف مسئله منتظر تصمیم است؛ برای ادامه تحلیل ابتدا آن را رد کنید.',
       ANALYSIS_CLOSED: 'تحلیل این اجرا بسته شده است.',
-      ANALYSIS_PROJECT_NOT_ACTIVE: 'پاسخ فقط برای پروژهٔ فعال یا متوقف ثبت می‌شود.',
+      ANALYSIS_PROJECT_NOT_ACTIVE: 'پاسخ فقط برای پروژه فعال یا متوقف ثبت می‌شود.',
       ANALYSIS_MINIMUM_NOT_REACHED: 'هنوز حداقل لازم پرسش‌ها پرسیده نشده است.',
       ANALYSIS_ANSWERS_PENDING: 'ابتدا به پرسش‌های باز پاسخ دهید یا برایشان وضعیت بگذارید.',
       ANALYSIS_ATTACHMENT_NOT_FOUND: 'فایل پیوست پیدا نشد.',

@@ -85,8 +85,8 @@ describe('analysis limits (FR-ANL-001, FR-ANL-002)', () => {
 
 describe('repeated questions', () => {
   it('compares Persian and Arabic letter forms, digits and punctuation as the same', () => {
-    expect(normalizeQuestionText('آيا بودجهٔ ۱۰۰ میلیون كافی است؟')).toBe(
-      normalizeQuestionText('آیا بودجهٔ 100 میلیون کافی است'),
+    expect(normalizeQuestionText('آيا بودجه ۱۰۰ میلیون كافی است؟')).toBe(
+      normalizeQuestionText('آیا بودجه 100 میلیون کافی است'),
     );
     expect(normalizeQuestionText('  What   is the BUDGET?!  ')).toBe('what is the budget');
     expect(normalizeQuestionText('می‌خواهیم')).toBe('می خواهیم');

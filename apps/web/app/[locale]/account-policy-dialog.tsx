@@ -69,7 +69,7 @@ const copy = {
     dailyCalls: 'فراخوانی مدل در روز',
     usage: 'مصرف',
     usedTokens: 'توکن این ماه',
-    usedCost: 'هزینهٔ این ماه',
+    usedCost: 'هزینه این ماه',
     usedCalls: 'فراخوانی امروز',
     ofLimit: 'از {limit}',
     account: 'حساب',

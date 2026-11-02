@@ -1,3 +1,4 @@
+import { aiTaskKeyFor, beginAiTask } from './ai-activity-store';
 import { smartBus } from './smart/bus';
 
 /** Thin same-origin client for the API behind the `/api` rewrite; errors keep the problem code. */
@@ -104,6 +105,10 @@ export async function apiSend<T = unknown>(
   options: { version?: number; headers?: Record<string, string> } = {},
 ): Promise<T> {
   let response: Response;
+  const endAiTask = (() => {
+    const key = aiTaskKeyFor(method, path);
+    return key ? beginAiTask(key) : undefined;
+  })();
   try {
     response = await fetch(`/api${path}`, {
       method,
@@ -118,12 +123,17 @@ export async function apiSend<T = unknown>(
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
   } catch (error) {
+    endAiTask?.();
     reportNetworkFailure(error, method, path);
     throw error;
   }
-  if (!response.ok) throw await failure(response, method, path);
-  const text = await response.text();
-  return (text ? JSON.parse(text) : undefined) as T;
+  try {
+    if (!response.ok) throw await failure(response, method, path);
+    const text = await response.text();
+    return (text ? JSON.parse(text) : undefined) as T;
+  } finally {
+    endAiTask?.();
+  }
 }
 
 /** Sends a recording as the raw request body and returns the parsed JSON answer. */

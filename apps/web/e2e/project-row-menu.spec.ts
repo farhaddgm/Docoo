@@ -19,8 +19,8 @@ test.describe('the three-dot menu at the end of each project row', () => {
     const make = (code: string) =>
       createViaApi(page, '/projects', {
         code,
-        title: `پروژهٔ منوی ردیف ${code}`,
-        initialProblem: 'مسئلهٔ آزمون منوی سه‌نقطه',
+        title: `پروژه منوی ردیف ${code}`,
+        initialProblem: 'مسئله آزمون منوی سه‌نقطه',
         outputLanguage: 'fa',
       });
     await make(`rm-a-${stamp}`);
