@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "57de2a577fa7d3eeeaf429d662278ef3e796e8ed"
+    "source_commit": "a66f2394b4de6d10a848f38602d1a6946312d371"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-11-02T15:14:46.497Z",
+    "synced_at": "2026-11-02T16:19:14.439Z",
     "created": 0,
-    "updated": 1,
-    "unchanged": 73,
+    "updated": 2,
+    "unchanged": 72,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -333,13 +333,13 @@
       "version": "1.12.0",
       "status": "proposed",
       "owner": "API Architecture",
-      "checksum_sha256": "46383ad1384ee8dc0ca11445093c28d129e8a189ddec976c0ba54d215aa8a66d",
+      "checksum_sha256": "46089c2964b51adb28971bc4dca754a6acfcb3168233d1f0d90ec5fe0c4f053a",
       "notion_page_id": "3e55a24a-6668-812d-9f69-cd7fceb4fea8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812d9f69cd7fceb4fea8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a8-8910-fed8b8b362d3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a88910fed8b8b362d3",
-      "synced_commit": "57de2a577fa7d3eeeaf429d662278ef3e796e8ed",
-      "synced_at": "2026-11-02T15:14:46.497Z"
+      "synced_commit": "a66f2394b4de6d10a848f38602d1a6946312d371",
+      "synced_at": "2026-11-02T16:19:14.439Z"
     },
     "DOCOO-WORKFLOWS-JOBS": {
       "path": "docs/04-architecture/04-workflows-and-jobs.md",
@@ -655,13 +655,13 @@
       "version": "1.6.0",
       "status": "active",
       "owner": "Security & Engineering",
-      "checksum_sha256": "670bbb9fd8005a3a12742372b0d718eb660eed348e838bd40427e094efe55845",
+      "checksum_sha256": "924953ff935ca10cf1f90539ad2d47f5e6087d4df000dbc1600e18360a5f42ea",
       "notion_page_id": "3ed5a24a-6668-8161-89cf-feb622f23b1a",
       "notion_page_url": "https://app.notion.com/p/3ed5a24a6668816189cffeb622f23b1a",
       "index_row_page_id": "3ed5a24a-6668-8125-b8de-ff89f4514ef2",
       "index_row_page_url": "https://app.notion.com/p/3ed5a24a66688125b8deff89f4514ef2",
-      "synced_commit": "7a23628709f124561f41d7afa66d16f0297d2874",
-      "synced_at": "2026-11-02T12:58:02.137Z"
+      "synced_commit": "a66f2394b4de6d10a848f38602d1a6946312d371",
+      "synced_at": "2026-11-02T16:19:14.439Z"
     },
     "DOCOO-EPIC-BREAKDOWN": {
       "path": "docs/06-delivery/09-epic-breakdown.md",
