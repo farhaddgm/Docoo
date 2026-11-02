@@ -1,3 +1,5 @@
+import { RESEARCH_PRESET_KEYS } from '@docoo/contracts';
+
 import { PROJECT_CODE_PATTERN } from '../project-fields';
 
 /** The four steps of the creation wizard (ADR-0035). */
@@ -81,6 +83,9 @@ export function reachableSteps(complete: { problem: boolean; context: boolean })
   return REVIEW_STEP;
 }
 
+/** The second model a research mode may set along with its numbers. */
+const MODE_MODEL_KEYS = ['research.dual_connection_id', 'research.dual_model'] as const;
+
 /** How many settings an advanced section changes from their inherited values. */
 export function changedInSection(
   section: AdvancedSection,
@@ -90,6 +95,12 @@ export function changedInSection(
   const entry = ADVANCED_SECTIONS.find((item) => item.id === section);
   if (!entry) return 0;
   let count = entry.keys.filter((key) => changedKeys.has(key)).length;
+  // The research modes set these without showing them as rows (ADR-0048).
+  if (section === 'research') {
+    count += [...RESEARCH_PRESET_KEYS, ...MODE_MODEL_KEYS].filter((key) =>
+      changedKeys.has(key),
+    ).length;
+  }
   if (section === 'model' && extra.modelChanged) count += 1;
   if (section === 'solutions' && extra.criteriaChanged) count += 1;
   return count;

@@ -1,3 +1,5 @@
+import { RESEARCH_PRESET_KEYS } from '@docoo/contracts';
+
 /**
  * Shapes and rules of the settings screens (ADR-0018). The server is the authority on what a
  * value may be; the checks here only keep an administrator from sending what it would refuse
@@ -132,6 +134,12 @@ export const DUAL_PICKER: ReadonlySet<string> = new Set([
   'research.judge_connection_id',
   'research.judge_model',
 ]);
+
+/**
+ * The research numbers a mode sets (ADR-0048). Everyone chooses a mode; only the system owner
+ * sees and edits the numbers behind it.
+ */
+export const OWNER_ONLY_RESEARCH: ReadonlySet<string> = new Set(RESEARCH_PRESET_KEYS);
 
 export function sameValue(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);

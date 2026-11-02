@@ -102,6 +102,8 @@ test.describe('knowledge-backed research and role evaluation (RSC-001, EVL-002)'
     await expect(output.getByText(flow.out.levels['unverified']!, { exact: true })).toHaveCount(1);
     await expect(output.getByText(flow.out.citationVerified)).toHaveCount(1);
     await expect(output.locator('blockquote')).toHaveCount(1);
+    // The headline is always visible; the counts behind it are one click away.
+    await output.getByText(flow.out.overviewDetails, { exact: true }).click();
     await expect(
       output.getByText(
         flow.out.overviewFindings

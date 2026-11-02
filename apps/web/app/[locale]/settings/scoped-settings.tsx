@@ -1,5 +1,6 @@
 'use client';
 import { useReadOnlyAccess } from '../resource-access';
+import { useSessionIdentity } from '../signed-in';
 
 import type { Route } from 'next';
 import Link from 'next/link';
@@ -11,11 +12,13 @@ import { fill } from '../agents/agent-messages';
 import { Notice, useAction } from '../use-action';
 import { ReasonBar } from '../reason-bar';
 import { ModelPicker } from './model-picker';
+import { ResearchPresetPicker } from './research-presets';
 import { settingsMessages, type SettingsText } from './settings-messages';
 import {
   EDITED_ELSEWHERE,
   NOT_ENFORCED,
   DUAL_PICKER,
+  OWNER_ONLY_RESEARCH,
   PROVIDER_PAGE,
   SETTING_GROUPS,
   parseControlText,
@@ -79,6 +82,8 @@ export function ScopedSettings({
   scopeId: string;
 }) {
   const text = settingsMessages(locale);
+  const isOwner = useSessionIdentity()?.user.isOwner === true;
+  const readOnlyScope = useReadOnlyAccess();
   const base = `/workspaces/${workspaceId}/settings`;
   const [definitions, setDefinitions] = useState<Definition[] | null>(null);
   const [effective, setEffective] = useState<Effective | null>(null);
@@ -135,26 +140,65 @@ export function ScopedSettings({
           );
         if (rows.length === 0) return null;
         const info = text.groups[group.id];
+        const row = (definition: Definition) => (
+          <SettingRow
+            key={definition.key}
+            locale={locale}
+            workspaceId={workspaceId}
+            scopeType={scopeType}
+            scopeId={scopeId}
+            definition={definition}
+            effective={effective}
+            assignment={assignments.get(definition.key) ?? null}
+            action={action}
+            onChanged={load}
+          />
+        );
+        if (group.id !== 'research') {
+          return (
+            <GroupSection key={group.id} title={info.title} help={info.help}>
+              {rows.map(row)}
+            </GroupSection>
+          );
+        }
+        // The research group leads with the four modes; the exact numbers behind them are the
+        // system owner's to change (ADR-0048), behind a fold so they do not crowd the page.
+        const plain = rows.filter((item) => !OWNER_ONLY_RESEARCH.has(item.key));
+        const exact = rows.filter((item) => OWNER_ONLY_RESEARCH.has(item.key));
         return (
           <GroupSection key={group.id} title={info.title} help={info.help}>
-            {rows.map((definition) => (
-              <SettingRow
-                key={definition.key}
-                locale={locale}
-                workspaceId={workspaceId}
-                scopeType={scopeType}
-                scopeId={scopeId}
-                definition={definition}
-                effective={effective}
-                assignment={assignments.get(definition.key) ?? null}
-                action={action}
-                onChanged={load}
-              />
-            ))}
+            {exact.length > 0 && (
+              <li>
+                <ResearchPresetPicker
+                  locale={locale}
+                  workspaceId={workspaceId}
+                  values={effective.values}
+                  disabled={readOnlyScope}
+                  target={{ kind: 'save', scopeType, scopeId, onSaved: () => void load() }}
+                />
+              </li>
+            )}
+            {plain.map(row)}
+            {exact.length > 0 && (
+              <li>
+                {isOwner ? (
+                  <details className="wizard-section">
+                    <summary>
+                      <span className="wizard-section-title">{text.presets.advanced}</span>
+                    </summary>
+                    <ul className="plain-list settings-grid wizard-section-body">
+                      {exact.map(row)}
+                    </ul>
+                  </details>
+                ) : (
+                  <p className="muted">{text.presets.ownerOnly}</p>
+                )}
+              </li>
+            )}
           </GroupSection>
         );
       })}
-      {definitions.some((item) => DUAL_PICKER.has(item.key)) && (
+      {isOwner && definitions.some((item) => DUAL_PICKER.has(item.key)) && (
         <DualResearchSection
           locale={locale}
           workspaceId={workspaceId}

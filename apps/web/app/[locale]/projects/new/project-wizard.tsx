@@ -13,6 +13,7 @@ import {
 import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { fill } from '../../agents/agent-messages';
 import { ModelPicker } from '../../settings/model-picker';
+import { ResearchPresetPicker } from '../../settings/research-presets';
 import { displayValue, problemText, SettingControl } from '../../settings/scoped-settings';
 import { settingsMessages } from '../../settings/settings-messages';
 import {
@@ -331,6 +332,18 @@ export function ProjectWizard({
     }
     return { overrides, problem };
   }, [touched, definitions, baseline, connectionId, model, settings]);
+
+  /** What the research modes show as current: the inherited values with the ones chosen here. */
+  const presetValues = useMemo(() => {
+    const values: Record<string, unknown> = { ...(baseline?.values ?? {}) };
+    for (const [key, raw] of Object.entries(touched)) {
+      const def = definitions.find((item) => item.key === key);
+      if (!def) continue;
+      const parsed = parseControlText(def.valueSchema, raw);
+      if (parsed.ok) values[key] = parsed.value;
+    }
+    return values;
+  }, [baseline, touched, definitions]);
 
   // The review asks the server which value wins at each level (the first topic has priority 1).
   useEffect(() => {
@@ -863,6 +876,25 @@ export function ProjectWizard({
                             onChange={(nextConnection, nextModel) => {
                               setConnectionId(nextConnection);
                               setModel(nextModel);
+                            }}
+                          />
+                        )}
+                        {section.id === 'research' && baseline && (
+                          <ResearchPresetPicker
+                            locale={locale}
+                            workspaceId={workspaceId}
+                            values={presetValues}
+                            target={{
+                              kind: 'draft',
+                              onChoose: (changes) =>
+                                setTouched((current) => {
+                                  const next = { ...current };
+                                  for (const [key, value] of Object.entries(changes)) {
+                                    const def = definition(key);
+                                    if (def) next[key] = toControlText(def.valueSchema, value);
+                                  }
+                                  return next;
+                                }),
                             }}
                           />
                         )}
