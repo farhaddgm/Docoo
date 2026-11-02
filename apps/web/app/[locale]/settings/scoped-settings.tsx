@@ -168,26 +168,33 @@ export function ScopedSettings({
         return (
           <GroupSection key={group.id} title={info.title} help={info.help}>
             {exact.length > 0 && (
-              <ResearchPresetPicker
-                locale={locale}
-                workspaceId={workspaceId}
-                values={effective.values}
-                disabled={readOnlyScope}
-                target={{ kind: 'save', scopeType, scopeId, onSaved: () => void load() }}
-              />
+              <li>
+                <ResearchPresetPicker
+                  locale={locale}
+                  workspaceId={workspaceId}
+                  values={effective.values}
+                  disabled={readOnlyScope}
+                  target={{ kind: 'save', scopeType, scopeId, onSaved: () => void load() }}
+                />
+              </li>
             )}
             {plain.map(row)}
-            {exact.length > 0 &&
-              (isOwner ? (
-                <details className="wizard-section">
-                  <summary>
-                    <span className="wizard-section-title">{text.presets.advanced}</span>
-                  </summary>
-                  <div className="stack wizard-section-body">{exact.map(row)}</div>
-                </details>
-              ) : (
-                <p className="muted">{text.presets.ownerOnly}</p>
-              ))}
+            {exact.length > 0 && (
+              <li>
+                {isOwner ? (
+                  <details className="wizard-section">
+                    <summary>
+                      <span className="wizard-section-title">{text.presets.advanced}</span>
+                    </summary>
+                    <ul className="plain-list settings-grid wizard-section-body">
+                      {exact.map(row)}
+                    </ul>
+                  </details>
+                ) : (
+                  <p className="muted">{text.presets.ownerOnly}</p>
+                )}
+              </li>
+            )}
           </GroupSection>
         );
       })}
