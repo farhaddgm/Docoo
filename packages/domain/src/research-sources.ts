@@ -147,6 +147,47 @@ export function conflictFingerprint(description: string, refs: readonly string[]
   return pass(0x811c9dc5) + pass(0x9e3779b1);
 }
 
+/** Why one source of a conflict is suggested over the others (shown to the administrator). */
+export type ConflictAdviceReason = 'knowledge' | 'official' | 'both_models';
+
+export interface ConflictAdvice {
+  readonly trustedRef: string;
+  readonly reason: ConflictAdviceReason;
+}
+
+/** What advice needs of a source: where it stands and, for a page, how many models found it. */
+export interface AdvisedSource {
+  readonly ref: string;
+  readonly kind: SourceClass;
+  /** Models that found the page in dual-model research (ADR-0047); absent for one model. */
+  readonly foundBy?: readonly string[] | undefined;
+}
+
+const WEIGHT: Record<SourceClass, number> = { knowledge: 3, official: 2, public: 1 };
+
+/**
+ * A suggestion for a conflict, never a decision: the source that stands higher, or, between
+ * pages of equal standing, the one both search models found. Approved knowledge outranks an
+ * official page, which outranks a public one. With no clear leader (a tie, or fewer than two
+ * sources) there is no advice, and the administrator weighs it alone. Plain rules, so the reason
+ * can be told to the administrator exactly.
+ */
+export function adviseConflict(sources: readonly AdvisedSource[]): ConflictAdvice | null {
+  if (sources.length < 2) return null;
+  const ranked = [...sources].sort((a, b) => WEIGHT[b.kind] - WEIGHT[a.kind]);
+  const top = ranked[0]!;
+  const next = ranked[1]!;
+  if (WEIGHT[top.kind] > WEIGHT[next.kind]) {
+    return { trustedRef: top.ref, reason: top.kind === 'knowledge' ? 'knowledge' : 'official' };
+  }
+  const best = sources.filter((item) => WEIGHT[item.kind] === WEIGHT[top.kind]);
+  const both = best.filter((item) => (item.foundBy?.length ?? 0) > 1);
+  if (both.length === 1 && best.length > 1) {
+    return { trustedRef: both[0]!.ref, reason: 'both_models' };
+  }
+  return null;
+}
+
 export const CONFLICT_DECISIONS = ['trust', 'dismiss'] as const;
 export type ConflictDecision = (typeof CONFLICT_DECISIONS)[number];
 

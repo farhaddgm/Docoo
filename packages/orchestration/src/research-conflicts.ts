@@ -1,5 +1,7 @@
 import {
+  adviseConflict,
   conflictFingerprint,
+  type ConflictAdvice,
   type ConflictDecision,
   type PromptConflictDecision,
   type SourceClass,
@@ -12,12 +14,16 @@ export interface ConflictSource {
   readonly title: string;
   readonly url: string | null;
   readonly kind: SourceClass;
+  /** In dual-model research, the models that found the page. */
+  readonly foundBy?: readonly string[];
 }
 
 export interface ResearchConflictView {
   readonly fingerprint: string;
   readonly description: string;
   readonly sources: readonly ConflictSource[];
+  /** A suggestion from plain rules (ADR-0049); null when no source clearly leads. */
+  readonly advice: ConflictAdvice | null;
 }
 
 export interface StoredConflictDecision {
@@ -55,6 +61,9 @@ export function describeRef(content: unknown, ref: string): ConflictSource {
       title: asText(page['title']),
       url: asText(page['url']) || null,
       kind: page['sourceClass'] === 'official' ? 'official' : 'public',
+      ...(Array.isArray(page['foundBy'])
+        ? { foundBy: page['foundBy'].filter((v): v is string => typeof v === 'string') }
+        : {}),
     };
   }
   return { ref, title: '', url: null, kind: ref.startsWith('W') ? 'public' : 'knowledge' };
@@ -70,11 +79,13 @@ export function researchConflicts(content: unknown): ResearchConflictView[] {
     const refs = Array.isArray(entry['refs'])
       ? entry['refs'].filter((ref): ref is string => typeof ref === 'string')
       : [];
+    const sources = refs.map((ref) => describeRef(content, ref));
     return [
       {
         fingerprint: conflictFingerprint(description, refs),
         description,
-        sources: refs.map((ref) => describeRef(content, ref)),
+        sources,
+        advice: adviseConflict(sources),
       },
     ];
   });

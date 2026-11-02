@@ -11,6 +11,7 @@ import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { ReasonBar } from '../../reason-bar';
 import { DeliverablesPanel } from './deliverables-panel';
+import { summarizeProgress, type ProgressStep } from './progress-model';
 import { workflowMessages } from './workflow-messages';
 import { FieldLabel } from '../../../info-tip';
 
@@ -25,6 +26,7 @@ interface Run {
 
 interface StageItem {
   id: string | null;
+  progress?: ProgressStep[];
   stage: string;
   sequence: number;
   status: string;
@@ -100,6 +102,56 @@ const LIVE = ['starting', 'running', 'paused', 'waiting_for_human'];
 const POLL_ACTIVE_MS = 5000;
 const POLL_IDLE_MS = 15000;
 const ACTED_WINDOW_MS = 60000;
+
+/** What the running stage reports about itself, in a few plain lines (ADR-0049). */
+function StageProgress({
+  locale,
+  text,
+  steps,
+}: {
+  locale: Locale;
+  text: ReturnType<typeof workflowMessages>;
+  steps: ProgressStep[];
+}) {
+  const summary = summarizeProgress(steps);
+  if (!summary) return null;
+  const t = text.progress;
+  const sideKeys = Object.keys(summary.sides);
+  const n = (value: number) => formatNumber(locale, value);
+  return (
+    <div className="stage-progress" role="status" aria-label={t.heading}>
+      <strong>{t[summary.phase]}</strong>
+      {summary.round > 0 && summary.maxRounds > 1 && (
+        <span className="muted">
+          {' '}
+          {t.round.replace('{round}', n(summary.round)).replace('{max}', n(summary.maxRounds))}
+        </span>
+      )}
+      {sideKeys.map((key) => {
+        const count = summary.sides[key]!;
+        return (
+          <p key={key} className="muted">
+            {sideKeys.length > 1
+              ? t.sideCounts
+                  .replace('{who}', t.sides[key] ?? key)
+                  .replace('{searches}', n(count.searches))
+                  .replace('{pages}', n(count.pages))
+              : t.counts
+                  .replace('{searches}', n(count.searches))
+                  .replace('{pages}', n(count.pages))}
+          </p>
+        );
+      })}
+      {summary.open !== null && (
+        <p className="muted">
+          {summary.open.length === 0
+            ? t.allAnswered
+            : t.open.replace('{ids}', summary.open.join('، '))}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function WorkflowPanel({
   locale,
@@ -371,6 +423,9 @@ export function WorkflowPanel({
                 <span className="muted">
                   {stage.gateMode === 'manual' ? text.gateManual : text.gateAutomatic}
                 </span>
+              )}
+              {stage.progress && stage.progress.length > 0 && (
+                <StageProgress locale={locale} text={text} steps={stage.progress} />
               )}
               {stage.passedByDecision && <span className="muted">{text.passedByDecision}</span>}
               {stage.carriedFromStageRunId && <span className="muted">{text.carried}</span>}

@@ -1,7 +1,8 @@
-import { ProviderError } from '@docoo/providers';
+import { ProviderError, strictSchemaProblems } from '@docoo/providers';
 import { describe, expect, it } from 'vitest';
 
 import {
+  JUDGE_SCHEMA,
   judgeCanCompare,
   mergeConflicts,
   mergeModelRuns,
@@ -338,5 +339,11 @@ describe('judgeDualResearch', () => {
         Promise.resolve({ response: { finishReason: 'stop', json: { conflicts: 'x' } } }),
     });
     expect(junk.web.dual?.judge).toMatchObject({ status: 'used', conflicts: 0 });
+  });
+});
+
+describe('the judge schema', () => {
+  it('is accepted by strict structured outputs', () => {
+    expect(strictSchemaProblems(JUDGE_SCHEMA as never)).toEqual([]);
   });
 });

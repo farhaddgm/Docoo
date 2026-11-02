@@ -5519,3 +5519,9 @@ button.link-button {
 .report-list p {
   margin: 0.25rem 0 0;
 }
+
+/* ADR-0049: what a running stage reports about itself. */
+.stage-progress {
+  flex-basis: 100%;
+  padding-block: var(--space-2);
+}

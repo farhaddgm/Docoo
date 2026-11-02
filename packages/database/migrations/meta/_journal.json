@@ -568,6 +568,13 @@
       "when": 1793808764919,
       "tag": "0080_research_setting_wording",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1793808765919,
+      "tag": "0081_stage_progress",
+      "breakpoints": true
     }
   ]
 }
