@@ -47,6 +47,13 @@ export interface Settings {
   researchWebTargetSources: number;
   /** Pages kept for the research prompt (`research.web_source_limit`). */
   researchWebSourceLimit: number;
+  /** Read the key pages in full (`research.read_pages`, ADR-0054). */
+  researchReadPages: boolean;
+  /** Pages read in full at most (`research.read_pages_max`). */
+  researchReadPagesMax: number;
+  /** The owner's URL policy and allowlist (`ingestion.url_policy`, `ingestion.url_allowlist`). */
+  ingestionUrlPolicy: 'deny' | 'allowlist' | 'public';
+  ingestionUrlAllowlist: string[];
   /** Dual-model research (ADR-0047): a second model searches too and a judge compares. */
   researchDual: DualSettings;
   /** Ideation waits for the administrator to confirm the plan of deliverables (ADR-0031). */
@@ -140,6 +147,15 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
         researchWebTargetSources: policy.targetSources,
       };
     })(),
+    researchReadPages: values['research.read_pages'] === true,
+    researchReadPagesMax: boundedInteger(values['research.read_pages_max'], 5, 1, 10),
+    ingestionUrlPolicy:
+      values['ingestion.url_policy'] === 'public' || values['ingestion.url_policy'] === 'allowlist'
+        ? values['ingestion.url_policy']
+        : 'deny',
+    ingestionUrlAllowlist: Array.isArray(values['ingestion.url_allowlist'])
+      ? values['ingestion.url_allowlist'].filter((d): d is string => typeof d === 'string')
+      : [],
     researchDual: {
       enabled: values['research.dual_enabled'] === true,
       connectionId: textSetting(values['research.dual_connection_id']),

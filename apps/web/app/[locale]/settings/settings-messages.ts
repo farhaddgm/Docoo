@@ -169,9 +169,9 @@ const messages = {
       blurbs: {
         quick: 'برای بررسی سریع یا موضوع کم‌اهمیت: چند جستجوی کوتاه.',
         standard: 'برای بیشتر پروژه‌ها: همان روش همیشگی.',
-        deep: 'برای پروژه‌های مهم: چند دور جستجو و منابع بیشتر.',
+        deep: 'برای پروژه‌های مهم: چند دور جستجو، منابع بیشتر و خواندن کامل صفحه‌های کلیدی (در حد سیاست دریافت نشانی).',
         sensitive:
-          'برای تصمیم‌های حساس: دو مدل جداگانه جستجو می‌کنند و یک داور اختلاف‌های آن‌ها را گزارش می‌کند.',
+          'برای تصمیم‌های حساس: دو مدل جداگانه جستجو می‌کنند، صفحه‌های کلیدی کامل خوانده می‌شوند (در حد سیاست دریافت نشانی) و یک داور اختلاف‌ها را گزارش می‌کند.',
       } as Record<string, string>,
       current: 'حالت فعلی',
       custom: 'سفارشی: عددها جداگانه تغییر کرده‌اند و با هیچ‌کدام از چهار حالت برابر نیستند.',
@@ -409,9 +409,9 @@ const messages = {
       blurbs: {
         quick: 'For a quick look or a minor topic: a few short searches.',
         standard: 'For most projects: the usual way.',
-        deep: 'For important projects: several rounds of searching and more sources.',
+        deep: 'For important projects: several rounds of searching, more sources and the key pages read in full (as far as the URL policy allows).',
         sensitive:
-          'For sensitive decisions: two separate models search and a judge reports where they disagree.',
+          'For sensitive decisions: two separate models search, the key pages are read in full (as far as the URL policy allows) and a judge reports where they disagree.',
       } as Record<string, string>,
       current: 'Current mode',
       custom: 'Custom: the numbers were changed one by one and match none of the four modes.',

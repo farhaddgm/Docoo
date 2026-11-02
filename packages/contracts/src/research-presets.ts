@@ -18,6 +18,7 @@ export const RESEARCH_PRESET_KEYS = [
   'research.web_target_sources',
   'research.web_source_limit',
   'research.dual_enabled',
+  'research.read_pages',
 ] as const;
 export type ResearchPresetKey = (typeof RESEARCH_PRESET_KEYS)[number];
 export type ResearchPresetValues = Readonly<Record<ResearchPresetKey, boolean | number>>;
@@ -32,6 +33,7 @@ export const RESEARCH_PRESETS: Readonly<Record<ResearchPresetId, ResearchPresetV
     'research.web_target_sources': 0,
     'research.web_source_limit': 8,
     'research.dual_enabled': false,
+    'research.read_pages': false,
   },
   // The values every workspace has until someone changes them: "standard" is what runs today.
   standard: {
@@ -43,6 +45,7 @@ export const RESEARCH_PRESETS: Readonly<Record<ResearchPresetId, ResearchPresetV
     'research.web_target_sources': 0,
     'research.web_source_limit': 12,
     'research.dual_enabled': false,
+    'research.read_pages': false,
   },
   deep: {
     'research.web_enabled': true,
@@ -53,6 +56,7 @@ export const RESEARCH_PRESETS: Readonly<Record<ResearchPresetId, ResearchPresetV
     'research.web_target_sources': 15,
     'research.web_source_limit': 25,
     'research.dual_enabled': false,
+    'research.read_pages': true,
   },
   sensitive: {
     'research.web_enabled': true,
@@ -63,6 +67,7 @@ export const RESEARCH_PRESETS: Readonly<Record<ResearchPresetId, ResearchPresetV
     'research.web_target_sources': 15,
     'research.web_source_limit': 30,
     'research.dual_enabled': true,
+    'research.read_pages': true,
   },
 };
 
@@ -76,6 +81,7 @@ const BOUNDS: Readonly<Record<ResearchPresetKey, readonly [number, number]>> = {
   'research.web_target_sources': [0, 100],
   'research.web_source_limit': [1, 100],
   'research.dual_enabled': [0, 1],
+  'research.read_pages': [0, 1],
 };
 
 /**
@@ -124,6 +130,8 @@ export type EstimateMode = 'low' | 'typical' | 'high';
 const STRUCTURED_CALL = 2;
 const JUDGE_CALL = 1.5;
 const PAGE_WEIGHT = 0.05;
+// Reading key pages in full adds no model call but lengthens the structured call's prompt.
+const READ_PAGES_WEIGHT = 1;
 
 /** Relative size of one research run with these values; the standard preset at `typical` is 5.6. */
 export function researchUnits(values: ResearchPresetValues, mode: EstimateMode): number {
@@ -136,7 +144,8 @@ export function researchUnits(values: ResearchPresetValues, mode: EstimateMode):
     Math.max(searches, 1) * (dual ? 2 : 1) +
     STRUCTURED_CALL +
     (dual ? JUDGE_CALL : 0) +
-    (values['research.web_source_limit'] as number) * PAGE_WEIGHT
+    (values['research.web_source_limit'] as number) * PAGE_WEIGHT +
+    (values['research.read_pages'] === true ? READ_PAGES_WEIGHT : 0)
   );
 }
 

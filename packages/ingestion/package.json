@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./url-fetch": {
+      "types": "./dist/url-fetch.d.ts",
+      "default": "./dist/url-fetch.js"
     }
   },
   "scripts": {

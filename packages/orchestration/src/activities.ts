@@ -38,6 +38,7 @@ import {
   type Stage,
   type StageContext,
 } from './stages.js';
+import { readPages, searchTerms } from './page-reading.js';
 import { recordToolCall, toolDecision, type ToolCallScope } from './tool-calls.js';
 import {
   mergeModelRuns,
@@ -839,6 +840,42 @@ export function createOrchestrationActivities(
                 };
                 dualJudge = dual.judge;
               }
+            }
+          }
+          // ADR-0054: read the few pages the research leans on most, in full, under the owner's URL
+          // policy. It never fails the stage; a page that cannot be read stays as the search left it.
+          if (prepared.config.researchReadPages && web.sources.length > 0) {
+            if (toolDecision(prepared.toolScope, 'web_read') === 'denied') {
+              web = { ...web, pageReading: { status: 'denied', read: 0, failed: 0, entries: [] } };
+              await run(ref.workspaceId, (client) =>
+                recordToolCall(client, prepared.toolScope, {
+                  tool: 'web_read',
+                  decision: 'denied',
+                  input: { reason: 'tool_not_allowed' },
+                  errorCode: 'tool_not_allowed',
+                }),
+              );
+            } else {
+              await progress('reading', { pages: web.sources.length });
+              const reading = await readPages({
+                sources: web.sources,
+                max: prepared.config.researchReadPagesMax,
+                terms: searchTerms([
+                  prepared.promptInput.problem,
+                  ...(prepared.researchPlan?.questions ?? []).map((q) => q.question),
+                ]),
+                policy: prepared.config.ingestionUrlPolicy,
+                allowlist: prepared.config.ingestionUrlAllowlist,
+              });
+              web = { ...web, sources: reading.sources, pageReading: reading.info };
+              await run(ref.workspaceId, (client) =>
+                recordToolCall(client, prepared.toolScope, {
+                  tool: 'web_read',
+                  decision: reading.info.status === 'denied' ? 'denied' : 'allowed',
+                  input: { pages: reading.info.entries.length },
+                  result: { read: reading.info.read, failed: reading.info.failed },
+                }),
+              );
             }
           }
           research = { ...research, web };

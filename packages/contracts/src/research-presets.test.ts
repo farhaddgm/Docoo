@@ -32,6 +32,23 @@ describe('research presets', () => {
     }
   });
 
+  it('only Deep and Sensitive read the key pages in full, and doing so makes a run larger', () => {
+    for (const id of RESEARCH_PRESET_IDS) {
+      expect(RESEARCH_PRESETS[id]['research.read_pages']).toBe(id === 'deep' || id === 'sensitive');
+    }
+    const deep = RESEARCH_PRESETS.deep;
+    expect(researchUnits(deep, 'typical')).toBeGreaterThan(
+      researchUnits({ ...deep, 'research.read_pages': false }, 'typical'),
+    );
+    // Without a web search there is nothing to read.
+    expect(researchUnits({ ...deep, 'research.web_enabled': false }, 'high')).toBe(
+      researchUnits(
+        { ...deep, 'research.web_enabled': false, 'research.read_pages': false },
+        'high',
+      ),
+    );
+  });
+
   it('keeps every minimum under its maximum', () => {
     for (const id of RESEARCH_PRESET_IDS) {
       const preset = RESEARCH_PRESETS[id];

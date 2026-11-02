@@ -602,6 +602,9 @@ importers:
       '@docoo/domain':
         specifier: workspace:*
         version: link:../domain
+      '@docoo/ingestion':
+        specifier: workspace:*
+        version: link:../ingestion
       '@docoo/knowledge':
         specifier: workspace:*
         version: link:../knowledge
