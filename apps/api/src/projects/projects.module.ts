@@ -5,6 +5,7 @@ import { ConfigModule } from '../config/config.module.js';
 import { WorkflowModule } from '../workflow/workflow.module.js';
 import { DecisionIntelligenceController } from './decision-intelligence.controller.js';
 import { DecisionIntelligenceService } from './decision-intelligence.service.js';
+import { ProjectReportService } from './project-report.service.js';
 import { ProjectsController } from './projects.controller.js';
 import { ProjectsService } from './projects.service.js';
 import { EvaluationLabController } from './evaluation-lab.controller.js';
@@ -16,6 +17,7 @@ import { EvaluationStartDispatcher } from './evaluation-start-dispatcher.js';
   controllers: [ProjectsController, DecisionIntelligenceController, EvaluationLabController],
   providers: [
     ProjectsService,
+    ProjectReportService,
     DecisionIntelligenceService,
     EvaluationLabService,
     EvaluationStartDispatcher,

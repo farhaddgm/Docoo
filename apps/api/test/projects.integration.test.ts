@@ -605,6 +605,41 @@ describe.skipIf(!adminUrl)('projects integration (TC-PRJ-*)', () => {
     expect(missing.json<{ items: unknown[] }>().items).toHaveLength(0);
   });
 
+  it('reports the problem, tokens, ideas and final outputs of one project', async () => {
+    const project = await createProject('report');
+    const response = await h.request('GET', projects(h.ids.workspaceA, `/${project.id}/report`), {
+      cookie: cookieA,
+    });
+    expect(response.statusCode).toBe(200);
+    const { report } = response.json<{
+      report: {
+        project: { id: string; code: string; status: string };
+        problem: { initialProblem: string; approvedStatement: string | null };
+        usage: { totals: { invocations: number; inputTokens: number }; byStage: unknown[] };
+        ideas: { items: unknown[] };
+        outputs: { inProgress: number; items: unknown[] };
+      };
+    }>();
+    expect(report.project).toMatchObject({ id: project.id, code: 'report', status: 'draft' });
+    expect(report.problem.approvedStatement).toBeNull();
+    expect(report.problem.initialProblem).not.toBe('');
+    // A project nothing has run for yet has empty sections, not errors.
+    expect(report.usage.totals).toMatchObject({ invocations: 0, inputTokens: 0 });
+    expect(report.usage.byStage).toEqual([]);
+    expect(report.ideas.items).toEqual([]);
+    expect(report.outputs).toEqual({ inProgress: 0, items: [] });
+
+    const foreign = await h.request('GET', projects(h.ids.workspaceB, `/${project.id}/report`), {
+      cookie: cookieB,
+    });
+    expect(foreign.statusCode).toBe(404);
+    expect(foreign.json<{ code: string }>().code).toBe('PROJECT_NOT_FOUND');
+    const malformed = await h.request('GET', projects(h.ids.workspaceA, '/not-a-uuid/report'), {
+      cookie: cookieA,
+    });
+    expect(malformed.statusCode).toBe(400);
+  });
+
   it('isolates projects between workspaces', async () => {
     const project = await createProject('isolated');
     const foreignWorkspace = await h.request('GET', projects(h.ids.workspaceA, `/${project.id}`), {

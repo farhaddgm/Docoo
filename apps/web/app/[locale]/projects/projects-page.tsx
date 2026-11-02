@@ -2,6 +2,7 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { apiGet, apiSend, query } from '../../api-client';
@@ -104,6 +105,7 @@ function Projects({
   // The list of explorations starts, and stays, filtered to that kind.
   const initial = useMemo<Filters>(() => ({ ...noFilters, kind: kind ?? '' }), [kind]);
   const identity = useSessionIdentity();
+  const router = useRouter();
   const text = projectMessages(locale);
   const common = reportMessagesFor(locale);
   const base = `/workspaces/${workspaceId}/projects`;
@@ -117,7 +119,7 @@ function Projects({
   const pageText = projectPageMessages(locale);
   const [pending, setPending] = useState<{
     project: ProjectSummary;
-    command: RowCommand;
+    command: Exclude<RowCommand, 'report'>;
     reason: string;
   } | null>(null);
   const explain = useCallback((error: unknown) => explainProject(error, text), [text]);
@@ -385,7 +387,7 @@ function Projects({
                     <col className="col-stage" />
                     <col className="col-owner" />
                     <col className="col-updated" />
-                    {isAdmin && <col className="col-actions" />}
+                    <col className="col-actions" />
                   </colgroup>
                   <thead>
                     <tr>
@@ -396,11 +398,9 @@ function Projects({
                       <th scope="col">{text.stage}</th>
                       <th scope="col">{text.owner}</th>
                       <th scope="col">{text.updated}</th>
-                      {isAdmin && (
-                        <th scope="col">
-                          <span className="sr-only">{text.rowActions}</span>
-                        </th>
-                      )}
+                      <th scope="col">
+                        <span className="sr-only">{text.rowActions}</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -424,23 +424,31 @@ function Projects({
                           value={project.owner?.displayName ?? '—'}
                         />
                         <ClippedCell value={formatDateTime(locale, project.updatedAt)} />
-                        {isAdmin && (
-                          <td className="row-actions-cell">
-                            <ProjectRowMenu
-                              locale={locale}
-                              label={text.rowActionsFor.replace('{code}', project.code)}
-                              labels={pageText.commands}
-                              disabled={busy}
-                              commands={(['archive', 'delete'] as const).filter((command) =>
-                                project.availableCommands.includes(command),
-                              )}
-                              onChoose={(command) => {
-                                setNotice(null);
-                                setPending({ project, command, reason: '' });
-                              }}
-                            />
-                          </td>
-                        )}
+                        <td className="row-actions-cell">
+                          <ProjectRowMenu
+                            locale={locale}
+                            label={text.rowActionsFor.replace('{code}', project.code)}
+                            labels={{ ...pageText.commands, report: text.rowReport }}
+                            disabled={busy}
+                            commands={[
+                              'report',
+                              // Delete is the platform administrator's; archive is offered with it.
+                              ...(isAdmin
+                                ? (['archive', 'delete'] as const).filter((command) =>
+                                    project.availableCommands.includes(command),
+                                  )
+                                : []),
+                            ]}
+                            onChoose={(command) => {
+                              if (command === 'report') {
+                                router.push(`/${locale}/projects/${project.id}/report` as Route);
+                                return;
+                              }
+                              setNotice(null);
+                              setPending({ project, command, reason: '' });
+                            }}
+                          />
+                        </td>
                       </tr>
                     ))}
                   </tbody>

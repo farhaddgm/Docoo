@@ -38,6 +38,7 @@ test.describe('the three-dot menu at the end of each project row', () => {
     await menuButton(`rm-a-${stamp}`).click();
     const menu = page.getByRole('menu');
     await expect(menu.getByRole('menuitem')).toHaveText([
+      text.rowReport,
       page_.commands['archive']!,
       page_.commands['delete']!,
     ]);
@@ -68,7 +69,10 @@ test.describe('the three-dot menu at the end of each project row', () => {
     await expect(rowOf(`rm-a-${stamp}`)).toContainText(text.statuses['archived']!);
     // An archived project can still be deleted but no longer archived.
     await menuButton(`rm-a-${stamp}`).click();
-    await expect(menu.getByRole('menuitem')).toHaveText([page_.commands['delete']!]);
+    await expect(menu.getByRole('menuitem')).toHaveText([
+      text.rowReport,
+      page_.commands['delete']!,
+    ]);
     await page.keyboard.press('Escape');
 
     // Delete leaves the default view (deleted projects are recoverable from their own view).
@@ -77,6 +81,36 @@ test.describe('the three-dot menu at the end of each project row', () => {
     await page.getByRole('button', { name: page_.confirm }).click();
     await expect(page.getByRole('status').filter({ hasText: page_.done['delete']! })).toBeVisible();
     await expect(page.getByRole('rowheader', { name: `rm-d-${stamp}` })).toHaveCount(0);
+    await expectNoSeriousA11yViolations(page);
+  });
+});
+
+test.describe('the report of a project', () => {
+  test('the menu opens a report with the problem, tokens, ideas and outputs', async ({ page }) => {
+    await signInWithKeyboard(page);
+    const code = `rp-${stamp}`;
+    await createViaApi(page, '/projects', {
+      code,
+      title: `پروژه گزارش ${code}`,
+      initialProblem: 'مسئله آزمون گزارش پروژه',
+      outputLanguage: 'fa',
+    });
+    await page.goto('/fa/projects');
+    await revealRow(page, page.getByRole('rowheader', { name: code }));
+    await page
+      .getByRole('table')
+      .locator('tbody tr')
+      .filter({ hasText: code })
+      .getByRole('button', { name: text.rowActionsFor.replace('{code}', code) })
+      .click();
+    await page.getByRole('menuitem', { name: text.rowReport }).click();
+
+    await expect(page).toHaveURL(/\/fa\/projects\/[0-9a-f-]+\/report$/u);
+    await expect(page.getByRole('heading', { name: 'خلاصه مسئله' })).toBeVisible();
+    await expect(page.getByText('مسئله آزمون گزارش پروژه')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'توکن‌های مصرف‌شده' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ایده‌های ساخته‌شده' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'خروجی‌های نهایی' })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
 });

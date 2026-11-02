@@ -6,6 +6,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Added
 
+- **Project report.** The three-dot menu at the end of each row in the project list now has a "Report" item (for everyone who can read the project, not only the administrator). It opens `/projects/{id}/report`: a summary of the problem (the approved definition, or the initial problem until one is approved), the tokens the project's model calls used (in total, by stage and by model, with the estimated cost), the ideas made for it (with scores and the priority of the chosen ones) and its final outputs (approved or locked documents and the files made from them). The data comes from the new read-only `GET /workspaces/{id}/projects/{projectId}/report`; no migration.
+
+### Added
+
 - **Dual-model research** ([ADR-0047](docs/adr/0047-dual-model-research.md)). For a project where it matters, the administrator can have the web side of the research searched by two models (they may be of the same provider, for example two Claude models, or ChatGPT and Claude) and a judge that reports where their pages disagree. The disagreements join the output's conflicts, so you decide them on the page that already exists for conflicts; pages show which model found them. One-model research stays as it is and is the default. Settings: `research.dual_enabled`, the second model and the judge model (picked on the settings page with the model pickers, at workspace or project level). A failed second search or judge never fails the stage, a setting that cannot work (no second model, or the same model twice) runs one model and says so, and the same page found under two spellings counts once. It costs roughly double plus one judge call, and the questions go to both providers. **Migration 0079 runs on update.**
 
 ### Added
