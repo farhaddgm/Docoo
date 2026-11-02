@@ -90,6 +90,7 @@ const expectedMatrix: Record<string, string> = {
   'DELETE workspaces/:workspaceId/projects/:projectId': 'project.delete',
   'POST workspaces/:workspaceId/projects/:projectId/clone': 'project.create',
   'GET workspaces/:workspaceId/projects/:projectId/timeline': 'project.read',
+  'GET workspaces/:workspaceId/projects/:projectId/report': 'project.read',
   'GET workspaces/:workspaceId/projects/:projectId/effective-config': 'project.read',
   'GET workspaces/:workspaceId/projects/:projectId/config-snapshots': 'project.read',
   'GET workspaces/:workspaceId/settings/definitions': 'workspace.read',

@@ -36,6 +36,7 @@ import {
   PROJECT_MAX_TOPICS,
   ProjectsService,
 } from './projects.service.js';
+import { ProjectReportService } from './project-report.service.js';
 
 const codeSchema = z
   .string()
@@ -180,6 +181,7 @@ export class ProjectsController {
     private readonly projectsService: ProjectsService,
     private readonly configService: ConfigService,
     private readonly workflowService: WorkflowService,
+    private readonly reportService: ProjectReportService,
   ) {}
 
   @Post(':projectId/analysis/continue')
@@ -398,6 +400,15 @@ export class ProjectsController {
   ) {
     const id = projectId(rawId);
     return this.projectsService.clone(workspaceContext(request), id, parse(cloneSchema, body));
+  }
+
+  @Get(':projectId/report')
+  @ApiOperation({
+    summary: 'Summary report: the problem, tokens used, ideas made and final outputs',
+  })
+  @RequireWorkspacePermission('project.read')
+  async report(@Req() request: FastifyRequest, @Param('projectId') rawId: string) {
+    return { report: await this.reportService.report(workspaceContext(request), projectId(rawId)) };
   }
 
   @Get(':projectId/timeline')
