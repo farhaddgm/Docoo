@@ -64,9 +64,7 @@ export function ResearchPresetPicker({
 }) {
   const t = settingsMessages(locale).presets;
   const id = useId();
-  const action = useAction((error) =>
-    error instanceof Error && error.message ? t.failed : t.failed,
-  );
+  const action = useAction(() => t.failed);
   const [unit, setUnit] = useState<ResearchUnitCost | null>(null);
   const current = presetOf(values);
   const [chosen, setChosen] = useState<ResearchPresetId | null>(
