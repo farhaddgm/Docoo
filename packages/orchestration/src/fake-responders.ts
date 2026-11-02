@@ -61,6 +61,9 @@ export function fakeResearchResponder(request: NormalizedModelRequest): unknown 
         : `The approved knowledge "${String(first['title'])}" is relevant to this problem.`,
       source: String(first['title']),
       evidence: [{ ref: first['ref'], quote: sentence.slice(0, 200) }],
+      figures: [],
+      asOf: '',
+      agesFast: false,
     });
   }
   // A page from the web search is cited like knowledge: its ref and a quote from its own text.
@@ -73,6 +76,9 @@ export function fakeResearchResponder(request: NormalizedModelRequest): unknown 
         : `The web page "${String(page['title'])}" bears on this problem.`,
       source: String(page['url']),
       evidence: [{ ref: page['ref'], quote: sentence.slice(0, 200) }],
+      figures: [],
+      asOf: '',
+      agesFast: false,
     });
   }
   findings.push({
@@ -81,6 +87,9 @@ export function fakeResearchResponder(request: NormalizedModelRequest): unknown 
       : 'Similar approaches have been used in other fields.',
     source: persian ? 'دانش عمومی مدل' : 'General model knowledge',
     evidence: [],
+    figures: [],
+    asOf: '',
+    agesFast: false,
   });
   return {
     findings,

@@ -4,6 +4,7 @@ import type {
   SourceClass,
   WebSourceClass,
 } from '@docoo/domain';
+import { asOfYear, readFigures, toLatinDigits, type ResearchFigure } from '@docoo/contracts';
 import { normalizeForSearch } from '@docoo/knowledge';
 
 import type { RetrievedPassage } from './knowledge-retrieval.js';
@@ -360,6 +361,13 @@ export interface ResearchFinding {
   readonly verifiedSources?: number;
   readonly claim: string;
   readonly source: string;
+  /** The numbers it rests on, each marked supported when its value is in a verified quote (ADR-0051). */
+  readonly figures?: readonly ResearchFigure[];
+  /** The year or date the information is about, as reported; its year is in `asOfYear`. */
+  readonly asOf?: string;
+  readonly asOfYear?: number | null;
+  /** The researcher judged this kind of information to change within a year. */
+  readonly agesFast?: boolean;
   /** `knowledge` only when at least one citation was found verbatim in an approved passage. */
   readonly support: 'knowledge' | 'web' | 'unverified';
   readonly evidence: readonly ResearchEvidence[];
@@ -587,10 +595,20 @@ export function verifyResearch(input: {
       });
     }
     const askedId = asText(entry['questionId']).toUpperCase();
+    // Figures count only when their value is in a quote that verified; the date and the aging
+    // judgement are the researcher's and are shown as such (ADR-0051).
+    const figures = readFigures(
+      entry['figures'],
+      evidence.filter((cite) => cite.verified).map((cite) => cite.quote),
+    );
+    const asOf = clip(toLatinDigits(asText(entry['asOf'])).trim(), 30);
     findings.push({
       questionId: plannedIds.has(askedId) ? askedId : '',
       claim,
       source: clip(asText(entry['source']), RESEARCH_LIMITS.maxTextLength),
+      ...(figures.length > 0 ? { figures } : {}),
+      ...(asOf !== '' ? { asOf, asOfYear: asOfYear(asOf) } : {}),
+      ...(entry['agesFast'] === true ? { agesFast: true } : {}),
       // Approved knowledge counts first; a web page alone makes the finding `web`, never `knowledge`.
       support: evidence.some((cite) => cite.verified && !cite.ref.startsWith('W'))
         ? 'knowledge'
@@ -921,6 +939,16 @@ export function compactResearchForPrompt(
         // Older outputs carry no support field; they were never checked against knowledge.
         support: entry['support'] ?? 'unverified',
         ...(typeof entry['level'] === 'string' ? { level: entry['level'] } : {}),
+        // Only figures a verified quote backs go to the stages that write from the research.
+        ...(Array.isArray(entry['figures']) &&
+        entry['figures'].some((figure) => (figure as { supported?: unknown })?.supported === true)
+          ? {
+              figures: entry['figures'].filter(
+                (figure) => (figure as { supported?: unknown })?.supported === true,
+              ),
+            }
+          : {}),
+        ...(asText(entry['asOf']) !== '' ? { asOf: entry['asOf'] } : {}),
         ...(Array.isArray(entry['sourceKinds']) && entry['sourceKinds'].length > 0
           ? { sourceKinds: entry['sourceKinds'] }
           : {}),
