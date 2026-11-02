@@ -8,6 +8,7 @@ import { normalizeForSearch } from '@docoo/knowledge';
 
 import type { RetrievedPassage } from './knowledge-retrieval.js';
 import type { SourceCitation } from './source-citation.js';
+import type { DualInfo } from './research-dual.js';
 
 /**
  * Pure rules of the research stage with approved knowledge (ADR-0017): which queries the
@@ -250,6 +251,8 @@ export interface WebPassage {
   readonly text: string;
   /** Decided by code from the address (ADR-0040); older outputs have none and count as public. */
   readonly sourceClass?: WebSourceClass;
+  /** In dual-model research: which model(s) found the page; absent for a single model. */
+  readonly foundBy?: readonly ('primary' | 'second')[];
 }
 
 /** How the web side of one research attempt went. */
@@ -263,6 +266,10 @@ export interface WebRun {
   /** Rounds of the search loop and why it stopped; absent in older outputs and single searches. */
   readonly rounds?: number | undefined;
   readonly stop?: string | undefined;
+  /** Dual-model research (ADR-0047): how each model's search and the judge went. */
+  readonly dual?: DualInfo | undefined;
+  /** Why dual-model research was on but did not run (`dual_not_configured`, `dual_same_model`). */
+  readonly dualSkipped?: string | undefined;
 }
 
 export const NO_WEB: WebRun = { status: 'off', code: null, queries: [], sources: [] };
@@ -274,6 +281,7 @@ export interface WebPromptItem {
   readonly url: string;
   readonly sourceClass: WebSourceClass;
   readonly text: string;
+  readonly foundBy?: readonly ('primary' | 'second')[];
 }
 
 export const webPromptItems = (web: WebRun | undefined): WebPromptItem[] =>
@@ -283,6 +291,7 @@ export const webPromptItems = (web: WebRun | undefined): WebPromptItem[] =>
     url: source.url,
     sourceClass: source.sourceClass ?? 'public',
     text: source.text,
+    ...(source.foundBy ? { foundBy: source.foundBy } : {}),
   }));
 
 /** The web side of a stored research output: what was asked and which pages were cited. */
@@ -292,12 +301,15 @@ export interface ResearchWebInfo {
   readonly queries: readonly string[];
   readonly rounds?: number | undefined;
   readonly stop?: string | undefined;
+  readonly dual?: DualInfo | undefined;
+  readonly dualSkipped?: string | undefined;
   readonly sources: readonly {
     readonly ref: string;
     readonly url: string;
     readonly title: string;
     readonly cited: boolean;
     readonly sourceClass?: WebSourceClass;
+    readonly foundBy?: readonly ('primary' | 'second')[];
   }[];
 }
 
@@ -647,12 +659,15 @@ export function verifyResearch(input: {
         queries: web.queries,
         ...(web.rounds !== undefined ? { rounds: web.rounds } : {}),
         ...(web.stop !== undefined ? { stop: web.stop } : {}),
+        ...(web.dual ? { dual: web.dual } : {}),
+        ...(web.dualSkipped ? { dualSkipped: web.dualSkipped } : {}),
         sources: web.sources.map((source) => ({
           ref: source.ref,
           url: source.url,
           title: source.title,
           cited: citedWeb.has(source.ref),
           sourceClass: source.sourceClass ?? ('public' as const),
+          ...(source.foundBy ? { foundBy: source.foundBy } : {}),
         })),
       },
       verification: {
@@ -830,6 +845,15 @@ export function mergeFollowup(input: {
       status: previousWebStatus === 'used' || freshWebStatus === 'used' ? 'used' : freshWebStatus,
       code: fresh.web?.code ?? previous.web?.code ?? null,
       queries: [...(previous.web?.queries ?? []), ...(fresh.web?.queries ?? [])],
+      ...((fresh.web?.rounds ?? previous.web?.rounds) !== undefined
+        ? { rounds: fresh.web?.rounds ?? previous.web?.rounds }
+        : {}),
+      ...((fresh.web?.stop ?? previous.web?.stop) !== undefined
+        ? { stop: fresh.web?.stop ?? previous.web?.stop }
+        : {}),
+      ...((fresh.web?.dual ?? previous.web?.dual)
+        ? { dual: fresh.web?.dual ?? previous.web?.dual }
+        : {}),
       sources: webSources,
     },
     verification: {

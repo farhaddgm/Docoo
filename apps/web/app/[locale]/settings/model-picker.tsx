@@ -31,6 +31,7 @@ export function ModelPicker({
   model,
   disabled = false,
   idPrefix,
+  inheritLabel,
   onChange,
 }: {
   locale: Locale;
@@ -39,6 +40,8 @@ export function ModelPicker({
   model: string;
   disabled?: boolean;
   idPrefix: string;
+  /** What the empty choice means; the default is the inherited value. */
+  inheritLabel?: string;
   onChange: (connectionId: string, model: string) => void;
 }) {
   const text = settingsMessages(locale).picker;
@@ -88,7 +91,7 @@ export function ModelPicker({
           disabled={disabled}
           onChange={(event) => onChange(event.target.value, '')}
         >
-          <option value="">{text.inherit}</option>
+          <option value="">{inheritLabel ?? text.inherit}</option>
           {(connections ?? []).map((connection) => (
             <option key={connection.id} value={connection.id}>
               {connection.name} ({connection.provider})

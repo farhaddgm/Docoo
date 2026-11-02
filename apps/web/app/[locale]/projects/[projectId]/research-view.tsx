@@ -56,6 +56,7 @@ function WebBlock({
             })}
           </p>
         )}
+        <DualBlock text={text} web={web} num={num} />
         {queries.length > 0 && (
           <>
             <h5>{text.webQueries}</h5>
@@ -84,6 +85,7 @@ function WebBlock({
                 )}{' '}
                 <small className="muted">
                   ({page['cited'] === true ? text.cited : text.notCited})
+                  {foundByLabel(text, page['foundBy'])}
                 </small>
               </li>
             );
@@ -104,6 +106,61 @@ function WebBlock({
     <p className="notice" role="note">
       {message}
     </p>
+  );
+}
+
+/** Who found a page in dual-model research: nothing is shown for a single model. */
+function foundByLabel(text: Text, value: unknown): string {
+  const sides = strings(value);
+  if (sides.length === 0) return '';
+  const key = sides.length > 1 ? 'both' : (sides[0] ?? '');
+  return ` · ${text.dualSides[key] ?? key}`;
+}
+
+/** How each model's search and the judge went in dual-model research (ADR-0047). */
+function DualBlock({
+  text,
+  web,
+  num,
+}: {
+  text: Text;
+  web: Record<string, unknown> | null;
+  num: (value: unknown) => string;
+}) {
+  const skipped = asText(web?.['dualSkipped']);
+  const dual = web?.['dual'];
+  if (dual === null || typeof dual !== 'object') {
+    return skipped ? <p className="notice">{text.dualSkipped[skipped] ?? skipped}</p> : null;
+  }
+  const info = dual as Record<string, unknown>;
+  const side = (key: 'primary' | 'second') => {
+    const item = (info[key] ?? {}) as Record<string, unknown>;
+    return fill(text.dualSide, {
+      who: text.dualSides[key] ?? key,
+      model: asText(item['model']),
+      state: text.dualState[asText(item['status'])] ?? asText(item['status']),
+      pages: num(item['pages']),
+    });
+  };
+  const judge = (info['judge'] ?? {}) as Record<string, unknown>;
+  const status = asText(judge['status']);
+  const code = asText(judge['code']);
+  const model = asText(judge['model']);
+  const judgeLine =
+    status === 'used'
+      ? fill(text.dualJudgeUsed, { model, n: num(judge['conflicts']) })
+      : status === 'failed'
+        ? fill(text.dualJudgeFailed, { model, code: code || '—' })
+        : fill(text.dualJudgeSkipped, { model, reason: text.dualReason[code] ?? (code || '—') });
+  return (
+    <>
+      <h5>{text.dualHeading}</h5>
+      <ul>
+        <li>{side('primary')}</li>
+        <li>{side('second')}</li>
+        <li>{judgeLine}</li>
+      </ul>
+    </>
   );
 }
 
