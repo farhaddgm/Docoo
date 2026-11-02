@@ -5,12 +5,12 @@ import { createPortal } from 'react-dom';
 
 import { direction, type Locale } from '../../i18n';
 
-export type RowCommand = 'archive' | 'delete';
+export type RowCommand = 'report' | 'archive' | 'delete';
 
 /**
- * The three-dot button at the end of a project row. It opens a small menu of the lifecycle
- * commands the row's project accepts (archive, delete); picking one hands it to the page, which
- * asks for the confirmation the project page asks for too. The menu is drawn outside the table,
+ * The three-dot button at the end of a project row. It opens a small menu: the project's report
+ * and the lifecycle commands it accepts (archive, delete). Picking one hands it to the page, which
+ * opens the report or asks for the confirmation the project page asks for too. The menu is drawn outside the table,
  * which clips and scrolls.
  */
 export function ProjectRowMenu({
