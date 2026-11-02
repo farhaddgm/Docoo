@@ -147,6 +147,15 @@ const messages = {
       CONFIG_SCOPE_READ_ONLY: 'این پروژه یا حوزه فقط‌خواندنی است؛ ابتدا آن را بازیابی کنید.',
       CONFIG_SCOPE_NOT_FOUND: 'این پروژه یا حوزه پیدا نشد.',
     } as Record<string, string>,
+    sourceSuggestions: {
+      title: 'دامنه‌های پیشنهادی برای منابع رسمی',
+      help: 'در اختلاف‌های تحقیق بارها صفحه‌ای از این دامنه‌ها را معتبر دانسته‌اید. با افزودن، همیشه رسمی حساب می‌شوند و پیشنهاد اختلاف هم به نفعشان می‌شود.',
+      item: '{n} بار معتبر دانسته شد',
+      add: 'افزودن به منابع رسمی',
+      added: '«{domain}» به منابع رسمی افزوده شد.',
+      reason: 'افزودن دامنه‌ای که چند بار در اختلاف‌ها معتبر دانسته شده',
+      failed: 'افزوده نشد. دوباره تلاش کنید.',
+    },
     presets: {
       title: 'عمق تحقیق',
       help: 'یکی از چهار حالت را انتخاب کنید؛ همهٔ تنظیم‌های جستجو را یک‌جا مقدار می‌دهد. عددهای دقیق فقط برای مالک سامانه است.',
@@ -351,6 +360,15 @@ const messages = {
       CONFIG_SCOPE_READ_ONLY: 'This project or topic is read-only; restore it first.',
       CONFIG_SCOPE_NOT_FOUND: 'This project or topic was not found.',
     } as Record<string, string>,
+    sourceSuggestions: {
+      title: 'Suggested official sources',
+      help: 'In research conflicts you have trusted pages of these domains again and again. Adding them counts them as official from now on, and the conflict suggestion favors them.',
+      item: 'trusted {n} time(s)',
+      add: 'Add to official sources',
+      added: '“{domain}” was added to the official sources.',
+      reason: 'Added a domain that was trusted several times in conflicts',
+      failed: 'It was not added. Try again.',
+    },
     presets: {
       title: 'Research depth',
       help: 'Pick one of four modes; it sets all the search settings at once. The exact numbers are for the system owner only.',

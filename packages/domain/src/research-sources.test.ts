@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   adviseConflict,
   classifyWebSource,
+  isLearnedSource,
+  LEARNED_TRUST_MIN,
+  learnedDomains,
+  sourceHost,
   conflictFingerprint,
   MAX_OFFICIAL_DOMAINS,
   normalizeOfficialDomains,
@@ -156,5 +160,71 @@ describe('adviseConflict (ADR-0049)', () => {
         src('W2', 'public', ['primary', 'second']),
       ]),
     ).toEqual({ trustedRef: 'W1', reason: 'official' });
+  });
+});
+
+describe('learned domains (ADR-0050)', () => {
+  it('reads the host of a page without www, and nothing from a non-web address', () => {
+    expect(sourceHost('https://www.Example.com/a/b?x=1')).toBe('example.com');
+    expect(sourceHost('http://news.example.com./x')).toBe('news.example.com');
+    expect(sourceHost('ftp://example.com')).toBeNull();
+    expect(sourceHost('not a url')).toBeNull();
+  });
+
+  it('suggests a host trusted at least twice, as that exact host, most trusted first', () => {
+    const result = learnedDomains([
+      'https://www.alpha.com/1',
+      'https://alpha.com/2',
+      'https://beta.org/1',
+      'https://gamma.net/1',
+      'https://gamma.net/2',
+      'https://gamma.net/3',
+    ]);
+    expect(LEARNED_TRUST_MIN).toBe(2);
+    expect(result).toEqual([
+      { domain: 'gamma.net', trusted: 3 },
+      { domain: 'alpha.com', trusted: 2 },
+    ]);
+  });
+
+  it('never suggests an official domain, a built-in one or one already on the list, and never widens a host', () => {
+    const result = learnedDomains(
+      [
+        'https://stats.gov.ir/a',
+        'https://stats.gov.ir/b',
+        'https://regulator.test/a',
+        'https://regulator.test/b',
+        'https://news.example.com/a',
+        'https://news.example.com/b',
+      ],
+      ['regulator.test'],
+    );
+    expect(result).toEqual([{ domain: 'news.example.com', trusted: 2 }]);
+  });
+
+  it('matches a page under a learned domain, including its subdomains, and only that', () => {
+    const learned = new Set(['example.com']);
+    expect(isLearnedSource('https://example.com/a', learned)).toBe(true);
+    expect(isLearnedSource('https://www.example.com/a', learned)).toBe(true);
+    expect(isLearnedSource('https://blog.example.com/a', learned)).toBe(true);
+    expect(isLearnedSource('https://notexample.com/a', learned)).toBe(false);
+    expect(isLearnedSource('nonsense', learned)).toBe(false);
+  });
+
+  it('ranks a learned public page above a plain public one, below an official one', () => {
+    const src = (ref: string, kind: 'knowledge' | 'official' | 'public', learned = false) => ({
+      ref,
+      kind,
+      learned,
+    });
+    expect(adviseConflict([src('W1', 'public'), src('W2', 'public', true)])).toEqual({
+      trustedRef: 'W2',
+      reason: 'learned',
+    });
+    expect(adviseConflict([src('W1', 'official'), src('W2', 'public', true)])).toEqual({
+      trustedRef: 'W1',
+      reason: 'official',
+    });
+    expect(adviseConflict([src('W1', 'public', true), src('W2', 'public', true)])).toBeNull();
   });
 });

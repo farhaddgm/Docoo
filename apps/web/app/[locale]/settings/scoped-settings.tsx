@@ -4,7 +4,7 @@ import { useSessionIdentity } from '../signed-in';
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 
 import { apiGet, apiSend, query } from '../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
@@ -13,6 +13,7 @@ import { Notice, useAction } from '../use-action';
 import { ReasonBar } from '../reason-bar';
 import { ModelPicker } from './model-picker';
 import { ResearchPresetPicker } from './research-presets';
+import { SourceSuggestions } from './source-suggestions';
 import { settingsMessages, type SettingsText } from './settings-messages';
 import {
   EDITED_ELSEWHERE,
@@ -64,6 +65,9 @@ export function problemText(locale: Locale, text: SettingsText, problem: Control
     line: show(problem.line),
   });
 }
+
+const stringList = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 
 /**
  * The settings of one scope (the workspace, or one project) grouped by what they control.
@@ -178,7 +182,24 @@ export function ScopedSettings({
                 />
               </li>
             )}
-            {plain.map(row)}
+            {plain.map((definition) => (
+              <Fragment key={definition.key}>
+                {row(definition)}
+                {definition.key === 'research.official_domains' &&
+                  scopeType === 'workspace' &&
+                  !readOnlyScope && (
+                    <li>
+                      <SourceSuggestions
+                        locale={locale}
+                        workspaceId={workspaceId}
+                        current={stringList(effective.values['research.official_domains'])}
+                        sequence={assignments.get('research.official_domains')?.sequence ?? 0}
+                        onSaved={() => void load()}
+                      />
+                    </li>
+                  )}
+              </Fragment>
+            ))}
             {exact.length > 0 && (
               <li>
                 {isOwner ? (

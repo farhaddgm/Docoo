@@ -211,6 +211,7 @@ notion_sync: true
 - `GET /settings/effective?scopeType=&scopeId=` (مقدار مؤثر و منبع هر مقدار)
 - `PUT /settings/assignments/batch` (`{scopeType, scopeId, items: [{key, value}], reason}`، ۱ تا ۲۰ کلید یکتا؛ همه در یک تراکنش، پیش از نوشتن همه اعتبارسنجی می‌شوند و یکی نامعتبر یعنی هیچ‌کدام نوشته نمی‌شود؛ برای حالت‌های تحقیق، ADR-0048)
 - `GET /projects/:id/workflow` برای مرحلهٔ در حال اجرا فیلد `progress: [{kind, data, createdAt}]` (گام‌های آخرین تلاش، قدیمی‌به‌جدید) را هم می‌دهد (ADR-0049)؛ `GET /projects/:id/research-conflicts` به هر اختلاف `advice: {trustedRef, reason} | null` می‌افزاید (فقط پیشنهاد)
+- `GET /settings/research-source-suggestions` (`{items: [{domain, trusted}]}`: دامنه‌هایی که ادمین دست‌کم ۲ بار در اختلاف‌ها معتبر دانسته و هنوز رسمی نیستند؛ ADR-0050)
 - `GET /settings/research-estimate` (`{unit: {usd, seconds, sample} | null}`: هزینه و زمان هر واحد کار تحقیق از آخرین ۲۰ تحقیق تمام‌شده؛ `null` تا ۳ تحقیق قیمت‌دار)
 - `POST /settings/preview` (`workspace.read`، پاسخ ۲۰۰، بدون اثر جانبی) با `{topicIds: [≤۲۰], settings: [{key, value} ≤۴۰]}` → `{config}`: مقدار مؤثر و منبع هر کلید برای پروژه‌ای که هنوز ساخته نشده است. منبع انتخاب‌های ارسالی `{scope: 'project', pending: true}` است. حوزه‌ها به ترتیب اعمال می‌شوند (اولویت ۱ برنده)؛ مقدار نامعتبر همان `400 CONFIG_VALUE_INVALID` را می‌دهد.
 - قاعدهٔ معنایی علاوه بر schema: `document.level_bounds` باید ده عدد باشد که برای هر سطح کمینه < بیشینه و هر سطح بالاتر از بیشینهٔ سطح قبل شروع شود؛ نقض آن `400 CONFIG_VALUE_INVALID` با شرح مشکل است (قاعدهٔ همان `levelBoundsProblem` در `@docoo/documents`).

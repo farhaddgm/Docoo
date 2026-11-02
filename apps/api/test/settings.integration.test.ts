@@ -411,4 +411,12 @@ describe.skipIf(!adminUrl)('settings, templates and the project wizard (ADR-0018
     expect(response.statusCode, response.body).toBe(200);
     expect(response.json<{ unit: unknown }>().unit).toBeNull();
   });
+
+  it('STP-009: no domain is suggested as official until conflicts have been settled by trusting it (ADR-0050)', async () => {
+    const response = await h.request('GET', api('/settings/research-source-suggestions'), {
+      cookie,
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json<{ items: unknown[] }>().items).toEqual([]);
+  });
 });

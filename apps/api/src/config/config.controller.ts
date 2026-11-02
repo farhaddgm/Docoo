@@ -167,6 +167,15 @@ export class ConfigController {
     return { unit: await this.configService.researchUnitCost(workspaceContext(request)) };
   }
 
+  @Get('research-source-suggestions')
+  @ApiOperation({
+    summary: 'Domains trusted again and again in research conflicts, not yet on the official list',
+  })
+  @RequireWorkspacePermission('workspace.read')
+  async researchSourceSuggestions(@Req() request: FastifyRequest) {
+    return { items: await this.configService.researchSourceSuggestions(workspaceContext(request)) };
+  }
+
   @Get('effective')
   @ApiOperation({ summary: 'Effective values and the source of each value for a scope' })
   @RequireWorkspacePermission('workspace.read')

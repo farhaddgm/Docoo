@@ -4,6 +4,8 @@ import {
   researchValuesOf,
   type ResearchUnitCost,
 } from '@docoo/contracts';
+import { learnedDomains, normalizeOfficialDomains, type LearnedDomain } from '@docoo/domain';
+import { trustedPageUrls } from '@docoo/orchestration';
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import type { PoolClient, QueryResultRow } from 'pg';
@@ -234,6 +236,19 @@ export class ConfigService {
     };
     if (usd.length < MIN_ESTIMATE_SAMPLE || seconds.length === 0) return null;
     return { usd: median(usd), seconds: median(seconds), sample: usd.length };
+  }
+
+  /**
+   * Domains the administrator has kept trusting in research conflicts, not yet on the official
+   * list (ADR-0050). The page offers each as a one-click addition; nothing changes by itself.
+   */
+  async researchSourceSuggestions(context: WorkspaceRequestContext): Promise<LearnedDomain[]> {
+    const urls = await this.database.run(context, (client) => trustedPageUrls(client));
+    const effective = await this.effective(context, 'workspace', context.workspaceId);
+    return learnedDomains(
+      urls,
+      normalizeOfficialDomains(effective.values['research.official_domains']),
+    );
   }
 
   /**
