@@ -6,6 +6,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Added
 
+- **Research modes instead of numbers** ([ADR-0048](docs/adr/0048-research-modes.md)). The research settings page and the project wizard now lead with four modes — Quick, Standard (what runs today), Deep and Sensitive (deep, with a second model and a judge) — each with a sentence on what it is for and what it costs compared with Standard. Once the workspace has run a few researches, the card also shows the estimated cost in dollars and the time in minutes, measured from its own earlier research (nothing is invented before that). Choosing a mode sets all the search settings together or none of them (`PUT /settings/assignments/batch`). The exact numbers and the second/judge model pickers are for the system owner only, behind a fold. The explanation of every research setting was rewritten in plain words with a small example (migration 0080, text only). The top of a research output is now one line (“12 solid findings out of 15; 3 source disagreements waiting for your decision”), with the other counts under “Summary details”.
+
+### Added
+
 - **Dual-model research** ([ADR-0047](docs/adr/0047-dual-model-research.md)). For a project where it matters, the administrator can have the web side of the research searched by two models (they may be of the same provider, for example two Claude models, or ChatGPT and Claude) and a judge that reports where their pages disagree. The disagreements join the output's conflicts, so you decide them on the page that already exists for conflicts; pages show which model found them. One-model research stays as it is and is the default. Settings: `research.dual_enabled`, the second model and the judge model (picked on the settings page with the model pickers, at workspace or project level). A failed second search or judge never fails the stage, a setting that cannot work (no second model, or the same model twice) runs one model and says so, and the same page found under two spellings counts once. It costs roughly double plus one judge call, and the questions go to both providers. **Migration 0079 runs on update.**
 
 ### Added

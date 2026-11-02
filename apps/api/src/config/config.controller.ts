@@ -28,6 +28,17 @@ const setSchema = z
     expectedSequence: z.number().int().min(0).optional(),
   })
   .strict();
+const setManySchema = z
+  .object({
+    ...scopeSchema,
+    items: z
+      .array(z.object({ key: keySchema, value: jsonValue }).strict())
+      .min(1)
+      .max(20)
+      .refine((items) => new Set(items.map((item) => item.key)).size === items.length),
+    reason: reasonSchema,
+  })
+  .strict();
 const previewSchema = z
   .object({
     topicIds: z
@@ -107,6 +118,19 @@ export class ConfigController {
     return { assignment };
   }
 
+  @Put('assignments/batch')
+  @ApiOperation({
+    summary: 'Set or clear several settings of one scope together, all or none (a preset)',
+  })
+  @RequireWorkspacePermission('workspace.configure')
+  async setMany(@Req() request: FastifyRequest, @Body() body: unknown) {
+    const assignments = await this.configService.setMany(
+      workspaceContext(request),
+      parse(setManySchema, body),
+    );
+    return { assignments };
+  }
+
   @Post('assignments/restore')
   @HttpCode(200)
   @ApiOperation({ summary: 'Restore an earlier version as a new version' })
@@ -132,6 +156,15 @@ export class ConfigController {
         parse(previewSchema, body),
       ),
     };
+  }
+
+  @Get('research-estimate')
+  @ApiOperation({
+    summary: 'What one unit of research costs here, from completed research stages (or null)',
+  })
+  @RequireWorkspacePermission('workspace.read')
+  async researchEstimate(@Req() request: FastifyRequest) {
+    return { unit: await this.configService.researchUnitCost(workspaceContext(request)) };
   }
 
   @Get('effective')

@@ -1,3 +1,9 @@
+import {
+  MIN_ESTIMATE_SAMPLE,
+  researchUnits,
+  researchValuesOf,
+  type ResearchUnitCost,
+} from '@docoo/contracts';
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import type { PoolClient, QueryResultRow } from 'pg';
@@ -57,6 +63,13 @@ export interface EffectiveConfig {
 export interface ConfigSnapshot extends EffectiveConfig {
   readonly id: string;
   readonly createdAt: string;
+}
+
+export interface SetManyInput {
+  readonly scopeType: ConfigScope;
+  readonly scopeId: string;
+  readonly items: readonly { readonly key: string; readonly value: unknown }[];
+  readonly reason: string;
 }
 
 export interface SetAssignmentInput {
@@ -178,6 +191,90 @@ export class ConfigService {
         restoredFromSequence: null,
         expectedSequence: input.expectedSequence,
       });
+    });
+  }
+
+  /**
+   * What one unit of research work cost in this workspace, from its last completed research
+   * stages: each stage's cost and time divided by the size its own settings gave it, then the
+   * median. Null until enough stages have run with a price, so a page never quotes dollars it
+   * cannot back (ADR-0048).
+   */
+  async researchUnitCost(context: WorkspaceRequestContext): Promise<ResearchUnitCost | null> {
+    const rows = await this.database.run(context, async (client) => {
+      const result = await client.query<{
+        cost: number | null;
+        seconds: number | null;
+        resolved: Record<string, unknown> | null;
+      }>(
+        `select (select sum(i.cost_usd) from model_invocations i where i.stage_run_id = s.id)::float8 as cost,
+                (select extract(epoch from sum(a.finished_at - a.started_at))
+                   from stage_attempts a where a.stage_run_id = s.id and a.status = 'succeeded')::float8 as seconds,
+                c.resolved
+           from stage_runs s
+           join workflow_runs r on r.id = s.run_id
+           left join config_snapshots c on c.id = r.config_snapshot_id
+          where s.stage = 'research' and s.status = 'completed'
+          order by s.updated_at desc
+          limit 20`,
+      );
+      return result.rows;
+    });
+    const usd: number[] = [];
+    const seconds: number[] = [];
+    for (const row of rows) {
+      const units = researchUnits(researchValuesOf(row.resolved ?? {}), 'typical');
+      if (row.cost !== null && row.cost > 0) usd.push(row.cost / units);
+      if (row.seconds !== null && row.seconds > 0) seconds.push(row.seconds / units);
+    }
+    const median = (values: number[]) => {
+      const sorted = [...values].sort((a, b) => a - b);
+      const middle = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
+    };
+    if (usd.length < MIN_ESTIMATE_SAMPLE || seconds.length === 0) return null;
+    return { usd: median(usd), seconds: median(seconds), sample: usd.length };
+  }
+
+  /**
+   * Sets several settings of one scope together or not at all (a research preset sets eight):
+   * every value is checked before the first is written and all of them share one transaction,
+   * so a rejected value leaves the scope exactly as it was.
+   */
+  async setMany(
+    context: WorkspaceRequestContext,
+    input: SetManyInput,
+  ): Promise<ConfigAssignment[]> {
+    return this.database.run(context, async (client) => {
+      await this.assertScope(client, context, input.scopeType, input.scopeId, true);
+      const checked: { definition: SettingDefinition; key: string; value: unknown }[] = [];
+      for (const item of input.items) {
+        const definition = await this.requireDefinition(client, item.key);
+        this.assertAllowedScope(definition, input.scopeType);
+        if (item.value !== null) {
+          const problem =
+            validateSettingValue(definition.valueSchema, item.value) ??
+            settingSemanticProblem(item.key, item.value);
+          if (problem) throw badRequest('CONFIG_VALUE_INVALID', `${item.key}: ${problem}`);
+        }
+        checked.push({ definition, key: item.key, value: item.value });
+      }
+      const saved: ConfigAssignment[] = [];
+      for (const item of checked) {
+        saved.push(
+          await this.append(client, context, item.definition, {
+            key: item.key,
+            scopeType: input.scopeType,
+            scopeId: input.scopeId,
+            value: item.value,
+            cleared: item.value === null,
+            reason: input.reason,
+            restoredFromSequence: null,
+            expectedSequence: undefined,
+          }),
+        );
+      }
+      return saved;
     });
   }
 

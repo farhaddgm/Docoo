@@ -280,14 +280,18 @@ function Finding({
 
 /** The whole research at a glance (ADR-0038): how many findings are solid and which questions are open. */
 function Overview({
+  locale,
   text,
   summary,
   rounds,
+  conflicts,
   num,
 }: {
+  locale: Locale;
   text: Text;
   summary: Record<string, unknown>;
   rounds: number;
+  conflicts: number;
   num: (value: unknown) => string;
 }) {
   const questions =
@@ -306,43 +310,58 @@ function Overview({
     <section className="notice info" aria-label={text.overviewHeading} role="note">
       <h4>{text.overviewHeading}</h4>
       <p>
-        {fill(text.overviewFindings, {
-          findings: num(summary['findings']),
-          solid: num(summary['solid']),
-          limited: num(summary['limited']),
-          unverified: num(summary['unverified']),
-          disputed: num(summary['disputed']),
-        })}
+        <strong>
+          {[
+            fill(text.overviewHeadline, {
+              solid: num(summary['solid']),
+              findings: num(summary['findings']),
+            }),
+            ...(conflicts > 0 ? [fill(text.overviewHeadlineConflicts, { n: num(conflicts) })] : []),
+            ...(open > 0 ? [fill(text.overviewHeadlineOpen, { n: num(open) })] : []),
+          ].join(locale === 'fa' ? '؛ ' : '; ')}
+        </strong>
       </p>
-      {total > 0 && (
+      <details>
+        <summary>{text.overviewDetails}</summary>
         <p>
-          {fill(text.overviewQuestions, {
-            total: num(total),
-            answered: num(questions['answered']),
-            weak: num(questions['weak']),
-            unanswered: num(questions['unanswered']),
+          {fill(text.overviewFindings, {
+            findings: num(summary['findings']),
+            solid: num(summary['solid']),
+            limited: num(summary['limited']),
+            unverified: num(summary['unverified']),
+            disputed: num(summary['disputed']),
           })}
         </p>
-      )}
-      <p>
-        {fill(text.overviewSources, {
-          knowledge: num(sources['knowledge']),
-          web: num(sources['web']),
-        })}
-      </p>
-      {typeof sources['web'] === 'number' && sources['web'] > 0 && (
+        {total > 0 && (
+          <p>
+            {fill(text.overviewQuestions, {
+              total: num(total),
+              answered: num(questions['answered']),
+              weak: num(questions['weak']),
+              unanswered: num(questions['unanswered']),
+            })}
+          </p>
+        )}
         <p>
-          {fill(text.overviewWebClasses, {
-            official: num(sources['official']),
-            public: num(sources['public']),
+          {fill(text.overviewSources, {
+            knowledge: num(sources['knowledge']),
+            web: num(sources['web']),
           })}
         </p>
-      )}
-      {typeof summary['singleSource'] === 'number' && summary['singleSource'] > 0 && (
-        <p>{fill(text.overviewSingle, { n: num(summary['singleSource']) })}</p>
-      )}
-      {rounds > 0 && <p>{fill(text.overviewRounds, { n: num(rounds) })}</p>}
-      {open > 0 && <p>{text.overviewNext}</p>}
+        {typeof sources['web'] === 'number' && sources['web'] > 0 && (
+          <p>
+            {fill(text.overviewWebClasses, {
+              official: num(sources['official']),
+              public: num(sources['public']),
+            })}
+          </p>
+        )}
+        {typeof summary['singleSource'] === 'number' && summary['singleSource'] > 0 && (
+          <p>{fill(text.overviewSingle, { n: num(summary['singleSource']) })}</p>
+        )}
+        {rounds > 0 && <p>{fill(text.overviewRounds, { n: num(rounds) })}</p>}
+        {open > 0 && <p>{text.overviewNext}</p>}
+      </details>
     </section>
   );
 }
@@ -388,7 +407,14 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
   return (
     <div className="output-view">
       {summary && (
-        <Overview text={text} summary={summary} rounds={records(data['rounds']).length} num={num} />
+        <Overview
+          locale={locale}
+          text={text}
+          summary={summary}
+          rounds={records(data['rounds']).length}
+          conflicts={conflicts.length}
+          num={num}
+        />
       )}
       <WebBlock locale={locale} text={text} web={web} num={num} />
       {verification && !summary && (

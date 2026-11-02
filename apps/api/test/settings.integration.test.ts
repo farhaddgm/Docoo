@@ -338,4 +338,77 @@ describe.skipIf(!adminUrl)('settings, templates and the project wizard (ADR-0018
     ]);
     expect(detailed.reason).toContain('detailed-v1');
   });
+
+  it('STP-007: a preset sets all its settings together, or none of them (ADR-0048)', async () => {
+    const batch = (items: { key: string; value: unknown }[], expected = 200) =>
+      h
+        .request('PUT', api('/settings/assignments/batch'), {
+          cookie,
+          payload: {
+            scopeType: 'workspace',
+            scopeId: h.ids.workspaceA,
+            items,
+            reason: 'preset',
+          },
+        })
+        .then((response) => {
+          expect(response.statusCode, response.body).toBe(expected);
+          return response;
+        });
+    const effective = async () =>
+      (
+        await h.request(
+          'GET',
+          api(`/settings/effective?scopeType=workspace&scopeId=${h.ids.workspaceA}`),
+          { cookie },
+        )
+      ).json<{ config: Effective }>().config.values;
+
+    await batch([
+      { key: 'research.web_min_searches', value: 2 },
+      { key: 'research.web_max_searches', value: 9 },
+      { key: 'research.web_max_rounds', value: 3 },
+    ]);
+    const applied = await effective();
+    expect(applied['research.web_min_searches']).toBe(2);
+    expect(applied['research.web_max_searches']).toBe(9);
+    expect(applied['research.web_max_rounds']).toBe(3);
+
+    // One value out of range refuses the whole batch: nothing the batch holds is applied.
+    const refused = await batch(
+      [
+        { key: 'research.web_min_searches', value: 4 },
+        { key: 'research.web_max_searches', value: 9999 },
+      ],
+      400,
+    );
+    expect(refused.json<{ code: string }>().code).toBe('CONFIG_VALUE_INVALID');
+    expect((await effective())['research.web_min_searches']).toBe(2);
+
+    // An unknown key refuses it too, and so does a repeated key.
+    await batch([{ key: 'research.no_such_setting', value: 1 }], 404);
+    await batch(
+      [
+        { key: 'research.web_min_rounds', value: 1 },
+        { key: 'research.web_min_rounds', value: 2 },
+      ],
+      400,
+    );
+
+    // Clearing goes back to the defaults.
+    await batch([
+      { key: 'research.web_min_searches', value: null },
+      { key: 'research.web_max_searches', value: null },
+      { key: 'research.web_max_rounds', value: null },
+    ]);
+    const cleared = await effective();
+    expect(cleared['research.web_max_searches']).toBe(5);
+    expect(cleared['research.web_max_rounds']).toBe(1);
+  });
+
+  it('STP-008: the research estimate quotes no dollars until the workspace has run research (ADR-0048)', async () => {
+    const response = await h.request('GET', api('/settings/research-estimate'), { cookie });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json<{ unit: unknown }>().unit).toBeNull();
+  });
 });

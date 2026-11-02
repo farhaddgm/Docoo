@@ -9,6 +9,7 @@ export * from './evaluation-invocation.js';
 export * from './account-policy.js';
 export * from './rubric.js';
 export * from './problem-template.js';
+export * from './research-presets.js';
 export * from './problem-pattern.js';
 export * from './problem-pattern-authoring.js';
 export * from './problem-pattern-examples.js';

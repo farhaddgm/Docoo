@@ -62,6 +62,19 @@ describe('wizard model', () => {
     expect(changedInSection('model', changed, { ...none, modelChanged: true })).toBe(1);
     expect(changedInSection('solutions', changed, { ...none, criteriaChanged: true })).toBe(2);
   });
+
+  it('counts what a research mode sets, though the mode shows none of it as rows', () => {
+    const mode = new Set([
+      'research.web_max_searches',
+      'research.web_max_rounds',
+      'research.dual_enabled',
+      'research.dual_model',
+      'research.max_queries',
+    ]);
+    const none = { modelChanged: false, criteriaChanged: false };
+    expect(changedInSection('research', mode, none)).toBe(5);
+    expect(changedInSection('workflow', mode, none)).toBe(0);
+  });
 });
 
 describe('which draft a dimension replaces', () => {

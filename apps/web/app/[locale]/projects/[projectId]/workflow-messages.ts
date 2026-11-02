@@ -269,6 +269,10 @@ const messages = {
       singleSourceHelp: 'فقط یک منبع تأییدشده پشتوانه این یافته است.',
       overviewWebClasses: 'صفحه‌های وب ارجاع‌شده: {official} رسمی و {public} عمومی.',
       overviewSingle: '{n} یافته فقط به یک منبع تأییدشده تکیه دارد.',
+      overviewHeadline: '{solid} یافتهٔ قوی از {findings} یافته',
+      overviewHeadlineConflicts: '{n} اختلاف منابع که تصمیم شما را می‌خواهد',
+      overviewHeadlineOpen: '{n} سؤال هنوز باز است',
+      overviewDetails: 'جزئیات خلاصه',
       overviewHeading: 'خلاصه تحقیق',
       overviewFindings:
         '{findings} یافته: {solid} قوی (دانش تأییدشده)، {limited} محدود (فقط وب)، {unverified} بی‌شاهد و {disputed} مورد تناقض.',
@@ -588,6 +592,10 @@ const messages = {
       singleSourceHelp: 'Only one verified source backs this finding.',
       overviewWebClasses: 'Web pages cited: {official} official and {public} public.',
       overviewSingle: '{n} finding(s) rest on a single verified source.',
+      overviewHeadline: '{solid} solid finding(s) out of {findings}',
+      overviewHeadlineConflicts: '{n} source disagreement(s) waiting for your decision',
+      overviewHeadlineOpen: '{n} question(s) still open',
+      overviewDetails: 'Summary details',
       overviewHeading: 'Research at a glance',
       overviewFindings:
         '{findings} findings: {solid} strong (approved knowledge), {limited} limited (web only), {unverified} without evidence and {disputed} disputed.',

@@ -36,6 +36,16 @@ export function formatNumber(locale: Locale, value: number): string {
   return new Intl.NumberFormat(intlTag[locale]).format(value);
 }
 
+/** An amount in US dollars for an estimate: cents below one dollar, whole cents above. */
+export function formatUsd(locale: Locale, value: number): string {
+  return new Intl.NumberFormat(intlTag[locale], {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: value < 10 ? 2 : 0,
+    maximumFractionDigits: value < 10 ? 2 : 0,
+  }).format(value);
+}
+
 /** A price in USD per million tokens: up to six decimals, so 0.0375 is never shown as 0.038. */
 export function formatPrice(locale: Locale, value: number): string {
   return new Intl.NumberFormat(intlTag[locale], { maximumFractionDigits: 6 }).format(value);
