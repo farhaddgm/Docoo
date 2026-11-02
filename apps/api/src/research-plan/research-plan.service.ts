@@ -7,6 +7,7 @@ import {
   isConflictDecision,
   normalizeRequirementGaps,
   normalizeResearchQuestions,
+  learnedDomains,
   openFollowupQuestions,
   planExtends,
   REQUIREMENT_GAP_RULES,
@@ -31,6 +32,7 @@ import {
   promptRequirements,
   ProviderRuntime,
   researchConflicts,
+  trustedPageUrls,
   confirmedDeliverables,
   type ResearchContent,
   type ResearchPlanView,
@@ -645,7 +647,10 @@ export class ResearchPlanService {
     return {
       stageRunId: research.stageRunId,
       outputId: research.outputId,
-      items: researchConflicts(research.content).map((conflict) => ({
+      items: researchConflicts(
+        research.content,
+        new Set(learnedDomains(await trustedPageUrls(client)).map((item) => item.domain)),
+      ).map((conflict) => ({
         ...conflict,
         decision: decisions.get(conflict.fingerprint) ?? null,
       })),

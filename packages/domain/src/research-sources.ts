@@ -113,6 +113,50 @@ const hostOf = (url: string): string | null => {
 const underDomain = (host: string, domain: string): boolean =>
   host === domain || host.endsWith(`.${domain}`);
 
+/** The host of a page address without a leading `www.`, or null for anything that is not a web address. */
+export function sourceHost(url: string): string | null {
+  const host = hostOf(url);
+  return host === null ? null : host.replace(/^www\./u, '');
+}
+
+/** Times the administrator must have trusted a domain before it is suggested as official. */
+export const LEARNED_TRUST_MIN = 2;
+export const LEARNED_SUGGESTIONS_MAX = 20;
+
+export interface LearnedDomain {
+  readonly domain: string;
+  /** Conflicts the administrator settled by trusting a page of this domain. */
+  readonly trusted: number;
+}
+
+/**
+ * Domains the administrator keeps trusting (ADR-0050): the hosts of the pages they chose as right
+ * in conflicts, at least `LEARNED_TRUST_MIN` times, that are not already official. Suggested as the
+ * exact host they trusted, never as a wider domain, so a suggestion cannot trust more than they did.
+ */
+export function learnedDomains(
+  trustedUrls: readonly string[],
+  extraOfficial: readonly string[] = [],
+): LearnedDomain[] {
+  const counts = new Map<string, number>();
+  for (const url of trustedUrls) {
+    const host = sourceHost(url);
+    if (host === null || classifyWebSource(url, extraOfficial) === 'official') continue;
+    counts.set(host, (counts.get(host) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, trusted]) => trusted >= LEARNED_TRUST_MIN)
+    .map(([domain, trusted]) => ({ domain, trusted }))
+    .sort((a, b) => b.trusted - a.trusted || a.domain.localeCompare(b.domain))
+    .slice(0, LEARNED_SUGGESTIONS_MAX);
+}
+
+/** Whether a page address is under one of the learned domains. */
+export function isLearnedSource(url: string, learned: ReadonlySet<string>): boolean {
+  const host = sourceHost(url);
+  return host !== null && [...learned].some((domain) => underDomain(host, domain));
+}
+
 /** `official` or `public` for a page address; an address that is not a web address is `public`. */
 export function classifyWebSource(
   url: string,
@@ -148,7 +192,7 @@ export function conflictFingerprint(description: string, refs: readonly string[]
 }
 
 /** Why one source of a conflict is suggested over the others (shown to the administrator). */
-export type ConflictAdviceReason = 'knowledge' | 'official' | 'both_models';
+export type ConflictAdviceReason = 'knowledge' | 'official' | 'learned' | 'both_models';
 
 export interface ConflictAdvice {
   readonly trustedRef: string;
@@ -161,9 +205,14 @@ export interface AdvisedSource {
   readonly kind: SourceClass;
   /** Models that found the page in dual-model research (ADR-0047); absent for one model. */
   readonly foundBy?: readonly string[] | undefined;
+  /** A public page of a domain the administrator has kept trusting (ADR-0050). */
+  readonly learned?: boolean | undefined;
 }
 
 const WEIGHT: Record<SourceClass, number> = { knowledge: 3, official: 2, public: 1 };
+/** A learned domain stands between a plain public page and an official one. */
+const weightOf = (source: AdvisedSource): number =>
+  WEIGHT[source.kind] + (source.kind === 'public' && source.learned === true ? 0.5 : 0);
 
 /**
  * A suggestion for a conflict, never a decision: the source that stands higher, or, between
@@ -174,13 +223,17 @@ const WEIGHT: Record<SourceClass, number> = { knowledge: 3, official: 2, public:
  */
 export function adviseConflict(sources: readonly AdvisedSource[]): ConflictAdvice | null {
   if (sources.length < 2) return null;
-  const ranked = [...sources].sort((a, b) => WEIGHT[b.kind] - WEIGHT[a.kind]);
+  const ranked = [...sources].sort((a, b) => weightOf(b) - weightOf(a));
   const top = ranked[0]!;
   const next = ranked[1]!;
-  if (WEIGHT[top.kind] > WEIGHT[next.kind]) {
-    return { trustedRef: top.ref, reason: top.kind === 'knowledge' ? 'knowledge' : 'official' };
+  if (weightOf(top) > weightOf(next)) {
+    return {
+      trustedRef: top.ref,
+      reason:
+        top.kind === 'knowledge' ? 'knowledge' : top.kind === 'official' ? 'official' : 'learned',
+    };
   }
-  const best = sources.filter((item) => WEIGHT[item.kind] === WEIGHT[top.kind]);
+  const best = sources.filter((item) => weightOf(item) === weightOf(top));
   const both = best.filter((item) => (item.foundBy?.length ?? 0) > 1);
   if (both.length === 1 && best.length > 1) {
     return { trustedRef: both[0]!.ref, reason: 'both_models' };

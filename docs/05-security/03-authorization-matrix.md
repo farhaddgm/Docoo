@@ -72,6 +72,7 @@ notion_sync: true
 | `PUT /settings/assignments/batch`                                           | `workspace.configure`       |
 | `POST /settings/assignments/restore`                                        | `workspace.configure`       |
 | `GET /settings/research-estimate`                                           | `workspace.read`            |
+| `GET /settings/research-source-suggestions`                                 | `workspace.read`            |
 | `GET /settings/effective`                                                   | `workspace.read`            |
 | `POST /settings/preview`                                                    | `workspace.read`            |
 | `GET /document-templates`                                                   | `workspace.read`            |

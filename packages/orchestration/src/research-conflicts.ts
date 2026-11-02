@@ -1,5 +1,6 @@
 import {
   adviseConflict,
+  isLearnedSource,
   conflictFingerprint,
   type ConflictAdvice,
   type ConflictDecision,
@@ -16,6 +17,8 @@ export interface ConflictSource {
   readonly kind: SourceClass;
   /** In dual-model research, the models that found the page. */
   readonly foundBy?: readonly string[];
+  /** A public page of a domain the administrator keeps trusting (ADR-0050). */
+  readonly learned?: boolean;
 }
 
 export interface ResearchConflictView {
@@ -45,7 +48,11 @@ const records = (value: unknown): Record<string, unknown>[] =>
     : [];
 
 /** What the stored output says about one reference: a knowledge item or a web page. */
-export function describeRef(content: unknown, ref: string): ConflictSource {
+export function describeRef(
+  content: unknown,
+  ref: string,
+  learned: ReadonlySet<string> = new Set(),
+): ConflictSource {
   const raw =
     content !== null && typeof content === 'object' ? (content as Record<string, unknown>) : {};
   const knowledge = raw['knowledge'] as Record<string, unknown> | undefined;
@@ -61,6 +68,9 @@ export function describeRef(content: unknown, ref: string): ConflictSource {
       title: asText(page['title']),
       url: asText(page['url']) || null,
       kind: page['sourceClass'] === 'official' ? 'official' : 'public',
+      ...(page['sourceClass'] !== 'official' && isLearnedSource(asText(page['url']), learned)
+        ? { learned: true }
+        : {}),
       ...(Array.isArray(page['foundBy'])
         ? { foundBy: page['foundBy'].filter((v): v is string => typeof v === 'string') }
         : {}),
@@ -70,7 +80,10 @@ export function describeRef(content: unknown, ref: string): ConflictSource {
 }
 
 /** The conflicts of a stored research output with their fingerprints and the sources they name. */
-export function researchConflicts(content: unknown): ResearchConflictView[] {
+export function researchConflicts(
+  content: unknown,
+  learned: ReadonlySet<string> = new Set(),
+): ResearchConflictView[] {
   const raw =
     content !== null && typeof content === 'object' ? (content as Record<string, unknown>) : {};
   return records(raw['conflicts']).flatMap((entry) => {
@@ -79,7 +92,7 @@ export function researchConflicts(content: unknown): ResearchConflictView[] {
     const refs = Array.isArray(entry['refs'])
       ? entry['refs'].filter((ref): ref is string => typeof ref === 'string')
       : [];
-    const sources = refs.map((ref) => describeRef(content, ref));
+    const sources = refs.map((ref) => describeRef(content, ref, learned));
     return [
       {
         fingerprint: conflictFingerprint(description, refs),
@@ -139,5 +152,28 @@ export async function promptConflictDecisions(
         ...(decided.note ? { note: decided.note } : {}),
       },
     ];
+  });
+}
+
+/**
+ * The addresses of the web pages the administrator chose as right in conflicts (ADR-0050), one per
+ * settled conflict: the newest decision of each conflict, when it trusts a web page, looked up in
+ * the output it was made on. Read by the learned-domain suggestions and the conflict advisor.
+ */
+export async function trustedPageUrls(client: PoolClient): Promise<string[]> {
+  const rows = (
+    await client.query<{ trustedRef: string; sources: unknown }>(
+      `select d.trusted_ref as "trustedRef", o.content #> '{web,sources}' as sources
+         from (select distinct on (stage_run_id, fingerprint) *
+                 from research_conflict_decisions
+                order by stage_run_id, fingerprint, created_at desc, id desc) d
+         join stage_outputs o on o.id = d.output_id
+        where d.decision = 'trust' and d.trusted_ref like 'W%'`,
+    )
+  ).rows;
+  return rows.flatMap((row) => {
+    const page = records(row.sources).find((entry) => entry['ref'] === row.trustedRef);
+    const url = page ? asText(page['url']) : '';
+    return url === '' ? [] : [url];
   });
 }

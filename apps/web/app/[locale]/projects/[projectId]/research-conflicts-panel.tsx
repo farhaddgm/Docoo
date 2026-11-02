@@ -26,7 +26,10 @@ interface Conflict {
   sources: Source[];
   decision: Decision | null;
   /** A suggestion from plain rules (ADR-0049); never a decision. */
-  advice?: { trustedRef: string; reason: 'knowledge' | 'official' | 'both_models' } | null;
+  advice?: {
+    trustedRef: string;
+    reason: 'knowledge' | 'official' | 'learned' | 'both_models';
+  } | null;
 }
 
 interface Data {
@@ -49,6 +52,7 @@ const copy = {
     reasons: {
       knowledge: 'دانش تأییدشدهٔ داخلی از منبع وب معتبرتر است',
       official: 'منبع رسمی است و دیگری عمومی',
+      learned: 'شما پیش‌تر بارها صفحه‌ای از همین دامنه را معتبر دانسته‌اید',
       both_models: 'هر دو مدل جست‌وجو آن را یافته‌اند و دیگری را فقط یکی',
     } as Record<string, string>,
     adviceNote: 'این فقط پیشنهاد است؛ تصمیم با شماست.',
@@ -76,6 +80,7 @@ const copy = {
     reasons: {
       knowledge: 'approved internal knowledge outranks a web page',
       official: 'it is an official source and the other is public',
+      learned: 'you have trusted pages of this domain several times before',
       both_models: 'both search models found it and only one found the other',
     } as Record<string, string>,
     adviceNote: 'This is only a suggestion; the decision is yours.',
