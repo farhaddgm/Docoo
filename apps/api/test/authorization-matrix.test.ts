@@ -29,6 +29,7 @@ import { DocumentsController } from '../src/documents/documents.controller.js';
 import { ReportsController } from '../src/reports/reports.controller.js';
 import { ConfigController } from '../src/config/config.controller.js';
 import { KnowledgeController } from '../src/knowledge/knowledge.controller.js';
+import { ResearchMemoryController } from '../src/knowledge/research-memory.controller.js';
 import { NotificationsController } from '../src/notifications/notifications.controller.js';
 import { ProjectsController } from '../src/projects/projects.controller.js';
 import { ProvidersController } from '../src/providers/providers.controller.js';
@@ -209,6 +210,8 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/projects/:projectId/research-plan/followup': 'workflow.reject',
   'POST workspaces/:workspaceId/projects/:projectId/research-plan/requirement-gaps': 'project.run',
   'GET workspaces/:workspaceId/projects/:projectId/research-conflicts': 'project.read',
+  'GET workspaces/:workspaceId/projects/:projectId/research-memory': 'project.read',
+  'POST workspaces/:workspaceId/projects/:projectId/research-memory': 'knowledge.create',
   'POST workspaces/:workspaceId/projects/:projectId/research-conflicts/:fingerprint/decision':
     'project.update',
   'GET workspaces/:workspaceId/projects/:projectId/output-requirements': 'project.read',
@@ -330,6 +333,7 @@ const controllers = [
   AuditController,
   SourcesController,
   KnowledgeController,
+  ResearchMemoryController,
   ProvidersController,
   WorkflowController,
   StageChatController,
