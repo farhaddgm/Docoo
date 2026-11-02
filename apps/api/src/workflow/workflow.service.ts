@@ -469,6 +469,37 @@ export class WorkflowService {
               )
             ).rows
           : [];
+        // What each running stage reports about itself, newest attempt only, oldest step first.
+        const runningIds = stages
+          .filter((item) => item.status === 'running')
+          .map((item) => item.id);
+        const steps = runningIds.length
+          ? (
+              await client.query<{
+                stageRunId: string;
+                attemptId: string;
+                kind: string;
+                data: Record<string, unknown>;
+                createdAt: string;
+              }>(
+                `select stage_run_id as "stageRunId", attempt_id as "attemptId", kind, data,
+                        ${isoColumn('created_at', '"createdAt"')}
+                   from stage_progress
+                  where stage_run_id = any($1::uuid[])
+                  order by created_at desc, id desc
+                  limit 80`,
+                [runningIds],
+              )
+            ).rows
+          : [];
+        const progressOf = (stageRunId: string) => {
+          const mine = steps.filter((step) => step.stageRunId === stageRunId);
+          const latest = mine[0]?.attemptId;
+          return mine
+            .filter((step) => step.attemptId === latest)
+            .reverse()
+            .map(({ kind, data, createdAt }) => ({ kind, data, createdAt }));
+        };
         const tasks = (
           await client.query<Record<string, unknown>>(
             `select id, stage_run_id as "stageRunId", kind, title, payload, ${isoColumn('created_at', '"createdAt"')}
@@ -486,6 +517,7 @@ export class WorkflowService {
                   ...this.toStage(row),
                   pendingGateOutputId:
                     gates.find((gate) => gate.stage_run_id === row.id)?.output_id ?? null,
+                  ...(row.status === 'running' ? { progress: progressOf(row.id) } : {}),
                 }
               : { stage, sequence: index + 1, status: 'pending', id: null };
           }),

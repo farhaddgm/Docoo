@@ -109,6 +109,14 @@ function WebBlock({
   );
 }
 
+/** What the gap finder recorded for one planned question (ADR-0049); undefined when it did not run. */
+function gapOf(
+  web: Record<string, unknown> | null,
+  id: unknown,
+): Record<string, unknown> | undefined {
+  return records(web?.['gaps']).find((entry) => entry['id'] === id);
+}
+
 /** Who found a page in dual-model research: nothing is shown for a single model. */
 function foundByLabel(text: Text, value: unknown): string {
   const sides = strings(value);
@@ -462,6 +470,23 @@ export function ResearchView({ locale, data }: { locale: Locale; data: Record<st
                     })}
                   </small>
                 </p>
+                {gapOf(web, question['id'])?.['unanswerable'] === true && status !== 'answered' && (
+                  <div className="notice" role="note">
+                    <p>
+                      {fill(text.unanswerable, {
+                        n: num(gapOf(web, question['id'])?.['rounds']),
+                      })}
+                    </p>
+                    {asText(gapOf(web, question['id'])?.['missing']) !== '' && (
+                      <p className="muted" dir={textDir(locale)}>
+                        {fill(text.unanswerableMissing, {
+                          missing: asText(gapOf(web, question['id'])?.['missing']),
+                        })}
+                      </p>
+                    )}
+                    <Link href={`/${locale}/knowledge` as Route}>{text.openKnowledge}</Link>
+                  </div>
+                )}
                 {mine.length === 0 ? (
                   <p className="muted">{text.questionNoFindings}</p>
                 ) : (

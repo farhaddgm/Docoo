@@ -9,6 +9,7 @@ import { normalizeForSearch } from '@docoo/knowledge';
 import type { RetrievedPassage } from './knowledge-retrieval.js';
 import type { SourceCitation } from './source-citation.js';
 import type { DualInfo } from './research-dual.js';
+import type { StoredGap } from './research-gaps.js';
 
 /**
  * Pure rules of the research stage with approved knowledge (ADR-0017): which queries the
@@ -270,6 +271,8 @@ export interface WebRun {
   readonly dual?: DualInfo | undefined;
   /** Why dual-model research was on but did not run (`dual_not_configured`, `dual_same_model`). */
   readonly dualSkipped?: string | undefined;
+  /** Per planned question: rounds spent, whether answered, what is missing (ADR-0049). */
+  readonly gaps?: readonly StoredGap[] | undefined;
 }
 
 export const NO_WEB: WebRun = { status: 'off', code: null, queries: [], sources: [] };
@@ -303,6 +306,7 @@ export interface ResearchWebInfo {
   readonly stop?: string | undefined;
   readonly dual?: DualInfo | undefined;
   readonly dualSkipped?: string | undefined;
+  readonly gaps?: readonly StoredGap[] | undefined;
   readonly sources: readonly {
     readonly ref: string;
     readonly url: string;
@@ -661,6 +665,7 @@ export function verifyResearch(input: {
         ...(web.stop !== undefined ? { stop: web.stop } : {}),
         ...(web.dual ? { dual: web.dual } : {}),
         ...(web.dualSkipped ? { dualSkipped: web.dualSkipped } : {}),
+        ...(web.gaps ? { gaps: web.gaps } : {}),
         sources: web.sources.map((source) => ({
           ref: source.ref,
           url: source.url,
@@ -853,6 +858,9 @@ export function mergeFollowup(input: {
         : {}),
       ...((fresh.web?.dual ?? previous.web?.dual)
         ? { dual: fresh.web?.dual ?? previous.web?.dual }
+        : {}),
+      ...((fresh.web?.gaps ?? previous.web?.gaps)
+        ? { gaps: fresh.web?.gaps ?? previous.web?.gaps }
         : {}),
       sources: webSources,
     },

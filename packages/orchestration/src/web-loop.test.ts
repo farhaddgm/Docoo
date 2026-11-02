@@ -55,6 +55,28 @@ describe('webStopReason', () => {
     ).toBe('max_rounds');
   });
 
+  it('stops when the gap finder says every question is covered, once the minima are met', () => {
+    expect(
+      webStopReason(
+        policy(),
+        state({ rounds: 2, searches: 3, sources: 4, newSources: 2, allCovered: true }),
+      ),
+    ).toBe('all_covered');
+    // Below the minima it keeps going, and a "not covered" verdict never stops it by itself.
+    expect(
+      webStopReason(
+        policy(),
+        state({ rounds: 1, searches: 1, sources: 4, newSources: 2, allCovered: true }),
+      ),
+    ).toBeNull();
+    expect(
+      webStopReason(
+        policy(),
+        state({ rounds: 2, searches: 3, sources: 4, newSources: 2, allCovered: false }),
+      ),
+    ).toBeNull();
+  });
+
   it('never stops early on a target of 0', () => {
     expect(
       webStopReason(

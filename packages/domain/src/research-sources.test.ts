@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  adviseConflict,
   classifyWebSource,
   conflictFingerprint,
   MAX_OFFICIAL_DOMAINS,
@@ -104,5 +105,56 @@ describe('cleaning the listed domains stays linear', () => {
         '-bad.test',
       ]),
     ).toEqual(['sub.agency.test']);
+  });
+});
+
+describe('adviseConflict (ADR-0049)', () => {
+  const src = (
+    ref: string,
+    kind: 'knowledge' | 'official' | 'public',
+    foundBy?: string[],
+  ): { ref: string; kind: 'knowledge' | 'official' | 'public'; foundBy?: string[] } => ({
+    ref,
+    kind,
+    ...(foundBy ? { foundBy } : {}),
+  });
+
+  it('prefers approved knowledge over an official page, and an official page over a public one', () => {
+    expect(adviseConflict([src('W1', 'official'), src('K1', 'knowledge')])).toEqual({
+      trustedRef: 'K1',
+      reason: 'knowledge',
+    });
+    expect(adviseConflict([src('W1', 'public'), src('W2', 'official')])).toEqual({
+      trustedRef: 'W2',
+      reason: 'official',
+    });
+  });
+
+  it('between equals, prefers the page both models found, and only when exactly one was', () => {
+    expect(
+      adviseConflict([
+        src('W1', 'public', ['primary']),
+        src('W2', 'public', ['primary', 'second']),
+      ]),
+    ).toEqual({ trustedRef: 'W2', reason: 'both_models' });
+    expect(
+      adviseConflict([
+        src('W1', 'public', ['primary', 'second']),
+        src('W2', 'public', ['primary', 'second']),
+      ]),
+    ).toBeNull();
+  });
+
+  it('gives no advice for a tie, a single source, or a both-models page that is not on the top level', () => {
+    expect(adviseConflict([src('W1', 'public'), src('W2', 'public')])).toBeNull();
+    expect(adviseConflict([src('W1', 'official')])).toBeNull();
+    expect(adviseConflict([])).toBeNull();
+    // The lower class cannot win on "both models found it": the official page still leads.
+    expect(
+      adviseConflict([
+        src('W1', 'official', ['primary']),
+        src('W2', 'public', ['primary', 'second']),
+      ]),
+    ).toEqual({ trustedRef: 'W1', reason: 'official' });
   });
 });

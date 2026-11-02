@@ -25,6 +25,8 @@ interface Conflict {
   description: string;
   sources: Source[];
   decision: Decision | null;
+  /** A suggestion from plain rules (ADR-0049); never a decision. */
+  advice?: { trustedRef: string; reason: 'knowledge' | 'official' | 'both_models' } | null;
 }
 
 interface Data {
@@ -43,6 +45,14 @@ const copy = {
     dismiss: 'این تعارض مهم نیست',
     note: 'یادداشت (اختیاری)',
     kinds: { knowledge: 'دانش تأییدشده', official: 'وب رسمی', public: 'وب عمومی' },
+    advice: 'پیشنهاد: {source} — {reason}',
+    reasons: {
+      knowledge: 'دانش تأییدشدهٔ داخلی از منبع وب معتبرتر است',
+      official: 'منبع رسمی است و دیگری عمومی',
+      both_models: 'هر دو مدل جست‌وجو آن را یافته‌اند و دیگری را فقط یکی',
+    } as Record<string, string>,
+    adviceNote: 'این فقط پیشنهاد است؛ تصمیم با شماست.',
+    accept: 'قبول پیشنهاد',
     change: 'تغییر تصمیم',
     cancel: 'انصراف',
     errors: {
@@ -62,6 +72,14 @@ const copy = {
     dismiss: 'This conflict does not matter',
     note: 'Note (optional)',
     kinds: { knowledge: 'Approved knowledge', official: 'Official web', public: 'Public web' },
+    advice: 'Suggestion: {source} — {reason}',
+    reasons: {
+      knowledge: 'approved internal knowledge outranks a web page',
+      official: 'it is an official source and the other is public',
+      both_models: 'both search models found it and only one found the other',
+    } as Record<string, string>,
+    adviceNote: 'This is only a suggestion; the decision is yours.',
+    accept: 'Accept the suggestion',
     change: 'Change the decision',
     cancel: 'Cancel',
     errors: {
@@ -214,6 +232,33 @@ export function ResearchConflictsPanel({
                 </p>
               )}
               {!decided && <p className="muted">{text.undecided}</p>}
+              {!decided && conflict.advice && (
+                <div className="notice info" role="note">
+                  <p>
+                    {fill(text.advice, {
+                      source: conflict.advice.trustedRef,
+                      reason: text.reasons[conflict.advice.reason] ?? '',
+                    })}
+                  </p>
+                  <p className="muted">{text.adviceNote}</p>
+                  {!readOnly && (
+                    <button
+                      data-write-action
+                      className="secondary-button"
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        void decide(conflict, {
+                          decision: 'trust',
+                          trustedRef: conflict.advice!.trustedRef,
+                        })
+                      }
+                    >
+                      {text.accept}
+                    </button>
+                  )}
+                </div>
+              )}
               {open && !readOnly && (
                 <div className="field-stack">
                   <label htmlFor={`${id}-note-${conflict.fingerprint}`}>{text.note}</label>

@@ -1474,6 +1474,24 @@ export const researchConflictDecisions = pgTable(
   ],
 );
 
+/** What a running stage is doing (ADR-0049): one small append-only row per step. */
+export const stageProgress = pgTable(
+  'stage_progress',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    stageRunId: uuid('stage_run_id').notNull(),
+    attemptId: uuid('attempt_id').notNull(),
+    kind: text('kind').notNull(),
+    data: jsonb('data').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('stage_progress_idx').on(table.stageRunId, table.createdAt)],
+);
+
 export const gateDecisions = pgTable(
   'gate_decisions',
   {

@@ -360,6 +360,7 @@ describe.skipIf(!adminUrl)('Research follow-up round and requirement gaps (ADR-0
         description: string;
         sources: { ref: string; title: string; kind: string }[];
         decision: { decision: string; trustedRef: string | null; note: string } | null;
+        advice: { trustedRef: string; reason: string } | null;
       }[];
     }
     const listing = async () => (await h.request('GET', conflicts(), { cookie })).json<Listing>();
@@ -368,7 +369,8 @@ describe.skipIf(!adminUrl)('Research follow-up round and requirement gaps (ADR-0
       const view = await listing();
       expect(view.stageRunId).toBe(stageRunId);
       expect(view.items).toHaveLength(1);
-      expect(view.items[0]).toMatchObject({ fingerprint, decision: null });
+      // Two approved-knowledge sources stand level, so there is no suggestion (ADR-0049).
+      expect(view.items[0]).toMatchObject({ fingerprint, decision: null, advice: null });
       expect(
         view.items[0]!.sources.map((source) => [source.ref, source.title, source.kind]),
       ).toEqual([

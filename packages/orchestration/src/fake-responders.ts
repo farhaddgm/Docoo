@@ -18,6 +18,25 @@ const records = (value: unknown): Record<string, unknown>[] =>
 const isPersian = (request: NormalizedModelRequest) =>
   (request.instructions ?? '').includes('Persian');
 
+/**
+ * Deterministic gap finder (ADR-0049): every asked question counts as covered, except one whose
+ * text carries the marker "[no-answer]", which stays open so a test can see the loop go on.
+ */
+export function fakeResearchGapsResponder(request: NormalizedModelRequest): unknown {
+  if (request.responseSchema?.name !== 'research_gaps') return null;
+  const asked = records(dataOf(request)['questions']);
+  return {
+    questions: asked.map((item) => {
+      const open = typeof item['question'] === 'string' && item['question'].includes('[no-answer]');
+      return {
+        id: typeof item['id'] === 'string' ? item['id'] : '',
+        covered: !open,
+        missing: open ? 'nothing found' : '',
+      };
+    }),
+  };
+}
+
 /** Deterministic judge of dual-model research: finds no disagreement between the pages. */
 export function fakeResearchJudgeResponder(request: NormalizedModelRequest): unknown {
   return request.responseSchema?.name === 'research_judge' ? { conflicts: [] } : null;
@@ -363,6 +382,7 @@ export function fakeResponder(request: NormalizedModelRequest): unknown {
     fakeAnalystResponder(request) ??
     fakeResearchResponder(request) ??
     fakeResearchJudgeResponder(request) ??
+    fakeResearchGapsResponder(request) ??
     fakeRoleEvaluationResponder(request) ??
     fakeQuestionQualityResponder(request) ??
     fakeExplorationResponder(request) ??

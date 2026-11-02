@@ -26,7 +26,13 @@ export interface WebSearchPolicy {
 }
 
 export type WebStopReason =
-  'target_reached' | 'max_searches' | 'max_rounds' | 'no_new_findings' | 'cost_limit' | 'failed';
+  | 'target_reached'
+  | 'max_searches'
+  | 'max_rounds'
+  | 'no_new_findings'
+  | 'all_covered'
+  | 'cost_limit'
+  | 'failed';
 
 export interface WebLoopState {
   /** Rounds finished so far. */
@@ -37,6 +43,8 @@ export interface WebLoopState {
   readonly sources: number;
   /** Pages the last finished round added. */
   readonly newSources: number;
+  /** The gap finder's verdict after the round; absent when it did not run (ADR-0049). */
+  readonly allCovered?: boolean | undefined;
 }
 
 /**
@@ -50,6 +58,7 @@ export function webStopReason(policy: WebSearchPolicy, state: WebLoopState): Web
   const minimaMet = state.searches >= policy.minSearches && state.rounds >= policy.minRounds;
   if (!minimaMet) return null;
   if (policy.targetSources > 0 && state.sources >= policy.targetSources) return 'target_reached';
+  if (state.allCovered === true) return 'all_covered';
   if (state.newSources === 0) return 'no_new_findings';
   return null;
 }
@@ -83,6 +92,8 @@ export function webSearchPrompt(input: {
   /** A later round: what the earlier rounds already searched and found, so this one goes further. */
   readonly earlier?:
     { readonly queries: readonly string[]; readonly urls: readonly string[] } | undefined;
+  /** What each question of a later round still lacks, from the gap finder (ADR-0049). */
+  readonly missing?: readonly { readonly id: string; readonly missing: string }[] | undefined;
 }): { instructions: string; message: string } {
   const analysis = JSON.stringify(input.analysis ?? null) ?? 'null';
   return {
@@ -92,6 +103,11 @@ export function webSearchPrompt(input: {
       ...(input.questions && input.questions.length > 0
         ? [
             'researchQuestions lists the questions to answer, numbered Q1, Q2, …. Search for evidence for each of them and start every note with the id of the question it answers. Say plainly which questions you found nothing for.',
+          ]
+        : []),
+      ...(input.missing && input.missing.some((item) => item.missing !== '')
+        ? [
+            'missing says what each listed question still lacks after the earlier rounds. Search for exactly that, with queries that differ from the earlier ones.',
           ]
         : []),
       ...(input.earlier
@@ -115,6 +131,7 @@ export function webSearchPrompt(input: {
         ? { researchQuestions: input.questions }
         : {}),
       ...(input.earlier ? { earlierRounds: input.earlier } : {}),
+      ...(input.missing && input.missing.length > 0 ? { missing: input.missing } : {}),
     }),
   };
 }

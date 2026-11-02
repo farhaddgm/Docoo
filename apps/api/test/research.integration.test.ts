@@ -1136,9 +1136,14 @@ describe.skipIf(!adminUrl || !temporalAddress)(
         });
         expect(response.statusCode, response.body).toBe(200);
       };
-      const reachResearchWithWeb = async (prefix: string): Promise<string> => {
+      const reachResearchWithWeb = async (
+        prefix: string,
+        extra: Record<string, unknown> = {},
+      ): Promise<string> => {
         const projectId = await project(prefix);
         await projectSetting(projectId, 'research.web_enabled', true);
+        for (const [key, value] of Object.entries(extra))
+          await projectSetting(projectId, key, value);
         await activateProject(projectId);
         await analysis.reachDefinition(projectId);
         const view = await waitFor(projectId, waiting('analysis'), 'analysis gate');
@@ -1195,6 +1200,25 @@ describe.skipIf(!adminUrl || !temporalAddress)(
           [projectId],
         );
         expect(calls.rowCount).toBe(1);
+      }, 120_000);
+
+      it('runs the rounds the administrator asked for and reports each step while it runs (ADR-0049)', async () => {
+        const projectId = await reachResearchWithWeb('webrounds', {
+          'research.web_min_rounds': 2,
+          'research.web_max_rounds': 2,
+        });
+        const content = await researchOutput(projectId);
+        expect(content.web).toMatchObject({ status: 'used', rounds: 2, stop: 'max_rounds' });
+        const calls = await h.admin.query(
+          `select 1 from model_invocations where project_id = $1 and purpose = 'stage:research:web'`,
+          [projectId],
+        );
+        expect(calls.rowCount).toBe(2);
+        const steps = await h.admin.query<{ kind: string }>(
+          `select kind from stage_progress where project_id = $1 order by created_at, id`,
+          [projectId],
+        );
+        expect(steps.rows.map((row) => row.kind)).toEqual(['start', 'round', 'round', 'writing']);
       }, 120_000);
 
       it('a search that fails leaves the stage on its approved knowledge and the output says so', async () => {

@@ -48,6 +48,16 @@ import {
   type SideRun,
 } from './research-dual.js';
 import { judgeDualResearch } from './research-dual-judge.js';
+import { assessGaps } from './research-gap-run.js';
+import { mergeGaps } from './research-gaps.js';
+import {
+  missingHints,
+  openQuestions,
+  unanswerableOf,
+  updateLedger,
+  type GapLedgerEntry,
+} from './research-gaps.js';
+import { recordProgress, type ProgressKind } from './stage-progress.js';
 import {
   deniedWebRun,
   failedWebRun,
@@ -546,6 +556,21 @@ export function createOrchestrationActivities(
             ).rows[0]?.total;
             return checkCostLimit(total ?? 0, prepared.config.costLimitUsd).status !== 'exceeded';
           });
+        // What the stage is doing is reported step by step (ADR-0049); a missed row never fails it.
+        const progress = (kind: ProgressKind, data: Record<string, unknown> = {}) =>
+          run(ref.workspaceId, (client) =>
+            recordProgress(
+              client,
+              {
+                workspaceId: ref.workspaceId,
+                projectId: ref.projectId,
+                stageRunId: ref.stageRunId,
+                attemptId: prepared.attemptId,
+              },
+              kind,
+              data,
+            ),
+          ).catch(() => undefined);
         // The research stage may also search the web with the provider's own tool (ADR-0026). The
         // pages it finds reach the structured call as numbered `W` pages, never as knowledge; a
         // failed or refused search leaves the stage on its approved knowledge, and says so.
@@ -587,6 +612,17 @@ export function createOrchestrationActivities(
                 const seenUrls = new Set<string>();
                 let searches = 0;
                 let stop: WebStopReason;
+                // The gap finder (ADR-0049) runs only when there is more than one round and a plan:
+                // after each round it checks which planned questions the notes answer, and the
+                // next round searches only for the rest.
+                const askedAll = (prepared.researchPlan?.questions ?? []).filter(
+                  (question) => question.channel !== 'knowledge',
+                );
+                const gapOn = askedAll.length > 0 && policy.maxRounds > 1;
+                let open = askedAll;
+                let missing: { id: string; missing: string }[] | undefined;
+                let ledger: GapLedgerEntry[] = [];
+                const notes: string[] = [];
                 for (let round = 1; ; round += 1) {
                   if (round > 1 && !(await affordable())) {
                     stop = 'cost_limit';
@@ -606,10 +642,9 @@ export function createOrchestrationActivities(
                     analysis: prepared.promptInput.previous.find(
                       (item) => item.stage === 'analysis',
                     )?.content,
-                    questions: prepared.researchPlan?.questions.filter(
-                      (question) => question.channel !== 'knowledge',
-                    ),
+                    questions: open,
                     earlier,
+                    missing,
                   });
                   // Leave room for the minimum searches of the rounds still to come.
                   const roundsLeft = Math.max(1, policy.maxRounds - round + 1);
@@ -657,11 +692,54 @@ export function createOrchestrationActivities(
                         latencyMs: Date.now() - started,
                       }),
                     );
+                    await progress('round', {
+                      side,
+                      round,
+                      searches,
+                      pages: seenUrls.size,
+                      newPages: fresh.length,
+                    });
+                    let allCovered: boolean | undefined;
+                    if (gapOn && open.length > 0) {
+                      notes.push(found.response.text);
+                      const coverage = await assessGaps({
+                        model: target,
+                        asked: open,
+                        // Newest first, so the budget cuts the oldest notes.
+                        notes: [...notes].reverse().join('\n\n'),
+                        pages: rounds.flatMap((item) =>
+                          item.sources.map((source) => ({ title: source.title, url: source.url })),
+                        ),
+                        language: prepared.promptInput.language,
+                        affordable,
+                        invoke: (model, request, promptSha256) =>
+                          runtime.invoke(
+                            { ...invocation('stage:research:gaps'), promptSha256 },
+                            model.connectionId,
+                            {
+                              ...request,
+                              idempotencyKey: `${key}:${ref.retryNo}:gap${idSuffix}${round}`,
+                            },
+                          ),
+                      });
+                      if (coverage) {
+                        ledger = updateLedger(ledger, coverage);
+                        open = openQuestions(open, coverage);
+                        missing = missingHints(open, coverage);
+                        allCovered = open.length === 0;
+                        await progress('gaps', {
+                          side,
+                          round,
+                          open: open.map((question) => question.id),
+                        });
+                      }
+                    }
                     const reason = webStopReason(policy, {
                       rounds: round,
                       searches,
                       sources: seenUrls.size,
                       newSources: fresh.length,
+                      allCovered,
                     });
                     if (reason) {
                       stop = reason;
@@ -684,15 +762,41 @@ export function createOrchestrationActivities(
                     break;
                   }
                 }
-                return rounds.length === 1 && stop !== 'failed'
-                  ? { ...rounds[0]!, rounds: 1, stop }
-                  : mergeWebRuns(rounds, limit, { rounds: rounds.length, stop });
+                const joined =
+                  rounds.length === 1 && stop !== 'failed'
+                    ? { ...rounds[0]!, rounds: 1, stop }
+                    : mergeWebRuns(rounds, limit, { rounds: rounds.length, stop });
+                const unanswerable = new Set(unanswerableOf(ledger).map((entry) => entry.id));
+                return ledger.length > 0
+                  ? {
+                      ...joined,
+                      gaps: ledger.map((entry) => ({
+                        ...entry,
+                        unanswerable: unanswerable.has(entry.id),
+                      })),
+                    }
+                  : joined;
               };
               const primary: ModelRef = {
                 connectionId: prepared.config.connectionId,
                 model: prepared.config.model,
               };
               const dual = resolveDualPlan(primary, prepared.config.researchDual);
+              const startPolicy = normalizeWebPolicy({
+                minSearches: prepared.config.researchWebMinSearches,
+                maxSearches: prepared.config.researchWebMaxSearches,
+                minRounds: prepared.config.researchWebMinRounds,
+                maxRounds: prepared.config.researchWebMaxRounds,
+                targetSources: prepared.config.researchWebTargetSources,
+              });
+              await progress('start', {
+                questions: (prepared.researchPlan?.questions ?? []).filter(
+                  (question) => question.channel !== 'knowledge',
+                ).length,
+                maxRounds: startPolicy.maxRounds,
+                maxSearches: startPolicy.maxSearches,
+                dual: dual.mode === 'dual',
+              });
               if (dual.mode === 'off') {
                 web = await searchLoop(primary, 'primary', '', 'stage:research:web');
                 if (dual.code) web = { ...web, dualSkipped: dual.code };
@@ -724,6 +828,9 @@ export function createOrchestrationActivities(
                   sources: pages,
                   rounds: first.rounds,
                   stop: first.stop,
+                  ...(first.gaps || second.gaps
+                    ? { gaps: mergeGaps(first.gaps ?? [], second.gaps ?? []) }
+                    : {}),
                   dual: {
                     primary: sideInfo(sides[0]!),
                     second: sideInfo(sides[1]!),
@@ -804,6 +911,7 @@ export function createOrchestrationActivities(
             };
           }
         }
+        if (research) await progress('writing');
         const { response } = await runtime.invoke(
           { ...invocation(`stage:${prepared.stage}`), promptSha256 },
           prepared.config.connectionId,
@@ -825,6 +933,7 @@ export function createOrchestrationActivities(
         // conflicts; a failed judge only means no extra conflicts are reported (ADR-0047).
         let answer: unknown = response.json;
         if (research?.web?.dual && dualJudge) {
+          await progress('judge');
           const judged = await judgeDualResearch({
             judge: dualJudge,
             web: research.web,
