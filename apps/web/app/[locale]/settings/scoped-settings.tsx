@@ -15,6 +15,7 @@ import { settingsMessages, type SettingsText } from './settings-messages';
 import {
   EDITED_ELSEWHERE,
   NOT_ENFORCED,
+  DUAL_PICKER,
   PROVIDER_PAGE,
   SETTING_GROUPS,
   parseControlText,
@@ -129,7 +130,8 @@ export function ScopedSettings({
               !item.sensitive &&
               item.allowedScopes.includes(scopeType) &&
               // A project's model has its own section: connection and model go together.
-              !(scopeType === 'project' && PROVIDER_PAGE.has(item.key)),
+              !(scopeType === 'project' && PROVIDER_PAGE.has(item.key)) &&
+              !DUAL_PICKER.has(item.key),
           );
         if (rows.length === 0) return null;
         const info = text.groups[group.id];
@@ -152,7 +154,144 @@ export function ScopedSettings({
           </GroupSection>
         );
       })}
+      {definitions.some((item) => DUAL_PICKER.has(item.key)) && (
+        <DualResearchSection
+          locale={locale}
+          workspaceId={workspaceId}
+          scopeType={scopeType}
+          scopeId={scopeId}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * The two models of dual-model research (ADR-0047): the second searcher and the judge, each a
+ * connection and a model saved together. The second may be of the same provider as the first.
+ */
+function DualResearchSection({
+  locale,
+  workspaceId,
+  scopeType,
+  scopeId,
+}: {
+  locale: Locale;
+  workspaceId: string;
+  scopeType: Extract<Scope, 'workspace' | 'project'>;
+  scopeId: string;
+}) {
+  const text = settingsMessages(locale);
+  const readOnly = useReadOnlyAccess();
+  const base = `/workspaces/${workspaceId}/settings`;
+  const id = useId();
+  const [second, setSecond] = useState({ connection: '', model: '' });
+  const [judge, setJudge] = useState({ connection: '', model: '' });
+  const [reason, setReason] = useState('');
+  const [loaded, setLoaded] = useState(false);
+  const [assignments, setAssignments] = useState<Map<string, Assignment>>(new Map());
+  const explain = useCallback((error: unknown) => explainSettingError(error, text), [text]);
+  const action = useAction(explain);
+
+  const load = useCallback(async () => {
+    const scope = query({ scopeType, scopeId });
+    const assigned = await apiGet<{ items: Assignment[] }>(`${base}/assignments${scope}`);
+    const map = new Map(assigned.items.map((item) => [item.key, item]));
+    setAssignments(map);
+    const own = (key: string) => {
+      const item = map.get(key);
+      return item && !item.cleared && typeof item.value === 'string' ? item.value : '';
+    };
+    setSecond({
+      connection: own('research.dual_connection_id'),
+      model: own('research.dual_model'),
+    });
+    setJudge({
+      connection: own('research.judge_connection_id'),
+      model: own('research.judge_model'),
+    });
+    setLoaded(true);
+  }, [base, scopeId, scopeType]);
+
+  useEffect(() => {
+    void load().catch(() => setLoaded(true));
+  }, [load]);
+
+  const set = (key: string, value: string | null) =>
+    apiSend('PUT', `${base}/assignments`, {
+      scopeType,
+      scopeId,
+      key,
+      value,
+      reason: reason.trim(),
+      expectedSequence: assignments.get(key)?.sequence ?? 0,
+    });
+
+  // A connection without its model (or the reverse) would be ignored at run time; refuse it here.
+  const complete = (pick: { connection: string; model: string }) =>
+    (pick.connection === '') === (pick.model === '');
+  const ready = complete(second) && complete(judge);
+  return (
+    <section className="card stack settings-group" aria-labelledby={`${id}-title`}>
+      <SectionTitle id={`${id}-title`} help={text.dual.help}>
+        {text.dual.title}
+      </SectionTitle>
+      <p className="notice">{text.dual.cost}</p>
+      <Notice notice={action.notice} />
+      {loaded && (
+        <>
+          <h4>{text.dual.second}</h4>
+          <ModelPicker
+            locale={locale}
+            workspaceId={workspaceId}
+            connectionId={second.connection}
+            model={second.model}
+            idPrefix={`${id}-second`}
+            disabled={readOnly}
+            inheritLabel={text.dual.secondNone}
+            onChange={(connection, model) => setSecond({ connection, model })}
+          />
+          <h4>{text.dual.judge}</h4>
+          <ModelPicker
+            locale={locale}
+            workspaceId={workspaceId}
+            connectionId={judge.connection}
+            model={judge.model}
+            idPrefix={`${id}-judge`}
+            disabled={readOnly}
+            inheritLabel={text.dual.judgeNone}
+            onChange={(connection, model) => setJudge({ connection, model })}
+          />
+        </>
+      )}
+      {!ready && <p className="notice error">{text.dual.pickBoth}</p>}
+      {!readOnly && (
+        <ReasonBar
+          locale={locale}
+          id={`${id}-reason`}
+          label={text.reasonLabel}
+          value={reason}
+          onChange={setReason}
+        >
+          <button
+            type="button"
+            className="primary-button"
+            disabled={!ready || reason.trim() === '' || action.busy}
+            onClick={() =>
+              void action.run(async () => {
+                await set('research.dual_connection_id', second.connection || null);
+                await set('research.dual_model', second.model || null);
+                await set('research.judge_connection_id', judge.connection || null);
+                await set('research.judge_model', judge.model || null);
+                await load();
+              }, text.dual.saved)
+            }
+          >
+            {action.busy ? text.saving : text.dual.save}
+          </button>
+        </ReasonBar>
+      )}
+    </section>
   );
 }
 

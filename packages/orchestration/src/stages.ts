@@ -235,6 +235,11 @@ export interface StageContext {
   readonly web?: readonly WebPromptItem[] | undefined;
 }
 
+/** Added when two models searched the web (ADR-0047). */
+export const WEB_DUAL_RULES: readonly string[] = [
+  'foundBy says which search model found a page: primary, second or both. A page both found is better corroborated than one only a single model found; prefer it when pages disagree.',
+];
+
 /** Rules added when the research stage hands over web pages (ADR-0026). */
 export const WEB_SEARCH_RULES: readonly string[] = [
   'webSources lists pages found by a web search, numbered W1, W2, …. They are not approved knowledge.',
@@ -358,7 +363,11 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
           : NO_RESEARCH_PLAN_RULES
         : []),
       ...(context.web && context.web.length > 0
-        ? [...WEB_SEARCH_RULES, ...WEB_SOURCE_CLASS_RULES]
+        ? [
+            ...WEB_SEARCH_RULES,
+            ...WEB_SOURCE_CLASS_RULES,
+            ...(context.web.some((page) => page.foundBy) ? WEB_DUAL_RULES : []),
+          ]
         : []),
       ...(decidesConflicts(context.previous) ? RESEARCH_DECISION_RULES : []),
       ...(context.deliverables && context.deliverables.length > 0 ? DELIVERABLE_STAGE_RULES : []),

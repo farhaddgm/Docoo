@@ -204,6 +204,31 @@ const messages = {
         cost_limit: 'سقف هزینه',
         failed: 'یکی از دورها شکست خورد؛ یافته‌های دورهای قبل نگه داشته شد',
       } as Record<string, string>,
+      dualHeading: 'تحقیق دومدلی',
+      dualSides: { primary: 'مدل اصلی', second: 'مدل دوم', both: 'هر دو مدل' } as Record<
+        string,
+        string
+      >,
+      dualSide: '{who} ({model}): {state}، {pages} صفحه',
+      dualState: {
+        used: 'جست‌وجو شد',
+        none: 'صفحه‌ای نیافت',
+        failed: 'شکست خورد',
+        denied: 'مجاز نبود',
+        off: 'خاموش',
+      } as Record<string, string>,
+      dualJudgeUsed:
+        'داور ({model}) صفحه‌ها را مقایسه کرد و {n} اختلاف گزارش کرد؛ تصمیم اختلاف‌ها با شماست.',
+      dualJudgeSkipped: 'داور ({model}) مقایسه نکرد: {reason}.',
+      dualJudgeFailed: 'داور ({model}) شکست خورد ({code}); اختلافی از او گزارش نشد.',
+      dualReason: {
+        nothing_to_compare: 'هر دو مدل صفحه نیاوردند',
+        cost_limit_exceeded: 'سقف هزینه',
+      } as Record<string, string>,
+      dualSkipped: {
+        dual_not_configured: 'تحقیق دومدلی روشن است ولی مدل دوم انتخاب نشده؛ با یک مدل اجرا شد.',
+        dual_same_model: 'مدل دوم همان مدل اصلی است؛ با یک مدل اجرا شد.',
+      } as Record<string, string>,
       webHeading: 'جستجوی وب',
       webUsed:
         '{queries} جست‌وجو انجام شد و {pages} صفحه به مدل داده شد. این صفحه‌ها دانش تأییدشده نیستند.',
@@ -494,6 +519,33 @@ const messages = {
         no_new_findings: 'the last round found nothing new',
         cost_limit: 'the cost limit',
         failed: 'a round failed; what earlier rounds found was kept',
+      } as Record<string, string>,
+      dualHeading: 'Dual-model research',
+      dualSides: {
+        primary: 'Primary model',
+        second: 'Second model',
+        both: 'Both models',
+      } as Record<string, string>,
+      dualSide: '{who} ({model}): {state}, {pages} page(s)',
+      dualState: {
+        used: 'searched',
+        none: 'found no page',
+        failed: 'failed',
+        denied: 'not allowed',
+        off: 'off',
+      } as Record<string, string>,
+      dualJudgeUsed:
+        'The judge ({model}) compared the pages and reported {n} disagreement(s); you decide them.',
+      dualJudgeSkipped: 'The judge ({model}) did not compare: {reason}.',
+      dualJudgeFailed: 'The judge ({model}) failed ({code}); no disagreements were reported by it.',
+      dualReason: {
+        nothing_to_compare: 'both models did not bring pages',
+        cost_limit_exceeded: 'the cost limit',
+      } as Record<string, string>,
+      dualSkipped: {
+        dual_not_configured:
+          'Dual-model research is on but no second model is chosen; it ran with one model.',
+        dual_same_model: 'The second model is the same as the first; it ran with one model.',
       } as Record<string, string>,
       webHeading: 'Web search',
       webUsed:

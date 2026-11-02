@@ -18,6 +18,11 @@ const records = (value: unknown): Record<string, unknown>[] =>
 const isPersian = (request: NormalizedModelRequest) =>
   (request.instructions ?? '').includes('Persian');
 
+/** Deterministic judge of dual-model research: finds no disagreement between the pages. */
+export function fakeResearchJudgeResponder(request: NormalizedModelRequest): unknown {
+  return request.responseSchema?.name === 'research_judge' ? { conflicts: [] } : null;
+}
+
 /**
  * Deterministic researcher: cites the first approved passage it was given with a verbatim
  * quote, adds one finding with no evidence (shown as unverified), and reports a gap. With no
@@ -357,6 +362,7 @@ export function fakeResponder(request: NormalizedModelRequest): unknown {
   return (
     fakeAnalystResponder(request) ??
     fakeResearchResponder(request) ??
+    fakeResearchJudgeResponder(request) ??
     fakeRoleEvaluationResponder(request) ??
     fakeQuestionQualityResponder(request) ??
     fakeExplorationResponder(request) ??

@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 
 import { RESEARCH_DEFAULTS } from './research.js';
 import { MAX_ATTEMPTS } from './stages.js';
+import type { DualSettings } from './research-dual.js';
 import { normalizeWebPolicy, WEB_SOURCE_LIMIT, WEB_SOURCE_LIMIT_MAX } from './web-research.js';
 
 export interface Settings {
@@ -46,6 +47,8 @@ export interface Settings {
   researchWebTargetSources: number;
   /** Pages kept for the research prompt (`research.web_source_limit`). */
   researchWebSourceLimit: number;
+  /** Dual-model research (ADR-0047): a second model searches too and a judge compares. */
+  researchDual: DualSettings;
   /** Ideation waits for the administrator to confirm the plan of deliverables (ADR-0031). */
   requireDeliverableConfirmation: boolean;
   /** Domains counted as official web sources besides the built-in ones (ADR-0040). */
@@ -64,6 +67,8 @@ function boundedFraction(value: unknown, fallback: number): number {
   const number = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(number) ? Math.max(0, Math.min(1, number)) : fallback;
 }
+
+const textSetting = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
 /** The effective configuration the run was started with (FR-CFG-005). */
 export async function loadSettings(client: PoolClient, runId: string): Promise<Settings> {
@@ -135,6 +140,13 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
         researchWebTargetSources: policy.targetSources,
       };
     })(),
+    researchDual: {
+      enabled: values['research.dual_enabled'] === true,
+      connectionId: textSetting(values['research.dual_connection_id']),
+      model: textSetting(values['research.dual_model']),
+      judgeConnectionId: textSetting(values['research.judge_connection_id']),
+      judgeModel: textSetting(values['research.judge_model']),
+    },
     researchWebSourceLimit: boundedInteger(
       values['research.web_source_limit'],
       WEB_SOURCE_LIMIT,

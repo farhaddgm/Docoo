@@ -75,6 +75,7 @@ export const SETTING_GROUPS = [
       'research.max_sources',
       'research.official_domains',
       'research.web_enabled',
+      'research.dual_enabled',
       'research.web_min_searches',
       'research.web_max_searches',
       'research.web_min_rounds',
@@ -120,6 +121,17 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set(['document.level_bo
 
 /** Shown and changed on the AI providers page, which also knows the connections and models. */
 export const PROVIDER_PAGE: ReadonlySet<string> = new Set(['ai.connection_id', 'ai.model']);
+
+/**
+ * Chosen with the model pickers of the dual-model research section, not as typed ids: the second
+ * model and the judge, each a connection and a model that go together.
+ */
+export const DUAL_PICKER: ReadonlySet<string> = new Set([
+  'research.dual_connection_id',
+  'research.dual_model',
+  'research.judge_connection_id',
+  'research.judge_model',
+]);
 
 export function sameValue(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);

@@ -40,6 +40,15 @@ import {
 } from './stages.js';
 import { recordToolCall, toolDecision, type ToolCallScope } from './tool-calls.js';
 import {
+  mergeModelRuns,
+  resolveDualPlan,
+  sideInfo,
+  type ModelRef,
+  type ModelSide,
+  type SideRun,
+} from './research-dual.js';
+import { judgeDualResearch } from './research-dual-judge.js';
+import {
   deniedWebRun,
   failedWebRun,
   mergeWebRuns,
@@ -541,6 +550,7 @@ export function createOrchestrationActivities(
         // pages it finds reach the structured call as numbered `W` pages, never as knowledge; a
         // failed or refused search leaves the stage on its approved knowledge, and says so.
         let promptInput = prepared.promptInput;
+        let dualJudge: ModelRef | null = null;
         if (research) {
           let web: WebRun = NO_WEB;
           if (prepared.config.researchWebEnabled) {
@@ -557,120 +567,171 @@ export function createOrchestrationActivities(
             } else if (!(await affordable())) {
               web = failedWebRun('cost_limit_exceeded');
             } else {
-              // A bounded loop of rounds: each later round is told what the earlier ones used and
-              // goes after what is still missing. The minima keep it going, the maxima end it.
-              const policy = normalizeWebPolicy({
-                minSearches: prepared.config.researchWebMinSearches,
-                maxSearches: prepared.config.researchWebMaxSearches,
-                minRounds: prepared.config.researchWebMinRounds,
-                maxRounds: prepared.config.researchWebMaxRounds,
-                targetSources: prepared.config.researchWebTargetSources,
-              });
-              const limit = prepared.config.researchWebSourceLimit;
-              const rounds: WebRun[] = [];
-              const seenUrls = new Set<string>();
-              let searches = 0;
-              let stop: WebStopReason = 'max_rounds';
-              for (let round = 1; ; round += 1) {
-                if (round > 1 && !(await affordable())) {
-                  stop = 'cost_limit';
-                  break;
-                }
-                const earlier = rounds.length
-                  ? {
-                      queries: rounds.flatMap((item) => item.queries),
-                      urls: rounds.flatMap((item) => item.sources.map((source) => source.url)),
-                    }
-                  : undefined;
-                const search = webSearchPrompt({
-                  language: prepared.promptInput.language,
-                  projectTitle: prepared.promptInput.projectTitle,
-                  problem: prepared.promptInput.problem,
-                  topics: prepared.promptInput.topics,
-                  analysis: prepared.promptInput.previous.find((item) => item.stage === 'analysis')
-                    ?.content,
-                  questions: prepared.researchPlan?.questions.filter(
-                    (question) => question.channel !== 'knowledge',
-                  ),
-                  earlier,
+              const searchLoop = async (
+                target: ModelRef,
+                side: ModelSide,
+                idSuffix: string,
+                purpose: string,
+              ): Promise<WebRun> => {
+                // A bounded loop of rounds: each later round is told what the earlier ones used and
+                // goes after what is still missing. The minima keep it going, the maxima end it.
+                const policy = normalizeWebPolicy({
+                  minSearches: prepared.config.researchWebMinSearches,
+                  maxSearches: prepared.config.researchWebMaxSearches,
+                  minRounds: prepared.config.researchWebMinRounds,
+                  maxRounds: prepared.config.researchWebMaxRounds,
+                  targetSources: prepared.config.researchWebTargetSources,
                 });
-                // Leave room for the minimum searches of the rounds still to come.
-                const roundsLeft = Math.max(1, policy.maxRounds - round + 1);
-                const allowance = Math.max(
-                  1,
-                  Math.min(
-                    policy.maxSearches - searches,
-                    Math.ceil((policy.maxSearches - searches) / roundsLeft),
-                  ),
-                );
-                const started = Date.now();
-                try {
-                  const found = await runtime.invoke(
-                    { ...invocation('stage:research:web'), promptSha256: promptDigest(search) },
-                    prepared.config.connectionId,
-                    {
-                      model: prepared.config.model,
-                      instructions: search.instructions,
-                      messages: [{ role: 'user', content: search.message }],
-                      webSearch: { maxUses: allowance },
-                      maxOutputTokens: 3000,
-                      idempotencyKey:
-                        round === 1
-                          ? `${key}:${ref.retryNo}:web`
-                          : `${key}:${ref.retryNo}:web${round}`,
-                    },
-                  );
-                  const done = webRunFrom(
-                    found.response.web,
-                    prepared.webOffset,
-                    prepared.config.researchOfficialDomains,
-                    limit,
-                  );
-                  const fresh = done.sources.filter((source) => !seenUrls.has(source.url));
-                  fresh.forEach((source) => seenUrls.add(source.url));
-                  rounds.push(done);
-                  // A provider that reports no queries still ran at least one search.
-                  searches += Math.max(1, done.queries.length);
-                  await run(ref.workspaceId, (client) =>
-                    recordToolCall(client, prepared.toolScope, {
-                      tool: 'web_search',
-                      decision: 'allowed',
-                      input: { round, queries: done.queries },
-                      result: { queries: done.queries.length, sources: done.sources.length },
-                      latencyMs: Date.now() - started,
-                    }),
-                  );
-                  const reason = webStopReason(policy, {
-                    rounds: round,
-                    searches,
-                    sources: seenUrls.size,
-                    newSources: fresh.length,
-                  });
-                  if (reason) {
-                    stop = reason;
+                const limit = prepared.config.researchWebSourceLimit;
+                const rounds: WebRun[] = [];
+                const seenUrls = new Set<string>();
+                let searches = 0;
+                let stop: WebStopReason;
+                for (let round = 1; ; round += 1) {
+                  if (round > 1 && !(await affordable())) {
+                    stop = 'cost_limit';
                     break;
                   }
-                } catch (error) {
-                  // The search is an extra: a failure ends the loop and keeps what earlier rounds found.
-                  const code = error instanceof ProviderError ? error.code : 'web_search_failed';
-                  rounds.push(failedWebRun(code));
-                  stop = 'failed';
-                  await run(ref.workspaceId, (client) =>
-                    recordToolCall(client, prepared.toolScope, {
-                      tool: 'web_search',
-                      decision: 'allowed',
-                      input: { round },
-                      latencyMs: Date.now() - started,
-                      errorCode: code,
-                    }),
+                  const earlier = rounds.length
+                    ? {
+                        queries: rounds.flatMap((item) => item.queries),
+                        urls: rounds.flatMap((item) => item.sources.map((source) => source.url)),
+                      }
+                    : undefined;
+                  const search = webSearchPrompt({
+                    language: prepared.promptInput.language,
+                    projectTitle: prepared.promptInput.projectTitle,
+                    problem: prepared.promptInput.problem,
+                    topics: prepared.promptInput.topics,
+                    analysis: prepared.promptInput.previous.find(
+                      (item) => item.stage === 'analysis',
+                    )?.content,
+                    questions: prepared.researchPlan?.questions.filter(
+                      (question) => question.channel !== 'knowledge',
+                    ),
+                    earlier,
+                  });
+                  // Leave room for the minimum searches of the rounds still to come.
+                  const roundsLeft = Math.max(1, policy.maxRounds - round + 1);
+                  const allowance = Math.max(
+                    1,
+                    Math.min(
+                      policy.maxSearches - searches,
+                      Math.ceil((policy.maxSearches - searches) / roundsLeft),
+                    ),
                   );
-                  break;
+                  const started = Date.now();
+                  try {
+                    const found = await runtime.invoke(
+                      { ...invocation(purpose), promptSha256: promptDigest(search) },
+                      target.connectionId,
+                      {
+                        model: target.model,
+                        instructions: search.instructions,
+                        messages: [{ role: 'user', content: search.message }],
+                        webSearch: { maxUses: allowance },
+                        maxOutputTokens: 3000,
+                        idempotencyKey:
+                          round === 1
+                            ? `${key}:${ref.retryNo}:web${idSuffix}`
+                            : `${key}:${ref.retryNo}:web${idSuffix}${round}`,
+                      },
+                    );
+                    const done = webRunFrom(
+                      found.response.web,
+                      prepared.webOffset,
+                      prepared.config.researchOfficialDomains,
+                      limit,
+                    );
+                    const fresh = done.sources.filter((source) => !seenUrls.has(source.url));
+                    fresh.forEach((source) => seenUrls.add(source.url));
+                    rounds.push(done);
+                    // A provider that reports no queries still ran at least one search.
+                    searches += Math.max(1, done.queries.length);
+                    await run(ref.workspaceId, (client) =>
+                      recordToolCall(client, prepared.toolScope, {
+                        tool: 'web_search',
+                        decision: 'allowed',
+                        input: { round, side, queries: done.queries },
+                        result: { queries: done.queries.length, sources: done.sources.length },
+                        latencyMs: Date.now() - started,
+                      }),
+                    );
+                    const reason = webStopReason(policy, {
+                      rounds: round,
+                      searches,
+                      sources: seenUrls.size,
+                      newSources: fresh.length,
+                    });
+                    if (reason) {
+                      stop = reason;
+                      break;
+                    }
+                  } catch (error) {
+                    // The search is an extra: a failure ends the loop and keeps what earlier rounds found.
+                    const code = error instanceof ProviderError ? error.code : 'web_search_failed';
+                    rounds.push(failedWebRun(code));
+                    stop = 'failed';
+                    await run(ref.workspaceId, (client) =>
+                      recordToolCall(client, prepared.toolScope, {
+                        tool: 'web_search',
+                        decision: 'allowed',
+                        input: { round, side },
+                        latencyMs: Date.now() - started,
+                        errorCode: code,
+                      }),
+                    );
+                    break;
+                  }
                 }
-              }
-              web =
-                rounds.length === 1 && stop !== 'failed'
+                return rounds.length === 1 && stop !== 'failed'
                   ? { ...rounds[0]!, rounds: 1, stop }
                   : mergeWebRuns(rounds, limit, { rounds: rounds.length, stop });
+              };
+              const primary: ModelRef = {
+                connectionId: prepared.config.connectionId,
+                model: prepared.config.model,
+              };
+              const dual = resolveDualPlan(primary, prepared.config.researchDual);
+              if (dual.mode === 'off') {
+                web = await searchLoop(primary, 'primary', '', 'stage:research:web');
+                if (dual.code) web = { ...web, dualSkipped: dual.code };
+              } else {
+                // Dual-model research (ADR-0047): both models search on their own, so one failing
+                // leaves the other's pages; the judge reads both after the researcher has answered.
+                const [first, second] = await Promise.all([
+                  searchLoop(primary, 'primary', '', 'stage:research:web'),
+                  searchLoop(dual.second, 'second', 'b', 'stage:research:web2'),
+                ]);
+                const sides: SideRun[] = [
+                  { side: 'primary', model: primary.model, run: first },
+                  { side: 'second', model: dual.second.model, run: second },
+                ];
+                const pages = mergeModelRuns(
+                  sides,
+                  prepared.config.researchWebSourceLimit,
+                  prepared.webOffset,
+                );
+                web = {
+                  status:
+                    pages.length > 0
+                      ? 'used'
+                      : first.status === 'failed' && second.status === 'failed'
+                        ? 'failed'
+                        : 'none',
+                  code: pages.length > 0 ? null : (first.code ?? second.code),
+                  queries: [...first.queries, ...second.queries],
+                  sources: pages,
+                  rounds: first.rounds,
+                  stop: first.stop,
+                  dual: {
+                    primary: sideInfo(sides[0]!),
+                    second: sideInfo(sides[1]!),
+                    judge: { model: dual.judge.model, status: 'skipped', code: null, conflicts: 0 },
+                  },
+                };
+                dualJudge = dual.judge;
+              }
             }
           }
           research = { ...research, web };
@@ -760,6 +821,27 @@ export function createOrchestrationActivities(
         if (response.finishReason !== 'stop' || response.json === null) {
           throw new ProviderError('invalid_output', `output_${response.finishReason}`);
         }
+        // The judge compares what the two models found and adds their disagreements to the
+        // conflicts; a failed judge only means no extra conflicts are reported (ADR-0047).
+        let answer: unknown = response.json;
+        if (research?.web?.dual && dualJudge) {
+          const judged = await judgeDualResearch({
+            judge: dualJudge,
+            web: research.web,
+            answer: response.json,
+            language: prepared.promptInput.language,
+            problem: prepared.promptInput.problem,
+            affordable,
+            invoke: (target, request, promptSha256) =>
+              runtime.invoke(
+                { ...invocation('stage:research:judge'), promptSha256 },
+                target.connectionId,
+                { ...request, idempotencyKey: `${key}:${ref.retryNo}:judge` },
+              ),
+          });
+          research = { ...research, web: judged.web };
+          answer = judged.answer;
+        }
         const outputId = await run(ref.workspaceId, async (client) => {
           // The research answer is stored with every citation checked against the passages the
           // model was given (the gated `citation_verifier`); other stages store it as returned.
@@ -769,7 +851,7 @@ export function createOrchestrationActivities(
                   client,
                   prepared.toolScope,
                   research,
-                  response.json,
+                  answer,
                   prepared.researchPlan ?? undefined,
                   prepared.followup,
                 )

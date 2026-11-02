@@ -6,6 +6,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Added
 
+- **Dual-model research** ([ADR-0047](docs/adr/0047-dual-model-research.md)). For a project where it matters, the administrator can have the web side of the research searched by two models (they may be of the same provider, for example two Claude models, or ChatGPT and Claude) and a judge that reports where their pages disagree. The disagreements join the output's conflicts, so you decide them on the page that already exists for conflicts; pages show which model found them. One-model research stays as it is and is the default. Settings: `research.dual_enabled`, the second model and the judge model (picked on the settings page with the model pickers, at workspace or project level). A failed second search or judge never fails the stage, a setting that cannot work (no second model, or the same model twice) runs one model and says so, and the same page found under two spellings counts once. It costs roughly double plus one judge call, and the questions go to both providers. **Migration 0079 runs on update.**
+
+### Added
+
 - **Bounded web research loop.** The web side of the research stage now runs in rounds. Each later round is told which searches and pages the earlier ones used and looks for what is still missing. The administrator sets the least and the most searches (`research.web_min_searches`, `research.web_max_searches`, now up to 50), the least and the most rounds (`research.web_min_rounds`, `research.web_max_rounds`), the number of pages that ends the loop early (`research.web_target_sources`, 0 = never) and how many pages are kept for the prompt (`research.web_source_limit`, default 12, up to 100). A maximum always wins over a minimum. The research view shows the rounds and why the loop ended (target reached, maximum searches, maximum rounds, nothing new, cost limit, or a failed round whose earlier findings are kept). **Migration 0078 runs on update.**
 
 ## [0.49.0] — 2026-11-01
