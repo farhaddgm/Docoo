@@ -159,10 +159,13 @@ const messages = {
     presets: {
       title: 'عمق تحقیق',
       help: 'یکی از چهار حالت را انتخاب کنید؛ همهٔ تنظیم‌های جستجو را یک‌جا مقدار می‌دهد. عددهای دقیق فقط برای مالک سامانه است.',
-      names: { quick: 'سریع', standard: 'استاندارد', deep: 'عمیق', sensitive: 'حساس' } as Record<
-        string,
-        string
-      >,
+      names: {
+        quick: 'سریع',
+        standard: 'استاندارد',
+        deep: 'عمیق',
+        sensitive: 'حساس',
+        custom: 'سفارشی',
+      } as Record<string, string>,
       blurbs: {
         quick: 'برای بررسی سریع یا موضوع کم‌اهمیت: چند جستجوی کوتاه.',
         standard: 'برای بیشتر پروژه‌ها: همان روش همیشگی.',
@@ -177,6 +180,31 @@ const messages = {
       factorLess: 'هزینه و زمان: حدود {n} برابر روش استاندارد (ارزان‌تر)',
       cost: 'هزینهٔ تخمینی: {low} تا {high}',
       time: 'زمان تخمینی: {low} تا {high} دقیقه',
+      experience: 'تجربهٔ شما از {runs} تحقیق با این حالت:',
+      experienceParts: {
+        answered: '{p} سؤال‌ها پاسخ گرفت',
+        verified: '{p} نقل‌قول‌ها تأیید شد',
+        solid: '{p} یافته‌ها قوی بود',
+        costPerSolid: 'هزینهٔ هر یافتهٔ قوی حدود {usd}',
+      } as Record<string, string>,
+      notEnoughRuns:
+        'تا اینجا {runs} تحقیق با این حالت انجام شده؛ برای دیدن نتیجه دست‌کم {min} لازم است.',
+      detailsTitle: 'نتیجهٔ واقعی هر حالت در این workspace',
+      detailsHelp:
+        'از تحقیق‌های تمام‌شدهٔ خودتان محاسبه شده؛ چیزی حدس زده نمی‌شود. «—» یعنی داده‌ای نبوده است.',
+      columns: {
+        mode: 'حالت',
+        runs: 'تعداد تحقیق',
+        answered: 'سؤال پاسخ‌گرفته',
+        verified: 'نقل‌قول تأییدشده',
+        solid: 'یافتهٔ قوی',
+        conflicts: 'اختلاف در هر تحقیق',
+        unanswerable: 'بی‌پاسخ در هر تحقیق',
+        rounds: 'دور در هر تحقیق',
+        cost: 'هزینهٔ میانگین',
+        time: 'زمان میانگین (دقیقه)',
+        costPerSolid: 'هزینهٔ هر یافتهٔ قوی',
+      } as Record<string, string>,
       noHistory:
         'برآورد دلار و زمان بعد از چند تحقیق اجراشده در این workspace نمایش داده می‌شود؛ تا آن موقع فقط نسبت به روش استاندارد سنجیده می‌شود.',
       apply: 'اعمال این حالت',
@@ -392,6 +420,31 @@ const messages = {
       factorLess: 'Cost and time: about {n} times Standard (cheaper)',
       cost: 'Estimated cost: {low} to {high}',
       time: 'Estimated time: {low} to {high} minutes',
+      experience: 'Your experience from {runs} researches in this mode:',
+      experienceParts: {
+        answered: '{p} of the questions were answered',
+        verified: '{p} of the citations verified',
+        solid: '{p} of the findings were solid',
+        costPerSolid: 'about {usd} per solid finding',
+      } as Record<string, string>,
+      notEnoughRuns:
+        'So far {runs} researches ran in this mode; at least {min} are needed to show a result.',
+      detailsTitle: 'What each mode actually delivered in this workspace',
+      detailsHelp:
+        'Calculated from your own completed researches; nothing is guessed. “—” means there was no data.',
+      columns: {
+        mode: 'Mode',
+        runs: 'Researches',
+        answered: 'Questions answered',
+        verified: 'Citations verified',
+        solid: 'Solid findings',
+        conflicts: 'Conflicts per research',
+        unanswerable: 'Unanswered per research',
+        rounds: 'Rounds per research',
+        cost: 'Average cost',
+        time: 'Average time (minutes)',
+        costPerSolid: 'Cost per solid finding',
+      } as Record<string, string>,
       noHistory:
         'Dollar and time estimates appear after this workspace has run a few researches; until then the modes are only compared with Standard.',
       apply: 'Use this mode',

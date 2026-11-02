@@ -36,6 +36,14 @@ export function formatNumber(locale: Locale, value: number): string {
   return new Intl.NumberFormat(intlTag[locale]).format(value);
 }
 
+/** A share (0..1) as a whole percent. */
+export function formatPercent(locale: Locale, ratio: number): string {
+  return new Intl.NumberFormat(intlTag[locale], {
+    style: 'percent',
+    maximumFractionDigits: 0,
+  }).format(ratio);
+}
+
 /** An amount in US dollars for an estimate: cents below one dollar, whole cents above. */
 export function formatUsd(locale: Locale, value: number): string {
   return new Intl.NumberFormat(intlTag[locale], {

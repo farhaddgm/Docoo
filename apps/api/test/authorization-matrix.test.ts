@@ -101,6 +101,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/settings/assignments/restore': 'workspace.configure',
   'GET workspaces/:workspaceId/settings/effective': 'workspace.read',
   'GET workspaces/:workspaceId/settings/research-estimate': 'workspace.read',
+  'GET workspaces/:workspaceId/settings/research-quality': 'workspace.read',
   'GET workspaces/:workspaceId/settings/research-source-suggestions': 'workspace.read',
   'POST workspaces/:workspaceId/settings/preview': 'workspace.read',
   'GET workspaces/:workspaceId/audit-events': 'audit.read',

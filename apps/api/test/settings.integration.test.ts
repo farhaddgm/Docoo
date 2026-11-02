@@ -419,4 +419,10 @@ describe.skipIf(!adminUrl)('settings, templates and the project wizard (ADR-0018
     expect(response.statusCode, response.body).toBe(200);
     expect(response.json<{ items: unknown[] }>().items).toEqual([]);
   });
+
+  it('STP-010: the research quality report is empty until research has been completed (ADR-0052)', async () => {
+    const response = await h.request('GET', api('/settings/research-quality'), { cookie });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json<{ modes: unknown[] }>().modes).toEqual([]);
+  });
 });
