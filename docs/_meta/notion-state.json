@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "7a23628709f124561f41d7afa66d16f0297d2874"
+    "source_commit": "57de2a577fa7d3eeeaf429d662278ef3e796e8ed"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-11-02T12:58:02.137Z",
+    "synced_at": "2026-11-02T15:14:46.497Z",
     "created": 0,
-    "updated": 2,
-    "unchanged": 72,
+    "updated": 1,
+    "unchanged": 73,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -333,13 +333,13 @@
       "version": "1.12.0",
       "status": "proposed",
       "owner": "API Architecture",
-      "checksum_sha256": "01aaba40d85755b327d08aa8a5c37ea59b75b8fafe3d64f80edf539a3e6ae365",
+      "checksum_sha256": "46383ad1384ee8dc0ca11445093c28d129e8a189ddec976c0ba54d215aa8a66d",
       "notion_page_id": "3e55a24a-6668-812d-9f69-cd7fceb4fea8",
       "notion_page_url": "https://app.notion.com/p/3e55a24a6668812d9f69cd7fceb4fea8?pvs=204",
       "index_row_page_id": "3e55a24a-6668-81a8-8910-fed8b8b362d3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a666881a88910fed8b8b362d3",
-      "synced_commit": "7a23628709f124561f41d7afa66d16f0297d2874",
-      "synced_at": "2026-11-02T12:58:02.137Z"
+      "synced_commit": "57de2a577fa7d3eeeaf429d662278ef3e796e8ed",
+      "synced_at": "2026-11-02T15:14:46.497Z"
     },
     "DOCOO-WORKFLOWS-JOBS": {
       "path": "docs/04-architecture/04-workflows-and-jobs.md",
