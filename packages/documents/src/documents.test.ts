@@ -45,7 +45,7 @@ const persian: StructuredDocument = {
       runs: [{ text: 'ریزش مشتری ۲۰٪ افزایش یافت.', citations: ['r1'] }],
     },
     { type: 'heading', id: 'h2', level: 1, text: 'راه‌حل' },
-    { type: 'list', id: 'l1', ordered: false, items: ['برنامهٔ وفاداری', 'پیگیری پس از خرید'] },
+    { type: 'list', id: 'l1', ordered: false, items: ['برنامه وفاداری', 'پیگیری پس از خرید'] },
     {
       type: 'table',
       id: 't1',
@@ -91,7 +91,7 @@ describe('structured model and counting (DOC-101)', () => {
           'ریزش مشتری ۲۰٪ افزایش یافت.',
           '[1]',
           'راه‌حل',
-          'برنامهٔ وفاداری',
+          'برنامه وفاداری',
           'پیگیری پس از خرید',
           'هزینه‌ها',
           'مورد',
@@ -173,7 +173,7 @@ describe('versions and diff (DOC-102)', () => {
       title: 'عنوان تازه',
       blocks: [
         persian.blocks[2]!,
-        { type: 'heading', id: 'h1', level: 1, text: 'مسئلهٔ اصلی' },
+        { type: 'heading', id: 'h1', level: 1, text: 'مسئله اصلی' },
         persian.blocks[3]!,
         { type: 'callout', id: 'n1', tone: 'decision', text: 'تصمیم' },
       ],

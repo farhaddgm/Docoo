@@ -34,11 +34,11 @@ const stamp = Date.now().toString(36);
 const titles = {
   market: `بازار هدف ${stamp}`,
   marketEdited: `بازار هدف بازنگری‌شده ${stamp}`,
-  first: `حوزهٔ اول ${stamp}`,
-  second: `حوزهٔ دوم ${stamp}`,
-  flow: `حوزهٔ جریان ${stamp}`,
-  solutions: `حوزهٔ راه‌حل ${stamp}`,
-  analysis: `حوزهٔ تحلیل ${stamp}`,
+  first: `حوزه اول ${stamp}`,
+  second: `حوزه دوم ${stamp}`,
+  flow: `حوزه جریان ${stamp}`,
+  solutions: `حوزه راه‌حل ${stamp}`,
+  analysis: `حوزه تحلیل ${stamp}`,
 };
 
 /** Persian digits, as the pages show numbers. */
@@ -128,10 +128,10 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
 
     const code = `prj-${stamp}`;
     await page.locator('#project-code').fill(code);
-    await page.locator('#project-title').fill('پروژهٔ آزمون');
+    await page.locator('#project-title').fill('پروژه آزمون');
     await page.locator('#project-problem').fill('فروش آنلاین کند شده و علت آن را نمی‌دانیم.');
     // The optional expected output (ADR-0043) is saved with the project and shown on its page.
-    const expectedOutput = 'برنامهٔ ۹۰‌روزه برای بازگشت فروش با مسئول هر اقدام';
+    const expectedOutput = 'برنامه ۹۰‌روزه برای بازگشت فروش با مسئول هر اقدام';
     await page.locator('#project-expected-output').fill(expectedOutput);
     // The wizard: basics, then the prioritized topics.
     await page.getByRole('button', { name: wizardText.next }).click();
@@ -191,7 +191,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: detail.edit }).click();
     await expect(page.locator('#project-problem')).toBeDisabled();
     await expect(page.locator('#project-expected-output')).toBeDisabled();
-    await page.locator('#project-title').fill('پروژهٔ آزمون بازنگری‌شده');
+    await page.locator('#project-title').fill('پروژه آزمون بازنگری‌شده');
     await page.getByRole('button', { name: projectText.saveChanges }).click();
     await expect(page.getByRole('heading', { level: 2, name: /بازنگری‌شده/u })).toBeVisible();
 
@@ -250,7 +250,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     const created = await createViaApi<{ project: { id: string } }>(page, '/projects', {
       code: `flow-${stamp}`,
       title: 'جریان کامل',
-      initialProblem: 'مسئلهٔ آزمون جریان کار',
+      initialProblem: 'مسئله آزمون جریان کار',
       topics: [{ topicId: topic.topic.id }],
     });
     await page.goto(`/fa/projects/${created.project.id}`);
@@ -279,7 +279,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: flow.editToggle }).click();
     const editor = page.locator('#edit-content-analysis');
     const edited = JSON.parse(await editor.inputValue()) as Record<string, unknown>;
-    edited['problemStatement'] = 'بیان مسئلهٔ اصلاح‌شده توسط ادمین';
+    edited['problemStatement'] = 'بیان مسئله اصلاح‌شده توسط ادمین';
     await editor.fill(JSON.stringify(edited, null, 2));
     await fillReason(page, page.locator('#edit-reason-analysis'), 'اصلاح بیان مسئله');
     await page.getByRole('button', { name: flow.editSave }).click();
@@ -287,7 +287,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(page.getByText(flow.outputVersion.replace('{n}', '۳'))).toBeVisible(waiting);
     // The output itself is read in the Analysis tab, not repeated in the workflow.
     await page.getByRole('button', { name: detail.tabs.problem, exact: true }).click();
-    await expect(page.getByText('بیان مسئلهٔ اصلاح‌شده توسط ادمین').first()).toBeVisible();
+    await expect(page.getByText('بیان مسئله اصلاح‌شده توسط ادمین').first()).toBeVisible();
     await page.getByRole('button', { name: detail.tabs.workflow, exact: true }).click();
 
     // Approve every stage in order until the run completes.
@@ -382,9 +382,9 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expectNoSeriousA11yViolations(page);
 
     // Three answers, one "later" and one "irrelevant" are saved; the batch stays open.
-    await question(1).getByRole('textbox').fill('بودجهٔ ما ۵۰۰ میلیون تومان است');
+    await question(1).getByRole('textbox').fill('بودجه ما ۵۰۰ میلیون تومان است');
     await question(2).getByRole('textbox').fill('تیم پنج‌نفره است');
-    await question(3).getByRole('textbox').fill('مهلت تا پایان سه‌ماههٔ جاری است');
+    await question(3).getByRole('textbox').fill('مهلت تا پایان سه‌ماهه جاری است');
     await question(4).getByRole('radio', { name: problemText.modes['later']! }).check();
     await question(5).getByRole('radio', { name: problemText.modes['irrelevant']! }).check();
     await save.click();
@@ -400,7 +400,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
 
     // A saved answer can be changed while its batch is open.
     await question(1).getByRole('button', { name: problemText.editAnswer }).click();
-    await question(1).getByRole('textbox').fill('بودجهٔ ما ۶۰۰ میلیون تومان است');
+    await question(1).getByRole('textbox').fill('بودجه ما ۶۰۰ میلیون تومان است');
     await save.click();
     await expect(
       status(problemText.saved.partial.replace('{saved}', digits(1)).replace('{left}', digits(15))),
@@ -505,7 +505,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await useFakeProvider(page);
     const topic = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
       code: `fl-${stamp}`,
-      title: `حوزهٔ فایل ${stamp}`,
+      title: `حوزه فایل ${stamp}`,
     });
     const created = await createViaApi<{ project: { id: string } }>(page, '/projects', {
       code: `fil-${stamp}`,
@@ -523,7 +523,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await first.locator('input[type="file"]').setInputFiles({
       name: 'survey.txt',
       mimeType: 'text/plain',
-      buffer: Buffer.from('ریزش مشتریان در سه‌ماههٔ گذشته ۱۴ درصد بود.'),
+      buffer: Buffer.from('ریزش مشتریان در سه‌ماهه گذشته ۱۴ درصد بود.'),
     });
     await expect(first.getByRole('listitem').filter({ hasText: 'survey.txt' })).toBeVisible({
       timeout: 30_000,
@@ -631,7 +631,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByText('پیشرفته: آزمایش دستی وزن‌ها').click();
     await page.locator('#sensitivity-weight').focus();
     await page.locator('#sensitivity-weight').press('Home');
-    await page.getByRole('button', { name: 'محاسبهٔ رتبه‌ها' }).click();
+    await page.getByRole('button', { name: 'محاسبه رتبه‌ها' }).click();
     await expect(
       page.getByRole('table', { name: 'رتبه در وزن آزمایشی' }).locator('tbody tr'),
     ).toHaveCount(3);
@@ -644,7 +644,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       .nth(1)
       .getByRole('button', { name: new RegExp(solutionText.moveUp, 'u') })
       .click();
-    await fillReason(page, page.locator('#selection-reason'), 'دو گزینهٔ برتر');
+    await fillReason(page, page.locator('#selection-reason'), 'دو گزینه برتر');
     await fillReason(page, page.locator('#rejected-reason'), 'این گزینه ریسک بیشتری دارد');
     await page.getByRole('button', { name: solutionText.select }).click();
     await expect(

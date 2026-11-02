@@ -126,7 +126,7 @@ export function AccountSecurity({
       )}
       {user.hasPassword !== false && user.loginMethod !== 'GOOGLE' ? (
         <form className="auth-form" onSubmit={(event) => void change(event)}>
-          <label htmlFor="current-password">{fa ? 'گذرواژهٔ فعلی' : 'Current password'}</label>
+          <label htmlFor="current-password">{fa ? 'گذرواژه فعلی' : 'Current password'}</label>
           <input
             id="current-password"
             type="password"
@@ -135,7 +135,7 @@ export function AccountSecurity({
             onChange={(e) => setCurrent(e.target.value)}
             required
           />
-          <label htmlFor="new-password">{fa ? 'گذرواژهٔ جدید' : 'New password'}</label>
+          <label htmlFor="new-password">{fa ? 'گذرواژه جدید' : 'New password'}</label>
           <input
             id="new-password"
             type="password"
@@ -147,7 +147,7 @@ export function AccountSecurity({
             required
           />
           <label htmlFor="confirm-new-password">
-            {fa ? 'تکرار گذرواژهٔ جدید' : 'Confirm new password'}
+            {fa ? 'تکرار گذرواژه جدید' : 'Confirm new password'}
           </label>
           <input
             id="confirm-new-password"
@@ -176,7 +176,7 @@ export function AccountSecurity({
         disabled={busy}
         onClick={() => void revoke()}
       >
-        {fa ? 'خروج از همهٔ دستگاه‌ها' : 'Sign out all devices'}
+        {fa ? 'خروج از همه دستگاه‌ها' : 'Sign out all devices'}
       </button>
     </section>
   );

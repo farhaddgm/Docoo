@@ -127,7 +127,7 @@ for (const locale of ['fa', 'en'] as const) {
       .click();
     await expect(goal).toHaveValue('A clear salary request');
     await page
-      .getByRole('button', { name: locale === 'fa' ? 'ذخیرهٔ برگه' : 'Save brief', exact: true })
+      .getByRole('button', { name: locale === 'fa' ? 'ذخیره برگه' : 'Save brief', exact: true })
       .click();
     await page
       .getByRole('button', { name: locale === 'fa' ? 'شروع تمرین' : 'Start practice', exact: true })
@@ -164,7 +164,7 @@ for (const locale of ['fa', 'en'] as const) {
       .fill('We agreed to a follow-up.');
     await page
       .getByRole('button', {
-        name: locale === 'fa' ? 'ذخیرهٔ مرور نتیجه' : 'Save reflection',
+        name: locale === 'fa' ? 'ذخیره مرور نتیجه' : 'Save reflection',
         exact: true,
       })
       .click();

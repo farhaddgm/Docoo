@@ -32,10 +32,10 @@ test.describe('Smart in Persian and English (SMT-001..004)', () => {
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await page.getByRole('button', { name: 'باز کردن اسمارت' }).click();
 
-    const panel = page.getByRole('complementary', { name: 'پنجرهٔ اسمارت' });
+    const panel = page.getByRole('complementary', { name: 'پنجره اسمارت' });
     await expect(panel).toBeVisible();
     // The walker shows a step of 12 and says what to do (which step depends on earlier tests).
-    await expect(panel.getByText(/^مرحلهٔ .+ از ۱۳$/)).toBeVisible();
+    await expect(panel.getByText(/^مرحله .+ از ۱۳$/)).toBeVisible();
     await expect(panel.getByRole('heading', { level: 3 })).toBeVisible();
     await expect(panel.getByRole('heading', { name: 'چه کار کنم؟' })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
@@ -76,7 +76,7 @@ test.describe('Smart in Persian and English (SMT-001..004)', () => {
     }).toPass({ timeout: 30_000 });
     await toast.getByRole('button', { name: 'جزئیات' }).click();
 
-    const panel = page.getByRole('complementary', { name: 'پنجرهٔ اسمارت' });
+    const panel = page.getByRole('complementary', { name: 'پنجره اسمارت' });
     await expect(panel.getByRole('tab', { name: 'خطاها' })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -116,7 +116,7 @@ test.describe('Smart in Persian and English (SMT-001..004)', () => {
       ),
     );
     await page.reload();
-    const panel = page.getByRole('complementary', { name: 'پنجرهٔ اسمارت' });
+    const panel = page.getByRole('complementary', { name: 'پنجره اسمارت' });
     await expect(panel).toBeVisible();
 
     await page.getByRole('button', { name: /^اسمارت/ }).click();

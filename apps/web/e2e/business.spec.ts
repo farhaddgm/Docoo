@@ -21,8 +21,8 @@ const stamp = Date.now().toString(36);
 const contenter = `http://127.0.0.1:${process.env['E2E_CONTENTER_PORT'] ?? '4010'}`;
 const TOKEN = 'e2e-contenter-service-token-0123456789abcdef';
 const WRONG_TOKEN = 'wrong-token-'.padEnd(40, 'x');
-const FIRST = 'شعبهٔ دیجیتال وی‌پاد';
-const SECOND = 'کافهٔ آزمون';
+const FIRST = 'شعبه دیجیتال وی‌پاد';
+const SECOND = 'کافه آزمون';
 
 const digits = (value: number) => new Intl.NumberFormat('fa').format(value);
 /** Persian digits back to a number, as the pages show them. */
@@ -110,7 +110,7 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
   test('the wizard chooses a business; the project keeps its link', async () => {
     await page.goto('/fa/projects/new');
     await page.locator('#project-code').fill(`biz-${stamp}`);
-    await page.locator('#project-title').fill(`پروژهٔ کسب‌وکار ${stamp}`);
+    await page.locator('#project-title').fill(`پروژه کسب‌وکار ${stamp}`);
     await page.locator('#project-problem').fill('افزایش درخواست وام دیجیتال');
     // The business is chosen on the second step, with the topics.
     await page.getByRole('button', { name: wizard.next }).click();
@@ -156,7 +156,7 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
 
     // Profile: grouped sections, who wrote them, empty ones listed.
     await expect(page.getByTestId('business-section-OVERVIEW')).toContainText(
-      'شعبهٔ دیجیتال یک بانک',
+      'شعبه دیجیتال یک بانک',
     );
     await expect(page.getByTestId('business-group-AUDIENCE')).toContainText('کارمندان حقوق‌بگیر');
     await expect(page.getByRole('heading', { name: biz.profile.emptySections })).toBeVisible();
@@ -189,7 +189,7 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
 
     // References and brand assets with their analysis.
     await view('sources').click();
-    await expect(page.getByTestId('business-references')).toContainText('دربارهٔ وی‌پاد');
+    await expect(page.getByTestId('business-references')).toContainText('درباره وی‌پاد');
     await expect(page.getByTestId('business-assets')).toContainText('بنر کمپین بهار');
     await expect(page.getByTestId('business-assets')).toContainText('شاد و روشن');
     await expectNoSeriousA11yViolations(page);
@@ -219,7 +219,7 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
       .getByRole('button', { name: biz.ai.show })
       .click();
     const detailBox = page.getByTestId('business-role-detail');
-    await expect(detailBox).toContainText('شعبهٔ دیجیتال یک بانک');
+    await expect(detailBox).toContainText('شعبه دیجیتال یک بانک');
     await expect(detailBox).not.toContainText('گرم، روشن و محترمانه');
     await expect(detailBox).toContainText(biz.ai.rules);
     await expectNoSeriousA11yViolations(page);
@@ -239,7 +239,7 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
     await control('section', {
       id: 'biz-e2e-1',
       key: 'OVERVIEW',
-      content: 'متن تازهٔ معرفی پس از ویرایش',
+      content: 'متن تازه معرفی پس از ویرایش',
     });
     await page.getByRole('button', { name: biz.panel.sync }).click();
     await expect(
@@ -249,7 +249,7 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
     ).toBeVisible();
     await expect(page.getByTestId('business-version')).toHaveText(digits(first + 1));
     await expect(page.getByTestId('business-section-OVERVIEW')).toContainText(
-      'متن تازهٔ معرفی پس از ویرایش',
+      'متن تازه معرفی پس از ویرایش',
     );
 
     // Syncing again finds nothing new.
@@ -278,11 +278,11 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
       .click();
     await expect(page.getByTestId('business-old-version')).toContainText(digits(first));
     await expect(page.getByTestId('business-section-OVERVIEW')).toContainText(
-      'شعبهٔ دیجیتال یک بانک',
+      'شعبه دیجیتال یک بانک',
     );
     await page.getByRole('button', { name: biz.versions.back }).click();
     await expect(page.getByTestId('business-section-OVERVIEW')).toContainText(
-      'متن تازهٔ معرفی پس از ویرایش',
+      'متن تازه معرفی پس از ویرایش',
     );
   });
 
@@ -297,7 +297,7 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
     // The page still shows the saved version, and says the last sync failed.
     await expect(page.getByTestId('business-version')).toHaveText(digits(first + 1));
     await expect(page.getByTestId('business-section-OVERVIEW')).toContainText(
-      'متن تازهٔ معرفی پس از ویرایش',
+      'متن تازه معرفی پس از ویرایش',
     );
     await expect(
       page.getByText(biz.panel.syncProblem.split('{reason}')[0]!, { exact: false }),
@@ -315,7 +315,7 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
     await page.getByRole('button', { name: biz.panel.change, exact: true }).click();
     const confirm = page.getByRole('group', { name: biz.panel.change });
     await confirm.getByRole('radio', { name: new RegExp(SECOND, 'u') }).check();
-    await fillReason(page, confirm.getByLabel(biz.panel.reason), 'پروژهٔ دیگر');
+    await fillReason(page, confirm.getByLabel(biz.panel.reason), 'پروژه دیگر');
     await confirm.getByRole('button', { name: biz.panel.confirm }).click();
     await expect(page.getByRole('status').filter({ hasText: biz.panel.linked })).toBeVisible();
     await expect(page.getByTestId('business-header')).toContainText(SECOND);

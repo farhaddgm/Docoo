@@ -112,7 +112,7 @@ for (const locale of ['fa', 'en'] as const) {
     });
     await page.goto(`/${locale}/workspaces/${workspaceId}/problem-patterns`);
     const identifier = page.getByLabel(
-      locale === 'fa' ? 'شناسهٔ پیشنهادی الگو' : 'Suggested pattern identifier',
+      locale === 'fa' ? 'شناسه پیشنهادی الگو' : 'Suggested pattern identifier',
     );
     await expect(identifier).toHaveValue(/^pattern-[0-9a-f-]{36}$/);
     const firstKey = await identifier.inputValue();
@@ -169,7 +169,7 @@ for (const locale of ['fa', 'en'] as const) {
       .getByRole('button', { name: locale === 'fa' ? 'ارسال پیام' : 'Send message', exact: true })
       .click();
     const accept = page.getByRole('button', {
-      name: locale === 'fa' ? 'پذیرش و ذخیرهٔ الگو' : 'Accept and save pattern',
+      name: locale === 'fa' ? 'پذیرش و ذخیره الگو' : 'Accept and save pattern',
       exact: true,
     });
     await accept.click();
@@ -186,16 +186,16 @@ for (const locale of ['fa', 'en'] as const) {
       .getByText(locale === 'fa' ? 'ویرایش جزئیات الگو' : 'Edit pattern details', { exact: true })
       .click();
     await page
-      .getByLabel(locale === 'fa' ? 'شناسهٔ الگو' : 'Pattern identifier', { exact: true })
+      .getByLabel(locale === 'fa' ? 'شناسه الگو' : 'Pattern identifier', { exact: true })
       .fill('renamed-by-admin');
     await page
       .getByRole('button', {
-        name: locale === 'fa' ? 'ذخیرهٔ تغییرات' : 'Save changes',
+        name: locale === 'fa' ? 'ذخیره تغییرات' : 'Save changes',
         exact: true,
       })
       .click();
     await expect(
-      page.getByLabel(locale === 'fa' ? 'شناسهٔ الگو' : 'Pattern identifier', { exact: true }),
+      page.getByLabel(locale === 'fa' ? 'شناسه الگو' : 'Pattern identifier', { exact: true }),
     ).toHaveValue('renamed-by-admin');
     expect(pattern!.definition.key).toBe('renamed-by-admin');
     await expect(page.locator('#app-sidebar')).toBeVisible();

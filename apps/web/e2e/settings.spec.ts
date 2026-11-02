@@ -166,7 +166,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     const group = page.getByRole('group', { name: templates.defaultTemplate });
     await expect(group.getByRole('radio')).toHaveCount(3);
     await expect(
-      group.getByText('خلاصه ← فرض‌ها ← شواهد ← برنامهٔ اجرا ← ریسک‌ها', { exact: true }),
+      group.getByText('خلاصه ← فرض‌ها ← شواهد ← برنامه اجرا ← ریسک‌ها', { exact: true }),
     ).toBeVisible();
     await group.getByRole('radio', { name: new RegExp(templates.names['detailed']!, 'u') }).check();
     await expect(page.getByRole('button', { name: templates.saveTemplate })).toBeDisabled();
@@ -209,7 +209,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await useFakeProvider(page);
     const topic = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
       code: `wz-${stamp}`,
-      title: `حوزهٔ ویزارد ${stamp}`,
+      title: `حوزه ویزارد ${stamp}`,
     });
 
     await page.goto('/fa/projects/new');
@@ -223,14 +223,14 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await expect(next).toBeDisabled();
     await expect(problem(page)).toContainText(wizard.needBasics);
     await page.locator('#project-code').fill(`wz-${stamp}`);
-    await page.locator('#project-title').fill(`پروژهٔ ویزارد ${stamp}`);
-    await page.locator('#project-problem').fill('کاهش ریزش مشتریان برنامهٔ وفاداری');
+    await page.locator('#project-title').fill(`پروژه ویزارد ${stamp}`);
+    await page.locator('#project-problem').fill('کاهش ریزش مشتریان برنامه وفاداری');
     await expect(next).toBeEnabled();
 
     // The draft is kept: a reload brings the same step and values back.
     await page.reload();
     await expect(page.getByText(wizard.draftRestored)).toBeVisible();
-    await expect(page.locator('#project-title')).toHaveValue(`پروژهٔ ویزارد ${stamp}`);
+    await expect(page.locator('#project-title')).toHaveValue(`پروژه ویزارد ${stamp}`);
     await next.click();
 
     // Step 2: topics (and the business and the kind of analysis).

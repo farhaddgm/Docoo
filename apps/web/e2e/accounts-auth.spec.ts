@@ -68,7 +68,7 @@ test('Google-only owner sees account administration and no password-change form'
   // The Gmail list is a section of that one page, not a second navigation entry.
   await expect(page.getByRole('link', { name: 'ورود با جیمیل', exact: true })).toHaveCount(0);
   await expect(page.getByText('این حساب فقط با جیمیل وارد می‌شود و رمز عبور ندارد.')).toBeVisible();
-  await expect(page.getByLabel('گذرواژهٔ فعلی')).toHaveCount(0);
+  await expect(page.getByLabel('گذرواژه فعلی')).toHaveCount(0);
 });
 test('owner creates a Google account without a password and assigns separate topic/project grants', async ({
   page,
@@ -155,7 +155,7 @@ test('ordinary administrators cannot open the owner Gmail page', async ({ page }
     json(route, { user: { ...owner, isOwner: false }, workspaces: [workspace] }),
   );
   await page.goto('/fa/settings/google-access');
-  await expect(page.locator('p[role=alert]')).toHaveText('اجازهٔ دسترسی به این بخش را ندارید.');
+  await expect(page.locator('p[role=alert]')).toHaveText('اجازه دسترسی به این بخش را ندارید.');
   await expect(page.getByRole('button', { name: 'افزودن حساب' })).toHaveCount(0);
 });
 test('VIEW preserves project content and hides editing and lifecycle controls', async ({

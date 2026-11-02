@@ -29,7 +29,7 @@ export function PatternEditor({
     <fieldset disabled={disabled} className="pattern-editor">
       <legend>{label('ویرایش پیش‌نویس', 'Edit draft')}</legend>
       <label>
-        {label('شناسهٔ الگو', 'Pattern identifier')}
+        {label('شناسه الگو', 'Pattern identifier')}
         <input
           value={value.key}
           onChange={(event) => patch({ key: event.target.value })}

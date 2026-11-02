@@ -34,14 +34,14 @@ const initial = () => ({
   businesses: [
     {
       id: 'biz-e2e-1',
-      name: 'شعبهٔ دیجیتال وی‌پاد',
+      name: 'شعبه دیجیتال وی‌پاد',
       tagline: 'وام سریع بدون مراجعه به شعبه',
       industry: 'بانکداری دیجیتال',
       website: 'https://wepod.example.com',
       location: 'تهران',
       language: 'fa',
       sections: {
-        OVERVIEW: 'وی‌پاد شعبهٔ دیجیتال یک بانک است و به کارمندان حقوق‌بگیر خدمت می‌دهد.',
+        OVERVIEW: 'وی‌پاد شعبه دیجیتال یک بانک است و به کارمندان حقوق‌بگیر خدمت می‌دهد.',
         SERVICES: 'وام و کارت اعتباری. سقف وام در واقعیت‌های کلیدی آمده است.',
         TARGET_MARKET: 'کارمندان حقوق‌بگیر ۲۵ تا ۴۵ سال در شهرهای بزرگ.',
         PERSONAS: 'سارا، ۳۰ ساله، حسابدار که وام سریع می‌خواهد.',
@@ -56,14 +56,14 @@ const initial = () => ({
       ],
       terms: [
         { term: 'وی‌پاد', kind: 'USE', alternatives: ['وی پاد', 'ویپاد'] },
-        { term: 'وی‌پاد بانک', kind: 'AVOID', alternatives: ['شعبهٔ دیجیتال وی‌پاد'] },
+        { term: 'وی‌پاد بانک', kind: 'AVOID', alternatives: ['شعبه دیجیتال وی‌پاد'] },
       ],
       notes: ['مشتریان را همیشه رسمی خطاب کن.'],
       references: [
         {
           kind: 'URL',
           url: 'https://wepod.example.com/about',
-          title: 'دربارهٔ وی‌پاد',
+          title: 'درباره وی‌پاد',
           status: 'READY',
           contentChars: 1200,
           excerpt: 'وی‌پاد از سال ۱۴۰۲ فعال است.',
@@ -98,13 +98,13 @@ const initial = () => ({
     },
     {
       id: 'biz-e2e-2',
-      name: 'کافهٔ آزمون',
+      name: 'کافه آزمون',
       tagline: '',
       industry: 'کافه و رستوران',
       website: '',
       location: 'شیراز',
       language: 'fa',
-      sections: { OVERVIEW: 'یک کافهٔ کوچک در شیراز.' },
+      sections: { OVERVIEW: 'یک کافه کوچک در شیراز.' },
       aiSections: [],
       facts: [],
       terms: [],

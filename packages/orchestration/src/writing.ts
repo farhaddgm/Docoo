@@ -366,7 +366,7 @@ export const EMPTY_CITATION_STATE: CitationState = {
 };
 
 const KNOWLEDGE_LABEL = {
-  fa: (version: number) => `دانش تأییدشده، نسخهٔ ${version}`,
+  fa: (version: number) => `دانش تأییدشده، نسخه ${version}`,
   en: (version: number) => `approved knowledge, version ${version}`,
 } as const;
 
@@ -466,7 +466,7 @@ export function citedReferences(
       {
         id,
         text: source
-          ? `${[source.author, source.title, source.publisher, source.publishedAt].filter(Boolean).join('. ')} — ${entry.title} (${KNOWLEDGE_LABEL[language](entry.versionNo)}; ${language === 'fa' ? 'انتساب اعلام‌شده برای گزیدهٔ دانش' : 'declared attribution for the knowledge excerpt'})`
+          ? `${[source.author, source.title, source.publisher, source.publishedAt].filter(Boolean).join('. ')} — ${entry.title} (${KNOWLEDGE_LABEL[language](entry.versionNo)}; ${language === 'fa' ? 'انتساب اعلام‌شده برای گزیده دانش' : 'declared attribution for the knowledge excerpt'})`
           : `${entry.title} (${KNOWLEDGE_LABEL[language](entry.versionNo)})`,
         ...(source ? { url: source.url } : {}),
       },

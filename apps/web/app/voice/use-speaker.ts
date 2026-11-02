@@ -12,6 +12,9 @@ export function useSpeaker(workspaceId: string, volume: number) {
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
+  const [rate, setRate] = useState<1 | 2>(1);
+  const rateRef = useRef<1 | 2>(1);
+  rateRef.current = rate;
   const audio = useRef<HTMLAudioElement | null>(null);
   const url = useRef<string | null>(null);
   const cache = useRef(new Map<string, { blob: Blob; truncated: boolean }>());
@@ -35,6 +38,10 @@ export function useSpeaker(workspaceId: string, volume: number) {
     if (audio.current) audio.current.volume = volume;
   }, [volume]);
 
+  useEffect(() => {
+    if (audio.current) audio.current.playbackRate = rate;
+  }, [rate]);
+
   /** Reads `text`; a second call with the same key while it plays stops it. Throws what the API refuses. */
   const play = useCallback(
     async (key: string, text: string, scope?: VoiceScope) => {
@@ -56,6 +63,7 @@ export function useSpeaker(workspaceId: string, volume: number) {
         url.current = URL.createObjectURL(entry.blob);
         const element = new Audio(url.current);
         element.volume = volumeRef.current;
+        element.playbackRate = rateRef.current;
         element.onended = () => {
           if (mine === token.current) halt();
         };
@@ -71,5 +79,5 @@ export function useSpeaker(workspaceId: string, volume: number) {
     [halt, loadingKey, playingKey, workspaceId],
   );
 
-  return { play, stop: halt, loadingKey, playingKey, truncated };
+  return { play, stop: halt, loadingKey, playingKey, truncated, rate, setRate };
 }

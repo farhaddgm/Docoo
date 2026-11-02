@@ -54,7 +54,7 @@ describe('offline exploration answers', () => {
     const persian = fakeResponder(request({ eventText: 'x', candidates: [] }, 'Persian')) as {
       candidates: { title: string }[];
     };
-    expect(persian.candidates[0]!.title).toBe('مسئلهٔ کاندید 1');
+    expect(persian.candidates[0]!.title).toBe('مسئله کاندید 1');
     expect(fakeExplorationResponder(request({}, 'English', 'something_else'))).toBeNull();
   });
 });

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { SectionTitle } from '../../../info-tip';
 import { apiGet } from '../../../api-client';
 import { formatDateTime, formatNumber, type Locale } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
@@ -30,13 +31,13 @@ interface Output {
 const copy = {
   fa: {
     title: 'تحقیق',
-    help: 'نتیجهٔ مرحلهٔ تحقیق: خلاصه، یافته‌ها زیر هر پرسش برنامه، منابع و جست‌وجوی وب. تأیید یا رد خروجی در تب «گردش‌کار» انجام می‌شود.',
+    help: 'نتیجه مرحله تحقیق: خلاصه، یافته‌ها زیر هر پرسش برنامه، منابع و جست‌وجوی وب. تأیید یا رد خروجی در تب «گردش‌کار» انجام می‌شود.',
     empty:
-      'هنوز مرحلهٔ تحقیق خروجی نداده است. بعد از تکمیل تحلیل، گردش‌کار این مرحله را اجرا می‌کند.',
+      'هنوز مرحله تحقیق خروجی نداده است. بعد از تکمیل تحلیل، گردش‌کار این مرحله را اجرا می‌کند.',
     waiting: 'این خروجی منتظر تأیید شماست.',
     openWorkflow: 'رفتن به گردش‌کار',
     refresh: 'تازه‌سازی',
-    version: 'نسخهٔ {n}',
+    version: 'نسخه {n}',
   },
   en: {
     title: 'Research',
@@ -128,7 +129,9 @@ export function ResearchPanel({
       )}
       <section className="card" aria-labelledby="research-title">
         <div className="toolbar spread">
-          <h2 id="research-title">{text.title}</h2>
+          <SectionTitle id="research-title" help={text.help}>
+            {text.title}
+          </SectionTitle>
           <button
             className="secondary-button"
             type="button"
@@ -137,7 +140,6 @@ export function ResearchPanel({
             {text.refresh}
           </button>
         </div>
-        <p className="muted">{text.help}</p>
         {stage && (
           <p>
             <span className={`badge state-${stage.status}`}>
