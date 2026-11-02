@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 
 import { RESEARCH_DEFAULTS } from './research.js';
 import { MAX_ATTEMPTS } from './stages.js';
+import { normalizeWebPolicy, WEB_SOURCE_LIMIT, WEB_SOURCE_LIMIT_MAX } from './web-research.js';
 
 export interface Settings {
   connectionId: string;
@@ -36,6 +37,15 @@ export interface Settings {
   researchWebEnabled: boolean;
   /** Searches the provider may run in one research attempt (`research.web_max_searches`). */
   researchWebMaxSearches: number;
+  /** Searches below which the loop never stops for a reached target (`research.web_min_searches`). */
+  researchWebMinSearches: number;
+  /** Rounds of the search loop (`research.web_min_rounds`, `research.web_max_rounds`). */
+  researchWebMinRounds: number;
+  researchWebMaxRounds: number;
+  /** Pages found after which the loop may stop; 0 never (`research.web_target_sources`). */
+  researchWebTargetSources: number;
+  /** Pages kept for the research prompt (`research.web_source_limit`). */
+  researchWebSourceLimit: number;
   /** Ideation waits for the administrator to confirm the plan of deliverables (ADR-0031). */
   requireDeliverableConfirmation: boolean;
   /** Domains counted as official web sources besides the built-in ones (ADR-0040). */
@@ -104,7 +114,33 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
     agentMaxToolCalls: boundedInteger(values['agents.max_tool_calls'], 6, 1, 20),
     agentMaxHumanQuestions: boundedInteger(values['agents.max_human_questions'], 2, 0, 5),
     researchWebEnabled: values['research.web_enabled'] !== false,
-    researchWebMaxSearches: boundedInteger(values['research.web_max_searches'], 5, 1, 10),
+    ...(() => {
+      const policy = normalizeWebPolicy({
+        minSearches: boundedInteger(values['research.web_min_searches'], 1, 0, 50),
+        maxSearches: boundedInteger(values['research.web_max_searches'], 5, 1, 50),
+        minRounds: boundedInteger(values['research.web_min_rounds'], 1, 1, 10),
+        maxRounds: boundedInteger(values['research.web_max_rounds'], 1, 1, 10),
+        targetSources: boundedInteger(
+          values['research.web_target_sources'],
+          0,
+          0,
+          WEB_SOURCE_LIMIT_MAX,
+        ),
+      });
+      return {
+        researchWebMinSearches: policy.minSearches,
+        researchWebMaxSearches: policy.maxSearches,
+        researchWebMinRounds: policy.minRounds,
+        researchWebMaxRounds: policy.maxRounds,
+        researchWebTargetSources: policy.targetSources,
+      };
+    })(),
+    researchWebSourceLimit: boundedInteger(
+      values['research.web_source_limit'],
+      WEB_SOURCE_LIMIT,
+      1,
+      WEB_SOURCE_LIMIT_MAX,
+    ),
     requireDeliverableConfirmation: values['workflow.require_deliverable_confirmation'] !== false,
     researchOfficialDomains: normalizeOfficialDomains(values['research.official_domains']),
     requireResearchPlanConfirmation:

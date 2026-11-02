@@ -1165,6 +1165,9 @@ describe.skipIf(!adminUrl || !temporalAddress)(
           status: 'used',
           code: null,
           queries: ['fake web query'],
+          // One search round by default (research.web_max_rounds = 1) that ends at its round limit.
+          rounds: 1,
+          stop: 'max_rounds',
           sources: [
             {
               ref: 'W1',
