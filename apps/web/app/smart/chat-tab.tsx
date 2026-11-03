@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../api-client';
 import type { Locale } from '../i18n';
+import { LiveCard } from '../live-assistant/live-card';
 import { smartApi, type Conversation, type Message } from './api';
 import { fill, smartErrorMessage, smartMessagesFor } from './messages';
 import { refreshSummary } from './summary';
@@ -254,6 +255,7 @@ export function ChatTab({
 
   return (
     <div className="smart-chat">
+      <LiveCard locale={locale} />
       <div className="smart-chat-controls">
         <div className="toolbar">
           <button type="button" className="secondary-button" onClick={fresh}>
