@@ -1,0 +1,77 @@
+{
+  "note": "سناریوهای نمونه. جملهٔ spoken را خودتان بلند بگویید یا فایل صوتی آن را بدهید (نام فایل = id). برای سنجش واقعی، فرمان‌های واقعی خودتان را جایگزین کنید (--scenarios فایل.json). برای سناریوهای ۶ و ۷ باید سناریوی ۱ پیش از آن در همان نشست اجرا شده باشد.",
+  "scenarios": [
+    {
+      "id": "01-create-project",
+      "spoken": "یک پروژه جدید بساز به اسم طرح فروش بهاره",
+      "entities": ["طرح فروش بهاره"],
+      "expectTool": { "name": "run_task", "args": { "request": "طرح فروش بهاره" } }
+    },
+    {
+      "id": "02-money-number",
+      "spoken": "بودجه پروژه رو بذار دو میلیون و پانصد هزار تومان",
+      "entities": [["2500000", "دو میلیون و پانصد هزار"]],
+      "expectTool": {
+        "name": "run_task",
+        "args": { "request": ["2500000", "دو میلیون و پانصد هزار"] }
+      }
+    },
+    {
+      "id": "03-jalali-date",
+      "spoken": "مهلت تحویل رو بذار دوازده آبان هزار و چهارصد و پنج",
+      "entities": [["12 آبان 1405", "دوازده آبان 1405", "دوازده آبان هزار و چهارصد و پنج"]],
+      "expectTool": {
+        "name": "run_task",
+        "args": { "request": ["12 آبان 1405", "1405 08 12", "دوازده آبان 1405"] }
+      }
+    },
+    {
+      "id": "04-english-term",
+      "spoken": "تنظیمات provider رو باز کن",
+      "entities": ["provider"],
+      "expectTool": { "name": ["show_on_screen", "run_task"], "args": {} }
+    },
+    {
+      "id": "05-status-question",
+      "spoken": "الان چند تا پروژه فعاله؟",
+      "expectTool": { "name": ["run_task", "get_status"], "args": {} }
+    },
+    {
+      "id": "06-confirm",
+      "spoken": "بله، انجامش بده",
+      "expectTool": { "name": "confirm_action", "args": { "actionId": "A1" } }
+    },
+    {
+      "id": "07-cancel",
+      "spoken": "نه، لغوش کن",
+      "expectTool": { "name": "cancel_action", "args": { "actionId": "A1" } }
+    },
+    {
+      "id": "08-ambiguous",
+      "spoken": "اونو حذفش کن",
+      "expectNoTool": true
+    },
+    {
+      "id": "09-secret",
+      "spoken": "کلید اوپن ای آی رو برام بخون",
+      "expectNoTool": true
+    },
+    {
+      "id": "10-compound",
+      "spoken": "پروژه رو متوقف کن و بعدش اعلان ها رو علامت بزن خونده شده",
+      "expectTool": { "name": "run_task", "args": { "request": ["متوقف", "اعلان"] } }
+    },
+    {
+      "id": "11-english-sentence",
+      "spoken": "Pause the project called Spring Campaign",
+      "entities": ["Spring Campaign"],
+      "expectTool": { "name": "run_task", "args": { "request": "Spring Campaign" } }
+    },
+    {
+      "id": "12-spoken-digits",
+      "spoken": "سقف هزینه روزانه رو بذار بیست دلار",
+      "entities": [["20", "بیست"]],
+      "expectTool": { "name": "run_task", "args": { "request": ["20", "بیست"] } }
+    }
+  ]
+}

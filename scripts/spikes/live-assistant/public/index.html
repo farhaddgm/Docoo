@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>فاز ۰ دستیار صوتی</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, 'Vazirmatn', sans-serif;
+      }
+      body {
+        max-width: 60rem;
+        margin: 1rem auto;
+        padding: 0 1rem;
+        line-height: 1.7;
+      }
+      section {
+        border: 1px solid #8884;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-block: 1rem;
+      }
+      h1,
+      h2 {
+        margin-block: 0.25rem;
+      }
+      label {
+        display: inline-flex;
+        gap: 0.4rem;
+        align-items: center;
+        margin-inline-end: 1rem;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+        padding: 0.25rem 0.5rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        border-bottom: 1px solid #8883;
+        padding: 0.25rem 0.4rem;
+        text-align: start;
+        vertical-align: top;
+      }
+      pre {
+        max-height: 14rem;
+        overflow: auto;
+        background: #8881;
+        padding: 0.5rem;
+        direction: ltr;
+        text-align: left;
+        white-space: pre-wrap;
+      }
+      .muted {
+        opacity: 0.7;
+      }
+      .bad {
+        color: #c0392b;
+      }
+      .ok {
+        color: #1e8449;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>فاز ۰ — آزمایش دستیار صوتی زنده</h1>
+    <p class="muted">
+      این صفحه فقط روی کامپیوتر خودتان اجرا می‌شود. کلید OpenAI فقط در سرور محلی است و به مرورگر
+      نمی‌رسد. خروجی‌ها فقط در پوشهٔ <code>--out</code> ذخیره می‌شوند.
+    </p>
+    <p id="keyState" role="status"></p>
+
+    <section aria-labelledby="h-setup">
+      <h2 id="h-setup">۱) اتصال</h2>
+      <p>
+        <label
+          >مدل بلادرنگ
+          <input id="model" list="models" size="28" placeholder="از فهرست انتخاب کنید" />
+        </label>
+        <label
+          >مدل رونویسی
+          <input id="stt" list="models" size="24" placeholder="برای سنجش درک گفتار" />
+        </label>
+        <datalist id="models"></datalist>
+      </p>
+      <p>
+        <label>صدا <input id="voice" size="14" placeholder="پیش‌فرض" /></label>
+        <label
+          >زبان
+          <select id="language">
+            <option value="fa">فارسی</option>
+            <option value="en">انگلیسی</option>
+          </select>
+        </label>
+        <label
+          >ورودی
+          <select id="mode">
+            <option value="mic">میکروفون (خودم حرف می‌زنم)</option>
+            <option value="files">فایل‌های ضبط‌شده (پخش خودکار)</option>
+          </select>
+        </label>
+      </p>
+      <p>
+        <button id="connect" type="button">اتصال</button>
+        <button id="disconnect" type="button" disabled>قطع</button>
+        <span id="status" role="status">قطع</span>
+      </p>
+    </section>
+
+    <section aria-labelledby="h-scen">
+      <h2 id="h-scen">۲) سناریوها</h2>
+      <p class="muted">
+        حالت میکروفون: روی «شروع» بزنید، جمله را بگویید، «پایان» را بزنید. حالت فایل: همهٔ فایل‌های
+        صوتی را انتخاب کنید (نام هر فایل باید با شناسهٔ سناریو شروع شود) و «اجرای خودکار» را بزنید.
+      </p>
+      <p>
+        <input id="files" type="file" accept="audio/*" multiple />
+        <button id="runAll" type="button" disabled>اجرای خودکار با فایل‌ها</button>
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>شناسه</th>
+            <th>جملهٔ گوینده</th>
+            <th>اقدام</th>
+            <th>نتیجه</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="h-live">
+      <h2 id="h-live">۳) وضعیت زنده</h2>
+      <p id="stats" role="status">توکن: ۰</p>
+      <pre id="log" aria-label="رویدادها"></pre>
+    </section>
+
+    <section aria-labelledby="h-hidden">
+      <h2 id="h-hidden">۴) آزمون مرورگر کوچک‌شده</h2>
+      <p class="muted">
+        با اتصال برقرار، پنجره را ۱۰ تا ۳۰ دقیقه کوچک کنید یا به برنامهٔ دیگر بروید (هر چند دقیقه یک
+        جمله بگویید)، بعد برگردید. ضربان هر ثانیه ثبت می‌شود.
+      </p>
+      <p id="hidden">هنوز دادهٔ پنهان‌بودن نیست.</p>
+    </section>
+
+    <section aria-labelledby="h-report">
+      <h2 id="h-report">۵) گزارش</h2>
+      <p>
+        <button id="save" type="button">ساخت و ذخیرهٔ گزارش</button>
+        <span id="saved" role="status"></span>
+      </p>
+    </section>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
