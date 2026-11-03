@@ -1492,6 +1492,28 @@ export const stageProgress = pgTable(
   (table) => [index('stage_progress_idx').on(table.stageRunId, table.createdAt)],
 );
 
+/** Which finding of a research became which knowledge item (ADR-0053); append-only. */
+export const researchMemoryItems = pgTable(
+  'research_memory_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    projectId: uuid('project_id').notNull(),
+    stageRunId: uuid('stage_run_id').notNull(),
+    outputId: uuid('output_id').notNull(),
+    fingerprint: text('fingerprint').notNull(),
+    knowledgeId: uuid('knowledge_id').notNull(),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('research_memory_items_fingerprint_idx').on(table.workspaceId, table.fingerprint),
+    index('research_memory_items_project_idx').on(table.projectId, table.createdAt),
+  ],
+);
+
 export const gateDecisions = pgTable(
   'gate_decisions',
   {

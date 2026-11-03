@@ -12,6 +12,7 @@ export * from './problem-template.js';
 export * from './research-presets.js';
 export * from './research-freshness.js';
 export * from './research-quality.js';
+export * from './research-memory.js';
 export * from './problem-pattern.js';
 export * from './problem-pattern-authoring.js';
 export * from './problem-pattern-examples.js';

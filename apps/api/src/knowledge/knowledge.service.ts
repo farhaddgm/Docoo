@@ -441,48 +441,58 @@ export class KnowledgeService {
   }
 
   async create(context: WorkspaceRequestContext, input: CreateKnowledgeInput) {
-    return this.database.run(context, async (client) => {
-      await this.assertScopes(client, context, input.scopes);
-      const item = (
-        await client.query<ItemRow>(
-          `insert into knowledge_items (workspace_id, title, source_type, confidentiality, language, created_by)
+    return this.database.run(context, (client) => this.createWithin(client, context, input));
+  }
+
+  /**
+   * Creates the draft inside a transaction the caller already holds, so something that must happen
+   * with it (research memory records which finding became this item) commits or rolls back together.
+   */
+  async createWithin(
+    client: PoolClient,
+    context: WorkspaceRequestContext,
+    input: CreateKnowledgeInput,
+  ) {
+    await this.assertScopes(client, context, input.scopes);
+    const item = (
+      await client.query<ItemRow>(
+        `insert into knowledge_items (workspace_id, title, source_type, confidentiality, language, created_by)
            values ($1, $2, $3, $4, $5, $6) returning ${itemColumns}`,
-          [
-            context.workspaceId,
-            input.title,
-            input.sourceType,
-            input.confidentiality,
-            input.language,
-            context.actorId,
-          ],
-        )
-      ).rows[0]!;
-      await this.insertScopes(client, context, item.id, input.scopes);
-      const provenance = this.provenance(context, input.sourceType, input.provenance);
-      const version = await this.insertVersion(client, context, item, 1, 'draft', {
-        content: input.content,
-        language: input.language,
-        provenance,
-        validFrom: input.validFrom,
-        validUntil: input.validUntil,
-        sourceVersionId: null,
-      });
-      await this.insertClaims(client, context, version.id, input.content, input.claims);
-      const updated = await this.setCurrent(client, item.id, version.id);
-      await writeAudit(client, context, {
-        action: 'knowledge.create',
-        targetType: 'knowledge',
-        targetId: item.id,
-        after: {
-          versionId: version.id,
-          sourceType: input.sourceType,
-          confidentiality: input.confidentiality,
-          scopes: input.scopes,
-          contentSha256: version.content_sha256,
-        },
-      });
-      return this.detail(client, updated);
+        [
+          context.workspaceId,
+          input.title,
+          input.sourceType,
+          input.confidentiality,
+          input.language,
+          context.actorId,
+        ],
+      )
+    ).rows[0]!;
+    await this.insertScopes(client, context, item.id, input.scopes);
+    const provenance = this.provenance(context, input.sourceType, input.provenance);
+    const version = await this.insertVersion(client, context, item, 1, 'draft', {
+      content: input.content,
+      language: input.language,
+      provenance,
+      validFrom: input.validFrom,
+      validUntil: input.validUntil,
+      sourceVersionId: null,
     });
+    await this.insertClaims(client, context, version.id, input.content, input.claims);
+    const updated = await this.setCurrent(client, item.id, version.id);
+    await writeAudit(client, context, {
+      action: 'knowledge.create',
+      targetType: 'knowledge',
+      targetId: item.id,
+      after: {
+        versionId: version.id,
+        sourceType: input.sourceType,
+        confidentiality: input.confidentiality,
+        scopes: input.scopes,
+        contentSha256: version.content_sha256,
+      },
+    });
+    return this.detail(client, updated);
   }
 
   /** ING-008: knowledge candidate from an extracted source with located claim candidates. */

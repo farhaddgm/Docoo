@@ -9,6 +9,7 @@ import { reportMessagesFor } from '../../../report-messages';
 import { ResearchConflictsPanel } from './research-conflicts-panel';
 import { ResearchFollowupPanel } from './research-followup-panel';
 import { ResearchPlanPanel } from './research-plan-panel';
+import { ResearchMemoryPanel } from './research-memory-panel';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
 
@@ -52,6 +53,23 @@ const copy = {
 };
 
 /** The research stage on its own: its latest output, read-only (decisions stay in the workflow). */
+/** The claim text of each finding of a stored research output, by index. */
+function findingClaims(content: unknown): string[] {
+  const list =
+    content !== null && typeof content === 'object'
+      ? (content as { findings?: unknown }).findings
+      : undefined;
+  return Array.isArray(list)
+    ? list.map((item) =>
+        item !== null &&
+        typeof item === 'object' &&
+        typeof (item as { claim?: unknown }).claim === 'string'
+          ? (item as { claim: string }).claim
+          : '',
+      )
+    : [];
+}
+
 export function ResearchPanel({
   locale,
   workspaceId,
@@ -165,6 +183,12 @@ export function ResearchPanel({
               </p>
             )}
             <StageOutput locale={locale} stage="research" content={output.content} />
+            <ResearchMemoryPanel
+              locale={locale}
+              base={base}
+              outputId={output.id}
+              claims={findingClaims(output.content)}
+            />
           </>
         )}
       </section>

@@ -1221,6 +1221,84 @@ describe.skipIf(!adminUrl || !temporalAddress)(
         expect(steps.rows.map((row) => row.kind)).toEqual(['start', 'round', 'round', 'writing']);
       }, 120_000);
 
+      it('keeps a verified web finding as a draft of the knowledge, once, and refuses the rest (ADR-0053)', async () => {
+        const projectId = await reachResearchWithWeb('webmemory');
+        const row = await h.admin.query<{ id: string; content: ResearchContent }>(
+          `select o.id, o.content from stage_outputs o join stage_runs s on s.id = o.stage_run_id
+            where s.project_id = $1 and s.stage = 'research' order by o.created_at desc, o.id desc limit 1`,
+          [projectId],
+        );
+        const outputId = row.rows[0]!.id;
+        const findings = row.rows[0]!.content.findings;
+        const webIndex = findings.findIndex((finding) => finding.support === 'web');
+        const plainIndex = findings.findIndex((finding) => finding.support === 'unverified');
+        expect(webIndex).toBeGreaterThanOrEqual(0);
+        expect(plainIndex).toBeGreaterThanOrEqual(0);
+        const memory = `/projects/${projectId}/research-memory`;
+
+        const before = await get<{ items: { index: number; state: string; reason?: string }[] }>(
+          `${memory}?outputId=${outputId}`,
+        );
+        expect(before.items.find((item) => item.index === webIndex)?.state).toBe('saveable');
+        expect(before.items.find((item) => item.index === plainIndex)).toMatchObject({
+          state: 'blocked',
+          reason: 'not_verified',
+        });
+
+        // A finding nothing verified cannot be kept.
+        const refused = await h.request('POST', api(memory), {
+          cookie,
+          payload: { outputId, findingIndex: plainIndex },
+        });
+        expect(refused.statusCode, refused.body).toBe(422);
+
+        const saved = await post<{ knowledgeId: string }>(memory, {
+          outputId,
+          findingIndex: webIndex,
+        });
+        const item = await get<{
+          knowledge: {
+            id: string;
+            sourceType: string;
+            confidentiality: string;
+            scopes: { type: string }[];
+          };
+        }>(`/knowledge/${saved.knowledgeId}`);
+        expect(item.knowledge).toMatchObject({
+          id: saved.knowledgeId,
+          sourceType: 'autonomous_research',
+          confidentiality: 'internal',
+        });
+        expect(item.knowledge.scopes.map((scope) => scope.type)).toContain('topic');
+
+        // The same finding is not kept twice, and the list now shows it as kept.
+        const again = await h.request('POST', api(memory), {
+          cookie,
+          payload: { outputId, findingIndex: webIndex },
+        });
+        expect(again.statusCode, again.body).toBe(409);
+        expect(again.json<{ code: string }>().code).toBe('RESEARCH_MEMORY_ALREADY_SAVED');
+        const after = await get<{
+          items: { index: number; state: string; knowledgeId?: string }[];
+        }>(`${memory}?outputId=${outputId}`);
+        expect(after.items.find((entry) => entry.index === webIndex)).toMatchObject({
+          state: 'saved',
+          knowledgeId: saved.knowledgeId,
+        });
+        const audit = await h.admin.query(
+          `select 1 from audit_events where action = 'research_memory.saved' and project_id = $1`,
+          [projectId],
+        );
+        expect(audit.rowCount).toBe(1);
+
+        // An index outside the output, or an output of another project, is not found.
+        const missing = await h.request('POST', api(memory), {
+          cookie,
+          payload: { outputId, findingIndex: 999 },
+        });
+        expect(missing.statusCode, missing.body).toBe(404);
+      }, 120_000);
+
       it('a search that fails leaves the stage on its approved knowledge and the output says so', async () => {
         temporal.fakeScript = (request) => (request.webSearch ? 'invalid_request' : null);
         const projectId = await reachResearchWithWeb('webfail');
