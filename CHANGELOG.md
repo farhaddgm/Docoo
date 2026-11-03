@@ -4,6 +4,14 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **View a stage's output from the workflow.** In a project's **Workflow** tab, every stage now has a "View output" button next to "Run again". It opens a large popup in the middle of the page with a short summary of the stage's latest output — the problem statement and goals, the first findings, ideas, outline items or scores — and a button to the stage's own tab for the full text. The button is disabled for a stage that has no output yet. No migration.
+
+### Changed
+
+- **One progress card in the project Overview.** "Project journey" and "Milestone" said nearly the same thing and looked alike, so the Overview now shows only one of them: the journey for a project being worked on (draft, active, paused), and the milestone only for a project that has no journey (completed, archived, deleted). No migration.
+
 ## [0.50.0] — 2026-11-03
 
 The research stage is much stronger and easier to steer (ADR-0047 to ADR-0054). Research now has four modes — Quick, Standard (the same as before), Deep and Sensitive — with the cost shown in dollars and the exact numbers kept for the system owner. It runs in bounded rounds, can use two models plus a judge whose disagreements you settle, shows live progress, notices questions that searching cannot answer, learns which sources you trust, records the figures and the age of every finding, shows what each mode really delivered in your workspace, can keep a verified finding in your knowledge as a draft, and — in Deep and Sensitive — reads the key pages in full under your URL policy. Standard mode and one-model research stay the default. **Migrations 0078 to 0083 run on update.**

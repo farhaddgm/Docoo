@@ -5028,6 +5028,17 @@ button.link-button {
   margin-block-end: var(--space-3);
 }
 
+/* The workflow's "view output" popup: large, in the middle of the page, its content scrolls inside it. */
+.output-dialog {
+  inline-size: min(52rem, calc(100vw - 2rem));
+  max-block-size: calc(100vh - 3rem);
+}
+
+.output-dialog .business-dialog-head {
+  align-items: flex-start;
+  margin-block-end: var(--space-3);
+}
+
 .chip-list {
   display: flex;
   flex-wrap: wrap;
