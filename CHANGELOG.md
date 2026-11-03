@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.50.0] — 2026-11-03
+
+The research stage is much stronger and easier to steer (ADR-0047 to ADR-0054). Research now has four modes — Quick, Standard (the same as before), Deep and Sensitive — with the cost shown in dollars and the exact numbers kept for the system owner. It runs in bounded rounds, can use two models plus a judge whose disagreements you settle, shows live progress, notices questions that searching cannot answer, learns which sources you trust, records the figures and the age of every finding, shows what each mode really delivered in your workspace, can keep a verified finding in your knowledge as a draft, and — in Deep and Sensitive — reads the key pages in full under your URL policy. Standard mode and one-model research stay the default. **Migrations 0078 to 0083 run on update.**
+
 ### Added
 
 - **Reading the key pages in full** ([ADR-0054](docs/adr/0054-research-page-reading.md)). In the Deep and Sensitive modes (or with `research.read_pages` on), after the web search the research reads the few pages it leans on most — those both models found first, then official ones, at most `research.read_pages_max` (default 5) — and uses the relevant part of each page, so a figure or a date is quoted exactly and checked against the page itself. It uses the same guarded fetcher as knowledge ingestion and obeys your URL policy and allowlist (`ingestion.url_policy`, default allowlist): with the policy on “deny” nothing is fetched, and the research says so. Only HTML and text pages are read (no PDF); page text is not stored, only the verified quotes. A page that cannot be read never fails the research. The research view shows how many pages were read and marks each. **Migration 0083 runs on update.**
