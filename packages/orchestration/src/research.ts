@@ -10,6 +10,7 @@ import { normalizeForSearch } from '@docoo/knowledge';
 import type { RetrievedPassage } from './knowledge-retrieval.js';
 import type { SourceCitation } from './source-citation.js';
 import type { DualInfo } from './research-dual.js';
+import type { PageReadingInfo } from './page-reading.js';
 import type { StoredGap } from './research-gaps.js';
 
 /**
@@ -255,6 +256,8 @@ export interface WebPassage {
   readonly sourceClass?: WebSourceClass;
   /** In dual-model research: which model(s) found the page; absent for a single model. */
   readonly foundBy?: readonly ('primary' | 'second')[];
+  /** The page itself was read in full and its relevant part added to `text` (ADR-0054). */
+  readonly read?: boolean;
 }
 
 /** How the web side of one research attempt went. */
@@ -274,6 +277,8 @@ export interface WebRun {
   readonly dualSkipped?: string | undefined;
   /** Per planned question: rounds spent, whether answered, what is missing (ADR-0049). */
   readonly gaps?: readonly StoredGap[] | undefined;
+  /** How the full reading of the key pages went (ADR-0054); absent when it was off. */
+  readonly pageReading?: PageReadingInfo | undefined;
 }
 
 export const NO_WEB: WebRun = { status: 'off', code: null, queries: [], sources: [] };
@@ -308,6 +313,7 @@ export interface ResearchWebInfo {
   readonly dual?: DualInfo | undefined;
   readonly dualSkipped?: string | undefined;
   readonly gaps?: readonly StoredGap[] | undefined;
+  readonly pageReading?: PageReadingInfo | undefined;
   readonly sources: readonly {
     readonly ref: string;
     readonly url: string;
@@ -315,6 +321,7 @@ export interface ResearchWebInfo {
     readonly cited: boolean;
     readonly sourceClass?: WebSourceClass;
     readonly foundBy?: readonly ('primary' | 'second')[];
+    readonly read?: boolean;
   }[];
 }
 
@@ -684,6 +691,7 @@ export function verifyResearch(input: {
         ...(web.dual ? { dual: web.dual } : {}),
         ...(web.dualSkipped ? { dualSkipped: web.dualSkipped } : {}),
         ...(web.gaps ? { gaps: web.gaps } : {}),
+        ...(web.pageReading ? { pageReading: web.pageReading } : {}),
         sources: web.sources.map((source) => ({
           ref: source.ref,
           url: source.url,
@@ -691,6 +699,7 @@ export function verifyResearch(input: {
           cited: citedWeb.has(source.ref),
           sourceClass: source.sourceClass ?? ('public' as const),
           ...(source.foundBy ? { foundBy: source.foundBy } : {}),
+          ...(source.read ? { read: true } : {}),
         })),
       },
       verification: {
@@ -879,6 +888,9 @@ export function mergeFollowup(input: {
         : {}),
       ...((fresh.web?.gaps ?? previous.web?.gaps)
         ? { gaps: fresh.web?.gaps ?? previous.web?.gaps }
+        : {}),
+      ...((fresh.web?.pageReading ?? previous.web?.pageReading)
+        ? { pageReading: fresh.web?.pageReading ?? previous.web?.pageReading }
         : {}),
       sources: webSources,
     },

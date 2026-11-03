@@ -84,6 +84,8 @@ export const SETTING_GROUPS = [
       'research.web_max_rounds',
       'research.web_target_sources',
       'research.web_source_limit',
+      'research.read_pages',
+      'research.read_pages_max',
       'knowledge.min_audit_score',
     ],
   },

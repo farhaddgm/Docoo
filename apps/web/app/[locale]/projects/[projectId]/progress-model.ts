@@ -10,7 +10,8 @@ export interface ProgressStep {
   readonly createdAt?: string;
 }
 
-export type ProgressPhase = 'starting' | 'searching' | 'checking' | 'judging' | 'writing';
+export type ProgressPhase =
+  'starting' | 'searching' | 'checking' | 'judging' | 'reading' | 'writing';
 
 export interface SideCount {
   readonly searches: number;
@@ -59,11 +60,13 @@ export function summarizeProgress(steps: readonly ProgressStep[]): ProgressSumma
       ? 'writing'
       : last === 'judge'
         ? 'judging'
-        : last === 'gaps'
-          ? 'checking'
-          : last === 'round'
-            ? 'searching'
-            : 'starting';
+        : last === 'reading'
+          ? 'reading'
+          : last === 'gaps'
+            ? 'checking'
+            : last === 'round'
+              ? 'searching'
+              : 'starting';
   // With two models a question is open only while neither has answered it.
   const reported = Object.values(openBySide);
   const open =

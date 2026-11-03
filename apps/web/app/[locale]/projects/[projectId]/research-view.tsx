@@ -58,6 +58,7 @@ function WebBlock({
           </p>
         )}
         <DualBlock text={text} web={web} num={num} />
+        <PageReadingLine text={text} web={web} num={num} />
         {queries.length > 0 && (
           <>
             <h5>{text.webQueries}</h5>
@@ -86,6 +87,7 @@ function WebBlock({
                 )}{' '}
                 <small className="muted">
                   ({page['cited'] === true ? text.cited : text.notCited})
+                  {page['read'] === true ? ` · ${text.pageRead}` : ''}
                   {foundByLabel(text, page['foundBy'])}
                 </small>
               </li>
@@ -116,6 +118,36 @@ function gapOf(
   id: unknown,
 ): Record<string, unknown> | undefined {
   return records(web?.['gaps']).find((entry) => entry['id'] === id);
+}
+
+/** How reading the key pages in full went (ADR-0054). */
+function PageReadingLine({
+  text,
+  web,
+  num,
+}: {
+  text: Text;
+  web: Record<string, unknown> | null;
+  num: (value: unknown) => string;
+}) {
+  const info = web?.['pageReading'];
+  if (info === null || typeof info !== 'object') return null;
+  const item = info as Record<string, unknown>;
+  const status = asText(item['status']);
+  if (status === 'used') {
+    const failed = typeof item['failed'] === 'number' && item['failed'] > 0 ? item['failed'] : 0;
+    return (
+      <p className="muted">
+        {fill(text.pageReadingUsed, {
+          read: num(item['read']),
+          failed: failed > 0 ? fill(text.pageReadingFailed, { n: num(failed) }) : '',
+        })}
+      </p>
+    );
+  }
+  if (status === 'denied') return <p className="notice">{text.pageReadingDenied}</p>;
+  if (status === 'none') return <p className="muted">{text.pageReadingNone}</p>;
+  return null;
 }
 
 /** Who found a page in dual-model research: nothing is shown for a single model. */

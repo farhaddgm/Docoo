@@ -59,4 +59,12 @@ describe('summarizeProgress', () => {
     ])!;
     expect(odd).toMatchObject({ maxRounds: 1, round: 0, open: [] });
   });
+
+  it('shows the reading phase while the key pages are being read', () => {
+    const summary = summarizeProgress([
+      step('round', { round: 1, searches: 2, pages: 4 }),
+      step('reading', { pages: 4 }),
+    ])!;
+    expect(summary.phase).toBe('reading');
+  });
 });

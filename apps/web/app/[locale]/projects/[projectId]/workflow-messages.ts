@@ -65,6 +65,7 @@ const messages = {
       searching: 'در حال جست‌وجو',
       checking: 'در حال بررسی اینکه کدام سؤال هنوز خالی است…',
       judging: 'داور در حال مقایسهٔ یافته‌های دو مدل…',
+      reading: 'در حال خواندن کامل صفحه‌های کلیدی…',
       writing: 'در حال نوشتن گزارش و بررسی نقل‌قول‌ها…',
       round: 'دور {round} از حداکثر {max}',
       counts: '{searches} جست‌وجو انجام شد و {pages} صفحه یافت شد.',
@@ -241,6 +242,12 @@ const messages = {
       figureSupported: 'در نقل‌قول هست',
       figureUnsupported: 'در نقل‌قول نیست؛ تأیید نشده',
       overviewHeadlineStale: '{n} یافته به اطلاعات قدیمی تکیه دارد',
+      pageReadingUsed: '{read} صفحهٔ کلیدی کامل خوانده شد{failed}.',
+      pageReadingFailed: '؛ {n} صفحه خوانده نشد',
+      pageReadingNone: 'هیچ صفحه‌ای کامل خوانده نشد (دسترسی یا سیاست دریافت نشانی اجازه نداد).',
+      pageReadingDenied:
+        'خواندن کامل صفحه‌ها انجام نشد: «سیاست دریافت نشانی» آن را ممنوع کرده است. یافته‌ها بر پایهٔ خلاصهٔ جست‌وجو هستند.',
+      pageRead: 'کامل خوانده شد',
       dualHeading: 'تحقیق دومدلی',
       dualSides: { primary: 'مدل اصلی', second: 'مدل دوم', both: 'هر دو مدل' } as Record<
         string,
@@ -426,6 +433,7 @@ const messages = {
       searching: 'Searching',
       checking: 'Checking which question is still empty…',
       judging: 'The judge is comparing what the two models found…',
+      reading: 'Reading the key pages in full…',
       writing: 'Writing the report and checking the quotes…',
       round: 'Round {round} of at most {max}',
       counts: '{searches} search(es) done, {pages} page(s) found.',
@@ -598,6 +606,12 @@ const messages = {
       figureSupported: 'In the quote',
       figureUnsupported: 'Not in the quote; unverified',
       overviewHeadlineStale: '{n} finding(s) rest on old information',
+      pageReadingUsed: '{read} key page(s) read in full{failed}.',
+      pageReadingFailed: '; {n} could not be read',
+      pageReadingNone: 'No page could be read in full (access or the URL policy did not allow it).',
+      pageReadingDenied:
+        'Pages were not read in full: the URL policy forbids it. Findings rest on the search notes.',
+      pageRead: 'read in full',
       dualHeading: 'Dual-model research',
       dualSides: {
         primary: 'Primary model',
