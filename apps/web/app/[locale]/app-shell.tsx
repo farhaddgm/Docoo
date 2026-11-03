@@ -37,6 +37,7 @@ const implemented: Partial<Record<NavigationKey, string>> = {
   providers: '/providers',
   costs: '/costs',
   smart: '/smart/errors',
+  liveAssistant: '/live-assistant',
   settings: '/settings',
 };
 
@@ -58,8 +59,16 @@ const navigationSection: Partial<Record<NavigationKey, PolicySection>> = {
   agents: 'agents',
 };
 
-/** Pages only the owner may open: they hold the platform's keys, settings and agents. */
-const ownerNavigation: readonly NavigationKey[] = ['providers', 'settings', 'agents'];
+/**
+ * Pages only the owner may open: they hold the platform's keys, settings and agents, and what the
+ * voice assistant may do on the owner's behalf.
+ */
+const ownerNavigation: readonly NavigationKey[] = [
+  'providers',
+  'settings',
+  'agents',
+  'liveAssistant',
+];
 
 type IconName =
   NavigationKey | 'users' | 'mail' | 'logout' | 'menu' | 'close' | 'workspace' | 'owner';
@@ -83,6 +92,8 @@ const icons: Record<IconName, string> = {
     'M12 2v20M17 6.5C16 5 14.2 4.5 12 4.5c-2.8 0-4.5 1.3-4.5 3.2 0 4.6 9 2.2 9 7 0 2-1.8 3.3-4.5 3.3-2.3 0-4.2-.7-5.2-2.3',
   smart:
     'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
+  // A microphone.
+  liveAssistant: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
   settings:
     'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
   users:

@@ -17,11 +17,17 @@ import { z } from 'zod';
 /** The setting keys of the assistant page, in the order the page shows them (ADR-0055 §4-8). */
 export const liveAssistantSettingKeys = [
   'live_assistant.enabled',
+  'live_assistant.disclosure_accepted',
   'live_assistant.display_name',
   'live_assistant.spoken_name',
   'live_assistant.wake_enabled',
   'live_assistant.wake_phrase',
-  'live_assistant.access_rules',
+  // One access rule, as four plain settings: the settings validator knows scalars and lists of
+  // scalars only. The rule model (a list of rules) stays; `accessRulesFromSettings` builds it.
+  'live_assistant.access_scope',
+  'live_assistant.access_level',
+  'live_assistant.access_project_ids',
+  'live_assistant.access_include_current',
   'live_assistant.mode',
   'live_assistant.connection_id',
   'live_assistant.model',
@@ -68,6 +74,51 @@ export const liveAssistantDefaults = {
   confirmTimeoutS: 300,
   transcriptRetentionDays: 90,
 } as const;
+
+export const liveAssistantModes = ['realtime', 'pipeline'] as const;
+export const liveAssistantLanguages = ['fa', 'en', 'auto'] as const;
+export const liveAssistantListeningModes = ['always', 'push_to_talk'] as const;
+export const confirmStrictnessLevels = ['standard', 'strict'] as const;
+export const accessScopeModes = ['all_projects', 'selected_projects', 'backoffice'] as const;
+
+/**
+ * What each setting is before the owner touches it. The migration seeds the same values, and a
+ * test keeps the two equal. The assistant starts off, reading the projects area only.
+ */
+export const liveAssistantSettingDefaults = {
+  'live_assistant.enabled': false,
+  'live_assistant.disclosure_accepted': false,
+  'live_assistant.display_name': 'Docoo',
+  'live_assistant.spoken_name': 'داکو',
+  'live_assistant.wake_enabled': false,
+  'live_assistant.wake_phrase': 'Hi Docoo',
+  'live_assistant.access_scope': 'all_projects',
+  'live_assistant.access_level': 'read',
+  'live_assistant.access_project_ids': [] as string[],
+  'live_assistant.access_include_current': false,
+  'live_assistant.mode': 'realtime',
+  'live_assistant.connection_id': '',
+  'live_assistant.model': '',
+  'live_assistant.voice_id': '',
+  'live_assistant.language': 'fa',
+  'live_assistant.executor_connection_id': '',
+  'live_assistant.executor_model': '',
+  'live_assistant.listening_mode': 'always',
+  'live_assistant.idle_sleep_s': 120,
+  'live_assistant.session_max_minutes': 30,
+  'live_assistant.session_cost_cap_usd': 5,
+  'live_assistant.daily_cost_cap_usd': 20,
+  'live_assistant.task_cost_cap_usd': 1,
+  'live_assistant.max_actions_per_task': 8,
+  'live_assistant.confirm_timeout_s': 300,
+  'live_assistant.confirm_strictness': 'standard',
+  'live_assistant.t3_categories': [] as string[],
+  'live_assistant.store_transcripts': true,
+  'live_assistant.transcript_retention_days': 90,
+  'live_assistant.store_audio': false,
+} as const satisfies Record<LiveAssistantSettingKey, unknown>;
+
+export type LiveAssistantSettingValues = Partial<Record<LiveAssistantSettingKey, unknown>>;
 
 const bounded = (range: { readonly min: number; readonly max: number }) =>
   z.number().min(range.min).max(range.max);
@@ -116,6 +167,50 @@ export const assistantAccessRulesSchema = z.array(assistantAccessRuleSchema).min
 export const defaultAssistantAccessRules = (): AssistantAccessRule[] => [
   { scope: { mode: 'all_projects' }, level: 'read' },
 ];
+
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
+/**
+ * The access rule the owner set on the assistant page, built from its four plain settings. A
+ * missing value means the default; a value that no longer makes sense (an unknown scope or level)
+ * gives no rule at all, so the assistant can do nothing rather than something unintended.
+ */
+export function accessRulesFromSettings(values: LiveAssistantSettingValues): AssistantAccessRule[] {
+  const pick = <K extends LiveAssistantSettingKey>(key: K): unknown =>
+    values[key] === undefined ? liveAssistantSettingDefaults[key] : values[key];
+  const scope = pick('live_assistant.access_scope');
+  const level = pick('live_assistant.access_level');
+  const parsedLevel = z.enum(assistantAccessLevels).safeParse(level);
+  if (!parsedLevel.success) return [];
+  switch (scope) {
+    case 'backoffice':
+      return [{ scope: { mode: 'backoffice' }, level: parsedLevel.data }];
+    case 'all_projects':
+      return [{ scope: { mode: 'all_projects' }, level: parsedLevel.data }];
+    case 'selected_projects': {
+      const ids = pick('live_assistant.access_project_ids');
+      const projectIds = Array.isArray(ids)
+        ? [
+            ...new Set(
+              ids.filter((id): id is string => typeof id === 'string' && UUID_SHAPE.test(id)),
+            ),
+          ]
+        : [];
+      return [
+        {
+          scope: {
+            mode: 'selected_projects',
+            projectIds: projectIds.slice(0, 200),
+            includeCurrent: pick('live_assistant.access_include_current') === true,
+          },
+          level: parsedLevel.data,
+        },
+      ];
+    }
+    default:
+      return [];
+  }
+}
 
 /**
  * Where a capability acts. `projects_overview` is the list and comparisons across projects;

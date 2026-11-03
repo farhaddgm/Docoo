@@ -589,6 +589,13 @@
       "when": 1793808767919,
       "tag": "0083_research_read_pages",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1793808768919,
+      "tag": "0084_live_assistant",
+      "breakpoints": true
     }
   ]
 }

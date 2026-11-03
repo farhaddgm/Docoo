@@ -3,8 +3,17 @@ import { describe, expect, it } from 'vitest';
 import {
   type AssistantAccessRule,
   type CapabilityMeta,
+  accessRulesFromSettings,
+  accessScopeModes,
   assistantAccessRulesSchema,
+  confirmStrictnessLevels,
   liveActionStatuses,
+  liveAssistantLanguages,
+  liveAssistantLimits,
+  liveAssistantListeningModes,
+  liveAssistantModes,
+  liveAssistantSettingDefaults,
+  liveAssistantSettingKeys,
   decideCapability,
   defaultAssistantAccessRules,
   evaluateAssistantAccess,
@@ -500,5 +509,138 @@ describe('the action ledger', () => {
   it('an unconfirmed action expires at its timeout, never before', () => {
     expect(isLiveActionExpired(0, 299_999, 300)).toBe(false);
     expect(isLiveActionExpired(0, 300_000, 300)).toBe(true);
+  });
+});
+
+describe('the access rule built from the settings', () => {
+  const settings = (over: Record<string, unknown>) =>
+    over as Parameters<typeof accessRulesFromSettings>[0];
+
+  it('with nothing set, it is the first-activation rule: all projects, read only', () => {
+    expect(accessRulesFromSettings({})).toEqual(defaultAssistantAccessRules());
+  });
+
+  it('builds the whole back office and the all-projects rules at either level', () => {
+    expect(
+      accessRulesFromSettings(
+        settings({
+          'live_assistant.access_scope': 'backoffice',
+          'live_assistant.access_level': 'act',
+        }),
+      ),
+    ).toEqual([{ scope: { mode: 'backoffice' }, level: 'act' }]);
+    expect(
+      accessRulesFromSettings(
+        settings({
+          'live_assistant.access_scope': 'all_projects',
+          'live_assistant.access_level': 'act',
+        }),
+      ),
+    ).toEqual([{ scope: { mode: 'all_projects' }, level: 'act' }]);
+  });
+
+  it('builds the chosen-projects rule, dropping duplicates and ids that are not uuids', () => {
+    const rules = accessRulesFromSettings(
+      settings({
+        'live_assistant.access_scope': 'selected_projects',
+        'live_assistant.access_level': 'act',
+        'live_assistant.access_project_ids': [P1, P1, 'nope', 5, P2],
+        'live_assistant.access_include_current': true,
+      }),
+    );
+    expect(rules).toEqual([
+      {
+        scope: { mode: 'selected_projects', projectIds: [P1, P2], includeCurrent: true },
+        level: 'act',
+      },
+    ]);
+    expect(assistantAccessRulesSchema.safeParse(rules).success).toBe(true);
+  });
+
+  it('chosen projects with no list or a broken list is a rule that reaches nothing', () => {
+    for (const ids of [undefined, 'x', null]) {
+      const [rule] = accessRulesFromSettings(
+        settings({
+          'live_assistant.access_scope': 'selected_projects',
+          'live_assistant.access_project_ids': ids,
+        }),
+      );
+      expect(rule).toMatchObject({ scope: { mode: 'selected_projects', projectIds: [] } });
+    }
+    expect(
+      evaluateAssistantAccess(
+        accessRulesFromSettings(settings({ 'live_assistant.access_scope': 'selected_projects' })),
+        { target: { area: 'project', projectId: P1 }, write: false },
+      ).allowed,
+    ).toBe(false);
+  });
+
+  it('a scope or level that makes no sense gives no rule, so the assistant can do nothing', () => {
+    expect(
+      accessRulesFromSettings(settings({ 'live_assistant.access_scope': 'everything' })),
+    ).toEqual([]);
+    expect(accessRulesFromSettings(settings({ 'live_assistant.access_level': 'admin' }))).toEqual(
+      [],
+    );
+    expect(accessRulesFromSettings(settings({ 'live_assistant.access_scope': 7 }))).toEqual([]);
+  });
+
+  it('never allows a change at the default read level', () => {
+    expect(
+      evaluateAssistantAccess(accessRulesFromSettings({}), {
+        target: { area: 'project', projectId: P1 },
+        write: true,
+      }),
+    ).toEqual({ allowed: false, reason: 'read_only' });
+  });
+});
+
+describe('the settings and their defaults', () => {
+  it('every key has a default, and the defaults sit inside the limits and the allowed values', () => {
+    expect(Object.keys(liveAssistantSettingDefaults).sort()).toEqual(
+      [...liveAssistantSettingKeys].sort(),
+    );
+    const d = liveAssistantSettingDefaults;
+    expect(accessScopeModes).toContain(d['live_assistant.access_scope']);
+    expect(liveAssistantModes).toContain(d['live_assistant.mode']);
+    expect(liveAssistantLanguages).toContain(d['live_assistant.language']);
+    expect(liveAssistantListeningModes).toContain(d['live_assistant.listening_mode']);
+    expect(confirmStrictnessLevels).toContain(d['live_assistant.confirm_strictness']);
+    const inside = (value: number, range: { min: number; max: number }) =>
+      value >= range.min && value <= range.max;
+    expect(inside(d['live_assistant.idle_sleep_s'], liveAssistantLimits.idleSleepS)).toBe(true);
+    expect(
+      inside(d['live_assistant.session_max_minutes'], liveAssistantLimits.sessionMaxMinutes),
+    ).toBe(true);
+    expect(
+      inside(d['live_assistant.session_cost_cap_usd'], liveAssistantLimits.sessionCostCapUsd),
+    ).toBe(true);
+    expect(
+      inside(d['live_assistant.daily_cost_cap_usd'], liveAssistantLimits.dailyCostCapUsd),
+    ).toBe(true);
+    expect(inside(d['live_assistant.task_cost_cap_usd'], liveAssistantLimits.taskCostCapUsd)).toBe(
+      true,
+    );
+    expect(
+      inside(d['live_assistant.max_actions_per_task'], liveAssistantLimits.maxActionsPerTask),
+    ).toBe(true);
+    expect(inside(d['live_assistant.confirm_timeout_s'], liveAssistantLimits.confirmTimeoutS)).toBe(
+      true,
+    );
+    expect(
+      inside(
+        d['live_assistant.transcript_retention_days'],
+        liveAssistantLimits.transcriptRetentionDays,
+      ),
+    ).toBe(true);
+  });
+
+  it('starts switched off, with no consent given, nothing stored as audio, and nothing irreversible enabled', () => {
+    const d = liveAssistantSettingDefaults;
+    expect(d['live_assistant.enabled']).toBe(false);
+    expect(d['live_assistant.disclosure_accepted']).toBe(false);
+    expect(d['live_assistant.store_audio']).toBe(false);
+    expect(d['live_assistant.t3_categories']).toEqual([]);
+    expect(d['live_assistant.access_level']).toBe('read');
   });
 });
