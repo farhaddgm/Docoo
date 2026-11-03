@@ -5,7 +5,8 @@
  *
  * اجرا:
  *   OPENAI_API_KEY=... node scripts/spikes/live-assistant/serve.mjs --out <پوشهٔ_خروجی>
- *     [--port 8787] [--scenarios فایل.json] [--prices '{"audioIn":..,"audioOut":..,"textIn":..,"textOut":..}']
+ *     [--port 8787] [--scenarios فایل.json]
+ *     [--price-audio-in N --price-audio-out N --price-text-in N --price-text-out N]  (دلار به‌ازای هر میلیون توکن)
  *     [--session-override فایل.json] [--dry-run]
  *
  * امنیت: فقط روی 127.0.0.1 گوش می‌دهد؛ Host نامعتبر رد می‌شود (DNS rebinding)؛ هر POST باید هدر
@@ -21,6 +22,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { hasPrices } from './lib/cost.mjs';
 import { buildCallForm, buildSessionConfig, INSTRUCTIONS_FA, SPIKE_TOOLS } from './lib/session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -213,6 +215,50 @@ function arg(name) {
   return index === -1 ? undefined : process.argv[index + 1];
 }
 
+const PRICE_FLAGS = {
+  audioIn: 'price-audio-in',
+  audioOut: 'price-audio-out',
+  textIn: 'price-text-in',
+  textOut: 'price-text-out',
+};
+
+/**
+ * قیمت‌ها (دلار به‌ازای هر میلیون توکن): یا چهار پرچم عددی ساده، یا `--prices` با JSON.
+ * چهار پرچم در همهٔ پوسته‌ها (cmd، PowerShell، bash) بدون دردسر نقل‌قول کار می‌کند.
+ * ناقص‌بودن خطاست، چون قیمت نصفه هزینهٔ غلط می‌سازد. هیچ‌چیز داده نشود: null (بدون قیمت).
+ */
+export function pricesFromArgs(argv) {
+  const value = (name) => {
+    const index = argv.indexOf(`--${name}`);
+    return index === -1 ? undefined : argv[index + 1];
+  };
+  const given = Object.entries(PRICE_FLAGS).filter(([, flag]) => value(flag) !== undefined);
+  if (given.length > 0) {
+    if (given.length !== 4) {
+      throw new Error(
+        `قیمت‌ها باید هر چهار پرچم باشند: ${Object.values(PRICE_FLAGS)
+          .map((flag) => `--${flag}`)
+          .join(' ')}`,
+      );
+    }
+    const prices = {};
+    for (const [key, flag] of given) {
+      const number = Number(value(flag));
+      if (!Number.isFinite(number) || number < 0) {
+        throw new Error(`مقدار --${flag} باید عدد غیرمنفی باشد (دلار به‌ازای هر میلیون توکن).`);
+      }
+      prices[key] = number;
+    }
+    return prices;
+  }
+  const json = value('prices');
+  if (json === undefined) return null;
+  const parsed = JSON.parse(json);
+  if (!hasPrices(parsed))
+    throw new Error('--prices باید audioIn، audioOut، textIn و textOut را داشته باشد.');
+  return parsed;
+}
+
 async function readJson(file, fallback) {
   if (!file) return fallback;
   return JSON.parse(await fs.readFile(file, 'utf8'));
@@ -232,6 +278,13 @@ async function main() {
     console.error('--out <پوشهٔ_خروجی> لازم است (خارج از مخزن).');
     process.exit(2);
   }
+  let prices;
+  try {
+    prices = pricesFromArgs(process.argv);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(2);
+  }
   const app = createSpikeServer({
     apiKey,
     outDir: outDir ? path.resolve(outDir) : undefined,
@@ -239,7 +292,7 @@ async function main() {
       arg('scenarios'),
       await readJson(path.join(here, 'scenarios.fa.json'), {}),
     ),
-    prices: arg('prices') ? JSON.parse(arg('prices')) : null,
+    prices,
     sessionOverride: await readJson(arg('session-override'), {}),
   });
   const port = await app.listen(Number(arg('port') ?? 8787));

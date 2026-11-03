@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
 
-import { createSpikeServer } from './serve.mjs';
+import { createSpikeServer, pricesFromArgs } from './serve.mjs';
 
 const KEY = 'sk-test-secret-123';
 const upstreamCalls = [];
@@ -178,4 +178,55 @@ test('without a key the session endpoints say so instead of calling out', async 
   });
   await keyless.close();
   assert.equal(result, 409);
+});
+
+test('pricesFromArgs: four simple flags, a JSON fallback, or nothing', () => {
+  const four = [
+    '--price-audio-in',
+    '32',
+    '--price-audio-out',
+    '64',
+    '--price-text-in',
+    '4',
+    '--price-text-out',
+    '16',
+  ];
+  assert.deepEqual(pricesFromArgs(['node', 'serve.mjs', ...four]), {
+    audioIn: 32,
+    audioOut: 64,
+    textIn: 4,
+    textOut: 16,
+  });
+  assert.deepEqual(
+    pricesFromArgs(['--prices', '{"audioIn":1,"audioOut":2,"textIn":3,"textOut":4}']),
+    { audioIn: 1, audioOut: 2, textIn: 3, textOut: 4 },
+  );
+  assert.equal(pricesFromArgs(['--out', 'x']), null);
+});
+
+test('pricesFromArgs: a half-given or bad price is an error, never a wrong cost', () => {
+  assert.throws(() => pricesFromArgs(['--price-audio-in', '32']), /هر چهار پرچم/u);
+  const bad = [
+    '--price-audio-in',
+    'abc',
+    '--price-audio-out',
+    '1',
+    '--price-text-in',
+    '1',
+    '--price-text-out',
+    '1',
+  ];
+  assert.throws(() => pricesFromArgs(bad), /عدد غیرمنفی/u);
+  const negative = [
+    '--price-audio-in',
+    '-1',
+    '--price-audio-out',
+    '1',
+    '--price-text-in',
+    '1',
+    '--price-text-out',
+    '1',
+  ];
+  assert.throws(() => pricesFromArgs(negative), /عدد غیرمنفی/u);
+  assert.throws(() => pricesFromArgs(['--prices', '{"audioIn":1}']), /audioOut/u);
 });
