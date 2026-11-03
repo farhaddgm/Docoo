@@ -87,9 +87,7 @@ describe('live assistant setting definitions (migration 0084)', () => {
       ['live_assistant.confirm_strictness', confirmStrictnessLevels],
     ];
     for (const [key, values] of choices) expect(row(key).schema.enum, key).toEqual(values);
-    expect((row('live_assistant.t3_categories').schema.items as { enum: string[] }).enum).toEqual([
-      ...t3Categories,
-    ]);
+    expect(row('live_assistant.t3_categories').schema.items?.enum).toEqual([...t3Categories]);
   });
 
   it('bound every cap by the same limits as the contract', () => {
