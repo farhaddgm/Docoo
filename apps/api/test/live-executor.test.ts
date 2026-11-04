@@ -22,6 +22,7 @@ import {
   type ExecutorDeps,
 } from '../src/live-assistant/live-executor.js';
 import { liveSettingsFrom, textBlocker } from '../src/live-assistant/live-gateway.js';
+import { knowledgeCapabilities } from '../src/live-assistant/knowledge-capabilities.js';
 import { projectCapabilities } from '../src/live-assistant/project-capabilities.js';
 import type { NotificationsService } from '../src/notifications/notifications.service.js';
 import type { ProjectReportService } from '../src/projects/project-report.service.js';
@@ -610,5 +611,49 @@ describe('a capability without tool text', () => {
       settings({ 'live_assistant.access_scope': 'backoffice' }),
     );
     expect(offered.specs).toEqual([]);
+  });
+});
+
+describe('the knowledge read', () => {
+  const list = vi.fn().mockResolvedValue({
+    items: [
+      {
+        id: 'k1',
+        title: 'Pricing rules',
+        sourceType: 'document',
+        status: 'approved',
+        versionNo: 2,
+        validUntil: null,
+        claimCount: 5,
+        openConflicts: 1,
+        text: 'long text that must stay out',
+      },
+    ],
+    nextCursor: 'more',
+  });
+  const [search] = knowledgeCapabilities({ knowledge: { list } as never });
+
+  it('is a back-office read with a strict tool schema, offered only with the back office', () => {
+    expect(search?.meta).toMatchObject({
+      name: 'knowledge.search',
+      klass: 'T0',
+      area: 'backoffice',
+    });
+    expect(strictSchemaProblems(search!.tool!.parameters)).toEqual([]);
+    const registry = new LiveCapabilityRegistry([search!]);
+    expect(offeredTools(registry, settings()).specs).toEqual([]);
+    const withOffice = settings({ 'live_assistant.access_scope': 'backoffice' });
+    expect([...offeredTools(registry, withOffice).names.values()]).toEqual(['knowledge.search']);
+  });
+
+  it('returns titles and states, never the text', async () => {
+    const out = (await search!.execute(
+      { context: { workspaceId: P1, actorId: P1, correlationId: P1 }, sessionId: P1, actionId: P1 },
+      search!.params.parse({ q: 'pricing', limit: 5 }),
+    )) as { items: Record<string, unknown>[]; more: boolean };
+    expect(list).toHaveBeenCalledWith(expect.anything(), { limit: 5, q: 'pricing' });
+    expect(out.more).toBe(true);
+    expect(out.items[0]).toMatchObject({ title: 'Pricing rules', claims: 5, openConflicts: 1 });
+    expect(JSON.stringify(out)).not.toContain('long text');
   });
 });

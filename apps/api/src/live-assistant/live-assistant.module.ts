@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { KnowledgeModule } from '../knowledge/knowledge.module.js';
+import { KnowledgeService } from '../knowledge/knowledge.service.js';
 import { ConfigModule } from '../config/config.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -12,26 +14,42 @@ import { WorkflowService } from '../workflow/workflow.service.js';
 import { LIVE_CAPABILITIES, LiveCapabilityRegistry } from './capabilities.js';
 import { LiveAssistantController } from './live-assistant.controller.js';
 import { LiveAssistantService } from './live-assistant.service.js';
+import { knowledgeCapabilities } from './knowledge-capabilities.js';
 import { projectCapabilities } from './project-capabilities.js';
 
 /** The live voice assistant (ADR-0055): sessions, the confirmation gateway and its ledger. */
 @Module({
-  imports: [ConfigModule, NotificationsModule, ProjectsModule, ProvidersModule, WorkflowModule],
+  imports: [
+    ConfigModule,
+    KnowledgeModule,
+    NotificationsModule,
+    ProjectsModule,
+    ProvidersModule,
+    WorkflowModule,
+  ],
   controllers: [LiveAssistantController],
   providers: [
     LiveAssistantService,
     {
       provide: LIVE_CAPABILITIES,
-      inject: [ProjectsService, ProjectReportService, NotificationsService, WorkflowService],
+      inject: [
+        ProjectsService,
+        ProjectReportService,
+        NotificationsService,
+        WorkflowService,
+        KnowledgeService,
+      ],
       useFactory: (
         projects: ProjectsService,
         reports: ProjectReportService,
         notifications: NotificationsService,
         workflow: WorkflowService,
+        knowledge: KnowledgeService,
       ) =>
-        new LiveCapabilityRegistry(
-          projectCapabilities({ projects, reports, notifications, workflow }),
-        ),
+        new LiveCapabilityRegistry([
+          ...projectCapabilities({ projects, reports, notifications, workflow }),
+          ...knowledgeCapabilities({ knowledge }),
+        ]),
     },
   ],
 })

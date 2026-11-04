@@ -56,6 +56,14 @@ export const CAPABILITY_TOOLS: Readonly<Record<string, LiveToolSpec>> = {
       "Read the owner's unread notifications: what happened and where, newest first. Reads only; needs access to the whole back office.",
     parameters: closed({ limit: LIMIT }),
   },
+  'knowledge.search': {
+    description:
+      'List items of the knowledge base, newest first, optionally only those whose title contains a word: title, kind, state, validity, number of claims and open conflicts. Reads only; the text of an item is not returned. Needs access to the whole back office.',
+    parameters: closed({
+      q: text('A word to look for in the title, or an empty string for all items.'),
+      limit: LIMIT,
+    }),
+  },
   'project.status': {
     description:
       "Read one project's current status: stage, pause reason, next action and which lifecycle commands it accepts now. Reads only.",
