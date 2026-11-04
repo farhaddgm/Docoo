@@ -4,6 +4,7 @@ import {
   numeric,
   boolean,
   check,
+  doublePrecision,
   foreignKey,
   index,
   integer,
@@ -3082,3 +3083,97 @@ export const voicePreferences = pgTable('voice_preferences', {
   volume: real('volume').notNull().default(1),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** ADR-0055: one switched-on stretch of the live voice assistant, belonging to one administrator. */
+export const liveSessions = pgTable(
+  'live_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    status: text('status').notNull().default('active'),
+    endReason: text('end_reason'),
+    mode: text('mode').notNull(),
+    model: text('model').notNull().default(''),
+    accessRules: jsonb('access_rules').notNull(),
+    caps: jsonb('caps').notNull(),
+    inputTokens: bigint('input_tokens', { mode: 'number' }).notNull().default(0),
+    outputTokens: bigint('output_tokens', { mode: 'number' }).notNull().default(0),
+    costUsd: doublePrecision('cost_usd').notNull().default(0),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    lastActivityAt: timestamp('last_activity_at', { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('live_sessions_user_idx').on(table.userId, table.startedAt),
+    index('live_sessions_workspace_idx').on(table.workspaceId, table.startedAt),
+  ],
+);
+
+/** ADR-0055: the transcript of a live session; append-only. */
+export const liveMessages = pgTable(
+  'live_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => liveSessions.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    seq: integer('seq').notNull(),
+    role: text('role').notNull(),
+    content: text('content').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique('live_messages_session_seq').on(table.sessionId, table.seq)],
+);
+
+/** ADR-0055: a change the assistant proposed, with every step of its confirmation. */
+export const liveActions = pgTable(
+  'live_actions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => liveSessions.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    capability: text('capability').notNull(),
+    projectId: uuid('project_id'),
+    currentProjectId: uuid('current_project_id'),
+    tier: text('tier'),
+    steps: text('steps').array().notNull().default([]),
+    tainted: boolean('tainted').notNull().default(false),
+    params: jsonb('params').notNull().default({}),
+    summary: text('summary').notNull().default(''),
+    targetName: text('target_name'),
+    status: text('status').notNull(),
+    refusalReason: text('refusal_reason'),
+    cancelReason: text('cancel_reason'),
+    result: jsonb('result'),
+    errorCode: text('error_code'),
+    proposedAt: timestamp('proposed_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    firstConfirmedAt: timestamp('first_confirmed_at', { withTimezone: true }),
+    firstConfirmedVia: text('first_confirmed_via'),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    confirmedVia: text('confirmed_via'),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('live_actions_session_idx').on(table.sessionId, table.proposedAt),
+    index('live_actions_user_idx').on(table.userId, table.proposedAt),
+  ],
+);

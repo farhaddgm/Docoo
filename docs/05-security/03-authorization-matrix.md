@@ -269,6 +269,20 @@ notion_sync: true
 
 صدای ضبط‌شده را فقط خودِ گوینده می‌شنود (RLS روی `conversation_audio`)؛ مالک فقط فراداده را می‌بیند و می‌تواند حذف کند.
 
+## دستیار صوتی زنده ([ADR-0055](../adr/0055-live-voice-assistant.md))
+
+یک permission تازه: `live_assistant.use` فقط برای مالک (super admin)؛ ویرایشگر و مشاهده‌گر آن را ندارند. صفحهٔ تنظیمات دستیار هم فقط برای مالک است (نوشتن تنظیم‌های `live_assistant.*` همان مسیر عمومی تنظیمات و `workspace.configure` است). هر مسیر فقط نشست‌ها و پیشنهادهای خودِ کاربر را می‌بیند (RLS روی `live_sessions`، `live_messages` و `live_actions`)؛ مالک هم گفتگوی مالک دیگر را از طریق برنامه نمی‌خواند.
+
+| مسیر                                                                      | permission           |
+| ------------------------------------------------------------------------- | -------------------- |
+| `GET /live-assistant/config`                                              | `live_assistant.use` |
+| `POST\|GET /live-assistant/sessions`، `GET /live-assistant/sessions/{id}` | `live_assistant.use` |
+| `POST /live-assistant/sessions/{id}/usage`، `…/messages`، `…/end`         | `live_assistant.use` |
+| `POST /live-assistant/actions`، `GET /live-assistant/actions/{id}`        | `live_assistant.use` |
+| `POST /live-assistant/actions/{id}/confirm`، `…/cancel`                   | `live_assistant.use` |
+
+هیچ مسیری با فرمان یک مدل چیزی را اجرا نمی‌کند: تغییر ابتدا «پیشنهاد» می‌شود، دروازه با تنظیم‌های مالک و رجیستری capability تصمیم می‌گیرد، و فقط پس از تأیید یک انسان (و برای بازگشت‌ناپذیرها دو تأیید جدا) اجرا می‌شود. وضعیت هر پیشنهاد در `live_actions` ثبت می‌شود و تریگر پایگاه‌داده همان ماشین حالت `nextLiveActionStatus` را اجباری می‌کند.
+
 ## endpointهای هویت
 
 `/v1/auth/*` و `/v1/me*` به workspace وابسته نیستند و فقط نشست خود کاربر را مدیریت می‌کنند: ورود، خروج، درخواست و انجام reset، تغییر گذرواژه و لغو همهٔ نشست‌ها. همهٔ عملیات تغییر‌دهندهٔ آن‌ها بررسی Origin دارند و ورود/reset محدودیت نرخ جداگانهٔ ۱۰ درخواست در دقیقه دارند.

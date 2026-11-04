@@ -407,7 +407,13 @@ export interface Harness {
  */
 export async function createHarness(
   name: string,
-  options: { workflow?: boolean; correlation?: boolean; deliverableGate?: boolean } = {},
+  options: {
+    workflow?: boolean;
+    correlation?: boolean;
+    deliverableGate?: boolean;
+    /** Providers to replace in the application, for suites that need a fake of their own. */
+    overrides?: { provide: unknown; useValue: unknown }[];
+  } = {},
 ): Promise<Harness> {
   const parsed = new URL(adminUrl!);
   if (!['postgres:', 'postgresql:'].includes(parsed.protocol) || parsed.pathname !== '/docoo_ci') {
@@ -499,7 +505,7 @@ export async function createHarness(
   );
   const priceCatalog = new StubPriceCatalog({});
   const mailbox = new CapturingMailTransport();
-  const module = await Test.createTestingModule({ imports: [AppModule] })
+  const builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(DATABASE_POOL)
     .useValue(runtimePool)
     .overrideProvider(PASSWORD_RESET_DELIVERY)
@@ -515,8 +521,11 @@ export async function createHarness(
     .overrideProvider(PRICE_CATALOG)
     .useValue(priceCatalog)
     .overrideProvider(NOTIFICATION_MAIL_TRANSPORT)
-    .useValue(mailbox)
-    .compile();
+    .useValue(mailbox);
+  for (const override of options.overrides ?? []) {
+    builder.overrideProvider(override.provide as symbol).useValue(override.useValue);
+  }
+  const module = await builder.compile();
   const adapter = new FastifyAdapter(
     options.correlation
       ? {

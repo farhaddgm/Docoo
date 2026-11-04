@@ -22,6 +22,7 @@ import { ProjectsModule } from './projects/projects.module.js';
 import { ProvidersModule } from './providers/providers.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { SmartModule } from './smart/smart.module.js';
+import { LiveAssistantModule } from './live-assistant/live-assistant.module.js';
 import { VoiceModule } from './voice/voice.module.js';
 import { StageChatModule } from './stage-chat/stage-chat.module.js';
 import { SourcesModule } from './sources/sources.module.js';
@@ -56,6 +57,7 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
     ReportsModule,
     SmartModule,
     VoiceModule,
+    LiveAssistantModule,
     NotificationsModule,
   ],
   controllers: [HealthController, SecurityHealthController],

@@ -35,6 +35,7 @@ import { ProjectsController } from '../src/projects/projects.controller.js';
 import { ProvidersController } from '../src/providers/providers.controller.js';
 import { StageChatController } from '../src/stage-chat/stage-chat.controller.js';
 import { SmartController } from '../src/smart/smart.controller.js';
+import { LiveAssistantController } from '../src/live-assistant/live-assistant.controller.js';
 import { VoiceController } from '../src/voice/voice.controller.js';
 import { SourcesController } from '../src/sources/sources.controller.js';
 import { TopicsController } from '../src/topics/topics.controller.js';
@@ -321,6 +322,17 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/voice/usage/all': 'voice.manage',
   'GET workspaces/:workspaceId/voice/prices': 'voice.manage',
   'POST workspaces/:workspaceId/voice/prices': 'voice.manage',
+  'GET workspaces/:workspaceId/live-assistant/config': 'live_assistant.use',
+  'POST workspaces/:workspaceId/live-assistant/sessions': 'live_assistant.use',
+  'GET workspaces/:workspaceId/live-assistant/sessions': 'live_assistant.use',
+  'GET workspaces/:workspaceId/live-assistant/sessions/:sessionId': 'live_assistant.use',
+  'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/usage': 'live_assistant.use',
+  'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/messages': 'live_assistant.use',
+  'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/end': 'live_assistant.use',
+  'POST workspaces/:workspaceId/live-assistant/actions': 'live_assistant.use',
+  'GET workspaces/:workspaceId/live-assistant/actions/:actionId': 'live_assistant.use',
+  'POST workspaces/:workspaceId/live-assistant/actions/:actionId/confirm': 'live_assistant.use',
+  'POST workspaces/:workspaceId/live-assistant/actions/:actionId/cancel': 'live_assistant.use',
 };
 
 const controllers = [
@@ -348,6 +360,7 @@ const controllers = [
   ReportsController,
   SmartController,
   VoiceController,
+  LiveAssistantController,
   NotificationsController,
 ];
 
