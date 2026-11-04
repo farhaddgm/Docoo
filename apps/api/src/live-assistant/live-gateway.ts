@@ -172,6 +172,12 @@ export interface ProposalInput {
   readonly settings: LiveSettings;
   readonly tainted: boolean;
   readonly currentProjectId: string | null;
+  /** What the capability's `prepare` found, when it ran. */
+  readonly facts?: unknown;
+  /** `prepare` ran and failed: the target is not there. Said only once access is allowed. */
+  readonly prepareFailed?: boolean | undefined;
+  /** Asking again at confirmation: the preview was fixed when proposed and is not rebuilt. */
+  readonly skipPreview?: boolean | undefined;
 }
 
 /**
@@ -196,9 +202,20 @@ export function decideProposal(input: ProposalInput): ProposalDecision {
     enabledT3: input.settings.enabledT3,
   });
   if (!decision.allowed) return { outcome: 'refused', reason: decision.reason };
+  if (input.prepareFailed) return { outcome: 'refused', reason: 'target_not_found' };
+  if (input.skipPreview) {
+    return {
+      outcome: 'accepted',
+      tier: decision.plan.tier,
+      steps: decision.plan.steps,
+      projectId,
+      params: parsed.data,
+      preview: { summary: '' },
+    };
+  }
   let preview: LivePreview;
   try {
-    preview = capability.describe(parsed.data, localeOf(input.settings.language));
+    preview = capability.describe(parsed.data, localeOf(input.settings.language), input.facts);
   } catch {
     return { outcome: 'refused', reason: 'misconfigured' };
   }

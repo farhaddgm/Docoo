@@ -362,6 +362,19 @@ export class LiveAssistantService {
     context: WorkspaceRequestContext,
     input: ProposeLiveAction,
   ): Promise<LiveActionView> {
+    // What the preview must say comes from the database, looked up before the ledger transaction
+    // opens (it must not hold the session's lock while it waits) and used only if access allows it.
+    const capability = this.registry.get(input.capability);
+    const parsed = capability?.params.safeParse(input.params);
+    let facts: unknown;
+    let prepareFailed = false;
+    if (capability?.prepare && parsed?.success) {
+      try {
+        facts = await capability.prepare(context, parsed.data);
+      } catch {
+        prepareFailed = true;
+      }
+    }
     const out = await this.database.run(context, async (client) => {
       const gate = await this.gate(client, context, input.sessionId, { touch: true });
       if (gate.kind === 'closed') return { closed: gate };
@@ -372,6 +385,8 @@ export class LiveAssistantService {
         settings: gate.settings,
         tainted: input.tainted,
         currentProjectId: input.currentProjectId ?? null,
+        facts,
+        prepareFailed,
       });
       const base = {
         workspaceId: context.workspaceId,
@@ -576,6 +591,7 @@ export class LiveAssistantService {
       settings: gate.settings,
       tainted: action.tainted,
       currentProjectId: action.current_project_id,
+      skipPreview: true,
     });
     // Allowed now, and not more lightly than when it was proposed: a tier that rose needs a new proposal.
     const stillFine =

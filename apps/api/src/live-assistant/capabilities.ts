@@ -28,17 +28,27 @@ export interface LiveExecution {
   readonly actionId: string;
 }
 
-export interface LiveCapability<P = unknown> {
+export interface LiveCapability<P = unknown, F = unknown> {
   readonly meta: CapabilityMeta;
   readonly params: z.ZodType<P>;
   /** Which project the call acts on. Required when `meta.area` is `project`. */
   readonly projectOf?: ((params: P) => string | null) | undefined;
-  readonly describe: (params: P, locale: LiveLocale) => LivePreview;
+  /**
+   * Looks up what the preview must say and only the database knows (a project's real title). It
+   * runs before the proposal is decided, outside the ledger's transaction, and only for
+   * parameters that already passed validation. What it throws means the target is not there. The
+   * preview comes from here, never from the model: a model cannot describe one project and act
+   * on another.
+   */
+  readonly prepare?: ((context: WorkspaceRequestContext, params: P) => Promise<F>) | undefined;
+  readonly describe: (params: P, locale: LiveLocale, facts: F | undefined) => LivePreview;
   readonly execute: (execution: LiveExecution, params: P) => Promise<unknown>;
 }
 
-/** Erases the parameter type so capabilities with different parameters sit in one list. */
-export function defineCapability<P>(capability: LiveCapability<P>): LiveCapability {
+/** Erases the parameter and facts types so capabilities with different ones sit in one list. */
+export function defineCapability<P, F = undefined>(
+  capability: LiveCapability<P, F>,
+): LiveCapability {
   return capability as unknown as LiveCapability;
 }
 
@@ -77,6 +87,3 @@ export class LiveCapabilityRegistry {
     return [...this.byName.keys()].sort();
   }
 }
-
-/** Production capabilities. None are connected yet: the first ones arrive with the executor step. */
-export const liveCapabilityDefinitions: readonly LiveCapability[] = [];

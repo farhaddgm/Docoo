@@ -5,7 +5,6 @@ import { z } from 'zod';
 import {
   defineCapability,
   LiveCapabilityRegistry,
-  liveCapabilityDefinitions,
   type LiveCapability,
 } from '../src/live-assistant/capabilities.js';
 import {
@@ -35,9 +34,9 @@ const projectParams = z.object({ projectId: z.uuid(), reason: z.string().min(1).
 const capability = (
   name: string,
   klass: 'T0' | 'T1' | 'T2' | 'T3',
-  over: Partial<LiveCapability<z.infer<typeof projectParams>>> = {},
+  over: Partial<LiveCapability<z.infer<typeof projectParams>, unknown>> = {},
 ) =>
-  defineCapability<z.infer<typeof projectParams>>({
+  defineCapability<z.infer<typeof projectParams>, unknown>({
     meta: {
       name,
       klass,
@@ -146,11 +145,6 @@ describe('the settings the gateway reads', () => {
 });
 
 describe('the capability registry', () => {
-  it('is empty in production until the first capabilities are connected', () => {
-    expect(liveCapabilityDefinitions).toEqual([]);
-    expect(new LiveCapabilityRegistry(liveCapabilityDefinitions).names()).toEqual([]);
-  });
-
   it('refuses a set that is inconsistent, so a mistake stops at start-up and not at the owner', () => {
     expect(
       () => new LiveCapabilityRegistry([capability('a.b', 'T1'), capability('a.b', 'T1')]),

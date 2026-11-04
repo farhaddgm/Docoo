@@ -45,6 +45,8 @@ export const liveRefusalReasons = [
   't3_disabled',
   'misconfigured',
   'invalid_params',
+  /** The thing it asked about does not exist (or no longer does). Said only after access is allowed. */
+  'target_not_found',
   'cap_exceeded',
   'assistant_disabled',
 ] as const;

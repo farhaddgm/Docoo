@@ -28,6 +28,7 @@ export interface ScenarioCtx {
 }
 
 export const PROJECT = '33333333-3333-4333-8333-333333333333';
+export const MISSING_PROJECT = '77777777-7777-4777-8777-777777777777';
 const params = z.object({ projectId: z.uuid().default(PROJECT) });
 const noParams = z.object({});
 
@@ -59,6 +60,21 @@ export const scenarioRegistry = new LiveCapabilityRegistry([
   project('project.remove', 'T3', () => Promise.resolve({ removed: true })),
   project('project.fail', 'T1', () => Promise.reject(conflict('NOTE_REJECTED', 'No.'))),
   project('project.crash', 'T1', () => Promise.reject(new Error('secret internal detail'))),
+  // The preview comes from a lookup of the server's own, not from anything the model said.
+  defineCapability<{ projectId: string }, { title: string }>({
+    meta: { name: 'project.label', klass: 'T1', area: 'project', write: true },
+    params,
+    projectOf: (value) => value.projectId,
+    prepare: (_context, value) =>
+      value.projectId === MISSING_PROJECT
+        ? Promise.reject(new Error('missing'))
+        : Promise.resolve({ title: 'Real title' }),
+    describe: (_value, _locale, facts) => ({ summary: `label ${facts?.title ?? '?'}` }),
+    execute: () => {
+      executions.push('project.label');
+      return Promise.resolve({ labelled: true });
+    },
+  }),
   defineCapability({
     meta: { name: 'projects.overview', klass: 'T0', area: 'projects_overview', write: false },
     params: noParams,
@@ -224,6 +240,44 @@ export function liveAssistantScenarios(ctxOf: () => ScenarioCtx): void {
       status: 'refused',
       refusalReason: 'out_of_scope',
     });
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it("builds the preview from the server's own lookup, whatever the model claims", async () => {
+    await ctx().configure({});
+    const session = await start();
+    const out = await propose(session.id, 'project.label', {
+      params: {
+        projectId: PROJECT,
+        title: 'Something the model made up',
+        summary: 'Delete nothing',
+      },
+    });
+    expect(out).toMatchObject({ status: 'proposed', summary: 'label Real title' });
+    const stored = await rows(`select params from live_actions where id = $1`, [out.id]);
+    expect(stored[0]?.['params']).toEqual({ projectId: PROJECT });
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('refuses a target that is not there, but says out of scope first for one it may not see', async () => {
+    await ctx().configure({});
+    const session = await start();
+    const missing = await propose(session.id, 'project.label', {
+      params: { projectId: MISSING_PROJECT },
+    });
+    expect(missing).toMatchObject({
+      status: 'refused',
+      refusalReason: 'target_not_found',
+      summary: '',
+    });
+    await ctx().configure({
+      'live_assistant.access_scope': 'selected_projects',
+      'live_assistant.access_project_ids': [PROJECT],
+    });
+    const hidden = await propose(session.id, 'project.label', {
+      params: { projectId: MISSING_PROJECT },
+    });
+    expect(hidden).toMatchObject({ status: 'refused', refusalReason: 'out_of_scope' });
     await ctx().service.endSession(ctx().context, session.id, 'user');
   });
 
