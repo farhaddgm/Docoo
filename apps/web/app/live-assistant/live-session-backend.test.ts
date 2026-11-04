@@ -215,6 +215,27 @@ describe('the session store with a server session (ADR-0055)', () => {
     }
   });
 
+  it('shows the near-cap warning while the server says so, and clears it when it no longer does', async () => {
+    let capStatus: LiveUsageAnswer['capStatus'] = 'ok';
+    const { backend } = fakeBackend({
+      reportUsage: () => Promise.resolve(answer(view(), capStatus)),
+    });
+    const store = make(backend);
+    await store.start();
+    await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
+    expect(store.getSnapshot().warning).toBe(false);
+    capStatus = 'warn';
+    await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
+    expect(store.getSnapshot()).toMatchObject({ status: 'awake', warning: true });
+    capStatus = 'ok';
+    await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
+    expect(store.getSnapshot().warning).toBe(false);
+    capStatus = 'warn';
+    await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
+    await store.stop();
+    expect(store.getSnapshot()).toMatchObject({ status: 'off', warning: false });
+  });
+
   it('survives a missed report or two, and closes after too many in a row', async () => {
     let failing = true;
     const { backend, calls } = fakeBackend({

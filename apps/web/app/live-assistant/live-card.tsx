@@ -76,6 +76,11 @@ export function LiveCard({
           )}
         </p>
       )}
+      {state.warning && active && (
+        <p className="notice warn" role="status">
+          {text.card.nearCap}
+        </p>
+      )}
       {state.error && (
         <p className="notice error" role="alert">
           {text.card.errors[state.error]}

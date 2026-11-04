@@ -18,6 +18,7 @@ export interface LiveMessages {
     readonly tokensTitle: string;
     readonly close: string;
     readonly closeTitle: string;
+    readonly nearCap: string;
   };
   readonly card: {
     readonly title: string;
@@ -35,6 +36,7 @@ export interface LiveMessages {
       readonly no_provider: string;
     };
     readonly openSettings: string;
+    readonly nearCap: string;
     readonly used: string;
     readonly errors: Record<LiveError, string>;
   };
@@ -74,6 +76,7 @@ const fa: LiveMessages = {
     tokensTitle: 'توکن مصرف‌شدهٔ این گفتگو',
     close: 'بستن',
     closeTitle: 'بستن و پایان گفتگوی زنده',
+    nearCap: 'نزدیک سقف',
   },
   card: {
     title: 'گفتگوی زنده با {name}',
@@ -101,6 +104,8 @@ const fa: LiveMessages = {
       no_provider: 'اتصال به سرویس صوتی هنوز راه‌اندازی نشده است.',
     },
     openSettings: 'باز کردن تنظیمات دستیار',
+    nearCap:
+      'به سقف هزینه یا زمان نزدیک می‌شوید؛ گفتگو با رسیدن به سقف خودکار بسته می‌شود. سقف‌ها در تنظیمات دستیار قابل‌تغییرند.',
   },
   history: {
     title: 'گفتگوهای صوتی',
@@ -156,6 +161,7 @@ const en: LiveMessages = {
     tokensTitle: 'Tokens used in this conversation',
     close: 'Close',
     closeTitle: 'Close and end the live conversation',
+    nearCap: 'Near the cap',
   },
   card: {
     title: 'Live conversation with {name}',
@@ -185,6 +191,8 @@ const en: LiveMessages = {
       no_provider: 'The connection to the voice service is not set up yet.',
     },
     openSettings: 'Open assistant settings',
+    nearCap:
+      'A cost or time cap is close; the conversation closes by itself when it is reached. The caps can be changed in the assistant settings.',
   },
   history: {
     title: 'Voice conversations',

@@ -31,6 +31,8 @@ export interface LiveState {
   readonly tokens: number;
   readonly startedAt: number | null;
   readonly error: LiveError | null;
+  /** The server says a cost or time cap is close (80% or more); the session is still running. */
+  readonly warning: boolean;
   readonly position: PillPosition | null;
 }
 
@@ -44,6 +46,7 @@ export type LiveAction =
   | { readonly type: 'stop' }
   | { readonly type: 'stopped' }
   | { readonly type: 'failed'; readonly error: LiveError }
+  | { readonly type: 'warning'; readonly on: boolean }
   | { readonly type: 'move'; readonly position: PillPosition | null };
 
 export const initialLiveState = (position: PillPosition | null = null): LiveState => ({
@@ -52,6 +55,7 @@ export const initialLiveState = (position: PillPosition | null = null): LiveStat
   tokens: 0,
   startedAt: null,
   error: null,
+  warning: false,
   position,
 });
 
@@ -73,7 +77,14 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
         : { ...state, available: action.available };
     case 'start':
       if (state.status !== 'off' && state.status !== 'error') return state;
-      return { ...state, status: 'starting', tokens: 0, startedAt: null, error: null };
+      return {
+        ...state,
+        status: 'starting',
+        tokens: 0,
+        startedAt: null,
+        error: null,
+        warning: false,
+      };
     case 'started':
       return state.status === 'starting'
         ? { ...state, status: 'awake', startedAt: action.now }
@@ -93,12 +104,17 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
       return isLiveActive(state.status) ? { ...state, status: 'closing' } : state;
     case 'stopped':
       return state.status === 'closing' || isLiveActive(state.status)
-        ? { ...state, status: 'off', startedAt: null }
+        ? { ...state, status: 'off', startedAt: null, warning: false }
         : state;
     case 'failed':
       return state.status === 'off' || state.status === 'error'
         ? state
-        : { ...state, status: 'error', error: action.error, startedAt: null };
+        : { ...state, status: 'error', error: action.error, startedAt: null, warning: false };
+    case 'warning':
+      // Only a running session has a cap to be close to; a stale answer after the end is ignored.
+      return isLiveActive(state.status) && state.warning !== action.on
+        ? { ...state, warning: action.on }
+        : state;
     case 'move':
       return state.position === action.position ||
         (state.position &&

@@ -83,6 +83,22 @@ describe('the live state machine', () => {
     });
   });
 
+  it('a near-cap warning shows only while the session runs, and ends with it', () => {
+    const warned = reduceLive(started, { type: 'warning', on: true });
+    expect(warned.warning).toBe(true);
+    expect(reduceLive(warned, { type: 'warning', on: true })).toBe(warned);
+    expect(reduceLive(warned, { type: 'warning', on: false }).warning).toBe(false);
+    // Nothing to be close to when off, and a late answer after the end changes nothing.
+    expect(reduceLive(initialLiveState(), { type: 'warning', on: true })).toEqual(
+      initialLiveState(),
+    );
+    const closed = apply(warned, { type: 'stop' }, { type: 'stopped' });
+    expect(closed.warning).toBe(false);
+    expect(reduceLive(closed, { type: 'warning', on: true })).toBe(closed);
+    expect(reduceLive(warned, { type: 'failed', error: 'cap_reached' }).warning).toBe(false);
+    expect(apply(closed, { type: 'start' }).warning).toBe(false);
+  });
+
   it('availability and position are tracked without waking anyone for the same value', () => {
     const ready = reduceLive(initialLiveState(), { type: 'availability', available: true });
     expect(ready.available).toBe(true);

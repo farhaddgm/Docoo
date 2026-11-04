@@ -130,8 +130,13 @@ export function LiveAssistantPill() {
     }
   }
 
+  const nearCap = state.warning && !failed;
   const statusText =
-    failed && state.error ? text.card.errors[state.error] : text.status[state.status];
+    failed && state.error
+      ? text.card.errors[state.error]
+      : nearCap
+        ? text.pill.nearCap
+        : text.status[state.status];
   const style = position
     ? { left: position.x, top: position.y, bottom: 'auto', transform: 'none' }
     : undefined;
@@ -141,6 +146,7 @@ export function LiveAssistantPill() {
       ref={element}
       className="live-pill"
       data-state={state.status}
+      data-warn={nearCap ? 'true' : undefined}
       style={style}
       role="group"
       aria-label={text.pill.aria}

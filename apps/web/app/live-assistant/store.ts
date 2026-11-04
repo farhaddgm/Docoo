@@ -183,6 +183,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
       const answer = await backend.reportUsage(id, totals());
       missed = 0;
       if (answer.session.status === 'ended') endedByServer(answer.session.endReason);
+      else dispatch({ type: 'warning', on: answer.capStatus === 'warn' });
     } catch {
       missed += 1;
       if (missed >= MAX_MISSED_HEARTBEATS && isLiveActive(state.status)) {
