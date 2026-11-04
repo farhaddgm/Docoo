@@ -4,6 +4,7 @@ import type {
   LiveActionView,
   LiveAssistantCaps,
   LiveCancelReason,
+  LiveCostSummary,
   LiveMessageView,
   LiveRefusalReason,
   LiveSessionEndReason,
@@ -159,6 +160,40 @@ export async function dailyCostUsd(client: PoolClient, workspaceId: string): Pro
     )
   ).rows[0];
   return row?.total ?? 0;
+}
+
+/** What the sessions cost over the last day, week and 30 days (a period is "sessions that began in it"). */
+export async function costPeriods(
+  client: PoolClient,
+  workspaceId: string,
+): Promise<Record<'day' | 'week' | 'month', LiveCostSummary['day']>> {
+  const row = (
+    await client.query<Record<string, number>>(
+      `select
+         coalesce(sum(cost_usd + executor_cost_usd) filter (where started_at >= now() - interval '24 hours'), 0)::float8 as day_cost,
+         coalesce(sum(executor_cost_usd) filter (where started_at >= now() - interval '24 hours'), 0)::float8 as day_typed,
+         coalesce(sum(input_tokens + output_tokens + executor_input_tokens + executor_output_tokens) filter (where started_at >= now() - interval '24 hours'), 0)::float8 as day_tokens,
+         (count(*) filter (where started_at >= now() - interval '24 hours'))::int as day_sessions,
+         coalesce(sum(cost_usd + executor_cost_usd) filter (where started_at >= now() - interval '7 days'), 0)::float8 as week_cost,
+         coalesce(sum(executor_cost_usd) filter (where started_at >= now() - interval '7 days'), 0)::float8 as week_typed,
+         coalesce(sum(input_tokens + output_tokens + executor_input_tokens + executor_output_tokens) filter (where started_at >= now() - interval '7 days'), 0)::float8 as week_tokens,
+         (count(*) filter (where started_at >= now() - interval '7 days'))::int as week_sessions,
+         coalesce(sum(cost_usd + executor_cost_usd), 0)::float8 as month_cost,
+         coalesce(sum(executor_cost_usd), 0)::float8 as month_typed,
+         coalesce(sum(input_tokens + output_tokens + executor_input_tokens + executor_output_tokens), 0)::float8 as month_tokens,
+         count(*)::int as month_sessions
+       from live_sessions
+      where workspace_id = $1 and started_at >= now() - interval '30 days'`,
+      [workspaceId],
+    )
+  ).rows[0]!;
+  const period = (key: 'day' | 'week' | 'month') => ({
+    costUsd: row[`${key}_cost`] ?? 0,
+    typedCostUsd: row[`${key}_typed`] ?? 0,
+    tokens: row[`${key}_tokens`] ?? 0,
+    sessions: row[`${key}_sessions`] ?? 0,
+  });
+  return { day: period('day'), week: period('week'), month: period('month') };
 }
 
 /** Totals only grow: a smaller number than the stored one changes nothing. */

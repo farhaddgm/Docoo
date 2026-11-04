@@ -58,6 +58,13 @@ export class LiveAssistantController {
     return this.assistant.startSession(workspaceContext(request), input.channel);
   }
 
+  @Get('cost')
+  @ApiOperation({ summary: 'What the assistant cost over the last day, week and month' })
+  @RequireWorkspacePermission('live_assistant.use')
+  cost(@Req() request: FastifyRequest) {
+    return this.assistant.costSummary(workspaceContext(request));
+  }
+
   @Get('sessions')
   @ApiOperation({ summary: 'Own live conversations, newest first' })
   @RequireWorkspacePermission('live_assistant.use')

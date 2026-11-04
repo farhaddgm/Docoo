@@ -1,6 +1,6 @@
 'use client';
 
-import type { LiveSessionView } from '@docoo/contracts';
+import type { LiveCostSummary, LiveSessionView } from '@docoo/contracts';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 import { formatNumber, type Locale } from '../i18n';
@@ -28,6 +28,7 @@ export function LiveHistory({
     () => 'off' as const,
   );
   const [items, setItems] = useState<LiveSessionView[] | null>(null);
+  const [spend, setSpend] = useState<LiveCostSummary | null>(null);
   const [failed, setFailed] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [detail, setDetail] = useState<LiveSessionDetail | null>(null);
@@ -39,6 +40,11 @@ export function LiveHistory({
       try {
         const out = await liveReadApi.sessions(workspaceId, signal);
         setItems(out.items);
+        // The summary is a nicety: failing to read it never hides the conversations.
+        liveReadApi
+          .cost(workspaceId, signal)
+          .then(setSpend)
+          .catch(() => undefined);
         setFailed(false);
       } catch {
         if (!signal?.aborted) setFailed(true);
@@ -98,6 +104,7 @@ export function LiveHistory({
           {text.loadFailed}
         </p>
       )}
+      {spend && <SpendSummary locale={locale} spend={spend} />}
       {items?.length === 0 && !failed && <p className="muted">{text.empty}</p>}
       {items && items.length > 0 && (
         <ul className="live-history-list">
@@ -223,5 +230,54 @@ export function LiveHistory({
         </ul>
       )}
     </section>
+  );
+}
+
+const dollars = (locale: Locale, value: number): string =>
+  formatNumber(locale, Math.round(value * 100) / 100);
+
+/** What the assistant cost, with the last 24 hours set against the daily cap that closes a session. */
+function SpendSummary({
+  locale,
+  spend,
+}: {
+  readonly locale: Locale;
+  readonly spend: LiveCostSummary;
+}) {
+  const text = liveMessagesFor(locale).history.spend;
+  const rows = [
+    [text.day, spend.day],
+    [text.week, spend.week],
+    [text.month, spend.month],
+  ] as const;
+  return (
+    <div className="live-spend" role="group" aria-label={text.title}>
+      <h4>{text.title}</h4>
+      {spend.month.sessions === 0 ? (
+        <p className="muted">{text.none}</p>
+      ) : (
+        <ul>
+          {rows.map(([label, period]) => (
+            <li key={label}>
+              <strong>{label}: </strong>
+              {label === text.day
+                ? fill(text.ofCap, {
+                    used: dollars(locale, period.costUsd),
+                    cap: dollars(locale, spend.dailyCapUsd),
+                  })
+                : fill(liveMessagesFor(locale).history.cost, {
+                    n: dollars(locale, period.costUsd),
+                  })}
+              {period.typedCostUsd > 0 && (
+                <span className="muted">
+                  {' '}
+                  ({fill(text.typed, { n: dollars(locale, period.typedCostUsd) })})
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

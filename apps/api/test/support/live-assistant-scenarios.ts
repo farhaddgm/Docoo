@@ -1137,4 +1137,51 @@ export function liveAssistantScenarios(ctxOf: () => ScenarioCtx): void {
     expect(await problem(ask(session.id, 'late'))).toMatchObject({ code: 'LIVE_SESSION_ENDED' });
     expect(model().requests).toHaveLength(0);
   });
+
+  it('sums what the sessions cost, voice and typed apart, next to the daily cap', async () => {
+    model().reset();
+    model().costUsd = 0.25;
+    await ctx().configure({ ...EXECUTOR, 'live_assistant.daily_cost_cap_usd': 20 });
+    const before = await ctx().service.costSummary(ctx().context);
+    const session = await startText();
+    model().script(say('Hello.'));
+    await ask(session.id, 'hi');
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+    const after = await ctx().service.costSummary(ctx().context);
+    expect(after.dailyCapUsd).toBe(20);
+    for (const period of ['day', 'week', 'month'] as const) {
+      expect(after[period].costUsd - before[period].costUsd, period).toBeCloseTo(0.25);
+      expect(after[period].typedCostUsd - before[period].typedCostUsd, period).toBeCloseTo(0.25);
+      expect(after[period].tokens - before[period].tokens, period).toBe(120);
+      expect(after[period].sessions - before[period].sessions, period).toBe(1);
+    }
+    // A session from ten days ago counts toward the month and not toward the day or the week.
+    await rows(
+      `insert into live_sessions (workspace_id, user_id, mode, model, caps, access_rules, status,
+                                  ended_at, end_reason, started_at, executor_cost_usd)
+       values ($1, $2, 'text', 'm', $3::jsonb, '[]'::jsonb, 'ended', now(), 'user',
+               now() - interval '10 days', 0.5)`,
+      [
+        ctx().context.workspaceId,
+        ctx().context.actorId,
+        JSON.stringify({
+          idleSleepS: 120,
+          sessionMaxMinutes: 30,
+          sessionCostCapUsd: 5,
+          dailyCostCapUsd: 20,
+          taskCostCapUsd: 1,
+          maxActionsPerTask: 8,
+          confirmTimeoutS: 300,
+        }),
+      ],
+    );
+    const later = await ctx().service.costSummary(ctx().context);
+    expect(later.day.costUsd).toBeCloseTo(after.day.costUsd);
+    expect(later.week.costUsd).toBeCloseTo(after.week.costUsd);
+    expect(later.month.costUsd - after.month.costUsd).toBeCloseTo(0.5);
+    // Another workspace sees none of it.
+    const other = await ctx().service.costSummary(ctx().otherContext);
+    expect(other.month.costUsd).toBe(0);
+    expect(other.month.sessions).toBe(0);
+  });
 }

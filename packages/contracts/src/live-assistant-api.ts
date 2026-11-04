@@ -240,6 +240,28 @@ export const liveUsageAnswerSchema = z.object({
 export type LiveUsageAnswer = z.infer<typeof liveUsageAnswerSchema>;
 
 // ---------------------------------------------------------------------------------------------
+// What it cost
+// ---------------------------------------------------------------------------------------------
+
+const costPeriod = z.object({
+  /** Dollars, from the prices on record; a model with no price counts as zero here. */
+  costUsd: z.number(),
+  /** The part of it that typed requests (the executor) used. */
+  typedCostUsd: z.number(),
+  tokens: z.number(),
+  sessions: z.number().int(),
+});
+
+export const liveCostSummarySchema = z.object({
+  /** The last 24 hours: the period the daily cap is measured over. */
+  day: costPeriod,
+  week: costPeriod,
+  month: costPeriod,
+  dailyCapUsd: z.number(),
+});
+export type LiveCostSummary = z.infer<typeof liveCostSummarySchema>;
+
+// ---------------------------------------------------------------------------------------------
 // Asking the executor (typing to the assistant)
 // ---------------------------------------------------------------------------------------------
 

@@ -8,6 +8,7 @@ import {
   type LiveActionStatus,
   type LiveActionView,
   type LiveAssistantClientConfig,
+  type LiveCostSummary,
   type LiveCancelReason,
   type LiveMessageView,
   type LiveSessionEndReason,
@@ -44,6 +45,7 @@ import {
   activeSessionId,
   appendMessages,
   cancelOpenActions,
+  costPeriods,
   dailyCostUsd,
   endSession,
   insertAction,
@@ -342,6 +344,17 @@ export class LiveAssistantService {
         });
       }
       return { deleted };
+    });
+  }
+
+  /** What the assistant cost in the last day, week and month, next to the daily cap. */
+  async costSummary(context: WorkspaceRequestContext): Promise<LiveCostSummary> {
+    return this.database.run(context, async (client) => {
+      const settings = await this.settings(client, context);
+      return {
+        ...(await costPeriods(client, context.workspaceId)),
+        dailyCapUsd: settings.caps.dailyCostCapUsd,
+      };
     });
   }
 

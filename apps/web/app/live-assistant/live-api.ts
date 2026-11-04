@@ -2,6 +2,7 @@ import type {
   LiveActionView,
   LiveAskAnswer,
   LiveAssistantClientConfig,
+  LiveCostSummary,
   LiveMessageView,
   LiveSessionView,
   LiveUsageAnswer,
@@ -84,6 +85,8 @@ export interface LiveSessionDetail {
 export const liveReadApi = {
   config: (workspaceId: string, signal?: AbortSignal) =>
     apiGet<LiveAssistantClientConfig>(`${base(workspaceId)}/config`, signal),
+  cost: (workspaceId: string, signal?: AbortSignal) =>
+    apiGet<LiveCostSummary>(`${base(workspaceId)}/cost`, signal),
   sessions: (workspaceId: string, signal?: AbortSignal) =>
     apiGet<{ items: LiveSessionView[] }>(`${base(workspaceId)}/sessions`, signal),
   session: (workspaceId: string, sessionId: string, signal?: AbortSignal) =>

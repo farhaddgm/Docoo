@@ -81,6 +81,16 @@ export interface LiveMessages {
     readonly minutes: string;
     readonly tokens: string;
     readonly cost: string;
+    readonly spend: {
+      readonly title: string;
+      readonly day: string;
+      readonly week: string;
+      readonly month: string;
+      /** "{used} of {cap} today", the daily cap being the limit that closes a session. */
+      readonly ofCap: string;
+      readonly typed: string;
+      readonly none: string;
+    };
     readonly noMessages: string;
     readonly noActions: string;
     readonly transcript: string;
@@ -211,6 +221,15 @@ const fa: LiveMessages = {
     minutes: '{n} دقیقه',
     tokens: '{n} توکن',
     cost: '{n} دلار',
+    spend: {
+      title: 'هزینه',
+      day: '۲۴ ساعت گذشته',
+      week: '۷ روز گذشته',
+      month: '۳۰ روز گذشته',
+      ofCap: '{used} دلار از سقف روزانهٔ {cap} دلار',
+      typed: 'که {n} دلارش مجرای نوشتاری بود',
+      none: 'هنوز هزینه‌ای ثبت نشده است.',
+    },
     noMessages: 'متنی برای این گفتگو ذخیره نشده است.',
     noActions: 'تغییری پیشنهاد نشد.',
     transcript: 'متن گفتگو',
@@ -363,6 +382,15 @@ const en: LiveMessages = {
     minutes: '{n} min',
     tokens: '{n} tokens',
     cost: '${n}',
+    spend: {
+      title: 'Spending',
+      day: 'Last 24 hours',
+      week: 'Last 7 days',
+      month: 'Last 30 days',
+      ofCap: '${used} of the ${cap} daily cap',
+      typed: 'of which ${n} was typed requests',
+      none: 'Nothing spent yet.',
+    },
     noMessages: 'No text was stored for this conversation.',
     noActions: 'No change was proposed.',
     transcript: 'Transcript',
