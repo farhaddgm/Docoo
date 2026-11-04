@@ -256,6 +256,26 @@ export async function appendMessages(
   return input.messages.length;
 }
 
+/**
+ * Deletes transcript lines: those of one session, or the ones older than the retention. The
+ * transcript is append-only, so the delete runs in a transaction that says it is a purge; row
+ * security still limits it to the caller's own lines.
+ */
+export async function purgeMessages(
+  client: PoolClient,
+  target: { sessionId: string } | { olderThanDays: number },
+): Promise<number> {
+  await client.query("select set_config('app.retention_purge', 'on', true)");
+  const result =
+    'sessionId' in target
+      ? await client.query('delete from live_messages where session_id = $1', [target.sessionId])
+      : await client.query(
+          `delete from live_messages where created_at < now() - make_interval(days => $1::int)`,
+          [target.olderThanDays],
+        );
+  return result.rowCount ?? 0;
+}
+
 export async function listMessages(
   client: PoolClient,
   sessionId: string,

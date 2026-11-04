@@ -42,6 +42,7 @@ import {
   listActions,
   listMessages,
   listSessions,
+  purgeMessages,
   moveAction,
   readAction,
   readSession,
@@ -150,6 +151,13 @@ export class LiveAssistantService {
   // ---- sessions --------------------------------------------------------------------------
 
   async startSession(context: WorkspaceRequestContext): Promise<LiveSessionView> {
+    const session = await this.startSessionInternal(context);
+    // Text past its retention goes when a new conversation starts; a failure here never blocks it.
+    await this.purgeExpired(context).catch(() => undefined);
+    return session;
+  }
+
+  private async startSessionInternal(context: WorkspaceRequestContext): Promise<LiveSessionView> {
     return this.database.run(context, async (client) => {
       const settings = await this.settings(client, context);
       const blocker = startBlocker(settings);
@@ -283,6 +291,51 @@ export class LiveAssistantService {
     });
     if (out.closed) throw conflict('LIVE_SESSION_ENDED', 'The live session has ended.');
     return { saved: out.saved };
+  }
+
+  /** Deletes the text of one ended conversation; its proposals and the audit trail stay. */
+  async deleteTranscript(
+    context: WorkspaceRequestContext,
+    sessionId: string,
+  ): Promise<{ deleted: number }> {
+    return this.database.run(context, async (client) => {
+      const session = await readSession(client, sessionId, { lock: true });
+      if (!session) throw notFound('LIVE_SESSION_NOT_FOUND', 'The live session was not found.');
+      if (session.status === 'active') {
+        throw conflict('LIVE_SESSION_ACTIVE', 'End the conversation before deleting its text.');
+      }
+      const deleted = await purgeMessages(client, { sessionId });
+      if (deleted > 0) {
+        // The tombstone says that and how much was deleted, never what.
+        await this.audit(client, context, {
+          action: 'live_assistant.transcript_deleted',
+          targetType: 'live_session',
+          targetId: sessionId,
+          severity: 'warning',
+          securityRelevant: true,
+          after: { lines: deleted },
+        });
+      }
+      return { deleted };
+    });
+  }
+
+  /** Deletes the caller's transcript lines older than the retention the owner set. */
+  async purgeExpired(context: WorkspaceRequestContext): Promise<{ deleted: number }> {
+    return this.database.run(context, async (client) => {
+      const settings = await this.settings(client, context);
+      const deleted = await purgeMessages(client, {
+        olderThanDays: settings.transcriptRetentionDays,
+      });
+      if (deleted > 0) {
+        await this.audit(client, context, {
+          action: 'live_assistant.transcript_expired',
+          targetType: 'live_session',
+          after: { lines: deleted, retentionDays: settings.transcriptRetentionDays },
+        });
+      }
+      return { deleted };
+    });
   }
 
   async endSession(

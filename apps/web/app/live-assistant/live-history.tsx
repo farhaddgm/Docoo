@@ -31,6 +31,8 @@ export function LiveHistory({
   const [failed, setFailed] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [detail, setDetail] = useState<LiveSessionDetail | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -55,6 +57,8 @@ export function LiveHistory({
   }, [load, settled, status]);
 
   useEffect(() => {
+    setAsking(false);
+    setDeleteFailed(false);
     if (!openId) return;
     const controller = new AbortController();
     setDetail(null);
@@ -64,6 +68,22 @@ export function LiveHistory({
       .catch(() => undefined);
     return () => controller.abort();
   }, [workspaceId, openId]);
+
+  async function deleteText(sessionId: string) {
+    setDeleteFailed(false);
+    try {
+      await liveReadApi.deleteTranscript(workspaceId, sessionId);
+      setAsking(false);
+      const [list, again] = await Promise.all([
+        liveReadApi.sessions(workspaceId),
+        liveReadApi.session(workspaceId, sessionId),
+      ]);
+      setItems(list.items);
+      setDetail(again);
+    } catch {
+      setDeleteFailed(true);
+    }
+  }
 
   const when = new Intl.DateTimeFormat(locale === 'fa' ? 'fa-IR' : 'en', {
     dateStyle: 'medium',
@@ -141,6 +161,42 @@ export function LiveHistory({
                               </li>
                             ))}
                           </ol>
+                        )}
+                        {item.status === 'ended' && detail.messages.length > 0 && (
+                          <div className="toolbar">
+                            {asking ? (
+                              <>
+                                <span>{text.deleteAsk}</span>
+                                <button
+                                  type="button"
+                                  className="secondary-button live-danger"
+                                  onClick={() => void deleteText(item.id)}
+                                >
+                                  {text.deleteYes}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  onClick={() => setAsking(false)}
+                                >
+                                  {text.deleteNo}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={() => setAsking(true)}
+                              >
+                                {text.deleteText}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {deleteFailed && (
+                          <p className="notice error" role="alert">
+                            {text.deleteFailed}
+                          </p>
                         )}
                         <h4>{text.changes}</h4>
                         {detail.actions.length === 0 ? (

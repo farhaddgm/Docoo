@@ -55,4 +55,7 @@ export const liveReadApi = {
     apiGet<{ items: LiveSessionView[] }>(`${base(workspaceId)}/sessions`, signal),
   session: (workspaceId: string, sessionId: string, signal?: AbortSignal) =>
     apiGet<LiveSessionDetail>(`${base(workspaceId)}/sessions/${sessionId}`, signal),
+  /** Deletes the text of one ended conversation; its proposed changes and the audit trail stay. */
+  deleteTranscript: (workspaceId: string, sessionId: string) =>
+    apiSend<{ deleted: number }>('DELETE', `${base(workspaceId)}/sessions/${sessionId}/messages`),
 };

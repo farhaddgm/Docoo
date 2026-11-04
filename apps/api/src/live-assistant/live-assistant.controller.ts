@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   appendLiveMessagesSchema,
@@ -93,6 +93,21 @@ export class LiveAssistantController {
       idOf(raw),
       parse(appendLiveMessagesSchema, body).messages,
     );
+  }
+
+  @Delete('sessions/:sessionId/messages')
+  @ApiOperation({ summary: 'Delete the text of one ended conversation; proposals and audit stay' })
+  @RequireWorkspacePermission('live_assistant.use')
+  deleteTranscript(@Req() request: FastifyRequest, @Param('sessionId') raw: string) {
+    return this.assistant.deleteTranscript(workspaceContext(request), idOf(raw));
+  }
+
+  @Post('messages/purge-expired')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Delete own transcript lines older than the retention in the settings' })
+  @RequireWorkspacePermission('live_assistant.use')
+  purgeExpired(@Req() request: FastifyRequest) {
+    return this.assistant.purgeExpired(workspaceContext(request));
   }
 
   @Post('sessions/:sessionId/end')

@@ -100,6 +100,23 @@ describe('live assistant taint (migration 0086)', () => {
   });
 });
 
+describe('live assistant transcript delete (migration 0087)', () => {
+  const del = readFileSync(join(migrations, '0087_live_assistant_transcript_delete.sql'), 'utf8');
+
+  it('lets a person delete only their own transcript lines, and nothing else', () => {
+    expect(del).toContain('GRANT DELETE ON live_messages TO docoo_app;');
+    expect(del.match(/GRANT /gu)).toHaveLength(1);
+    const policy =
+      /CREATE POLICY live_messages_own_delete ON live_messages\s+FOR DELETE USING \(([^;]*)\);/u.exec(
+        del,
+      );
+    expect(policy?.[1]).toContain('workspace_id = app.current_workspace_id()');
+    expect(policy?.[1]).toContain('user_id = app.current_actor_id()');
+    // The transcript stays append-only: nothing here removes the trigger that refuses a plain delete.
+    expect(del).not.toMatch(/DROP TRIGGER|DISABLE TRIGGER/u);
+  });
+});
+
 describe('migration journal', () => {
   it('lists 0085_live_assistant_ledger right after 0084, in order', () => {
     const journal = JSON.parse(readFileSync(join(migrations, 'meta/_journal.json'), 'utf8')) as {
@@ -110,6 +127,21 @@ describe('migration journal', () => {
     const entry = journal.entries[at];
     const before = journal.entries[at - 1];
     expect(before?.tag).toBe('0084_live_assistant');
+    expect(entry?.idx).toBe(before ? before.idx + 1 : -1);
+    expect(entry && before ? entry.when > before.when : false).toBe(true);
+  });
+
+  it('lists 0087_live_assistant_transcript_delete right after 0086, in order', () => {
+    const journal = JSON.parse(readFileSync(join(migrations, 'meta/_journal.json'), 'utf8')) as {
+      entries: { idx: number; tag: string; when: number }[];
+    };
+    const at = journal.entries.findIndex(
+      (entry) => entry.tag === '0087_live_assistant_transcript_delete',
+    );
+    expect(at).toBeGreaterThan(0);
+    const entry = journal.entries[at];
+    const before = journal.entries[at - 1];
+    expect(before?.tag).toBe('0086_live_assistant_taint');
     expect(entry?.idx).toBe(before ? before.idx + 1 : -1);
     expect(entry && before ? entry.when > before.when : false).toBe(true);
   });

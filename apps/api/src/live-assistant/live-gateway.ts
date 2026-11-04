@@ -4,6 +4,7 @@ import {
   decideCapability,
   liveAssistantCapsSchema,
   liveAssistantDefaults,
+  liveAssistantLimits,
   liveAssistantLanguages,
   liveAssistantListeningModes,
   liveAssistantModes,
@@ -47,6 +48,7 @@ export interface LiveSettings {
   readonly enabledT3: readonly T3Category[];
   readonly rules: readonly AssistantAccessRule[];
   readonly storeTranscripts: boolean;
+  readonly transcriptRetentionDays: number;
 }
 
 /**
@@ -127,6 +129,17 @@ export function liveSettingsFrom(values: Record<string, unknown>): LiveSettings 
     enabledT3: Array.isArray(t3) ? t3Categories.filter((category) => t3.includes(category)) : [],
     rules: accessRulesFromSettings(values),
     storeTranscripts: flag('live_assistant.store_transcripts'),
+    transcriptRetentionDays: ((): number => {
+      const days = number(
+        'live_assistant.transcript_retention_days',
+        liveAssistantDefaults.transcriptRetentionDays,
+      );
+      const { min, max } = liveAssistantLimits.transcriptRetentionDays;
+      // Out of range falls back to the default, which keeps text longer than a silly small value would.
+      return Number.isInteger(days) && days >= min && days <= max
+        ? days
+        : liveAssistantDefaults.transcriptRetentionDays;
+    })(),
   };
 }
 

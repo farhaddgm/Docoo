@@ -643,6 +643,75 @@ export function liveAssistantScenarios(ctxOf: () => ScenarioCtx): void {
     ).toBe('LIVE_SESSION_ENDED');
   });
 
+  it('deletes the text of an ended conversation, keeps its proposals, and says so only by count', async () => {
+    await ctx().configure({});
+    const session = await start();
+    await ctx().service.appendMessages(ctx().context, session.id, [
+      { role: 'user', content: 'a confidential sentence' },
+      { role: 'assistant', content: 'a confidential answer' },
+    ]);
+    const proposed = await propose(session.id, 'project.note');
+    // An open conversation keeps its text: end it first.
+    expect(await problem(ctx().service.deleteTranscript(ctx().context, session.id))).toMatchObject({
+      status: 409,
+      code: 'LIVE_SESSION_ACTIVE',
+    });
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+    expect(await ctx().service.deleteTranscript(ctx().context, session.id)).toEqual({ deleted: 2 });
+    const detail = await ctx().service.getSession(ctx().context, session.id);
+    expect(detail.messages).toEqual([]);
+    expect(detail.session.messageCount).toBe(0);
+    expect(detail.actions.map((action) => action.id)).toEqual([proposed.id]);
+    const tombstone = await rows(
+      `select after from audit_events where target_id = $1 and action = 'live_assistant.transcript_deleted'`,
+      [session.id],
+    );
+    expect(tombstone).toHaveLength(1);
+    expect(tombstone[0]?.['after']).toEqual({ lines: 2 });
+    expect(
+      JSON.stringify(await rows(`select * from audit_events where target_id = $1`, [session.id])),
+    ).not.toContain('confidential');
+    // Deleting again is harmless and leaves no second tombstone.
+    expect(await ctx().service.deleteTranscript(ctx().context, session.id)).toEqual({ deleted: 0 });
+    expect(
+      await rows(
+        `select 1 from audit_events where target_id = $1 and action = 'live_assistant.transcript_deleted'`,
+        [session.id],
+      ),
+    ).toHaveLength(1);
+    expect(
+      (await problem(ctx().service.deleteTranscript(ctx().otherContext, session.id))).code,
+    ).toBe('LIVE_SESSION_NOT_FOUND');
+  });
+
+  it('deletes text older than the retention when a new conversation starts, and only that', async () => {
+    await ctx().configure({ 'live_assistant.transcript_retention_days': 30 });
+    const old = await start();
+    await ctx().service.appendMessages(ctx().context, old.id, [
+      { role: 'user', content: 'recent line' },
+    ]);
+    await ctx().admin(
+      `insert into live_messages (workspace_id, session_id, user_id, seq, role, content, created_at)
+       values ($1, $2, $3, 100, 'user', 'an old line', now() - interval '40 days')`,
+      [ctx().context.workspaceId, old.id, ctx().context.actorId],
+    );
+    await ctx().service.endSession(ctx().context, old.id, 'user');
+    expect((await ctx().service.getSession(ctx().context, old.id)).messages).toHaveLength(2);
+
+    const next = await start();
+    const left = (await ctx().service.getSession(ctx().context, old.id)).messages;
+    expect(left.map((line) => line.content)).toEqual(['recent line']);
+    const tombstone = await rows(
+      `select after from audit_events where action = 'live_assistant.transcript_expired' and workspace_id = $1`,
+      [ctx().context.workspaceId],
+    );
+    expect(tombstone.at(-1)?.['after']).toEqual({ lines: 1, retentionDays: 30 });
+    await ctx().service.endSession(ctx().context, next.id, 'user');
+    // The owner can also run it by hand.
+    expect(await ctx().service.purgeExpired(ctx().context)).toEqual({ deleted: 0 });
+    await ctx().configure({});
+  });
+
   it('shows nothing of one workspace to another', async () => {
     await ctx().configure({});
     const session = await start();

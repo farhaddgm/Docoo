@@ -53,6 +53,11 @@ export interface LiveMessages {
     readonly noActions: string;
     readonly transcript: string;
     readonly changes: string;
+    readonly deleteText: string;
+    readonly deleteAsk: string;
+    readonly deleteYes: string;
+    readonly deleteNo: string;
+    readonly deleteFailed: string;
     readonly roles: Record<'user' | 'assistant', string>;
     readonly sessionStatus: Record<'active' | 'ended', string>;
     readonly endReasons: Record<LiveSessionEndReason, string>;
@@ -120,6 +125,11 @@ const fa: LiveMessages = {
     noActions: 'تغییری پیشنهاد نشد.',
     transcript: 'متن گفتگو',
     changes: 'تغییرهای پیشنهادی',
+    deleteText: 'پاک کردن متن این گفتگو',
+    deleteAsk: 'متن این گفتگو برای همیشه پاک شود؟ تغییرهای پیشنهادی و ردپای حسابرسی می‌مانند.',
+    deleteYes: 'بله، پاک شود',
+    deleteNo: 'نه',
+    deleteFailed: 'متن پاک نشد. دوباره تلاش کنید.',
     roles: { user: 'شما', assistant: '{name}' },
     sessionStatus: { active: 'در جریان', ended: 'پایان‌یافته' },
     endReasons: {
@@ -207,6 +217,12 @@ const en: LiveMessages = {
     noActions: 'No change was proposed.',
     transcript: 'Transcript',
     changes: 'Proposed changes',
+    deleteText: 'Delete the text of this conversation',
+    deleteAsk:
+      'Delete the text of this conversation for good? The proposed changes and the audit trail stay.',
+    deleteYes: 'Yes, delete it',
+    deleteNo: 'No',
+    deleteFailed: 'The text could not be deleted. Try again.',
     roles: { user: 'You', assistant: '{name}' },
     sessionStatus: { active: 'In progress', ended: 'Ended' },
     endReasons: {

@@ -5618,6 +5618,15 @@ button.link-button {
   gap: var(--space-2);
 }
 
+.secondary-button.live-danger {
+  border-color: var(--color-danger-ink);
+  color: var(--color-danger-ink);
+}
+
+.secondary-button.live-danger:hover:not(:disabled) {
+  background: var(--color-danger-bg);
+}
+
 .live-history-detail {
   display: flex;
   flex-direction: column;

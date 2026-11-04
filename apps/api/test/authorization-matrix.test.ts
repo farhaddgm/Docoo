@@ -329,6 +329,9 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/usage': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/messages': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/end': 'live_assistant.use',
+  'DELETE workspaces/:workspaceId/live-assistant/sessions/:sessionId/messages':
+    'live_assistant.use',
+  'POST workspaces/:workspaceId/live-assistant/messages/purge-expired': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/actions': 'live_assistant.use',
   'GET workspaces/:workspaceId/live-assistant/actions/:actionId': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/actions/:actionId/confirm': 'live_assistant.use',
