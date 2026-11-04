@@ -55,6 +55,22 @@ export interface LiveMessages {
     readonly nearCap: string;
     readonly used: string;
     readonly errors: Record<LiveError, string>;
+    /** Typing to the assistant instead of speaking. */
+    readonly typing: {
+      readonly start: string;
+      readonly intro: string;
+      readonly placeholder: string;
+      readonly send: string;
+      readonly thinking: string;
+      readonly log: string;
+      readonly stop: string;
+      readonly roles: Record<'user' | 'assistant', string>;
+      readonly waiting: string;
+      readonly notReady: Record<'disabled' | 'disclosure' | 'executor_not_configured', string>;
+      /** Why a request failed, by the problem code the server gave. */
+      readonly failures: Record<string, string>;
+      readonly failureOther: string;
+    };
   };
   readonly history: {
     readonly title: string;
@@ -162,6 +178,29 @@ const fa: LiveMessages = {
     openSettings: 'باز کردن تنظیمات دستیار',
     nearCap:
       'به سقف هزینه یا زمان نزدیک می‌شوید؛ گفتگو با رسیدن به سقف خودکار بسته می‌شود. سقف‌ها در تنظیمات دستیار قابل‌تغییرند.',
+    typing: {
+      start: 'نوشتن به‌جای صحبت',
+      intro:
+        'با {name} بنویسید. پاسخ‌ها با مدل متنی شما ساخته می‌شود و هر تغییر فقط با تأیید خودتان ثبت می‌شود.',
+      placeholder: 'درخواست خود را بنویسید…',
+      send: 'ارسال',
+      thinking: 'در حال فکر کردن…',
+      log: 'گفتگوی نوشتاری',
+      stop: 'پایان گفتگوی نوشتاری',
+      roles: { user: 'شما', assistant: 'دستیار' },
+      waiting: 'تغییرهای پیشنهادی در کارت تأیید پایین صفحه منتظر شماست.',
+      notReady: {
+        disabled: 'دستیار در تنظیمات خاموش است.',
+        disclosure: 'هشدار حریم خصوصی هنوز در تنظیمات دستیار پذیرفته نشده است.',
+        executor_not_configured:
+          'برای نوشتن، اتصال و مدل متنی را در تنظیمات دستیار انتخاب کنید یا اتصال هوش مصنوعی فضای کار را راه‌اندازی کنید.',
+      },
+      failures: {
+        LIVE_EXECUTOR_NOT_CONFIGURED: 'اتصال و مدل متنی در تنظیمات دستیار انتخاب نشده است.',
+        LIVE_ASK_BUSY: 'منتظر پاسخ درخواست قبلی بمانید.',
+      },
+      failureOther: 'درخواست انجام نشد. دوباره تلاش کنید.',
+    },
   },
   history: {
     title: 'گفتگوهای صوتی',
@@ -289,6 +328,31 @@ const en: LiveMessages = {
     openSettings: 'Open assistant settings',
     nearCap:
       'A cost or time cap is close; the conversation closes by itself when it is reached. The caps can be changed in the assistant settings.',
+    typing: {
+      start: 'Type instead of speaking',
+      intro:
+        'Type to {name}. Answers come from your text model, and every change is saved only after you confirm it.',
+      placeholder: 'Type your request…',
+      send: 'Send',
+      thinking: 'Thinking…',
+      log: 'Typed conversation',
+      stop: 'End typed conversation',
+      roles: { user: 'You', assistant: 'Assistant' },
+      waiting:
+        'Proposed changes are waiting for you on the confirmation card at the bottom of the page.',
+      notReady: {
+        disabled: 'The assistant is switched off in settings.',
+        disclosure: 'The privacy notice has not been accepted in the assistant settings yet.',
+        executor_not_configured:
+          'To type, choose the text connection and model in the assistant settings, or set up the workspace AI connection.',
+      },
+      failures: {
+        LIVE_EXECUTOR_NOT_CONFIGURED:
+          'The text connection and model are not chosen in the assistant settings.',
+        LIVE_ASK_BUSY: 'Wait for the answer to the last request.',
+      },
+      failureOther: 'The request did not work. Try again.',
+    },
   },
   history: {
     title: 'Voice conversations',

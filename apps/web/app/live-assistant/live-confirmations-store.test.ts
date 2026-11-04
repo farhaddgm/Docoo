@@ -87,6 +87,7 @@ function backendWith(over: Partial<LiveBackend> = {}) {
     startSession: () => Promise.resolve(session()),
     reportUsage: () =>
       Promise.resolve({ session: session(), capStatus: 'ok' as const, capsReached: [] }),
+    ask: () => Promise.reject(new Error('not used here')),
     appendMessages: () => Promise.resolve({ saved: 0 }),
     endSession: () => Promise.resolve(session()),
     proposeAction: (input) => {

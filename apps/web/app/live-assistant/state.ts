@@ -48,7 +48,27 @@ export interface ActionTiming {
   readonly settledAt: number | null;
 }
 
+/** How the owner talks to the assistant in this session: by voice, or by typing. */
+export type LiveChannel = 'voice' | 'text';
+
+/** One line of a typed conversation, kept in this tab while the session runs. */
+export interface ChatLine {
+  readonly id: number;
+  readonly role: 'user' | 'assistant';
+  readonly text: string;
+  /** A line the page wrote because the request failed, not something the assistant said. */
+  readonly failed?: boolean;
+}
+
+/** The most chat lines kept on screen. */
+export const MAX_CHAT_LINES = 60;
+
 export interface LiveState {
+  readonly channel: LiveChannel;
+  /** Typed conversation of this session, oldest first. */
+  readonly chat: readonly ChatLine[];
+  /** A typed request is being answered. */
+  readonly asking: boolean;
   readonly status: LiveStatus;
   /** Whether a way to talk to the provider is set up. Without one the feature stays switched off. */
   readonly available: boolean;
@@ -69,7 +89,9 @@ export interface LiveState {
 
 export type LiveAction =
   | { readonly type: 'availability'; readonly available: boolean }
-  | { readonly type: 'start' }
+  | { readonly type: 'start'; readonly channel?: LiveChannel }
+  | { readonly type: 'chat'; readonly line: ChatLine }
+  | { readonly type: 'asking'; readonly on: boolean }
   | { readonly type: 'started'; readonly now: number }
   | { readonly type: 'usage'; readonly tokens: number }
   | { readonly type: 'sleep' }
@@ -84,6 +106,9 @@ export type LiveAction =
   | { readonly type: 'move'; readonly position: PillPosition | null };
 
 export const initialLiveState = (position: PillPosition | null = null): LiveState => ({
+  channel: 'voice',
+  chat: [],
+  asking: false,
   status: 'off',
   available: false,
   tokens: 0,
@@ -117,6 +142,9 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
       if (state.status !== 'off' && state.status !== 'error') return state;
       return {
         ...state,
+        channel: action.channel ?? 'voice',
+        chat: [],
+        asking: false,
         status: 'starting',
         tokens: 0,
         startedAt: null,
@@ -127,6 +155,14 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
         timing: {},
         hint: null,
       };
+    case 'chat':
+      return BILLABLE.includes(state.status)
+        ? { ...state, chat: [...state.chat, action.line].slice(-MAX_CHAT_LINES) }
+        : state;
+    case 'asking':
+      return state.asking === action.on || !BILLABLE.includes(state.status)
+        ? state
+        : { ...state, asking: action.on };
     case 'started':
       return state.status === 'starting'
         ? { ...state, status: 'awake', startedAt: action.now }
@@ -153,6 +189,8 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
             warning: false,
             sessionId: null,
             actions: [],
+            chat: [],
+            asking: false,
             hint: null,
           }
         : state;
@@ -168,6 +206,8 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
             sessionId: null,
             actions: [],
             timing: {},
+            chat: [],
+            asking: false,
             hint: null,
           };
     case 'warning':

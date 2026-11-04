@@ -16,6 +16,7 @@ import {
   reduceLive,
   type ConfirmHintReason,
   type LiveAction,
+  type LiveChannel,
   type LiveError,
   type LiveState,
   type LiveStatus,
@@ -49,6 +50,15 @@ export const MAX_MISSED_HEARTBEATS = 3;
 /** The transcript lines waiting to be sent; the oldest are dropped past this, never the newest. */
 const MAX_PENDING_LINES = 200;
 const LINES_PER_REQUEST = 20;
+
+/** A typed session has no provider connection in the browser: the server's executor does the work. */
+const textTransport: LiveTransport = {
+  start: () => Promise.resolve(),
+  stop: () => Promise.resolve(),
+};
+/** The recent lines handed to the executor's model with each typed request. */
+const CONTEXT_LINES = 10;
+const MAX_TEXT_CHARS = 2000;
 
 type PendingLine = { role: 'user' | 'assistant'; content: string };
 
@@ -123,6 +133,9 @@ export function createLiveStore(deps: LiveStoreDeps) {
   let backend: LiveBackend | null = null;
   let sessionId: string | null = null;
   let costUsd = 0;
+  /** Tokens the server's executor used for typed requests: the server counts them itself. */
+  let executorTokens = 0;
+  let nextLine = 1;
   let pending: PendingLine[] = [];
   let missed = 0;
   let stopBeating: (() => void) | null = null;
@@ -198,7 +211,11 @@ export function createLiveStore(deps: LiveStoreDeps) {
   /** What the browser reports: the totals of this session, which only grow. */
   function totals() {
     // Rounded to a millionth of a dollar: adding many small prices leaves floating-point dust.
-    return { inputTokens: state.tokens, outputTokens: 0, costUsd: Math.round(costUsd * 1e6) / 1e6 };
+    return {
+      inputTokens: Math.max(0, state.tokens - executorTokens),
+      outputTokens: 0,
+      costUsd: Math.round(costUsd * 1e6) / 1e6,
+    };
   }
 
   /** The server ended the session (a cap, the owner's switch, another start): close down here. */
@@ -329,6 +346,60 @@ export function createLiveStore(deps: LiveStoreDeps) {
     }
   }
 
+  // ---- typing to the assistant -------------------------------------------------------------
+
+  function addLine(role: 'user' | 'assistant', text: string, failed = false): void {
+    dispatch({
+      type: 'chat',
+      line: { id: nextLine++, role, text, ...(failed ? { failed: true } : {}) },
+    });
+  }
+
+  /**
+   * The owner typed something. The server's executor works through the gateway: what it proposes
+   * comes back waiting on the confirmation card, never done. The answer, and what the executor
+   * used, are shown here; the server already counts that use in the session and its caps.
+   */
+  async function ask(raw: string, currentProjectId?: string): Promise<boolean> {
+    const text = raw.trim().slice(0, MAX_TEXT_CHARS);
+    const id = sessionId;
+    if (text === '' || !backend || !id || state.asking || !isLiveActive(state.status)) {
+      return false;
+    }
+    const context = state.chat
+      .filter((line) => !line.failed)
+      .slice(-CONTEXT_LINES)
+      .map((line) => ({ role: line.role, content: line.text }));
+    addLine('user', text);
+    dispatch({ type: 'asking', on: true });
+    try {
+      const answer = await backend.ask(id, {
+        text,
+        context,
+        ...(currentProjectId ? { currentProjectId } : {}),
+      });
+      if (sessionId !== id) return false;
+      const used = answer.usage.inputTokens + answer.usage.outputTokens;
+      executorTokens += used;
+      dispatch({ type: 'usage', tokens: used });
+      for (const view of answer.actions) accept(view, { report: false });
+      addLine('assistant', answer.answer);
+      return true;
+    } catch (error) {
+      if (sessionId !== id) return false;
+      const closing = sessionErrorOf(error);
+      if (closing) {
+        closeBecause(closing);
+        return false;
+      }
+      const code = (error as { code?: unknown } | null)?.code;
+      addLine('assistant', typeof code === 'string' ? code : 'LIVE_ASK_FAILED', true);
+      return false;
+    } finally {
+      dispatch({ type: 'asking', on: false });
+    }
+  }
+
   async function beat(): Promise<void> {
     const id = sessionId;
     if (!backend || !id || beating || !isLiveActive(state.status)) return;
@@ -384,7 +455,8 @@ export function createLiveStore(deps: LiveStoreDeps) {
   }
 
   async function open(): Promise<void> {
-    if (!factory) {
+    const typed = state.channel === 'text';
+    if (!factory && !typed) {
       dispatch({ type: 'failed', error: 'unavailable' });
       return;
     }
@@ -397,13 +469,14 @@ export function createLiveStore(deps: LiveStoreDeps) {
     // stop() was pressed while waiting for the lock: it tears everything down.
     if (state.status !== 'starting') return;
     costUsd = 0;
+    executorTokens = 0;
     missed = 0;
     pending = [];
     if (backend) {
       // The server first: it checks that the assistant is on and no cap is reached before the
       // microphone or any connection to a provider is opened.
       try {
-        sessionId = (await backend.startSession()).id;
+        sessionId = (await backend.startSession(state.channel)).id;
         dispatch({ type: 'session', id: sessionId });
       } catch (error) {
         if (currentStatus() === 'closing') return;
@@ -413,7 +486,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
       }
       if (currentStatus() !== 'starting') return;
     }
-    const created = factory();
+    const created = typed ? textTransport : factory!();
     transport = created;
     try {
       await created.start(handlersFor(created));
@@ -430,9 +503,9 @@ export function createLiveStore(deps: LiveStoreDeps) {
     }
   }
 
-  function start(): Promise<void> {
+  function start(options: { channel?: LiveChannel } = {}): Promise<void> {
     if (state.status !== 'off' && state.status !== 'error') return starting ?? Promise.resolve();
-    dispatch({ type: 'start' });
+    dispatch({ type: 'start', channel: options.channel ?? 'voice' });
     starting = open().finally(() => {
       starting = null;
     });
@@ -467,6 +540,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
     cancel,
     confirmGroup,
     answerByVoice,
+    ask,
     refresh,
     /** Seconds left to confirm a change, on this browser's clock; 0 when its time is over. */
     secondsLeft: (view: LiveActionView): number => remainingFor(state.timing, view, deps.now()),

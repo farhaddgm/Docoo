@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 
 import { formatNumber, type Locale } from '../i18n';
+import { LiveChat } from './live-chat';
 import { fill, liveMessagesFor } from './messages';
 import { isLiveActive } from './state';
 import { liveAssistant } from './store';
@@ -47,6 +48,10 @@ export function LiveCard({
       ? text.card.notReady.no_provider
       : null;
   const canStart = state.available && config.ready;
+  const typed = active && state.channel === 'text';
+  const typingReason = config.textUnavailableReason
+    ? text.card.typing.notReady[config.textUnavailableReason]
+    : null;
 
   return (
     <section className="live-card" aria-label={fill(text.card.title, name)}>
@@ -60,8 +65,18 @@ export function LiveCard({
           disabled={busy || (!active && !canStart)}
           onClick={() => void (active ? liveAssistant.stop() : liveAssistant.start())}
         >
-          {label}
+          {typed ? text.card.typing.stop : label}
         </button>
+        {!active && !busy && (
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={!config.textReady}
+            onClick={() => void liveAssistant.start({ channel: 'text' })}
+          >
+            {text.card.typing.start}
+          </button>
+        )}
         {state.status !== 'off' && (
           <span className="badge" data-state={state.status}>
             {text.status[state.status]}
@@ -76,6 +91,13 @@ export function LiveCard({
           )}
         </p>
       )}
+      {typingReason && !active && !reason && (
+        <p className="muted">
+          {typingReason}{' '}
+          <Link href={`/${locale}/live-assistant` as Route}>{text.card.openSettings}</Link>
+        </p>
+      )}
+      {typed && <LiveChat locale={locale} />}
       {state.warning && active && (
         <p className="notice warn" role="status">
           {text.card.nearCap}

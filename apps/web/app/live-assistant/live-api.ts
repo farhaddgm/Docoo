@@ -1,5 +1,6 @@
 import type {
   LiveActionView,
+  LiveAskAnswer,
   LiveAssistantClientConfig,
   LiveMessageView,
   LiveSessionView,
@@ -13,7 +14,16 @@ import { apiGet, apiSend } from '../api-client';
  * this interface, so tests give it a stand-in and production gives it the API of one workspace.
  */
 export interface LiveBackend {
-  readonly startSession: () => Promise<LiveSessionView>;
+  readonly startSession: (channel?: 'voice' | 'text') => Promise<LiveSessionView>;
+  /** Type to the assistant: its model works through the gateway; changes come back waiting. */
+  readonly ask: (
+    sessionId: string,
+    input: {
+      text: string;
+      context: readonly { role: 'user' | 'assistant'; content: string }[];
+      currentProjectId?: string;
+    },
+  ) => Promise<LiveAskAnswer>;
   /** Totals so far, not increments; the server checks its caps against them and its own clock. */
   readonly reportUsage: (
     sessionId: string,
@@ -45,7 +55,10 @@ const base = (workspaceId: string) => `/v1/workspaces/${workspaceId}/live-assist
 export function liveBackendFor(workspaceId: string): LiveBackend {
   const root = base(workspaceId);
   return {
-    startSession: () => apiSend<LiveSessionView>('POST', `${root}/sessions`, {}),
+    startSession: (channel = 'voice') =>
+      apiSend<LiveSessionView>('POST', `${root}/sessions`, { channel }),
+    ask: (sessionId, input) =>
+      apiSend<LiveAskAnswer>('POST', `${root}/sessions/${sessionId}/ask`, input),
     reportUsage: (sessionId, totals) =>
       apiSend<LiveUsageAnswer>('POST', `${root}/sessions/${sessionId}/usage`, totals),
     appendMessages: (sessionId, messages) =>
