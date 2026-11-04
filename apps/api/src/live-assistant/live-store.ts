@@ -25,7 +25,7 @@ interface SessionRow extends QueryResultRow {
   id: string;
   status: 'active' | 'ended';
   end_reason: LiveSessionEndReason | null;
-  mode: 'realtime' | 'pipeline';
+  mode: 'realtime' | 'pipeline' | 'text';
   model: string;
   caps: LiveAssistantCaps;
   access_rules: AssistantAccessRule[];
@@ -41,7 +41,9 @@ interface SessionRow extends QueryResultRow {
 
 const sessionColumns = `
   id, status, end_reason, mode, model, caps, access_rules,
-  input_tokens::float8 as input_tokens, output_tokens::float8 as output_tokens, cost_usd,
+  (input_tokens + executor_input_tokens)::float8 as input_tokens,
+  (output_tokens + executor_output_tokens)::float8 as output_tokens,
+  (cost_usd + executor_cost_usd)::float8 as cost_usd,
   ${isoColumn('started_at', 'started_at')}, ${isoColumn('last_activity_at', 'last_activity_at')},
   ${isoColumn('ended_at', 'ended_at')},
   (extract(epoch from (coalesce(ended_at, now()) - started_at)) / 60.0)::float8 as minutes,
@@ -98,7 +100,7 @@ export async function insertSession(
   input: {
     workspaceId: string;
     userId: string;
-    mode: 'realtime' | 'pipeline';
+    mode: 'realtime' | 'pipeline' | 'text';
     model: string;
     caps: LiveAssistantCaps;
     rules: readonly AssistantAccessRule[];
@@ -150,7 +152,7 @@ export async function listSessions(client: PoolClient, limit: number): Promise<L
 export async function dailyCostUsd(client: PoolClient, workspaceId: string): Promise<number> {
   const row = (
     await client.query<{ total: number }>(
-      `select coalesce(sum(cost_usd), 0)::float8 as total
+      `select coalesce(sum(cost_usd + executor_cost_usd), 0)::float8 as total
          from live_sessions
         where workspace_id = $1 and started_at >= now() - interval '24 hours'`,
       [workspaceId],
@@ -195,6 +197,24 @@ export async function markUntrustedRead(client: PoolClient, sessionId: string): 
   await client.query(
     `update live_sessions set untrusted_read_at = now() where id = $1 and status = 'active'`,
     [sessionId],
+  );
+}
+
+/** What the executor's model calls used, as the server measured it. Added, never overwritten. */
+export async function recordExecutorUsage(
+  client: PoolClient,
+  sessionId: string,
+  usage: { inputTokens: number; outputTokens: number; costUsd: number; calls: number },
+): Promise<void> {
+  await client.query(
+    `update live_sessions
+        set executor_input_tokens = executor_input_tokens + $2,
+            executor_output_tokens = executor_output_tokens + $3,
+            executor_cost_usd = executor_cost_usd + $4,
+            executor_calls = executor_calls + $5,
+            last_activity_at = now()
+      where id = $1 and status = 'active'`,
+    [sessionId, usage.inputTokens, usage.outputTokens, usage.costUsd, usage.calls],
   );
 }
 

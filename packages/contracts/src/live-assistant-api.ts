@@ -67,7 +67,14 @@ export type LiveCancelReason = (typeof liveCancelReasons)[number];
 
 const uuid = z.uuid().transform((value) => value.toLowerCase());
 
+/** A session with a voice, or one the owner types into (the server-side executor alone). */
+export const liveChannels = ['voice', 'text'] as const;
+export type LiveChannel = (typeof liveChannels)[number];
+
+export const liveSessionModes = [...liveAssistantModes, 'text'] as const;
+
 export const startLiveSessionSchema = z.strictObject({
+  channel: z.enum(liveChannels).default('voice'),
   /** The project the owner has open right now, if any (counts for "the open project" access). */
   currentProjectId: uuid.optional(),
 });
@@ -134,11 +141,24 @@ export const liveAssistantUnavailableReasons = [
 ] as const;
 export type LiveAssistantUnavailableReason = (typeof liveAssistantUnavailableReasons)[number];
 
+/** Why typing to the assistant is not possible yet: the executor's connection and model. */
+export const liveTextUnavailableReasons = [
+  'disabled',
+  'disclosure',
+  'executor_not_configured',
+] as const;
+export type LiveTextUnavailableReason = (typeof liveTextUnavailableReasons)[number];
+
 export const liveAssistantClientConfigSchema = z.object({
   enabled: z.boolean(),
   /** Settings are complete: switched on, privacy notice accepted, a model chosen. */
   ready: z.boolean(),
   unavailableReason: z.enum(liveAssistantUnavailableReasons).nullable(),
+  /** The same for typing: settings complete with an executor connection and model. */
+  textReady: z.boolean(),
+  /** Which pair of connection and model typing uses: the assistant's own, or the workspace's AI pair. */
+  executorSource: z.enum(['own', 'workspace']),
+  textUnavailableReason: z.enum(liveTextUnavailableReasons).nullable(),
   /**
    * Whether a speech provider is connected to the server yet. False until the provider step of
    * ADR-0055 ships, so the web keeps the activation button disabled even when `ready` is true.
@@ -161,7 +181,7 @@ export const liveSessionViewSchema = z.object({
   id: z.uuid(),
   status: z.enum(['active', 'ended']),
   endReason: z.enum(liveSessionEndReasons).nullable(),
-  mode: z.enum(liveAssistantModes),
+  mode: z.enum(liveSessionModes),
   model: z.string(),
   startedAt: z.string(),
   lastActivityAt: z.string(),
@@ -218,3 +238,45 @@ export const liveUsageAnswerSchema = z.object({
   capsReached: z.array(z.custom<CapKind>()),
 });
 export type LiveUsageAnswer = z.infer<typeof liveUsageAnswerSchema>;
+
+// ---------------------------------------------------------------------------------------------
+// Asking the executor (typing to the assistant)
+// ---------------------------------------------------------------------------------------------
+
+export const askLiveAssistantSchema = z.strictObject({
+  text: z.string().trim().min(1).max(2000),
+  /** The last turns of the conversation, for the model to follow; the server keeps none for it. */
+  context: z
+    .array(
+      z.strictObject({
+        role: z.enum(['user', 'assistant']),
+        content: z.string().trim().min(1).max(2000),
+      }),
+    )
+    .max(10)
+    .default([]),
+  /** The project the owner has open right now, if any. */
+  currentProjectId: uuid.optional(),
+});
+export type AskLiveAssistant = z.infer<typeof askLiveAssistantSchema>;
+
+/** Why the executor stopped: it answered, or one of the limits of a single request was reached. */
+export const liveAskStops = ['answered', 'tool_limit', 'round_limit', 'cost_cap', 'error'] as const;
+export type LiveAskStop = (typeof liveAskStops)[number];
+
+export const liveAskAnswerSchema = z.object({
+  answer: z.string(),
+  /** The changes proposed while answering; each waits for a person to confirm it. */
+  actions: z.array(liveActionViewSchema),
+  toolCalls: z.number().int(),
+  stop: z.enum(liveAskStops),
+  /** When a model call failed: its kind (never a message), so the screen can say what to check. */
+  errorCode: z.string().nullable(),
+  usage: z.object({
+    inputTokens: z.number(),
+    outputTokens: z.number(),
+    /** Null when the model has no price on record: the cost is unknown, never shown as zero. */
+    costUsd: z.number().nullable(),
+  }),
+});
+export type LiveAskAnswer = z.infer<typeof liveAskAnswerSchema>;

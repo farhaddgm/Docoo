@@ -1,4 +1,5 @@
 import { HttpException, Inject, Injectable } from '@nestjs/common';
+import { ProviderRuntime } from '@docoo/orchestration';
 import {
   evaluateCaps,
   nextLiveActionStatus,
@@ -12,6 +13,9 @@ import {
   type LiveSessionEndReason,
   type LiveSessionView,
   type LiveUsageAnswer,
+  type AskLiveAssistant,
+  type LiveAskAnswer,
+  type LiveChannel,
   type ProposeLiveAction,
   type ReportLiveUsage,
 } from '@docoo/contracts';
@@ -22,12 +26,18 @@ import { conflict, notFound, unprocessable } from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { ConfigService } from '../config/config.service.js';
+import { PROVIDER_RUNTIME } from '../providers/providers.service.js';
 import { LIVE_CAPABILITIES, LiveCapabilityRegistry } from './capabilities.js';
+import { askAnswerText } from './live-ask-text.js';
+import { runExecutor } from './live-executor.js';
 import {
   decideProposal,
   judgeConfirmation,
   liveSettingsFrom,
+  localeOf,
+  sessionBlocker,
   startBlocker,
+  textBlocker,
   type LiveSettings,
 } from './live-gateway.js';
 import {
@@ -46,6 +56,7 @@ import {
   moveAction,
   readAction,
   readSession,
+  recordExecutorUsage,
   recordUsage,
   sessionTainted,
   supersedeActiveSession,
@@ -113,7 +124,11 @@ export class LiveAssistantService {
     private readonly database: WorkspaceDatabase,
     private readonly config: ConfigService,
     @Inject(LIVE_CAPABILITIES) private readonly registry: LiveCapabilityRegistry,
+    @Inject(PROVIDER_RUNTIME) private readonly runtime: ProviderRuntime,
   ) {}
+
+  /** Sessions with a request to the executor running now: one at a time, so a model cannot be piled on. */
+  private readonly asking = new Set<string>();
 
   private async settings(
     client: PoolClient,
@@ -129,10 +144,14 @@ export class LiveAssistantService {
     return this.database.run(context, async (client) => {
       const settings = await this.settings(client, context);
       const blocker = startBlocker(settings);
+      const typing = textBlocker(settings);
       return {
         enabled: settings.enabled,
         ready: blocker === null,
         unavailableReason: blocker,
+        textReady: typing === null,
+        executorSource: settings.executorSource,
+        textUnavailableReason: typing,
         providerConnected: false,
         displayName: settings.displayName,
         spokenName: settings.spokenName,
@@ -150,17 +169,23 @@ export class LiveAssistantService {
 
   // ---- sessions --------------------------------------------------------------------------
 
-  async startSession(context: WorkspaceRequestContext): Promise<LiveSessionView> {
-    const session = await this.startSessionInternal(context);
+  async startSession(
+    context: WorkspaceRequestContext,
+    channel: LiveChannel = 'voice',
+  ): Promise<LiveSessionView> {
+    const session = await this.startSessionInternal(context, channel);
     // Text past its retention goes when a new conversation starts; a failure here never blocks it.
     await this.purgeExpired(context).catch(() => undefined);
     return session;
   }
 
-  private async startSessionInternal(context: WorkspaceRequestContext): Promise<LiveSessionView> {
+  private async startSessionInternal(
+    context: WorkspaceRequestContext,
+    channel: LiveChannel,
+  ): Promise<LiveSessionView> {
     return this.database.run(context, async (client) => {
       const settings = await this.settings(client, context);
-      const blocker = startBlocker(settings);
+      const blocker = channel === 'text' ? textBlocker(settings) : startBlocker(settings);
       if (blocker) {
         throw conflict('LIVE_ASSISTANT_UNAVAILABLE', 'The live assistant is not ready to start.', {
           reason: blocker,
@@ -187,8 +212,8 @@ export class LiveAssistantService {
       const id = await insertSession(client, {
         workspaceId: context.workspaceId,
         userId: context.actorId,
-        mode: settings.mode,
-        model: settings.model,
+        mode: channel === 'text' ? 'text' : settings.mode,
+        model: channel === 'text' ? settings.executorModel : settings.model,
         caps: settings.caps,
         rules: settings.rules,
       });
@@ -198,7 +223,7 @@ export class LiveAssistantService {
         targetId: id,
         severity: 'warning',
         securityRelevant: true,
-        after: { mode: settings.mode, access: settings.rules.map((rule) => rule.level) },
+        after: { mode: channel, access: settings.rules.map((rule) => rule.level) },
       });
       const session = await readSession(client, id);
       if (!session) throw new Error('The live session vanished after it was created.');
@@ -366,7 +391,7 @@ export class LiveAssistantService {
     if (!session) throw notFound('LIVE_SESSION_NOT_FOUND', 'The live session was not found.');
     if (session.status === 'ended') return { kind: 'closed', reason: 'ended' };
     const settings = await this.settings(client, context);
-    if (startBlocker(settings) !== null) {
+    if (sessionBlocker(session.mode, settings) !== null) {
       await this.close(client, context, sessionId, 'disabled');
       return { kind: 'closed', reason: 'unavailable' };
     }
@@ -534,6 +559,148 @@ export class LiveAssistantService {
       });
       return toActionView(row);
     });
+  }
+
+  /**
+   * The owner typed something. The executor's model works through the registry and the gateway: a
+   * read comes back with its result, a change comes back waiting for a person, and the answer says
+   * so. What the model used is measured here and added to the session, where the caps see it.
+   */
+  async ask(
+    context: WorkspaceRequestContext,
+    sessionId: string,
+    input: AskLiveAssistant,
+  ): Promise<LiveAskAnswer> {
+    const prepared = await this.database.run(context, async (client) => {
+      const gate = await this.gate(client, context, sessionId, { touch: true });
+      return gate.kind === 'closed' ? { closed: gate } : { settings: gate.settings };
+    });
+    if ('closed' in prepared) this.throwClosed(prepared.closed);
+    const { settings } = prepared;
+    if (textBlocker(settings) === 'executor_not_configured') {
+      throw conflict(
+        'LIVE_EXECUTOR_NOT_CONFIGURED',
+        'Choose the executor connection and model in the assistant settings.',
+      );
+    }
+    if (this.asking.has(sessionId)) {
+      throw conflict('LIVE_ASK_BUSY', 'Wait for the answer to the last request.');
+    }
+    this.asking.add(sessionId);
+    try {
+      const outcome = await runExecutor(
+        {
+          invoke: async (request) => {
+            const done = await this.runtime.invoke(
+              {
+                workspaceId: context.workspaceId,
+                onBehalfOf: context.actorId,
+                correlationId: context.correlationId,
+                projectId: null,
+                stageRunId: null,
+                attemptId: null,
+                purpose: 'live_assistant:executor',
+                retryNo: 0,
+              },
+              settings.executorConnectionId,
+              request,
+            );
+            return { response: done.response, costUsd: done.costUsd };
+          },
+          propose: (capability, params) =>
+            this.propose(context, {
+              sessionId,
+              capability,
+              params,
+              tainted: false,
+              ...(input.currentProjectId ? { currentProjectId: input.currentProjectId } : {}),
+            }),
+          isFatal: (error) =>
+            error instanceof HttpException &&
+            ['LIVE_CAP_REACHED', 'LIVE_ASSISTANT_UNAVAILABLE', 'LIVE_SESSION_ENDED'].includes(
+              String((error.getResponse() as { code?: unknown }).code),
+            ),
+        },
+        {
+          registry: this.registry,
+          settings,
+          model: settings.executorModel,
+          text: input.text,
+          context: input.context,
+          currentProjectId: input.currentProjectId ?? null,
+        },
+      );
+
+      const answer = askAnswerText({
+        locale: localeOf(settings.language),
+        answer: outcome.answer,
+        stop: outcome.stop,
+        waiting: outcome.actions.length,
+      });
+      // The caps look at the new total before anything is returned; over one, the session ends.
+      const closed = await this.database.run(context, async (client) => {
+        await recordExecutorUsage(client, sessionId, {
+          inputTokens: outcome.usage.inputTokens,
+          outputTokens: outcome.usage.outputTokens,
+          costUsd: outcome.usage.costUsd,
+          calls: outcome.usage.modelCalls,
+        });
+        await this.audit(client, context, {
+          action: 'live_assistant.ask',
+          targetType: 'live_session',
+          targetId: sessionId,
+          // Counts and the way it ended; never the question or the answer.
+          after: {
+            stop: outcome.stop,
+            toolCalls: outcome.toolCalls,
+            modelCalls: outcome.usage.modelCalls,
+            proposed: outcome.actions.length,
+            ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
+          },
+        });
+        const after = await this.gate(client, context, sessionId, { touch: false });
+        if (after.kind === 'open' && settings.storeTranscripts && outcome.fatal === null) {
+          await appendMessages(client, {
+            workspaceId: context.workspaceId,
+            userId: context.actorId,
+            sessionId,
+            messages: [
+              { role: 'user', content: input.text },
+              { role: 'assistant', content: answer.slice(0, 4000) },
+            ],
+          });
+        }
+        return after.kind === 'closed' ? after : null;
+      });
+      if (outcome.fatal !== null) throw outcome.fatal;
+      if (closed) this.throwClosed(closed);
+
+      // A proposal may have been settled meanwhile (the owner was quick); report where it stands.
+      const actions = await this.database.run(context, async (client) => {
+        const views: LiveActionView[] = [];
+        for (const proposed of outcome.actions) {
+          const row = await readAction(client, proposed.id);
+          if (row && (row.status === 'proposed' || row.status === 'first_confirmed')) {
+            views.push(toActionView(row));
+          }
+        }
+        return views;
+      });
+      return {
+        answer,
+        actions,
+        toolCalls: outcome.toolCalls,
+        stop: outcome.stop,
+        errorCode: outcome.errorCode,
+        usage: {
+          inputTokens: outcome.usage.inputTokens,
+          outputTokens: outcome.usage.outputTokens,
+          costUsd: outcome.usage.costKnown ? outcome.usage.costUsd : null,
+        },
+      };
+    } finally {
+      this.asking.delete(sessionId);
+    }
   }
 
   /**

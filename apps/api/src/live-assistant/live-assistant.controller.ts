@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req } from '@nest
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   appendLiveMessagesSchema,
+  askLiveAssistantSchema,
   confirmLiveActionSchema,
   endLiveSessionSchema,
   proposeLiveActionSchema,
@@ -11,7 +12,7 @@ import {
 import type { FastifyRequest } from 'fastify';
 import type { z } from 'zod';
 
-import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { RequireWorkspacePermission, UsesAi } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
 import { LiveAssistantService } from './live-assistant.service.js';
@@ -53,8 +54,8 @@ export class LiveAssistantController {
   @ApiOperation({ summary: 'Start a live session (ends one left running by this person)' })
   @RequireWorkspacePermission('live_assistant.use')
   start(@Req() request: FastifyRequest, @Body() body: unknown) {
-    parse(startLiveSessionSchema, body);
-    return this.assistant.startSession(workspaceContext(request));
+    const input = parse(startLiveSessionSchema, body);
+    return this.assistant.startSession(workspaceContext(request), input.channel);
   }
 
   @Get('sessions')
@@ -108,6 +109,21 @@ export class LiveAssistantController {
   @RequireWorkspacePermission('live_assistant.use')
   purgeExpired(@Req() request: FastifyRequest) {
     return this.assistant.purgeExpired(workspaceContext(request));
+  }
+
+  @Post('sessions/:sessionId/ask')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Type to the assistant: its model works through the gateway; changes wait',
+  })
+  @UsesAi()
+  @RequireWorkspacePermission('live_assistant.use')
+  ask(@Req() request: FastifyRequest, @Param('sessionId') raw: string, @Body() body: unknown) {
+    return this.assistant.ask(
+      workspaceContext(request),
+      idOf(raw),
+      parse(askLiveAssistantSchema, body),
+    );
   }
 
   @Post('sessions/:sessionId/end')

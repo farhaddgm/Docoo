@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { defineCapability, LiveCapabilityRegistry } from '../../src/live-assistant/capabilities.js';
 import { MIN_SECOND_CONFIRMATION_MS } from '../../src/live-assistant/live-gateway.js';
 import type { LiveAssistantService } from '../../src/live-assistant/live-assistant.service.js';
+import { say, toolCall, use, type ScriptedModel } from './scripted-model.js';
 
 /**
  * The behaviour of the live assistant's ledger and gateway, written once and run against a real
@@ -23,6 +24,8 @@ export interface ScenarioCtx {
   readonly otherContext: WorkspaceRequestContext;
   /** Sets workspace settings (merged over a ready, "may act" baseline) before the next call. */
   configure(values: Record<string, unknown>): Promise<void>;
+  /** The model behind the executor, scripted by the test. */
+  readonly model: ScriptedModel;
   /** Runs SQL as the database owner, bypassing row security: used to read and stage rows. */
   admin(sql: string, params?: unknown[]): Promise<Record<string, unknown>[]>;
 }
@@ -31,6 +34,16 @@ export const PROJECT = '33333333-3333-4333-8333-333333333333';
 export const MISSING_PROJECT = '77777777-7777-4777-8777-777777777777';
 const params = z.object({ projectId: z.uuid().default(PROJECT) });
 const noParams = z.object({});
+/** How the executor's model is told about a capability that acts on a project. */
+const projectTool = (description: string) => ({
+  description,
+  parameters: {
+    type: 'object',
+    properties: { projectId: { type: 'string', description: 'The project.' } },
+    required: ['projectId'],
+    additionalProperties: false,
+  },
+});
 
 /** What the fake executors did, in order. */
 export const executions: string[] = [];
@@ -44,6 +57,7 @@ const project = (name: string, klass: 'T0' | 'T1' | 'T2' | 'T3', run: () => Prom
       write: klass !== 'T0',
       ...(klass === 'T3' ? { t3Category: 'delete' as const } : {}),
     },
+    tool: projectTool(`The ${name} test capability.`),
     params,
     projectOf: (value) => value.projectId,
     describe: () => ({ summary: `${name} on the project`, targetName: 'Spring plan' }),
@@ -82,6 +96,10 @@ export const scenarioRegistry = new LiveCapabilityRegistry([
   }),
   defineCapability({
     meta: { name: 'projects.overview', klass: 'T0', area: 'projects_overview', write: false },
+    tool: {
+      description: 'The projects overview.',
+      parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    },
     params: noParams,
     describe: () => ({ summary: 'the projects overview' }),
     execute: () => {
@@ -778,5 +796,345 @@ export function liveAssistantScenarios(ctxOf: () => ScenarioCtx): void {
       status: 'proposed',
     });
     await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  // ---- typing to the assistant (the executor) ------------------------------------------------
+
+  const EXECUTOR = {
+    'live_assistant.executor_connection_id': '66666666-6666-4666-8666-666666666666',
+    'live_assistant.executor_model': 'text-model',
+  };
+  const startText = async () => ctx().service.startSession(ctx().context, 'text');
+  const ask = async (
+    sessionId: string,
+    text: string,
+    over: { context?: { role: 'user' | 'assistant'; content: string }[] } = {},
+  ) => ctx().service.ask(ctx().context, sessionId, { text, context: over.context ?? [] });
+  const model = () => ctx().model;
+  const ledger = async (sessionId: string) =>
+    rows(`select capability, status from live_actions where session_id = $1 order by proposed_at`, [
+      sessionId,
+    ]);
+  const toolMessages = (request: { messages: readonly unknown[] }) =>
+    request.messages
+      .filter((message) => (message as { role?: string }).role === 'tool')
+      .map(
+        (message) =>
+          JSON.parse((message as { content: string }).content) as Record<string, unknown>,
+      );
+
+  it('answers a typed request only once an executor model is chosen', async () => {
+    model().reset();
+    await ctx().configure({});
+    expect(await problem(startText())).toMatchObject({
+      status: 409,
+      code: 'LIVE_ASSISTANT_UNAVAILABLE',
+      reason: 'executor_not_configured',
+    });
+    const voice = await start();
+    expect(await problem(ask(voice.id, 'hello'))).toMatchObject({
+      status: 409,
+      code: 'LIVE_EXECUTOR_NOT_CONFIGURED',
+    });
+    expect(model().requests).toHaveLength(0);
+    await ctx().service.endSession(ctx().context, voice.id, 'user');
+  });
+
+  it('starts a typed session without a voice model, and counts what the executor used in the session', async () => {
+    model().reset();
+    await ctx().configure({
+      ...EXECUTOR,
+      'live_assistant.connection_id': '',
+      'live_assistant.model': '',
+    });
+    const session = await startText();
+    expect(session).toMatchObject({ status: 'active', mode: 'text' });
+    model().script(say(' Hello, I am Docoo. '));
+    const answer = await ask(session.id, 'hi', {
+      context: [{ role: 'user', content: 'earlier' }],
+    });
+    expect(answer).toMatchObject({
+      answer: 'Hello, I am Docoo.',
+      stop: 'answered',
+      toolCalls: 0,
+      actions: [],
+      errorCode: null,
+      usage: { inputTokens: 100, outputTokens: 20, costUsd: 0.01 },
+    });
+    // The call was made with the executor's own connection and model, for this person.
+    expect(model().connections).toEqual([EXECUTOR['live_assistant.executor_connection_id']]);
+    expect(model().requests[0]?.model).toBe('text-model');
+    expect(model().scopes[0]).toMatchObject({
+      workspaceId: ctx().context.workspaceId,
+      onBehalfOf: ctx().context.actorId,
+      purpose: 'live_assistant:executor',
+    });
+    expect(model().requests[0]?.messages.map((m) => (m as { content: string }).content)).toEqual([
+      'earlier',
+      'hi',
+    ]);
+    const detail = await ctx().service.getSession(ctx().context, session.id);
+    expect(detail.session).toMatchObject({ inputTokens: 100, outputTokens: 20 });
+    expect(detail.session.costUsd).toBeCloseTo(0.01);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('runs a read for the model and keeps the record of it', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    executions.length = 0;
+    const session = await startText();
+    model().script(
+      use(toolCall('project_read', { projectId: PROJECT })),
+      say('It is Spring plan.'),
+    );
+    const answer = await ask(session.id, 'what is the project called?');
+    expect(answer).toMatchObject({ answer: 'It is Spring plan.', toolCalls: 1, actions: [] });
+    expect(executions).toEqual(['project.read']);
+    const [result] = toolMessages(model().requests[1]!);
+    expect(result).toMatchObject({ status: 'done', result: { title: 'Spring plan' } });
+    expect(await ledger(session.id)).toEqual([{ capability: 'project.read', status: 'executed' }]);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('proposes a change for the model and leaves it waiting for a person, who then confirms it', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    executions.length = 0;
+    const session = await startText();
+    model().script(
+      use(toolCall('project_note', { projectId: PROJECT })),
+      say('I proposed it; it waits for you.'),
+    );
+    const answer = await ask(session.id, 'add a note');
+    expect(answer.actions).toHaveLength(1);
+    expect(answer.actions[0]).toMatchObject({
+      capability: 'project.note',
+      status: 'proposed',
+      tier: 'T1',
+    });
+    // Nothing ran, and the model was told so.
+    expect(executions).toEqual([]);
+    expect(toolMessages(model().requests[1]!)[0]).toMatchObject({
+      status: 'waiting_for_owner_confirmation',
+      kind: 'T1',
+    });
+    // A person confirms it; only then it runs, as them.
+    const done = await confirm(answer.actions[0]!.id, { via: 'click' });
+    expect(done).toMatchObject({ status: 'executed' });
+    expect(executions).toEqual(['project.note']);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('holds a costly change to its stricter steps even when the model asked for it', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    executions.length = 0;
+    const session = await startText();
+    model().script(use(toolCall('project_spend', { projectId: PROJECT })), say('Waiting for you.'));
+    const answer = await ask(session.id, 'spend something');
+    expect(answer.actions[0]).toMatchObject({
+      tier: 'T2',
+      status: 'proposed',
+      steps: ['preview', 'readback', 'voice_or_click'],
+    });
+    expect(executions).toEqual([]);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('does not let the model act beyond what the owner allowed: no tool exists for it', async () => {
+    model().reset();
+    await ctx().configure({ ...EXECUTOR, 'live_assistant.access_level': 'read' });
+    executions.length = 0;
+    const session = await startText();
+    model().script(use(toolCall('project_note', { projectId: PROJECT })), say('I cannot.'));
+    const answer = await ask(session.id, 'add a note');
+    const offered = (model().requests[0]?.tools ?? []).map((tool) => tool.name);
+    expect(offered).toContain('project_read');
+    expect(offered).not.toContain('project_note');
+    expect(toolMessages(model().requests[1]!)[0]).toMatchObject({
+      status: 'refused',
+      reason: 'unknown_tool',
+    });
+    expect(answer.actions).toEqual([]);
+    expect(executions).toEqual([]);
+    expect(await ledger(session.id)).toEqual([]);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('refuses, in the ledger, a project outside the area the owner chose', async () => {
+    model().reset();
+    await ctx().configure({
+      ...EXECUTOR,
+      'live_assistant.access_scope': 'selected_projects',
+      'live_assistant.access_project_ids': [MISSING_PROJECT],
+    });
+    executions.length = 0;
+    const session = await startText();
+    model().script(use(toolCall('project_read', { projectId: PROJECT })), say('Not allowed.'));
+    await ask(session.id, 'read it');
+    expect(toolMessages(model().requests[1]!)[0]).toMatchObject({ status: 'refused' });
+    expect(executions).toEqual([]);
+    expect(await ledger(session.id)).toEqual([{ capability: 'project.read', status: 'refused' }]);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('raises the steps of a change proposed after the model read long-form content', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    const session = await startText();
+    model().script(
+      use(toolCall('project_read_content', { projectId: PROJECT })),
+      use(toolCall('project_note', { projectId: PROJECT })),
+      say('Waiting.'),
+    );
+    const answer = await ask(session.id, 'read it and note it');
+    expect(answer.actions[0]).toMatchObject({ capability: 'project.note', tier: 'T2' });
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('stops tool calls at the limit of one request and says so', async () => {
+    model().reset();
+    await ctx().configure({
+      ...EXECUTOR,
+      'live_assistant.language': 'en',
+      'live_assistant.max_actions_per_task': 1,
+    });
+    executions.length = 0;
+    const session = await startText();
+    model().script(
+      use(
+        toolCall('project_read', { projectId: PROJECT }, 'a'),
+        toolCall('project_read', { projectId: PROJECT }, 'b'),
+      ),
+      say('Looked once.'),
+    );
+    const answer = await ask(session.id, 'read twice');
+    expect(answer).toMatchObject({ toolCalls: 1, stop: 'tool_limit' });
+    expect(executions).toEqual(['project.read']);
+    expect(answer.answer).toContain('Looked once.');
+    expect(answer.answer).toContain('limit');
+    expect(model().requests[1]?.toolChoice).toBe('none');
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('stops asking the model once one request has cost what the owner allowed', async () => {
+    model().reset();
+    model().costUsd = 0.5;
+    await ctx().configure({
+      ...EXECUTOR,
+      'live_assistant.language': 'en',
+      'live_assistant.task_cost_cap_usd': 0.5,
+    });
+    const session = await startText();
+    model().script(use(toolCall('project_read', { projectId: PROJECT })), say('never reached'));
+    const answer = await ask(session.id, 'read it');
+    expect(answer.stop).toBe('cost_cap');
+    expect(answer.answer).toContain('cost cap');
+    expect(model().requests).toHaveLength(1);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('says a model with no price has an unknown cost, never zero', async () => {
+    model().reset();
+    model().costUsd = null;
+    await ctx().configure(EXECUTOR);
+    const session = await startText();
+    model().script(say('Hello.'));
+    const answer = await ask(session.id, 'hi');
+    expect(answer.usage.costUsd).toBeNull();
+    const detail = await ctx().service.getSession(ctx().context, session.id);
+    expect(detail.session.costUsd).toBe(0);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('ends the session when what the model used reaches the session cap, and still counts it', async () => {
+    model().reset();
+    // The smallest session cap the settings allow is 0.5; one call costs more than that.
+    model().costUsd = 1;
+    await ctx().configure({ ...EXECUTOR, 'live_assistant.session_cost_cap_usd': 0.5 });
+    const session = await startText();
+    model().script(say('Hello.'));
+    expect(await problem(ask(session.id, 'hi'))).toMatchObject({
+      status: 409,
+      code: 'LIVE_CAP_REACHED',
+    });
+    const detail = await ctx().service.getSession(ctx().context, session.id);
+    expect(detail.session).toMatchObject({ status: 'ended', endReason: 'cap_cost' });
+    expect(detail.session.costUsd).toBeCloseTo(1);
+    expect(await problem(ask(session.id, 'again'))).toMatchObject({ code: 'LIVE_SESSION_ENDED' });
+    expect(model().requests).toHaveLength(1);
+  });
+
+  it('answers one request at a time in a session', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    const session = await startText();
+    let second: unknown = null;
+    model().during = async () => {
+      second = await problem(ask(session.id, 'and another'));
+    };
+    model().script(say('First.'));
+    expect(await ask(session.id, 'first')).toMatchObject({ answer: 'First.' });
+    expect(second).toMatchObject({ status: 409, code: 'LIVE_ASK_BUSY' });
+    // Free again afterwards.
+    model().script(say('Second.'));
+    expect(await ask(session.id, 'second')).toMatchObject({ answer: 'Second.' });
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('keeps the typed conversation like a spoken one, and only its counts in the audit trail', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    const session = await startText();
+    model().script(say('The answer is private-answer-text.'));
+    await ask(session.id, 'a private-question-text');
+    const detail = await ctx().service.getSession(ctx().context, session.id);
+    expect(detail.messages.map((message) => [message.role, message.content])).toEqual([
+      ['user', 'a private-question-text'],
+      ['assistant', 'The answer is private-answer-text.'],
+    ]);
+    const audit = await rows(
+      `select after from audit_events where action = 'live_assistant.ask' and target_id = $1`,
+      [session.id],
+    );
+    expect(audit).toHaveLength(1);
+    expect(audit[0]?.['after']).toMatchObject({ stop: 'answered', toolCalls: 0, modelCalls: 1 });
+    expect(JSON.stringify(audit)).not.toContain('private-');
+
+    await ctx().configure({ ...EXECUTOR, 'live_assistant.store_transcripts': false });
+    model().script(say('Not kept.'));
+    await ask(session.id, 'another');
+    expect((await ctx().service.getSession(ctx().context, session.id)).messages).toHaveLength(2);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('reports a failed model call as a kind, keeps the session, and leaks nothing', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    const session = await startText();
+    model().script(
+      Object.assign(new Error('401 for key sk-very-secret'), { code: 'provider_auth' }),
+    );
+    const answer = await ask(session.id, 'hi');
+    expect(answer).toMatchObject({ stop: 'error', errorCode: 'provider_auth', actions: [] });
+    expect(JSON.stringify(answer)).not.toContain('sk-very-secret');
+    expect((await ctx().service.getSession(ctx().context, session.id)).session.status).toBe(
+      'active',
+    );
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('shows another workspace nothing, and refuses a request in an ended session', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    const session = await startText();
+    expect(
+      await problem(ctx().service.ask(ctx().otherContext, session.id, { text: 'hi', context: [] })),
+    ).toMatchObject({ code: 'LIVE_SESSION_NOT_FOUND' });
+    expect(model().requests).toHaveLength(0);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+    expect(await problem(ask(session.id, 'late'))).toMatchObject({ code: 'LIVE_SESSION_ENDED' });
+    expect(model().requests).toHaveLength(0);
   });
 }

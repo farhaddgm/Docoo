@@ -617,6 +617,13 @@
       "when": 1793808771919,
       "tag": "0087_live_assistant_transcript_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1793808772919,
+      "tag": "0088_live_assistant_text",
+      "breakpoints": true
     }
   ]
 }

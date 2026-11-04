@@ -41,6 +41,15 @@ export interface LiveSettings {
   readonly mode: (typeof liveAssistantModes)[number];
   readonly connectionId: string;
   readonly model: string;
+  /**
+   * The text model that does the work for the assistant (ADR-0055 §4-1); typing needs it. It is the
+   * executor pair of the settings, or, when the owner set neither, the workspace's own AI
+   * connection and model, so a workspace that already has one can type to the assistant at once.
+   */
+  readonly executorConnectionId: string;
+  readonly executorModel: string;
+  /** Whether that pair is the assistant's own (`own`) or the workspace's AI pair (`workspace`). */
+  readonly executorSource: 'own' | 'workspace';
   readonly language: (typeof liveAssistantLanguages)[number];
   readonly listeningMode: (typeof liveAssistantListeningModes)[number];
   readonly caps: LiveAssistantCaps;
@@ -50,6 +59,8 @@ export interface LiveSettings {
   readonly storeTranscripts: boolean;
   readonly transcriptRetentionDays: number;
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 /**
  * Reads the assistant's settings. A value that is missing takes its default; one that no longer
@@ -102,6 +113,24 @@ export function liveSettingsFrom(values: Record<string, unknown>): LiveSettings 
   };
   const caps = liveAssistantCapsSchema.safeParse(capCandidate);
   const t3 = raw('live_assistant.t3_categories');
+  // The executor pair is used whole: either both of the assistant's own, or both of the workspace's.
+  // A half-filled own pair is left as it is (and blocks typing) rather than mixed with another
+  // provider's model.
+  const ownConnection = text('live_assistant.executor_connection_id', 36);
+  const ownModel = text('live_assistant.executor_model', 200);
+  const ownPair = ownConnection !== '' || ownModel.trim() !== '';
+  const workspaceConnection = values['ai.connection_id'];
+  const workspaceModel = values['ai.model'];
+  const executorConnectionId = ownPair
+    ? ownConnection
+    : typeof workspaceConnection === 'string' && UUID.test(workspaceConnection)
+      ? workspaceConnection
+      : '';
+  const executorModel = ownPair
+    ? ownModel
+    : typeof workspaceModel === 'string' && workspaceModel.length <= 200
+      ? workspaceModel
+      : '';
   return {
     enabled: flag('live_assistant.enabled'),
     disclosureAccepted: flag('live_assistant.disclosure_accepted'),
@@ -112,6 +141,9 @@ export function liveSettingsFrom(values: Record<string, unknown>): LiveSettings 
     mode: oneOf('live_assistant.mode', liveAssistantModes),
     connectionId: text('live_assistant.connection_id', 36),
     model: text('live_assistant.model', 200),
+    executorConnectionId,
+    executorModel,
+    executorSource: ownPair ? 'own' : 'workspace',
     language: oneOf('live_assistant.language', liveAssistantLanguages),
     listeningMode: oneOf('live_assistant.listening_mode', liveAssistantListeningModes),
     caps: caps.success
@@ -161,6 +193,23 @@ export function startBlocker(
     return 'not_configured';
   }
   return null;
+}
+
+/** Why typing to the assistant cannot start: the same two first, then the executor's model. */
+export function textBlocker(
+  settings: LiveSettings,
+): 'disabled' | 'disclosure' | 'executor_not_configured' | null {
+  if (!settings.enabled) return 'disabled';
+  if (!settings.disclosureAccepted) return 'disclosure';
+  if (settings.executorConnectionId === '' || settings.executorModel.trim() === '') {
+    return 'executor_not_configured';
+  }
+  return null;
+}
+
+/** Whether a running session may go on, by what it needs: a voice session its voice model, a typed one its executor. */
+export function sessionBlocker(mode: string, settings: LiveSettings): string | null {
+  return mode === 'text' ? textBlocker(settings) : startBlocker(settings);
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '../config/config.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { ProvidersModule } from '../providers/providers.module.js';
 import { ProjectReportService } from '../projects/project-report.service.js';
 import { ProjectsModule } from '../projects/projects.module.js';
 import { ProjectsService } from '../projects/projects.service.js';
@@ -15,7 +16,7 @@ import { projectCapabilities } from './project-capabilities.js';
 
 /** The live voice assistant (ADR-0055): sessions, the confirmation gateway and its ledger. */
 @Module({
-  imports: [ConfigModule, NotificationsModule, ProjectsModule, WorkflowModule],
+  imports: [ConfigModule, NotificationsModule, ProjectsModule, ProvidersModule, WorkflowModule],
   controllers: [LiveAssistantController],
   providers: [
     LiveAssistantService,

@@ -6,6 +6,7 @@ import type { ProjectReportService } from '../projects/project-report.service.js
 import type { ProjectsService } from '../projects/projects.service.js';
 import type { WorkflowService } from '../workflow/workflow.service.js';
 import { defineCapability, type LiveCapability, type LiveLocale } from './capabilities.js';
+import { CAPABILITY_TOOLS } from './capability-tools.js';
 
 /**
  * The capabilities of the live assistant about projects (ADR-0055 §4-3): look at them, read one in
@@ -116,6 +117,7 @@ export function projectCapabilities(services: {
 
   const overview = defineCapability({
     meta: { name: 'projects.overview', klass: 'T0', area: 'projects_overview', write: false },
+    tool: CAPABILITY_TOOLS['projects.overview'],
     params: z.object({
       q: z.string().trim().max(100).optional(),
       limit: z.number().int().min(1).max(20).default(10),
@@ -151,6 +153,7 @@ export function projectCapabilities(services: {
 
   const waiting = defineCapability({
     meta: { name: 'projects.waiting', klass: 'T0', area: 'projects_overview', write: false },
+    tool: CAPABILITY_TOOLS['projects.waiting'],
     params: z.object({ limit: z.number().int().min(1).max(20).default(10) }),
     describe: (_params, locale) => ({
       summary: t(
@@ -184,6 +187,7 @@ export function projectCapabilities(services: {
   // when the owner gave the assistant the back office, not just the projects.
   const unread = defineCapability({
     meta: { name: 'notifications.unread', klass: 'T0', area: 'backoffice', write: false },
+    tool: CAPABILITY_TOOLS['notifications.unread'],
     params: z.object({ limit: z.number().int().min(1).max(20).default(10) }),
     describe: (_params, locale) => ({
       summary: t(locale, 'اعلان‌های خواندنی‌نشده', 'Unread notifications'),
@@ -208,6 +212,7 @@ export function projectCapabilities(services: {
 
   const rename = defineCapability<{ projectId: string; title: string }, ProjectFacts>({
     meta: { name: 'project.rename', klass: 'T1', area: 'project', write: true },
+    tool: CAPABILITY_TOOLS['project.rename'],
     params: z.object({ projectId, title: z.string().trim().min(1).max(200) }),
     projectOf: (params) => params.projectId,
     prepare: (context, params) => facts(context, params.projectId),
@@ -231,6 +236,7 @@ export function projectCapabilities(services: {
 
   const status = defineCapability<{ projectId: string }, ProjectFacts>({
     meta: { name: 'project.status', klass: 'T0', area: 'project', write: false },
+    tool: CAPABILITY_TOOLS['project.status'],
     params: z.object({ projectId }),
     projectOf: (params) => params.projectId,
     prepare: (context, params) => facts(context, params.projectId),
@@ -259,6 +265,7 @@ export function projectCapabilities(services: {
 
   const report = defineCapability<{ projectId: string }, ProjectFacts>({
     meta: { name: 'project.report', klass: 'T0', area: 'project', write: false },
+    tool: CAPABILITY_TOOLS['project.report'],
     params: z.object({ projectId }),
     projectOf: (params) => params.projectId,
     prepare: (context, params) => facts(context, params.projectId),
@@ -312,6 +319,7 @@ export function projectCapabilities(services: {
         write: true,
         ...(klass === 'T3' ? { t3Category: 'delete' as const } : {}),
       },
+      tool: CAPABILITY_TOOLS[`project.${name}`],
       params,
       projectOf: (value) => value.projectId,
       prepare: (context, value) => facts(context, value.projectId),

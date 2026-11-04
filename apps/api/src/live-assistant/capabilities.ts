@@ -1,4 +1,5 @@
 import type { CapabilityMeta } from '@docoo/contracts';
+import type { JsonSchema } from '@docoo/providers';
 import type { z } from 'zod';
 
 import type { WorkspaceRequestContext } from '../common/request-context.js';
@@ -28,8 +29,20 @@ export interface LiveExecution {
   readonly actionId: string;
 }
 
+/**
+ * What the executor's model sees of a capability: a plain description and a strict schema (closed
+ * object, every property required, nothing the providers' strict modes refuse). A property that
+ * does not apply is sent as an empty string or null and dropped before the parameters are checked.
+ */
+export interface LiveToolSpec {
+  readonly description: string;
+  readonly parameters: JsonSchema;
+}
+
 export interface LiveCapability<P = unknown, F = unknown> {
   readonly meta: CapabilityMeta;
+  /** How the model is told about it. Without one the capability is not offered to a model. */
+  readonly tool?: LiveToolSpec | undefined;
   readonly params: z.ZodType<P>;
   /** Which project the call acts on. Required when `meta.area` is `project`. */
   readonly projectOf?: ((params: P) => string | null) | undefined;

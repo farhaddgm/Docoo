@@ -3109,6 +3109,11 @@ export const liveSessions = pgTable(
     endedAt: timestamp('ended_at', { withTimezone: true }),
     /** ADR-0055: when the session last read content that may carry instructions (taint). */
     untrustedReadAt: timestamp('untrusted_read_at', { withTimezone: true }),
+    /** ADR-0055: what the server-side executor's model calls used, measured by the server. */
+    executorInputTokens: bigint('executor_input_tokens', { mode: 'number' }).notNull().default(0),
+    executorOutputTokens: bigint('executor_output_tokens', { mode: 'number' }).notNull().default(0),
+    executorCostUsd: doublePrecision('executor_cost_usd').notNull().default(0),
+    executorCalls: integer('executor_calls').notNull().default(0),
   },
   (table) => [
     index('live_sessions_user_idx').on(table.userId, table.startedAt),
