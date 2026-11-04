@@ -354,7 +354,7 @@ describe.skipIf(!adminUrl)('live assistant: projects', () => {
     expect(response.json()).toMatchObject({ status: 'executed', tier: 'T0' });
     const unknown = await h.request('POST', api('/live-assistant/actions'), {
       cookie: cookieA,
-      payload: { sessionId, capability: 'project.delete', params: { projectId } },
+      payload: { sessionId, capability: 'project.destroy_everything', params: { projectId } },
     });
     expect(unknown.statusCode).toBe(201);
     expect(unknown.json()).toMatchObject({
