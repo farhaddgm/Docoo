@@ -16,11 +16,14 @@ import {
 const ID = '11111111-1111-4111-8111-111111111111';
 
 describe('live assistant requests', () => {
-  it('start takes nothing but the open project, and no stray field', () => {
+  it('start takes the open project and the channel (voice unless typed), and no stray field', () => {
     expect(startLiveSessionSchema.safeParse({}).success).toBe(true);
     expect(startLiveSessionSchema.safeParse({ currentProjectId: ID.toUpperCase() }).data).toEqual({
+      channel: 'voice',
       currentProjectId: ID,
     });
+    expect(startLiveSessionSchema.safeParse({ channel: 'text' }).data).toEqual({ channel: 'text' });
+    expect(startLiveSessionSchema.safeParse({ channel: 'video' }).success).toBe(false);
     expect(startLiveSessionSchema.safeParse({ role: 'owner' }).success).toBe(false);
   });
 
