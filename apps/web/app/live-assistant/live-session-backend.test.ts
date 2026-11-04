@@ -70,6 +70,10 @@ function fakeBackend(over: Partial<LiveBackend> = {}) {
       calls.order.push('end');
       return Promise.resolve(view({ status: 'ended', endReason: 'user' }));
     },
+    proposeAction: () => Promise.reject(new Error('not used here')),
+    confirmAction: () => Promise.reject(new Error('not used here')),
+    cancelAction: () => Promise.reject(new Error('not used here')),
+    getAction: () => Promise.reject(new Error('not used here')),
     ...over,
   };
   return { backend, calls };

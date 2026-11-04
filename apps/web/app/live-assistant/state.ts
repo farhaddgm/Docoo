@@ -6,6 +6,8 @@
  * starts switched off.
  */
 
+import type { LiveActionView } from '@docoo/contracts';
+
 export type LiveStatus = 'off' | 'starting' | 'awake' | 'asleep' | 'closing' | 'error';
 
 export type LiveError =
@@ -23,6 +25,29 @@ export interface PillPosition {
   readonly y: number;
 }
 
+/** Why the last confirmation of a change did not count; the card says what to do about it. */
+export type ConfirmHintReason =
+  | 'unclear'
+  | 'echo_mismatch'
+  | 'too_soon'
+  /** The change is no longer waiting (time ran out, it was cancelled): the card shows its new state. */
+  | 'closed'
+  | 'failed';
+
+export interface ConfirmHint {
+  readonly actionId: string;
+  readonly reason: ConfirmHintReason;
+}
+
+/** The most proposals kept on screen; the oldest finished ones go first. */
+export const MAX_ACTIONS = 30;
+
+/** When this tab first saw a change and when it saw it finish, on this browser's own clock. */
+export interface ActionTiming {
+  readonly firstAt: number;
+  readonly settledAt: number | null;
+}
+
 export interface LiveState {
   readonly status: LiveStatus;
   /** Whether a way to talk to the provider is set up. Without one the feature stays switched off. */
@@ -33,6 +58,12 @@ export interface LiveState {
   readonly error: LiveError | null;
   /** The server says a cost or time cap is close (80% or more); the session is still running. */
   readonly warning: boolean;
+  /** The server-side session this tab runs, while it runs. */
+  readonly sessionId: string | null;
+  /** The changes the assistant proposed in this session, oldest first, and where each stands. */
+  readonly actions: readonly LiveActionView[];
+  readonly timing: Readonly<Record<string, ActionTiming>>;
+  readonly hint: ConfirmHint | null;
   readonly position: PillPosition | null;
 }
 
@@ -47,6 +78,9 @@ export type LiveAction =
   | { readonly type: 'stopped' }
   | { readonly type: 'failed'; readonly error: LiveError }
   | { readonly type: 'warning'; readonly on: boolean }
+  | { readonly type: 'session'; readonly id: string | null }
+  | { readonly type: 'action'; readonly view: LiveActionView; readonly at: number }
+  | { readonly type: 'hint'; readonly hint: ConfirmHint | null }
   | { readonly type: 'move'; readonly position: PillPosition | null };
 
 export const initialLiveState = (position: PillPosition | null = null): LiveState => ({
@@ -56,6 +90,10 @@ export const initialLiveState = (position: PillPosition | null = null): LiveStat
   startedAt: null,
   error: null,
   warning: false,
+  sessionId: null,
+  actions: [],
+  timing: {},
+  hint: null,
   position,
 });
 
@@ -84,6 +122,10 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
         startedAt: null,
         error: null,
         warning: false,
+        sessionId: null,
+        actions: [],
+        timing: {},
+        hint: null,
       };
     case 'started':
       return state.status === 'starting'
@@ -104,17 +146,85 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
       return isLiveActive(state.status) ? { ...state, status: 'closing' } : state;
     case 'stopped':
       return state.status === 'closing' || isLiveActive(state.status)
-        ? { ...state, status: 'off', startedAt: null, warning: false }
+        ? {
+            ...state,
+            status: 'off',
+            startedAt: null,
+            warning: false,
+            sessionId: null,
+            actions: [],
+            hint: null,
+          }
         : state;
     case 'failed':
       return state.status === 'off' || state.status === 'error'
         ? state
-        : { ...state, status: 'error', error: action.error, startedAt: null, warning: false };
+        : {
+            ...state,
+            status: 'error',
+            error: action.error,
+            startedAt: null,
+            warning: false,
+            sessionId: null,
+            actions: [],
+            timing: {},
+            hint: null,
+          };
     case 'warning':
       // Only a running session has a cap to be close to; a stale answer after the end is ignored.
       return isLiveActive(state.status) && state.warning !== action.on
         ? { ...state, warning: action.on }
         : state;
+    case 'session':
+      return isLiveActive(state.status) && state.sessionId !== action.id
+        ? { ...state, sessionId: action.id }
+        : state;
+    case 'action': {
+      // Changes belong to a running (or closing) session; a late answer after the end is dropped.
+      if (!BILLABLE.includes(state.status)) return state;
+      const open = (view: LiveActionView) =>
+        view.status === 'proposed' || view.status === 'first_confirmed';
+      const before = state.timing[action.view.id];
+      const timing: ActionTiming = {
+        firstAt: before?.firstAt ?? action.at,
+        settledAt: before?.settledAt ?? (open(action.view) ? null : action.at),
+      };
+      const at = state.actions.findIndex((item) => item.id === action.view.id);
+      if (
+        at >= 0 &&
+        before?.firstAt === timing.firstAt &&
+        before.settledAt === timing.settledAt &&
+        JSON.stringify(state.actions[at]) === JSON.stringify(action.view)
+      ) {
+        return state;
+      }
+      let actions =
+        at >= 0
+          ? state.actions.map((item, index) => (index === at ? action.view : item))
+          : [...state.actions, action.view].sort((a, b) =>
+              a.proposedAt.localeCompare(b.proposedAt),
+            );
+      // Past the limit the oldest finished ones go; one still waiting for a person never does.
+      while (actions.length > MAX_ACTIONS) {
+        const drop = actions.findIndex((view) => !open(view));
+        if (drop < 0) break;
+        actions = actions.filter((_, index) => index !== drop);
+      }
+      const known = new Set(actions.map((view) => view.id));
+      const kept = Object.fromEntries(
+        Object.entries({ ...state.timing, [action.view.id]: timing }).filter(([id]) =>
+          known.has(id),
+        ),
+      );
+      // A hint belongs to one waiting change: when that change moves, the hint is stale.
+      const hint = state.hint && state.hint.actionId === action.view.id ? null : state.hint;
+      return { ...state, actions, timing: kept, hint };
+    }
+    case 'hint':
+      if (!isLiveActive(state.status)) return state;
+      return JSON.stringify(state.hint) === JSON.stringify(action.hint)
+        ? state
+        : { ...state, hint: action.hint };
     case 'move':
       return state.position === action.position ||
         (state.position &&

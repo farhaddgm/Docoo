@@ -510,8 +510,28 @@ export class LiveAssistantService {
 
   async getAction(context: WorkspaceRequestContext, actionId: string): Promise<LiveActionView> {
     return this.database.run(context, async (client) => {
-      const row = await readAction(client, actionId);
-      if (!row) throw notFound('LIVE_ACTION_NOT_FOUND', 'The proposed change was not found.');
+      const seen = await readAction(client, actionId);
+      if (!seen) throw notFound('LIVE_ACTION_NOT_FOUND', 'The proposed change was not found.');
+      const open = seen.status === 'proposed' || seen.status === 'first_confirmed';
+      if (!open || !seen.expired) return toActionView(seen);
+      // A proposal nobody confirmed in time is closed when someone looks at it, so the screen and
+      // the ledger agree. (The database refuses a late confirmation whether or not this ran.)
+      const { action } = await this.lockActionWithSession(client, actionId);
+      if (
+        (action.status !== 'proposed' && action.status !== 'first_confirmed') ||
+        !action.expired
+      ) {
+        return toActionView(action);
+      }
+      const row = await moveAction(client, action.id, action.status, 'expired');
+      if (!row) return toActionView((await readAction(client, actionId)) ?? action);
+      await this.audit(client, context, {
+        action: 'live_assistant.action_expired',
+        targetType: 'live_action',
+        targetId: action.id,
+        projectId: action.project_id,
+        after: { capability: action.capability },
+      });
       return toActionView(row);
     });
   }

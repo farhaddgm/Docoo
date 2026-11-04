@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 
+import { LiveConfirmations } from './live-confirmations';
 import { LiveAssistantPill } from './pill';
 import { isLiveActive } from './state';
 import { liveAssistant } from './store';
@@ -44,5 +45,10 @@ export function LiveAssistantHost() {
     };
   }, []);
 
-  return <LiveAssistantPill />;
+  return (
+    <>
+      <LiveConfirmations />
+      <LiveAssistantPill />
+    </>
+  );
 }

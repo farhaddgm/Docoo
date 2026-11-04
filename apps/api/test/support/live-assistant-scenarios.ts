@@ -494,6 +494,37 @@ export function liveAssistantScenarios(ctxOf: () => ScenarioCtx): void {
     await ctx().service.endSession(ctx().context, session.id, 'user');
   });
 
+  it('closes a proposal nobody confirmed in time as soon as someone looks at it', async () => {
+    await ctx().configure({});
+    const session = await start();
+    executions.length = 0;
+    const proposed = await propose(session.id, 'project.note');
+    // Looking before the deadline changes nothing.
+    expect((await ctx().service.getAction(ctx().context, proposed.id)).status).toBe('proposed');
+    await ctx().admin(`alter table live_actions disable trigger live_actions_guard`);
+    try {
+      await ctx().admin(
+        `update live_actions set proposed_at = now() - interval '2 hours', expires_at = now() - interval '1 hour' where id = $1`,
+        [proposed.id],
+      );
+    } finally {
+      await ctx().admin(`alter table live_actions enable trigger live_actions_guard`);
+    }
+    const closed = await ctx().service.getAction(ctx().context, proposed.id);
+    expect(closed).toMatchObject({ status: 'expired', nextStep: null });
+    expect(closed.finishedAt).not.toBeNull();
+    // Looking again is harmless and writes nothing more.
+    expect((await ctx().service.getAction(ctx().context, proposed.id)).status).toBe('expired');
+    expect(
+      await rows(
+        `select 1 from audit_events where target_id = $1 and action = 'live_assistant.action_expired'`,
+        [proposed.id],
+      ),
+    ).toHaveLength(1);
+    expect(executions).toEqual([]);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
   it('records a failed change with a safe code, never the internal message', async () => {
     await ctx().configure({});
     const session = await start();

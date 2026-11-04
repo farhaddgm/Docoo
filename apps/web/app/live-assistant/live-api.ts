@@ -24,6 +24,20 @@ export interface LiveBackend {
     messages: readonly { role: 'user' | 'assistant'; content: string }[],
   ) => Promise<unknown>;
   readonly endSession: (sessionId: string, reason: 'user' | 'idle' | 'error') => Promise<unknown>;
+  /** The gateway: the server decides whether the change may exist and with which confirmations. */
+  readonly proposeAction: (input: {
+    sessionId: string;
+    capability: string;
+    params: Record<string, unknown>;
+    tainted: boolean;
+  }) => Promise<LiveActionView>;
+  readonly confirmAction: (
+    actionId: string,
+    input: { via: 'voice' | 'click'; transcript?: string },
+  ) => Promise<LiveActionView>;
+  readonly cancelAction: (actionId: string) => Promise<LiveActionView>;
+  /** Also lets the server close a proposal whose time ran out. */
+  readonly getAction: (actionId: string) => Promise<LiveActionView>;
 }
 
 const base = (workspaceId: string) => `/v1/workspaces/${workspaceId}/live-assistant`;
@@ -38,6 +52,12 @@ export function liveBackendFor(workspaceId: string): LiveBackend {
       apiSend('POST', `${root}/sessions/${sessionId}/messages`, { messages }),
     endSession: (sessionId, reason) =>
       apiSend('POST', `${root}/sessions/${sessionId}/end`, { reason }),
+    proposeAction: (input) => apiSend<LiveActionView>('POST', `${root}/actions`, input),
+    confirmAction: (actionId, input) =>
+      apiSend<LiveActionView>('POST', `${root}/actions/${actionId}/confirm`, input),
+    cancelAction: (actionId) =>
+      apiSend<LiveActionView>('POST', `${root}/actions/${actionId}/cancel`, {}),
+    getAction: (actionId) => apiGet<LiveActionView>(`${root}/actions/${actionId}`),
   };
 }
 

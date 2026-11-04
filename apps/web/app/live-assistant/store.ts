@@ -1,3 +1,12 @@
+import type { LiveActionView } from '@docoo/contracts';
+
+import {
+  groupable,
+  isOpen,
+  remainingFor,
+  voiceTargets,
+  waitingActions,
+} from './confirmation-model';
 import { parsePosition } from './drag';
 import type { LiveBackend } from './live-api';
 import { acquireSingleTabLock, type LockHandle, type LocksApi } from './lock';
@@ -5,6 +14,7 @@ import {
   initialLiveState,
   isLiveActive,
   reduceLive,
+  type ConfirmHintReason,
   type LiveAction,
   type LiveError,
   type LiveState,
@@ -58,6 +68,31 @@ function endedErrorOf(reason: string | null): LiveError {
   if (reason === 'superseded') return 'other_tab';
   return 'connection_lost';
 }
+
+/** A problem that means the session itself is over, whichever call it came back from. */
+function sessionErrorOf(error: unknown): LiveError | null {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (code === 'LIVE_CAP_REACHED') return 'cap_reached';
+  if (code === 'LIVE_ASSISTANT_UNAVAILABLE') return 'switched_off';
+  if (code === 'LIVE_SESSION_ENDED') return 'connection_lost';
+  return null;
+}
+
+const RETRY_REASON: Record<string, ConfirmHintReason> = {
+  LIVE_CONFIRMATION_UNCLEAR: 'unclear',
+  LIVE_CONFIRMATION_ECHO_MISMATCH: 'echo_mismatch',
+  LIVE_CONFIRMATION_TOO_SOON: 'too_soon',
+};
+const CLOSED_CODES = new Set([
+  'LIVE_ACTION_EXPIRED',
+  'LIVE_ACTION_CANCELLED',
+  'LIVE_ACTION_NOT_OPEN',
+  'LIVE_ACTION_NOT_FOUND',
+]);
+
+export type ConfirmResult =
+  | { readonly ok: true; readonly view: LiveActionView }
+  | { readonly ok: false; readonly reason: ConfirmHintReason };
 
 function readPosition(storage: LiveStoreDeps['storage']): PillPosition | null {
   try {
@@ -167,11 +202,131 @@ export function createLiveStore(deps: LiveStoreDeps) {
   }
 
   /** The server ended the session (a cap, the owner's switch, another start): close down here. */
-  function endedByServer(reason: string | null): void {
+  function closeBecause(error: LiveError): void {
     if (!isLiveActive(state.status)) return;
     forgetServerSession();
-    dispatch({ type: 'failed', error: endedErrorOf(reason) });
+    dispatch({ type: 'failed', error });
     void teardown();
+  }
+
+  function endedByServer(reason: string | null): void {
+    closeBecause(endedErrorOf(reason));
+  }
+
+  // ---- changes the assistant proposes ------------------------------------------------------
+
+  /** Takes a view the server gave into the state; one that ended is told to the model too. */
+  function accept(view: LiveActionView, options: { report: boolean }): void {
+    dispatch({ type: 'action', view, at: deps.now() });
+    if (options.report && !isOpen(view) && view.status !== 'refused') {
+      try {
+        transport?.reportAction?.(view);
+      } catch {
+        /* the model not hearing about it must not undo what a person decided */
+      }
+    }
+  }
+
+  async function refresh(actionId: string): Promise<void> {
+    if (!backend) return;
+    try {
+      accept(await backend.getAction(actionId), { report: true });
+    } catch (error) {
+      const closing = sessionErrorOf(error);
+      if (closing) closeBecause(closing);
+    }
+  }
+
+  async function propose(
+    capability: string,
+    params: Record<string, unknown>,
+    tainted = false,
+  ): Promise<LiveActionView> {
+    const id = sessionId;
+    if (!backend || !id || !isLiveActive(state.status)) {
+      throw new Error('The live session is not running.');
+    }
+    try {
+      const view = await backend.proposeAction({ sessionId: id, capability, params, tainted });
+      if (sessionId !== id) throw new Error('The live session ended.');
+      accept(view, { report: false });
+      return view;
+    } catch (error) {
+      const closing = sessionErrorOf(error);
+      if (closing) closeBecause(closing);
+      throw error;
+    }
+  }
+
+  /** What became of a confirmation that did not go through, shown on the card, never thrown. */
+  async function stepFailed(actionId: string, error: unknown): Promise<ConfirmResult> {
+    const closing = sessionErrorOf(error);
+    if (closing) {
+      closeBecause(closing);
+      return { ok: false, reason: 'closed' };
+    }
+    const code = (error as { code?: unknown } | null)?.code;
+    const retry = typeof code === 'string' ? RETRY_REASON[code] : undefined;
+    if (retry) {
+      dispatch({ type: 'hint', hint: { actionId, reason: retry } });
+      return { ok: false, reason: retry };
+    }
+    if (typeof code === 'string' && CLOSED_CODES.has(code)) {
+      await refresh(actionId);
+      return { ok: false, reason: 'closed' };
+    }
+    dispatch({ type: 'hint', hint: { actionId, reason: 'failed' } });
+    return { ok: false, reason: 'failed' };
+  }
+
+  /** A person said yes, by click or by voice. The server reads it and says whether it counts. */
+  async function confirm(
+    actionId: string,
+    input: { via: 'voice' | 'click'; transcript?: string },
+  ): Promise<ConfirmResult> {
+    if (!backend || !isLiveActive(state.status)) return { ok: false, reason: 'failed' };
+    try {
+      const view = await backend.confirmAction(actionId, input);
+      accept(view, { report: true });
+      return { ok: true, view };
+    } catch (error) {
+      return stepFailed(actionId, error);
+    }
+  }
+
+  async function cancel(actionId: string): Promise<ConfirmResult> {
+    if (!backend || !isLiveActive(state.status)) return { ok: false, reason: 'failed' };
+    try {
+      const view = await backend.cancelAction(actionId);
+      accept(view, { report: true });
+      return { ok: true, view };
+    } catch (error) {
+      return stepFailed(actionId, error);
+    }
+  }
+
+  const waiting = (): LiveActionView[] =>
+    waitingActions(state.actions, (view) => remainingFor(state.timing, view, deps.now()));
+
+  /** One click for the simple changes that wait together; each is its own confirmation on the ledger. */
+  async function confirmGroup(): Promise<void> {
+    for (const view of groupable(waiting())) {
+      const result = await confirm(view.id, { via: 'click' });
+      if (!result.ok) return;
+    }
+  }
+
+  /**
+   * What the person said. With nothing waiting it is only conversation. With changes waiting it is
+   * their answer: to all of them when they are all simple, otherwise to the oldest alone. The
+   * server reads it; an unclear answer changes nothing and the card says to repeat or click.
+   */
+  async function answerByVoice(transcript: string): Promise<void> {
+    if (transcript.trim() === '') return;
+    for (const view of voiceTargets(waiting())) {
+      const result = await confirm(view.id, { via: 'voice', transcript });
+      if (!result.ok) return;
+    }
   }
 
   async function beat(): Promise<void> {
@@ -211,6 +366,13 @@ export function createLiveStore(deps: LiveStoreDeps) {
         pending.push({ role, content: content.trim().slice(0, 4000) });
         if (pending.length > MAX_PENDING_LINES) pending = pending.slice(-MAX_PENDING_LINES);
       },
+      propose: (capability, params, tainted) => {
+        if (transport !== owner) return Promise.reject(new Error('The live session is closed.'));
+        return propose(capability, params, tainted);
+      },
+      onSpeech: (transcript) => {
+        if (transport === owner) void answerByVoice(transcript);
+      },
       onSleep: live(() => dispatch({ type: 'sleep' })),
       onWake: live(() => dispatch({ type: 'wake' })),
       onLost: live(() => {
@@ -242,6 +404,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
       // microphone or any connection to a provider is opened.
       try {
         sessionId = (await backend.startSession()).id;
+        dispatch({ type: 'session', id: sessionId });
       } catch (error) {
         if (currentStatus() === 'closing') return;
         await teardown('error');
@@ -299,6 +462,14 @@ export function createLiveStore(deps: LiveStoreDeps) {
     getServerSnapshot: (): LiveState => serverState,
     start,
     stop,
+    propose,
+    confirm,
+    cancel,
+    confirmGroup,
+    answerByVoice,
+    refresh,
+    /** Seconds left to confirm a change, on this browser's clock; 0 when its time is over. */
+    secondsLeft: (view: LiveActionView): number => remainingFor(state.timing, view, deps.now()),
     move: (position: PillPosition | null): void => dispatch({ type: 'move', position }),
     /**
      * Tells the store which workspace's server to report to. A session already running keeps the

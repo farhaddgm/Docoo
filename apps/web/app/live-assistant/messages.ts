@@ -1,7 +1,8 @@
 import type { LiveActionStatus, LiveSessionEndReason } from '@docoo/contracts';
 
 import type { Locale } from '../i18n';
-import type { LiveError, LiveStatus } from './state';
+import type { StepKey } from './confirmation-model';
+import type { ConfirmHintReason, LiveError, LiveStatus } from './state';
 
 /**
  * The assistant's name is a setting (ADR-0055 §4-8); until the settings page exists these are its
@@ -19,6 +20,21 @@ export interface LiveMessages {
     readonly close: string;
     readonly closeTitle: string;
     readonly nearCap: string;
+    readonly waiting: string;
+  };
+  readonly confirm: {
+    readonly title: string;
+    readonly tiers: Record<'T1' | 'T2' | 'T3', { readonly label: string; readonly hint: string }>;
+    readonly steps: Record<StepKey, string>;
+    readonly confirmButton: string;
+    readonly finalButton: string;
+    readonly cancelButton: string;
+    readonly groupButton: string;
+    readonly voiceHint: string;
+    readonly echoHint: string;
+    readonly timeLeft: string;
+    readonly hints: Record<ConfirmHintReason, string>;
+    readonly results: Record<'executed' | 'failed' | 'cancelled' | 'expired', string>;
   };
   readonly card: {
     readonly title: string;
@@ -82,6 +98,41 @@ const fa: LiveMessages = {
     close: 'بستن',
     closeTitle: 'بستن و پایان گفتگوی زنده',
     nearCap: 'نزدیک سقف',
+    waiting: 'منتظر تأیید شما',
+  },
+  confirm: {
+    title: 'تغییر پیشنهادی {name}',
+    tiers: {
+      T1: { label: 'تغییر ساده', hint: 'قابل‌برگشت' },
+      T2: { label: 'تغییر پیامدار', hint: 'کار یا هزینه‌ای شروع یا بسته می‌شود' },
+      T3: { label: 'برگشت‌ناپذیر', hint: 'دو تأیید جدا لازم است' },
+    },
+    steps: {
+      preview: 'پیش‌نمایش',
+      readback: 'بازخوانی',
+      confirm: 'تأیید شما',
+      echo: 'تکرار نام',
+    },
+    confirmButton: 'تأیید',
+    finalButton: 'تأیید نهایی',
+    cancelButton: 'لغو',
+    groupButton: 'تأیید همهٔ تغییرهای ساده ({n})',
+    voiceHint: 'یا بگویید «تأیید» یا «نه».',
+    echoHint: 'برای تأیید نهایی نام «{target}» را بگویید، یا روی «تأیید نهایی» بزنید.',
+    timeLeft: 'مهلت: {time}',
+    hints: {
+      unclear: 'متوجه نشدم. دوباره بگویید «تأیید» یا «نه»، یا روی دکمه بزنید.',
+      echo_mismatch: 'نام درست گفته نشد. نام «{target}» را بگویید یا روی «تأیید نهایی» بزنید.',
+      too_soon: 'چند لحظه صبر کنید و دوباره تأیید کنید.',
+      closed: 'این تغییر دیگر منتظر تأیید نیست.',
+      failed: 'ثبت نشد. دوباره تلاش کنید.',
+    },
+    results: {
+      executed: 'انجام شد',
+      failed: 'انجام نشد',
+      cancelled: 'لغو شد',
+      expired: 'مهلت تمام شد',
+    },
   },
   card: {
     title: 'گفتگوی زنده با {name}',
@@ -172,6 +223,41 @@ const en: LiveMessages = {
     close: 'Close',
     closeTitle: 'Close and end the live conversation',
     nearCap: 'Near the cap',
+    waiting: 'Waiting for you',
+  },
+  confirm: {
+    title: 'Change proposed by {name}',
+    tiers: {
+      T1: { label: 'Simple change', hint: 'can be undone' },
+      T2: { label: 'Consequential change', hint: 'starts or closes work or cost' },
+      T3: { label: 'Irreversible', hint: 'needs two separate confirmations' },
+    },
+    steps: {
+      preview: 'Preview',
+      readback: 'Read back',
+      confirm: 'Your confirmation',
+      echo: 'Repeat the name',
+    },
+    confirmButton: 'Confirm',
+    finalButton: 'Final confirmation',
+    cancelButton: 'Cancel',
+    groupButton: 'Confirm all simple changes ({n})',
+    voiceHint: 'Or say "confirm" or "no".',
+    echoHint: 'For the final confirmation say the name "{target}", or press "Final confirmation".',
+    timeLeft: 'Time left: {time}',
+    hints: {
+      unclear: 'I did not understand. Say "confirm" or "no" again, or press a button.',
+      echo_mismatch: 'That was not the name. Say "{target}" or press "Final confirmation".',
+      too_soon: 'Wait a moment and confirm again.',
+      closed: 'This change is no longer waiting.',
+      failed: 'It was not recorded. Try again.',
+    },
+    results: {
+      executed: 'Done',
+      failed: 'Not done',
+      cancelled: 'Cancelled',
+      expired: 'Timed out',
+    },
   },
   card: {
     title: 'Live conversation with {name}',
