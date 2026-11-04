@@ -1,6 +1,7 @@
 import type { ProjectCommand } from '@docoo/domain';
 import { z } from 'zod';
 
+import type { NotificationsService } from '../notifications/notifications.service.js';
 import type { ProjectReportService } from '../projects/project-report.service.js';
 import type { ProjectsService } from '../projects/projects.service.js';
 import type { WorkflowService } from '../workflow/workflow.service.js';
@@ -103,9 +104,10 @@ export function compactReport(report: Report) {
 export function projectCapabilities(services: {
   readonly projects: ProjectsService;
   readonly reports: ProjectReportService;
+  readonly notifications: NotificationsService;
   readonly workflow: WorkflowService;
 }): LiveCapability[] {
-  const { projects, reports, workflow } = services;
+  const { projects, reports, notifications, workflow } = services;
 
   const facts = async (context: Context, id: string): Promise<ProjectFacts> => {
     const project = await projects.get(context, id);
@@ -144,6 +146,86 @@ export function projectCapabilities(services: {
         })),
         more: page.nextCursor !== null,
       };
+    },
+  });
+
+  const waiting = defineCapability({
+    meta: { name: 'projects.waiting', klass: 'T0', area: 'projects_overview', write: false },
+    params: z.object({ limit: z.number().int().min(1).max(20).default(10) }),
+    describe: (_params, locale) => ({
+      summary: t(
+        locale,
+        'پروژه‌هایی که منتظر تصمیم شما هستند',
+        'Projects waiting for your decision',
+      ),
+    }),
+    execute: async ({ context }, params) => {
+      const page = await projects.list(context, {
+        limit: params.limit,
+        status: 'current',
+        waiting: true,
+      });
+      return {
+        projects: page.items.map((item) => ({
+          id: item.id,
+          code: item.code,
+          title: item.title,
+          status: item.status,
+          stage: item.currentStage,
+          waitingFor: item.waiting?.kind ?? null,
+          waitingStage: item.waiting?.stage ?? null,
+        })),
+        more: page.nextCursor !== null,
+      };
+    },
+  });
+
+  // Notifications belong to the whole back office, not to one project: they are within reach only
+  // when the owner gave the assistant the back office, not just the projects.
+  const unread = defineCapability({
+    meta: { name: 'notifications.unread', klass: 'T0', area: 'backoffice', write: false },
+    params: z.object({ limit: z.number().int().min(1).max(20).default(10) }),
+    describe: (_params, locale) => ({
+      summary: t(locale, 'اعلان‌های خواندنی‌نشده', 'Unread notifications'),
+    }),
+    execute: async ({ context }, params) => {
+      const [summary, page] = await Promise.all([
+        notifications.summary(context),
+        notifications.list(context, { status: 'unread', limit: params.limit }),
+      ]);
+      return {
+        unread: summary.unread,
+        // What happened and where, never the payload: it can hold free text.
+        items: page.items.map((item) => ({
+          kind: item.kind,
+          project: item.project,
+          stillWaiting: item.stillWaiting,
+          createdAt: item.createdAt,
+        })),
+      };
+    },
+  });
+
+  const rename = defineCapability<{ projectId: string; title: string }, ProjectFacts>({
+    meta: { name: 'project.rename', klass: 'T1', area: 'project', write: true },
+    params: z.object({ projectId, title: z.string().trim().min(1).max(200) }),
+    projectOf: (params) => params.projectId,
+    prepare: (context, params) => facts(context, params.projectId),
+    describe: (params, locale, found) => ({
+      summary: t(
+        locale,
+        `تغییر نام پروژهٔ ${label(found, params.projectId)} به «${params.title}»`,
+        `Rename project ${label(found, params.projectId)} to "${params.title}"`,
+      ),
+    }),
+    // The old title goes into the ledger with the result, so the change can be undone by hand.
+    execute: async ({ context }, params) => {
+      const current = await projects.get(context, params.projectId);
+      const updated = await projects.update(context, params.projectId, current.version, {
+        title: params.title,
+        reason: reasonOf(undefined, 'renamed'),
+      });
+      return { id: updated.id, from: current.title, to: updated.title, version: updated.version };
     },
   });
 
@@ -247,8 +329,11 @@ export function projectCapabilities(services: {
 
   return [
     overview,
+    waiting,
+    unread,
     status,
     report,
+    rename,
     lifecycle('pause', 'T1', {
       needsReason: true,
       fallback: 'paused',

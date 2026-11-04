@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { LiveCapabilityRegistry } from '../src/live-assistant/capabilities.js';
 import { decideProposal, liveSettingsFrom } from '../src/live-assistant/live-gateway.js';
 import { compactReport, projectCapabilities } from '../src/live-assistant/project-capabilities.js';
+import type { NotificationsService } from '../src/notifications/notifications.service.js';
 import type { ProjectReportService } from '../src/projects/project-report.service.js';
 import type { ProjectsService } from '../src/projects/projects.service.js';
 import type { WorkflowService } from '../src/workflow/workflow.service.js';
@@ -103,14 +104,32 @@ function fakes() {
   });
   const onProjectCommand = vi.fn().mockResolvedValue(undefined);
   const report = vi.fn().mockResolvedValue(reportFixture());
+  const update = vi.fn().mockResolvedValue({ ...project, title: 'Summer plan', version: 8 });
+  const summary = vi.fn().mockResolvedValue({ unread: 4 });
+  const notes = vi.fn().mockResolvedValue({
+    items: [
+      {
+        id: 'n1',
+        kind: 'human_task',
+        projectId: P1,
+        project: { code: 'spring', title: 'Spring plan' },
+        payload: { secret: 'free text that must stay out' },
+        createdAt: 'c',
+        readAt: null,
+        stillWaiting: true,
+      },
+    ],
+    nextCursor: null,
+  });
   const registry = new LiveCapabilityRegistry(
     projectCapabilities({
-      projects: { get, command, list } as unknown as ProjectsService,
+      projects: { get, command, list, update } as unknown as ProjectsService,
       reports: { report } as unknown as ProjectReportService,
+      notifications: { summary, list: notes } as unknown as NotificationsService,
       workflow: { onProjectCommand } as unknown as WorkflowService,
     }),
   );
-  return { registry, get, command, list, onProjectCommand, report };
+  return { registry, get, command, list, onProjectCommand, report, update, summary, notes };
 }
 
 const settings = (over: Record<string, unknown> = {}) =>
@@ -126,21 +145,32 @@ const settings = (over: Record<string, unknown> = {}) =>
 describe('the first live assistant capabilities', () => {
   it('are reads and the whole life of a project, each with the right risk', () => {
     const { registry } = fakes();
-    expect(registry.names()).toEqual([
-      'project.archive',
-      'project.complete',
-      'project.delete',
-      'project.pause',
-      'project.reopen',
-      'project.report',
-      'project.restore',
-      'project.resume',
-      'project.status',
-      'project.unarchive',
-      'projects.overview',
-    ]);
+    expect(registry.names()).toEqual(
+      [
+        'project.archive',
+        'project.complete',
+        'project.delete',
+        'project.pause',
+        'project.rename',
+        'project.reopen',
+        'project.report',
+        'project.restore',
+        'project.resume',
+        'project.status',
+        'project.unarchive',
+        'notifications.unread',
+        'projects.overview',
+        'projects.waiting',
+      ].sort(),
+    );
     const klass = (name: string) => registry.get(name)?.meta.klass;
-    for (const name of ['projects.overview', 'project.status', 'project.report']) {
+    for (const name of [
+      'projects.overview',
+      'projects.waiting',
+      'notifications.unread',
+      'project.status',
+      'project.report',
+    ]) {
       expect(klass(name), name).toBe('T0');
     }
     // Reversible: undone by the opposite command, no model work started.
@@ -167,7 +197,7 @@ describe('the first live assistant capabilities', () => {
     const { registry } = fakes();
     const exposed = registry
       .names()
-      .filter((name) => registry.get(name)?.meta.write)
+      .filter((name) => registry.get(name)?.meta.write && name !== 'project.rename')
       .map((name) => name.replace('project.', ''))
       .sort();
     expect(exposed).toEqual([...projectCommands].filter((name) => name !== 'activate').sort());
@@ -501,5 +531,113 @@ describe('the rest of the project capabilities', () => {
     // The same bounds hold whatever the report holds: ids of files, per-model breakdowns and the like stay out.
     expect(JSON.stringify(out)).not.toMatch(/openai:m|"a1"|byStage/u);
     expect(compactReport(reportFixture() as never).project.stage).toBe('research');
+  });
+});
+
+describe('waiting work, notifications and renaming', () => {
+  const run = { context, sessionId: P1, actionId: P1 };
+
+  it('lists what waits for the owner, without the long texts', async () => {
+    const { registry, list } = fakes();
+    const out = await registry.get('projects.waiting')?.execute(run, { limit: 5 });
+    expect(list).toHaveBeenCalledWith(context, { limit: 5, status: 'current', waiting: true });
+    expect(out).toEqual({
+      projects: [
+        {
+          id: P1,
+          code: 'spring',
+          title: 'Spring plan',
+          status: 'active',
+          stage: 'research',
+          waitingFor: 'gate',
+          waitingStage: 'research',
+        },
+      ],
+      more: true,
+    });
+    expect(registry.get('projects.waiting')?.meta.area).toBe('projects_overview');
+  });
+
+  it('reads unread notifications as a back office matter, and leaves their free text out', async () => {
+    const { registry, summary, notes } = fakes();
+    const capability = registry.get('notifications.unread');
+    expect(capability?.meta.area).toBe('backoffice');
+    const out = await capability?.execute(run, { limit: 3 });
+    expect(summary).toHaveBeenCalledWith(context);
+    expect(notes).toHaveBeenCalledWith(context, { status: 'unread', limit: 3 });
+    expect(out).toEqual({
+      unread: 4,
+      items: [
+        {
+          kind: 'human_task',
+          project: { code: 'spring', title: 'Spring plan' },
+          stillWaiting: true,
+          createdAt: 'c',
+        },
+      ],
+    });
+    expect(JSON.stringify(out)).not.toContain('free text');
+  });
+
+  it('are out of reach of an assistant that has the projects but not the back office', () => {
+    const { registry } = fakes();
+    const ask = (name: string, params: unknown, scope: string) =>
+      decideProposal({
+        registry,
+        capability: name,
+        params,
+        settings: liveSettingsFrom({
+          'live_assistant.enabled': true,
+          'live_assistant.disclosure_accepted': true,
+          'live_assistant.connection_id': P1,
+          'live_assistant.model': 'm',
+          'live_assistant.access_scope': scope,
+        }),
+        tainted: false,
+        currentProjectId: null,
+      });
+    expect(ask('notifications.unread', {}, 'all_projects')).toEqual({
+      outcome: 'refused',
+      reason: 'out_of_scope',
+    });
+    expect(ask('notifications.unread', {}, 'backoffice')).toMatchObject({
+      outcome: 'accepted',
+      tier: 'T0',
+    });
+    expect(ask('projects.waiting', {}, 'all_projects')).toMatchObject({
+      outcome: 'accepted',
+      tier: 'T0',
+    });
+  });
+
+  it('rename keeps the old title in the ledger, and says both names in the preview', async () => {
+    const { registry, get, update } = fakes();
+    const capability = registry.get('project.rename');
+    const facts = { title: 'Spring plan', code: 'spring', status: 'active' };
+    expect(capability?.describe({ projectId: P1, title: 'Summer plan' }, 'en', facts).summary).toBe(
+      'Rename project «Spring plan» (spring) to "Summer plan"',
+    );
+    expect(
+      capability?.describe({ projectId: P1, title: 'Summer plan' }, 'fa', facts).summary,
+    ).toContain('«Spring plan»');
+    const out = await capability?.execute(run, { projectId: P1, title: 'Summer plan' });
+    expect(get).toHaveBeenCalledWith(context, P1);
+    expect(update).toHaveBeenCalledWith(context, P1, 7, {
+      title: 'Summer plan',
+      reason: 'Voice assistant: renamed',
+    });
+    expect(out).toEqual({ id: P1, from: 'Spring plan', to: 'Summer plan', version: 8 });
+  });
+
+  it('rename needs a real title', () => {
+    const { registry } = fakes();
+    const parse = (params: unknown) => registry.get('project.rename')?.params.safeParse(params);
+    expect(parse({ projectId: P1, title: '  New  ' })?.data).toEqual({
+      projectId: P1,
+      title: 'New',
+    });
+    expect(parse({ projectId: P1, title: '   ' })?.success).toBe(false);
+    expect(parse({ projectId: P1, title: 'x'.repeat(201) })?.success).toBe(false);
+    expect(parse({ projectId: P1 })?.success).toBe(false);
   });
 });

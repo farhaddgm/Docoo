@@ -319,6 +319,59 @@ describe.skipIf(!adminUrl)('live assistant: projects', () => {
     await service.cancel(context(), after.id);
   });
 
+  it('renames a project after a confirmation, and keeps the old title in the ledger', async () => {
+    await fresh();
+    const proposed = await propose('project.rename', {
+      projectId: lifeId,
+      title: 'Renamed by voice',
+    });
+    expect(proposed).toMatchObject({ status: 'proposed', tier: 'T1' });
+    expect(proposed.summary).toContain('Project live-life');
+    expect(proposed.summary).toContain('Renamed by voice');
+    const titleOf = async () =>
+      (await h.request('GET', api(`/projects/${lifeId}`), { cookie: cookieA })).json<{
+        project: { title: string };
+      }>().project.title;
+    expect(await titleOf()).toBe('Project live-life');
+
+    const done = await service.confirm(context(), proposed.id, { via: 'click' });
+    expect(done).toMatchObject({
+      status: 'executed',
+      result: { from: 'Project live-life', to: 'Renamed by voice' },
+    });
+    expect(await titleOf()).toBe('Renamed by voice');
+    const reasons = (
+      await h.admin.query(`select reason from audit_events where project_id = $1`, [lifeId])
+    ).rows.map((row: { reason: string | null }) => row.reason);
+    expect(reasons).toContain('Voice assistant: renamed');
+
+    const back = await propose('project.rename', { projectId: lifeId, title: 'Project live-life' });
+    await service.confirm(context(), back.id, { via: 'click' });
+    expect(await titleOf()).toBe('Project live-life');
+  });
+
+  it('lists the projects that wait for the owner', async () => {
+    await fresh();
+    const out = await propose('projects.waiting', {});
+    expect(out).toMatchObject({ status: 'executed', tier: 'T0' });
+    expect(Array.isArray((out.result as { projects: unknown[] }).projects)).toBe(true);
+  });
+
+  it('reads notifications only when the owner gave the assistant the whole back office', async () => {
+    await fresh();
+    expect(await propose('notifications.unread', {})).toMatchObject({
+      status: 'refused',
+      refusalReason: 'out_of_scope',
+    });
+    await setting('live_assistant.access_scope', 'backoffice');
+    const out = await propose('notifications.unread', { limit: 5 });
+    expect(out).toMatchObject({ status: 'executed', tier: 'T0' });
+    const body = out.result as { unread: number; items: unknown[] };
+    expect(typeof body.unread).toBe('number');
+    expect(Array.isArray(body.items)).toBe(true);
+    await setting('live_assistant.access_scope', 'all_projects');
+  });
+
   it('refuses a project that is not there, and one from another workspace, without a name', async () => {
     const gone = await propose('project.pause', { projectId: randomUUID(), reason: 'x' });
     expect(gone).toMatchObject({
