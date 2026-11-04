@@ -76,6 +76,7 @@ notion_sync: true
 
 - [تحقیق بازار، بنچ‌مارک و پیشنهادهای بهبود](06-delivery/15-product-research-and-improvement-proposals.md) — وضع فعلی، شکاف‌ها، رقبا و ۱۵ پیشنهاد با Issue؛ وضعیت proposed.
 - [پروتکل spike جست‌وجوی وب](06-delivery/16-search-api-spike.md) — روش و معیار مقایسهٔ ارائه‌دهندگان؛ اجرا نشده.
+- [پروتکل spike فاز ۰ دستیار صوتی زنده](06-delivery/18-live-assistant-spike.md) — روش، ابزار و معیار برو/نرو برای [ADR-0055](adr/0055-live-voice-assistant.md)؛ ابزار آزموده شده، اجرا نشده.
 
 ### ۷. یکپارچه‌سازی‌ها
 

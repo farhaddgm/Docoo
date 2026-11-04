@@ -1,5 +1,7 @@
 'use client';
 
+import type { Route } from 'next';
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   evaluationBlindReviewPackSchema,
@@ -611,12 +613,14 @@ export function EvaluationLabScreen({
   return (
     <div className="evaluation-lab" dir={locale === 'fa' ? 'rtl' : 'ltr'} lang={locale}>
       <header className="page-header">
-        <a href={`/${locale}/projects/${projectId}?workspaceId=${workspaceId}`}>{t.back}</a>
+        <Link href={`/${locale}/projects/${projectId}?workspaceId=${workspaceId}` as Route}>
+          {t.back}
+        </Link>
       </header>
       {state === 'loading' && <p role="status">{t.loading}</p>}
       {state === 'guest' && (
         <p role="alert">
-          {t.guest} <a href={`/${locale}/auth/login`}>{t.login}</a>
+          {t.guest} <Link href={`/${locale}/auth/login` as Route}>{t.login}</Link>
         </p>
       )}
       {state === 'denied' && <p role="alert">{t.denied}</p>}

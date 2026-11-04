@@ -9,6 +9,6 @@ import { NotificationsService } from './notifications.service.js';
   imports: [ConfigModule],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationMailer, notificationTransportProvider],
-  exports: [NotificationMailer],
+  exports: [NotificationMailer, NotificationsService],
 })
 export class NotificationsModule {}

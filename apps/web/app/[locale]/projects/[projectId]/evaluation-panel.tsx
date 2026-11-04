@@ -1,5 +1,7 @@
 'use client';
 
+import type { Route } from 'next';
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiGet } from '../../../api-client';
@@ -190,12 +192,14 @@ export function EvaluationPanel({
           <button type="button" className="secondary-button" onClick={onOpenSettings}>
             {text.openSettings}
           </button>
-          <a
+          <Link
             className="secondary-button link-button"
-            href={`/${locale}/projects/${projectId}/evaluation-lab?workspaceId=${workspaceId}`}
+            href={
+              `/${locale}/projects/${projectId}/evaluation-lab?workspaceId=${workspaceId}` as Route
+            }
           >
             {text.openLab}
-          </a>
+          </Link>
         </div>
       </section>
 

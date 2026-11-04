@@ -18,3 +18,5 @@ export * from './problem-pattern-authoring.js';
 export * from './problem-pattern-examples.js';
 export * from './meeting-preparation.js';
 export * from './voice.js';
+export * from './live-assistant.js';
+export * from './live-assistant-api.js';

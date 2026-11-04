@@ -5457,6 +5457,279 @@ button.link-button {
   }
 }
 
+/* ADR-0055: the floating pill of the live voice conversation, and its card in the Smart chat tab. */
+.live-pill {
+  position: fixed;
+  inset-block-end: 4.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 61;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-inline-size: calc(100vw - 1rem);
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  color: var(--color-ink);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.live-pill:active {
+  cursor: grabbing;
+}
+
+.live-pill:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.live-pill-orb {
+  flex: none;
+  inline-size: 0.6rem;
+  block-size: 0.6rem;
+  border-radius: 50%;
+  background: var(--color-muted);
+}
+
+.live-pill[data-state='awake'] .live-pill-orb {
+  background: var(--color-primary);
+  animation: live-pill-pulse 1.8s ease-in-out infinite;
+}
+
+.live-pill[data-state='starting'] .live-pill-orb,
+.live-pill[data-state='closing'] .live-pill-orb {
+  background: var(--color-warn-ink);
+}
+
+.live-pill[data-state='error'] .live-pill-orb {
+  background: var(--color-danger-ink);
+}
+
+.live-pill[data-warn='true'] .live-pill-orb {
+  background: var(--color-warn-ink);
+}
+
+.live-pill[data-warn='true'] .live-pill-status {
+  color: var(--color-warn-ink);
+  font-weight: 600;
+}
+
+.live-pill-status {
+  color: var(--color-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.live-pill-tokens {
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.live-pill-close {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.4rem;
+  block-size: 1.4rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--color-primary-soft);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.live-pill-close svg {
+  inline-size: 0.8rem;
+  block-size: 0.8rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+}
+
+@keyframes live-pill-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-pill[data-state='awake'] .live-pill-orb {
+    animation: none;
+  }
+}
+
+.live-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-primary-soft);
+}
+
+.live-card h3 {
+  margin: 0;
+}
+
+.live-card p {
+  margin: 0;
+}
+
+.live-confirm {
+  position: fixed;
+  inset-block-end: 8.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 62;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  inline-size: min(34rem, calc(100vw - 1rem));
+  max-block-size: calc(100vh - 11rem);
+  overflow-y: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+  box-shadow: 0 10px 32px rgb(0 0 0 / 0.22);
+}
+
+.live-confirm-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.live-confirm-item[data-tier='T2'] {
+  border-color: var(--color-warn-ink);
+}
+
+.live-confirm-item[data-tier='T3'] {
+  border-color: var(--color-danger-ink);
+  background: var(--color-danger-bg);
+}
+
+.live-confirm-item header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.live-confirm-time {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.live-confirm p {
+  margin: 0;
+}
+
+.live-confirm-summary {
+  font-weight: 600;
+}
+
+.live-confirm-echo {
+  font-weight: 600;
+  color: var(--color-danger-ink);
+}
+
+.live-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+}
+
+.live-steps li {
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-muted);
+}
+
+.live-steps li[data-state='done'] {
+  color: var(--color-ink);
+  background: var(--color-primary-soft);
+}
+
+.live-steps li[data-state='current'] {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.live-confirm-result {
+  font-size: var(--font-size-sm);
+}
+
+.live-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+}
+
+.live-history h3,
+.live-history h4,
+.live-history p {
+  margin: 0;
+}
+
+.live-history-list,
+.live-history-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.live-history-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.secondary-button.live-danger {
+  border-color: var(--color-danger-ink);
+  color: var(--color-danger-ink);
+}
+
+.secondary-button.live-danger:hover:not(:disabled) {
+  background: var(--color-danger-bg);
+}
+
+.live-history-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--color-border);
+}
+
 /* ADR-0048: the research mode cards. */
 .preset-picker {
   border: 1px solid var(--color-border);
