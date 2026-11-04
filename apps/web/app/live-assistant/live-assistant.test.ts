@@ -1,3 +1,8 @@
+import {
+  liveActionStatuses,
+  liveAssistantUnavailableReasons,
+  liveSessionEndReasons,
+} from '@docoo/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { clampPosition, isDrag, parsePosition } from './drag';
@@ -379,9 +384,33 @@ describe('the words', () => {
         'other_tab',
         'start_failed',
         'connection_lost',
+        'cap_reached',
+        'switched_off',
       ] as const) {
         expect(text.card.errors[error].length).toBeGreaterThan(0);
       }
+    }
+  });
+
+  it('every reason, session state, end reason and change state of the list has a text in both languages', () => {
+    for (const locale of ['fa', 'en'] as const) {
+      const text = liveMessagesFor(locale);
+      for (const reason of liveAssistantUnavailableReasons) {
+        expect(text.card.notReady[reason].length, reason).toBeGreaterThan(0);
+      }
+      expect(text.card.notReady.no_provider.length).toBeGreaterThan(0);
+      for (const reason of liveSessionEndReasons) {
+        expect(text.history.endReasons[reason].length, reason).toBeGreaterThan(0);
+      }
+      for (const status of liveActionStatuses) {
+        expect(text.history.actionStatus[status].length, status).toBeGreaterThan(0);
+      }
+      for (const status of ['active', 'ended'] as const) {
+        expect(text.history.sessionStatus[status].length).toBeGreaterThan(0);
+      }
+      expect(fill(text.history.roles.assistant, { name: text.name })).toBe(text.name);
+      expect(fill(text.history.minutes, { n: '3' })).not.toMatch(/\{/u);
+      expect(fill(text.history.cost, { n: '1.5' })).toContain('1.5');
     }
   });
 

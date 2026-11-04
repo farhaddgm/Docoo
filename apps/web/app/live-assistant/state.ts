@@ -8,7 +8,15 @@
 
 export type LiveStatus = 'off' | 'starting' | 'awake' | 'asleep' | 'closing' | 'error';
 
-export type LiveError = 'unavailable' | 'other_tab' | 'start_failed' | 'connection_lost';
+export type LiveError =
+  | 'unavailable'
+  | 'other_tab'
+  | 'start_failed'
+  | 'connection_lost'
+  /** The server ended the session because a cost or time cap was reached. */
+  | 'cap_reached'
+  /** The owner switched the assistant off in the settings, or it is not ready to start. */
+  | 'switched_off';
 
 export interface PillPosition {
   readonly x: number;

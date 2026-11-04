@@ -1,5 +1,8 @@
 'use client';
 
+import type { LiveAssistantClientConfig } from '@docoo/contracts';
+import type { Route } from 'next';
+import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 
 import { formatNumber, type Locale } from '../i18n';
@@ -7,11 +10,21 @@ import { fill, liveMessagesFor } from './messages';
 import { isLiveActive } from './state';
 import { liveAssistant } from './store';
 
+/** The name shown to the owner: the Persian interface uses the spoken name, the English one the display name. */
+export const assistantNameFor = (locale: Locale, config: LiveAssistantClientConfig): string =>
+  locale === 'fa' ? config.spokenName : config.displayName;
+
 /**
  * The button that switches the live conversation on and off, at the top of the Smart chat tab
  * (HUG-002). The session itself lives in the root layout, so closing this window changes nothing.
  */
-export function LiveCard({ locale }: { readonly locale: Locale }) {
+export function LiveCard({
+  locale,
+  config,
+}: {
+  readonly locale: Locale;
+  readonly config: LiveAssistantClientConfig;
+}) {
   const text = liveMessagesFor(locale);
   const state = useSyncExternalStore(
     liveAssistant.subscribe,
@@ -20,12 +33,20 @@ export function LiveCard({ locale }: { readonly locale: Locale }) {
   );
   const active = isLiveActive(state.status);
   const busy = state.status === 'starting' || state.status === 'closing';
-  const name = { name: text.name };
+  const name = { name: assistantNameFor(locale, config) };
 
   let label = text.card.start;
   if (state.status === 'starting') label = text.card.starting;
   else if (state.status === 'closing') label = text.card.closing;
   else if (active) label = text.card.stop;
+
+  // Why it cannot start yet, said once: the owner's settings first, then the missing connection.
+  const reason = config.unavailableReason
+    ? text.card.notReady[config.unavailableReason]
+    : !state.available
+      ? text.card.notReady.no_provider
+      : null;
+  const canStart = state.available && config.ready;
 
   return (
     <section className="live-card" aria-label={fill(text.card.title, name)}>
@@ -36,7 +57,7 @@ export function LiveCard({ locale }: { readonly locale: Locale }) {
           type="button"
           className={active ? 'secondary-button' : 'primary-button'}
           aria-pressed={active}
-          disabled={busy || (!active && !state.available)}
+          disabled={busy || (!active && !canStart)}
           onClick={() => void (active ? liveAssistant.stop() : liveAssistant.start())}
         >
           {label}
@@ -47,7 +68,14 @@ export function LiveCard({ locale }: { readonly locale: Locale }) {
           </span>
         )}
       </div>
-      {!state.available && !active && <p className="muted">{text.card.unavailable}</p>}
+      {reason && !active && (
+        <p className="muted">
+          {reason}{' '}
+          {config.unavailableReason && (
+            <Link href={`/${locale}/live-assistant` as Route}>{text.card.openSettings}</Link>
+          )}
+        </p>
+      )}
       {state.error && (
         <p className="notice error" role="alert">
           {text.card.errors[state.error]}

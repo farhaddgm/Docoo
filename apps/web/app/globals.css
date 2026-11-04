@@ -5577,6 +5577,47 @@ button.link-button {
   margin: 0;
 }
 
+.live-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+}
+
+.live-history h3,
+.live-history h4,
+.live-history p {
+  margin: 0;
+}
+
+.live-history-list,
+.live-history-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.live-history-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.live-history-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--color-border);
+}
+
 /* ADR-0048: the research mode cards. */
 .preset-picker {
   border: 1px solid var(--color-border);

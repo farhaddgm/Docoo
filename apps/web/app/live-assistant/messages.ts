@@ -1,3 +1,5 @@
+import type { LiveActionStatus, LiveSessionEndReason } from '@docoo/contracts';
+
 import type { Locale } from '../i18n';
 import type { LiveError, LiveStatus } from './state';
 
@@ -25,8 +27,34 @@ export interface LiveMessages {
     readonly starting: string;
     readonly closing: string;
     readonly unavailable: string;
+    /** Why the assistant cannot start yet, from the owner's settings. */
+    readonly notReady: {
+      readonly disabled: string;
+      readonly disclosure: string;
+      readonly not_configured: string;
+      readonly no_provider: string;
+    };
+    readonly openSettings: string;
     readonly used: string;
     readonly errors: Record<LiveError, string>;
+  };
+  readonly history: {
+    readonly title: string;
+    readonly empty: string;
+    readonly loadFailed: string;
+    readonly open: string;
+    readonly close: string;
+    readonly minutes: string;
+    readonly tokens: string;
+    readonly cost: string;
+    readonly noMessages: string;
+    readonly noActions: string;
+    readonly transcript: string;
+    readonly changes: string;
+    readonly roles: Record<'user' | 'assistant', string>;
+    readonly sessionStatus: Record<'active' | 'ended', string>;
+    readonly endReasons: Record<LiveSessionEndReason, string>;
+    readonly actionStatus: Record<LiveActionStatus, string>;
   };
 }
 
@@ -62,6 +90,52 @@ const fa: LiveMessages = {
       other_tab: 'گفتگوی زنده در تب دیگری فعال است. همان‌جا خاموشش کنید یا اینجا دوباره تلاش کنید.',
       start_failed: 'اتصال برقرار نشد. دوباره تلاش کنید.',
       connection_lost: 'اتصال قطع شد و گفتگوی زنده بسته شد.',
+      cap_reached:
+        'به سقف هزینه یا زمان رسید و گفتگوی زنده بسته شد. سقف‌ها در صفحهٔ تنظیمات دستیار قابل‌تغییرند.',
+      switched_off: 'دستیار صوتی در تنظیمات خاموش است یا آمادهٔ شروع نیست.',
+    },
+    notReady: {
+      disabled: 'دستیار صوتی در تنظیمات خاموش است.',
+      disclosure: 'هشدار حریم خصوصی هنوز در تنظیمات دستیار پذیرفته نشده است.',
+      not_configured: 'اتصال و مدل صوتی هنوز در تنظیمات دستیار انتخاب نشده است.',
+      no_provider: 'اتصال به سرویس صوتی هنوز راه‌اندازی نشده است.',
+    },
+    openSettings: 'باز کردن تنظیمات دستیار',
+  },
+  history: {
+    title: 'گفتگوهای صوتی',
+    empty: 'هنوز گفتگوی صوتی‌ای انجام نشده است.',
+    loadFailed: 'فهرست گفتگوهای صوتی بارگذاری نشد.',
+    open: 'نمایش',
+    close: 'بستن',
+    minutes: '{n} دقیقه',
+    tokens: '{n} توکن',
+    cost: '{n} دلار',
+    noMessages: 'متنی برای این گفتگو ذخیره نشده است.',
+    noActions: 'تغییری پیشنهاد نشد.',
+    transcript: 'متن گفتگو',
+    changes: 'تغییرهای پیشنهادی',
+    roles: { user: 'شما', assistant: '{name}' },
+    sessionStatus: { active: 'در جریان', ended: 'پایان‌یافته' },
+    endReasons: {
+      user: 'خاموش‌شده توسط شما',
+      idle: 'بیکاری',
+      cap_cost: 'سقف هزینه',
+      cap_time: 'سقف زمان',
+      cap_daily: 'سقف هزینهٔ روزانه',
+      disabled: 'خاموش‌شدن در تنظیمات',
+      superseded: 'شروع گفتگوی دیگر',
+      error: 'خطا',
+    },
+    actionStatus: {
+      proposed: 'منتظر تأیید',
+      first_confirmed: 'منتظر تأیید دوم',
+      confirmed: 'تأییدشده',
+      executed: 'انجام شد',
+      failed: 'ناموفق',
+      cancelled: 'لغو شد',
+      expired: 'مهلت تمام شد',
+      refused: 'رد شد',
     },
   },
 };
@@ -99,6 +173,53 @@ const en: LiveMessages = {
         'The live conversation is active in another tab. Switch it off there, or try again here.',
       start_failed: 'Could not connect. Try again.',
       connection_lost: 'The connection dropped and the live conversation was closed.',
+      cap_reached:
+        'A cost or time cap was reached and the live conversation was closed. The caps can be changed on the assistant settings page.',
+      switched_off: 'The voice assistant is switched off in settings or not ready to start.',
+    },
+    notReady: {
+      disabled: 'The voice assistant is switched off in settings.',
+      disclosure: 'The privacy notice has not been accepted in the assistant settings yet.',
+      not_configured:
+        'The voice connection and model are not chosen in the assistant settings yet.',
+      no_provider: 'The connection to the voice service is not set up yet.',
+    },
+    openSettings: 'Open assistant settings',
+  },
+  history: {
+    title: 'Voice conversations',
+    empty: 'No voice conversation yet.',
+    loadFailed: 'The voice conversations could not be loaded.',
+    open: 'Show',
+    close: 'Hide',
+    minutes: '{n} min',
+    tokens: '{n} tokens',
+    cost: '${n}',
+    noMessages: 'No text was stored for this conversation.',
+    noActions: 'No change was proposed.',
+    transcript: 'Transcript',
+    changes: 'Proposed changes',
+    roles: { user: 'You', assistant: '{name}' },
+    sessionStatus: { active: 'In progress', ended: 'Ended' },
+    endReasons: {
+      user: 'Switched off by you',
+      idle: 'Idle',
+      cap_cost: 'Cost cap',
+      cap_time: 'Time cap',
+      cap_daily: 'Daily cost cap',
+      disabled: 'Switched off in settings',
+      superseded: 'Another conversation started',
+      error: 'Error',
+    },
+    actionStatus: {
+      proposed: 'Waiting for confirmation',
+      first_confirmed: 'Waiting for the second confirmation',
+      confirmed: 'Confirmed',
+      executed: 'Done',
+      failed: 'Failed',
+      cancelled: 'Cancelled',
+      expired: 'Timed out',
+      refused: 'Refused',
     },
   },
 };
