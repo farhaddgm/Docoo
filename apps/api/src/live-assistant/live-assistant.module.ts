@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { ConfigModule } from '../config/config.module.js';
+import { ProjectReportService } from '../projects/project-report.service.js';
 import { ProjectsModule } from '../projects/projects.module.js';
 import { ProjectsService } from '../projects/projects.service.js';
 import { WorkflowModule } from '../workflow/workflow.module.js';
@@ -18,9 +19,12 @@ import { projectCapabilities } from './project-capabilities.js';
     LiveAssistantService,
     {
       provide: LIVE_CAPABILITIES,
-      inject: [ProjectsService, WorkflowService],
-      useFactory: (projects: ProjectsService, workflow: WorkflowService) =>
-        new LiveCapabilityRegistry(projectCapabilities({ projects, workflow })),
+      inject: [ProjectsService, ProjectReportService, WorkflowService],
+      useFactory: (
+        projects: ProjectsService,
+        reports: ProjectReportService,
+        workflow: WorkflowService,
+      ) => new LiveCapabilityRegistry(projectCapabilities({ projects, reports, workflow })),
     },
   ],
 })

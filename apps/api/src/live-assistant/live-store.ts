@@ -176,6 +176,28 @@ export async function recordUsage(
   );
 }
 
+/** How long after reading untrusted content a session's changes are confirmed more strictly. */
+export const TAINT_WINDOW_S = 600;
+
+/** Whether the session read untrusted content recently, by the database's own clock. */
+export async function sessionTainted(client: PoolClient, sessionId: string): Promise<boolean> {
+  const row = (
+    await client.query<{ tainted: boolean }>(
+      `select coalesce(untrusted_read_at >= now() - make_interval(secs => $2), false) as tainted
+         from live_sessions where id = $1`,
+      [sessionId, TAINT_WINDOW_S],
+    )
+  ).rows[0];
+  return row?.tainted ?? false;
+}
+
+export async function markUntrustedRead(client: PoolClient, sessionId: string): Promise<void> {
+  await client.query(
+    `update live_sessions set untrusted_read_at = now() where id = $1 and status = 'active'`,
+    [sessionId],
+  );
+}
+
 export async function touchSession(client: PoolClient, sessionId: string): Promise<void> {
   await client.query(
     `update live_sessions set last_activity_at = now() where id = $1 and status = 'active'`,

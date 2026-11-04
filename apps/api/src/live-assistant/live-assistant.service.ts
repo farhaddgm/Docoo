@@ -38,6 +38,7 @@ import {
   endSession,
   insertAction,
   insertSession,
+  markUntrustedRead,
   listActions,
   listMessages,
   listSessions,
@@ -45,6 +46,7 @@ import {
   readAction,
   readSession,
   recordUsage,
+  sessionTainted,
   supersedeActiveSession,
   toActionView,
   type ActionRow,
@@ -378,12 +380,15 @@ export class LiveAssistantService {
     const out = await this.database.run(context, async (client) => {
       const gate = await this.gate(client, context, input.sessionId, { touch: true });
       if (gate.kind === 'closed') return { closed: gate };
+      // The browser may say content was read; the server also remembers it. Either one raises the
+      // strictness, and nothing lowers it.
+      const tainted = input.tainted || (await sessionTainted(client, input.sessionId));
       const decision = decideProposal({
         registry: this.registry,
         capability: input.capability,
         params: input.params,
         settings: gate.settings,
-        tainted: input.tainted,
+        tainted,
         currentProjectId: input.currentProjectId ?? null,
         facts,
         prepareFailed,
@@ -394,7 +399,7 @@ export class LiveAssistantService {
         sessionId: input.sessionId,
         capability: input.capability,
         currentProjectId: input.currentProjectId ?? null,
-        tainted: input.tainted,
+        tainted,
         confirmTimeoutS: gate.settings.caps.confirmTimeoutS,
       };
       if (decision.outcome === 'refused') {
@@ -435,7 +440,7 @@ export class LiveAssistantService {
         targetId: proposed.id,
         projectId: decision.projectId,
         securityRelevant: decision.tier !== 'T0',
-        after: { capability: input.capability, tier: decision.tier, tainted: input.tainted },
+        after: { capability: input.capability, tier: decision.tier, tainted },
       });
       if (decision.tier !== 'T0') return { view: toActionView(proposed), run: false };
       // A read needs no one's yes; it still goes through the same states, so it is on the ledger.
@@ -676,6 +681,12 @@ export class LiveAssistantService {
           : { errorCode: outcome.errorCode },
       );
       if (!row) throw conflict('LIVE_ACTION_NOT_OPEN', 'The change was already settled.');
+      // Content that may carry instructions was just handed to the model: from now on, for a
+      // while, every change of this session is confirmed more strictly. Recorded in the same
+      // transaction as the result, so no proposal can slip in between.
+      if (outcome.status === 'executed' && capability?.untrustedOutput) {
+        await markUntrustedRead(client, action.session_id);
+      }
       await this.audit(client, context, {
         action: `live_assistant.action_${outcome.status}`,
         targetType: 'live_action',

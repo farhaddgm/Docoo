@@ -17,6 +17,7 @@ describe.skipIf(!adminUrl)('live assistant: projects', () => {
   let sessionId: string;
   let projectId: string;
   let draftId: string;
+  let lifeId: string;
   const context = () => ({
     workspaceId: h.ids.workspaceA,
     actorId: h.ids.userA,
@@ -52,10 +53,11 @@ describe.skipIf(!adminUrl)('live assistant: projects', () => {
     return response.json<{ project: { id: string; version: number } }>().project;
   }
 
-  const projectState = async () =>
-    (await h.request('GET', api(`/projects/${projectId}`), { cookie: cookieA })).json<{
+  const stateOf = async (id: string) =>
+    (await h.request('GET', api(`/projects/${id}`), { cookie: cookieA })).json<{
       project: { status: string; pauseReason: string | null };
     }>().project;
+  const projectState = () => stateOf(projectId);
 
   const propose = (capability: string, params: Record<string, unknown>) =>
     service.propose(context(), { sessionId, capability, params, tainted: false });
@@ -85,6 +87,13 @@ describe.skipIf(!adminUrl)('live assistant: projects', () => {
     });
     expect(activated.statusCode, activated.body).toBe(200);
     draftId = (await createProject('live-draft', topicId)).id;
+    const life = await createProject('live-life', topicId);
+    lifeId = life.id;
+    const lifeActive = await h.request('POST', api(`/projects/${lifeId}/activate`), {
+      cookie: cookieA,
+      payload: { expectedVersion: life.version },
+    });
+    expect(lifeActive.statusCode, lifeActive.body).toBe(200);
 
     sessionId = (await service.startSession(context())).id;
   });
@@ -175,6 +184,139 @@ describe.skipIf(!adminUrl)('live assistant: projects', () => {
     expect(proposed.status).toBe('proposed');
     const out = await service.confirm(context(), proposed.id, { via: 'click' });
     expect(out).toMatchObject({ status: 'failed', errorCode: 'PROJECT_STATE_CONFLICT' });
+  });
+
+  /** A new session, so what an earlier test read does not make this one stricter. */
+  const fresh = async () => {
+    sessionId = (await service.startSession(context())).id;
+  };
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  it('archives a project and brings it back, each a reversible change', async () => {
+    await fresh();
+    const archive = await propose('project.archive', { projectId: lifeId });
+    expect(archive).toMatchObject({ status: 'proposed', tier: 'T1' });
+    expect(await service.confirm(context(), archive.id, { via: 'click' })).toMatchObject({
+      status: 'executed',
+      result: { status: 'archived' },
+    });
+    expect((await stateOf(lifeId)).status).toBe('archived');
+    const back = await propose('project.unarchive', { projectId: lifeId });
+    expect(back.tier).toBe('T1');
+    expect(await service.confirm(context(), back.id, { via: 'click' })).toMatchObject({
+      status: 'executed',
+      result: { status: 'active' },
+    });
+    expect((await stateOf(lifeId)).status).toBe('active');
+  });
+
+  it('completes a project with a reason, as a consequential change, and reopens it', async () => {
+    await fresh();
+    const noReason = await propose('project.complete', { projectId: lifeId });
+    expect(noReason).toMatchObject({ status: 'refused', refusalReason: 'invalid_params' });
+    const complete = await propose('project.complete', { projectId: lifeId, reason: 'Delivered' });
+    expect(complete).toMatchObject({ status: 'proposed', tier: 'T2' });
+    expect(complete.steps).toEqual(['preview', 'readback', 'voice_or_click']);
+    expect(await service.confirm(context(), complete.id, { via: 'click' })).toMatchObject({
+      status: 'executed',
+      result: { status: 'completed' },
+    });
+    expect((await stateOf(lifeId)).status).toBe('completed');
+    const reopen = await propose('project.reopen', { projectId: lifeId, reason: 'One more round' });
+    expect(reopen.tier).toBe('T2');
+    expect(await service.confirm(context(), reopen.id, { via: 'click' })).toMatchObject({
+      status: 'executed',
+      result: { status: 'active' },
+    });
+    expect((await stateOf(lifeId)).status).toBe('active');
+  });
+
+  it('deletes only once its category is on, after two confirmations, the second by the name, and restores', async () => {
+    await fresh();
+    expect(await propose('project.delete', { projectId: lifeId })).toMatchObject({
+      status: 'refused',
+      refusalReason: 't3_disabled',
+    });
+    await setting('live_assistant.t3_categories', ['delete']);
+
+    const proposed = await propose('project.delete', { projectId: lifeId });
+    expect(proposed).toMatchObject({
+      status: 'proposed',
+      tier: 'T3',
+      targetName: 'Project live-life',
+    });
+    expect(proposed.steps).toContain('target_echo_or_click');
+    expect((await stateOf(lifeId)).status).toBe('active');
+
+    const first = await service.confirm(context(), proposed.id, {
+      via: 'voice',
+      transcript: 'بله',
+    });
+    expect(first).toMatchObject({ status: 'first_confirmed', nextStep: 'echo' });
+    expect((await stateOf(lifeId)).status).toBe('active');
+
+    const tooSoon = await service
+      .confirm(context(), proposed.id, { via: 'click' })
+      .catch((error: unknown) => error as { getStatus: () => number });
+    expect((tooSoon as { getStatus: () => number }).getStatus()).toBe(422);
+    await sleep(1800);
+    const wrong = await service
+      .confirm(context(), proposed.id, { via: 'voice', transcript: 'تایید' })
+      .catch((error: unknown) => error as { getStatus: () => number });
+    expect((wrong as { getStatus: () => number }).getStatus()).toBe(422);
+    expect((await stateOf(lifeId)).status).toBe('active');
+
+    const done = await service.confirm(context(), proposed.id, {
+      via: 'voice',
+      transcript: 'Project live-life',
+    });
+    expect(done).toMatchObject({ status: 'executed', result: { status: 'deleted' } });
+    expect((await stateOf(lifeId)).status).toBe('deleted');
+    const audit = (
+      await h.admin.query(
+        `select actor_id, reason from audit_events where project_id = $1 and action = 'project.delete'`,
+        [lifeId],
+      )
+    ).rows as { actor_id: string; reason: string }[];
+    expect(audit).toEqual([{ actor_id: h.ids.userA, reason: 'Voice assistant: deleted' }]);
+
+    const restore = await propose('project.restore', { projectId: lifeId });
+    expect(restore.tier).toBe('T1');
+    expect(await service.confirm(context(), restore.id, { via: 'click' })).toMatchObject({
+      status: 'executed',
+    });
+    expect((await stateOf(lifeId)).status).not.toBe('deleted');
+    await setting('live_assistant.t3_categories', []);
+  });
+
+  it("reads a project in depth, and then confirms the session's changes more strictly", async () => {
+    await fresh();
+    const before = await propose('project.pause', { projectId: lifeId, reason: 'Check' });
+    expect(before.tier).toBe('T1');
+    await service.cancel(context(), before.id);
+
+    const report = await propose('project.report', { projectId: lifeId });
+    expect(report).toMatchObject({ status: 'executed', tier: 'T0' });
+    const body = report.result as {
+      project: { code: string };
+      problem: { initialProblem: string };
+      usage: { invocations: number };
+      ideas: { items: unknown[] };
+      outputs: { final: unknown[] };
+    };
+    expect(body.project.code).toBe('live-life');
+    expect(body.problem.initialProblem).toContain('Confidential problem statement');
+    expect(body.usage.invocations).toBe(0);
+    expect(body.ideas.items).toEqual([]);
+    expect(body.outputs.final).toEqual([]);
+
+    const after = await propose('project.pause', { projectId: lifeId, reason: 'Check' });
+    expect(after).toMatchObject({ status: 'proposed', tier: 'T2' });
+    const stored = (
+      await h.admin.query(`select tainted from live_actions where id = $1`, [after.id])
+    ).rows[0] as { tainted: boolean };
+    expect(stored.tainted).toBe(true);
+    await service.cancel(context(), after.id);
   });
 
   it('refuses a project that is not there, and one from another workspace, without a name', async () => {

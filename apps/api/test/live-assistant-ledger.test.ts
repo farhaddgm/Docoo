@@ -90,6 +90,16 @@ describe('live assistant ledger (migration 0085)', () => {
   });
 });
 
+describe('live assistant taint (migration 0086)', () => {
+  const taint = readFileSync(join(migrations, '0086_live_assistant_taint.sql'), 'utf8');
+
+  it('adds only the moment a session last read untrusted content', () => {
+    expect(taint).toMatch(/ALTER TABLE live_sessions ADD COLUMN untrusted_read_at timestamptz;/u);
+    expect(taint.match(/ALTER TABLE/gu)).toHaveLength(1);
+    expect(taint).not.toMatch(/DROP|DELETE|TRUNCATE/u);
+  });
+});
+
 describe('migration journal', () => {
   it('lists 0085_live_assistant_ledger right after 0084, in order', () => {
     const journal = JSON.parse(readFileSync(join(migrations, 'meta/_journal.json'), 'utf8')) as {
@@ -100,6 +110,19 @@ describe('migration journal', () => {
     const entry = journal.entries[at];
     const before = journal.entries[at - 1];
     expect(before?.tag).toBe('0084_live_assistant');
+    expect(entry?.idx).toBe(before ? before.idx + 1 : -1);
+    expect(entry && before ? entry.when > before.when : false).toBe(true);
+  });
+
+  it('lists 0086_live_assistant_taint right after 0085, in order', () => {
+    const journal = JSON.parse(readFileSync(join(migrations, 'meta/_journal.json'), 'utf8')) as {
+      entries: { idx: number; tag: string; when: number }[];
+    };
+    const at = journal.entries.findIndex((entry) => entry.tag === '0086_live_assistant_taint');
+    expect(at).toBeGreaterThan(0);
+    const entry = journal.entries[at];
+    const before = journal.entries[at - 1];
+    expect(before?.tag).toBe('0085_live_assistant_ledger');
     expect(entry?.idx).toBe(before ? before.idx + 1 : -1);
     expect(entry && before ? entry.when > before.when : false).toBe(true);
   });

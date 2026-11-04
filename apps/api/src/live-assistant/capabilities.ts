@@ -43,6 +43,12 @@ export interface LiveCapability<P = unknown, F = unknown> {
   readonly prepare?: ((context: WorkspaceRequestContext, params: P) => Promise<F>) | undefined;
   readonly describe: (params: P, locale: LiveLocale, facts: F | undefined) => LivePreview;
   readonly execute: (execution: LiveExecution, params: P) => Promise<unknown>;
+  /**
+   * The result is long-form content people or models wrote (a problem statement, an output) and
+   * may carry instructions. After it runs, changes proposed in the same session are confirmed
+   * more strictly for a while. Short structured fields (a status, a list) are not.
+   */
+  readonly untrustedOutput?: boolean | undefined;
 }
 
 /** Erases the parameter and facts types so capabilities with different ones sit in one list. */

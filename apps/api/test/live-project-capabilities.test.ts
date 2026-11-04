@@ -1,8 +1,10 @@
+import { projectCommands } from '@docoo/domain';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LiveCapabilityRegistry } from '../src/live-assistant/capabilities.js';
 import { decideProposal, liveSettingsFrom } from '../src/live-assistant/live-gateway.js';
-import { projectCapabilities } from '../src/live-assistant/project-capabilities.js';
+import { compactReport, projectCapabilities } from '../src/live-assistant/project-capabilities.js';
+import type { ProjectReportService } from '../src/projects/project-report.service.js';
 import type { ProjectsService } from '../src/projects/projects.service.js';
 import type { WorkflowService } from '../src/workflow/workflow.service.js';
 
@@ -28,6 +30,70 @@ const project = {
   version: 7,
 };
 
+function reportFixture() {
+  return {
+    project: {
+      id: P1,
+      code: 'spring',
+      title: 'Spring plan',
+      status: 'active',
+      currentStage: 'research',
+      outputLanguage: 'fa',
+      kind: 'standard',
+      createdAt: 'x',
+      updatedAt: 'y',
+    },
+    problem: {
+      initialProblem: 'p'.repeat(5000),
+      description: 'd'.repeat(3000),
+      expectedOutput: 'e',
+      approvedStatement: 's'.repeat(5000),
+    },
+    usage: {
+      totals: {
+        invocations: 3,
+        inputTokens: 100,
+        outputTokens: 50,
+        reasoningTokens: 10,
+        costUsd: 0.5,
+        failures: 1,
+      },
+      byStage: [{ key: 'analysis' }],
+      byModel: [{ key: 'openai:m' }],
+    },
+    ideas: {
+      createdAt: 'z',
+      items: Array.from({ length: 12 }, (_, index) => ({
+        id: `id-${index}`,
+        ordinal: index + 1,
+        title: `Idea ${index}`,
+        summary: 'x'.repeat(900),
+        score: index,
+        selectedPriority: index === 0 ? 1 : null,
+      })),
+    },
+    outputs: {
+      inProgress: 2,
+      items: [
+        {
+          id: 'doc',
+          title: 'Final plan',
+          status: 'approved',
+          level: 1,
+          language: 'fa',
+          approvalKind: 'human',
+          versionNo: 3,
+          updatedAt: 'u',
+          artifacts: [
+            { id: 'a1', format: 'pdf', sizeBytes: 10, createdAt: 'c' },
+            { id: 'a2', format: 'docx', sizeBytes: 20, createdAt: 'c' },
+          ],
+        },
+      ],
+    },
+  };
+}
+
 function fakes() {
   const get = vi.fn().mockResolvedValue(project);
   const command = vi.fn().mockResolvedValue({ ...project, status: 'paused', version: 8 });
@@ -36,13 +102,15 @@ function fakes() {
     nextCursor: 'more',
   });
   const onProjectCommand = vi.fn().mockResolvedValue(undefined);
+  const report = vi.fn().mockResolvedValue(reportFixture());
   const registry = new LiveCapabilityRegistry(
     projectCapabilities({
       projects: { get, command, list } as unknown as ProjectsService,
+      reports: { report } as unknown as ProjectReportService,
       workflow: { onProjectCommand } as unknown as WorkflowService,
     }),
   );
-  return { registry, get, command, list, onProjectCommand };
+  return { registry, get, command, list, onProjectCommand, report };
 }
 
 const settings = (over: Record<string, unknown> = {}) =>
@@ -56,22 +124,59 @@ const settings = (over: Record<string, unknown> = {}) =>
   });
 
 describe('the first live assistant capabilities', () => {
-  it('are a read of the list, a read of one project, a pause and a resume, with the right risk', () => {
+  it('are reads and the whole life of a project, each with the right risk', () => {
     const { registry } = fakes();
     expect(registry.names()).toEqual([
+      'project.archive',
+      'project.complete',
+      'project.delete',
       'project.pause',
+      'project.reopen',
+      'project.report',
+      'project.restore',
       'project.resume',
       'project.status',
+      'project.unarchive',
       'projects.overview',
     ]);
     const klass = (name: string) => registry.get(name)?.meta.klass;
-    expect(klass('projects.overview')).toBe('T0');
-    expect(klass('project.status')).toBe('T0');
-    expect(klass('project.pause')).toBe('T1');
-    // Starting work again spends money: consequential, so it is read back before confirming.
+    for (const name of ['projects.overview', 'project.status', 'project.report']) {
+      expect(klass(name), name).toBe('T0');
+    }
+    // Reversible: undone by the opposite command, no model work started.
+    for (const name of [
+      'project.pause',
+      'project.archive',
+      'project.unarchive',
+      'project.restore',
+    ]) {
+      expect(klass(name), name).toBe('T1');
+    }
+    // Starting work again spends money and completing closes the work: consequential, read back first.
     expect(klass('project.resume')).toBe('T2');
+    expect(klass('project.complete')).toBe('T2');
+    expect(klass('project.reopen')).toBe('T2');
+    // Irreversible after 30 days: off until its category is switched on.
+    expect(klass('project.delete')).toBe('T3');
+    expect(registry.get('project.delete')?.meta.t3Category).toBe('delete');
     expect(registry.get('projects.overview')?.meta.area).toBe('projects_overview');
     expect(registry.get('project.pause')?.meta.area).toBe('project');
+  });
+
+  it('expose every lifecycle command of a project except starting it, which is not for a voice', () => {
+    const { registry } = fakes();
+    const exposed = registry
+      .names()
+      .filter((name) => registry.get(name)?.meta.write)
+      .map((name) => name.replace('project.', ''))
+      .sort();
+    expect(exposed).toEqual([...projectCommands].filter((name) => name !== 'activate').sort());
+  });
+
+  it('mark only the content reads as untrusted, so a status never makes a change stricter', () => {
+    const { registry } = fakes();
+    const untrusted = registry.names().filter((name) => registry.get(name)?.untrustedOutput);
+    expect(untrusted).toEqual(['project.report']);
   });
 
   it('check their parameters: a real id, a reason for a pause, a bounded list', () => {
@@ -286,5 +391,115 @@ describe('the first live assistant capabilities', () => {
         skipPreview: true,
       }),
     ).toEqual({ outcome: 'refused', reason: 'read_only' });
+  });
+});
+
+describe('the rest of the project capabilities', () => {
+  const run = { context, sessionId: P1, actionId: P1 };
+
+  it('need a reason only where the back office does', () => {
+    const { registry } = fakes();
+    const parse = (name: string, params: unknown) =>
+      registry.get(name)?.params.safeParse(params)?.success;
+    expect(parse('project.complete', { projectId: P1 })).toBe(false);
+    expect(parse('project.reopen', { projectId: P1 })).toBe(false);
+    expect(parse('project.complete', { projectId: P1, reason: 'finished' })).toBe(true);
+    for (const name of [
+      'project.archive',
+      'project.unarchive',
+      'project.delete',
+      'project.restore',
+    ]) {
+      expect(parse(name, { projectId: P1 }), name).toBe(true);
+    }
+  });
+
+  it('name the project in every preview, and an irreversible change by its title', () => {
+    const { registry } = fakes();
+    const facts = { title: 'Spring plan', code: 'spring', status: 'active' };
+    for (const name of registry.names().filter((item) => registry.get(item)?.meta.write)) {
+      const capability = registry.get(name);
+      const params = { projectId: P1, reason: 'because' };
+      for (const locale of ['fa', 'en'] as const) {
+        const preview = capability?.describe(params, locale, facts);
+        expect(preview?.summary, `${name} ${locale}`).toContain('«Spring plan» (spring)');
+      }
+    }
+    expect(registry.get('project.delete')?.describe({ projectId: P1 }, 'en', facts)).toMatchObject({
+      targetName: 'Spring plan',
+    });
+    // Only the irreversible one carries a name to be echoed.
+    expect(
+      registry.get('project.archive')?.describe({ projectId: P1 }, 'en', facts).targetName,
+    ).toBeUndefined();
+  });
+
+  it('delete as the back office does, with the workflow following', async () => {
+    const { registry, command, onProjectCommand } = fakes();
+    await registry.get('project.delete')?.execute(run, { projectId: P1 });
+    expect(command).toHaveBeenCalledWith(context, P1, 'delete', {
+      expectedVersion: 7,
+      reason: 'Voice assistant: deleted',
+    });
+    expect(onProjectCommand).toHaveBeenCalledWith(context, P1, 'delete');
+  });
+
+  it('refuse an irreversible change without a name to confirm it by', () => {
+    const { registry } = fakes();
+    const decision = decideProposal({
+      registry,
+      capability: 'project.delete',
+      params: { projectId: P1 },
+      settings: liveSettingsFrom({
+        'live_assistant.enabled': true,
+        'live_assistant.disclosure_accepted': true,
+        'live_assistant.connection_id': P1,
+        'live_assistant.model': 'm',
+        'live_assistant.access_level': 'act',
+        'live_assistant.t3_categories': ['delete'],
+      }),
+      tainted: false,
+      currentProjectId: null,
+      facts: undefined,
+    });
+    expect(decision).toEqual({ outcome: 'refused', reason: 'misconfigured' });
+  });
+
+  it('cut the report down to what a conversation needs', async () => {
+    const { registry, report } = fakes();
+    const out = (await registry
+      .get('project.report')
+      ?.execute(run, { projectId: P1 })) as ReturnType<typeof compactReport>;
+    expect(report).toHaveBeenCalledWith(context, P1);
+    expect(out.problem.initialProblem).toHaveLength(4000);
+    expect(out.problem.description).toHaveLength(2000);
+    expect(out.problem.approvedStatement).toHaveLength(4000);
+    expect(out.ideas.total).toBe(12);
+    expect(out.ideas.items).toHaveLength(10);
+    expect(out.ideas.items[0]).toEqual({
+      title: 'Idea 0',
+      summary: 'x'.repeat(600),
+      score: 0,
+      chosenPriority: 1,
+    });
+    expect(out.usage).toEqual({
+      invocations: 3,
+      inputTokens: 100,
+      outputTokens: 50,
+      costUsd: 0.5,
+      failures: 1,
+    });
+    expect(out.outputs.final).toEqual([
+      {
+        title: 'Final plan',
+        status: 'approved',
+        language: 'fa',
+        version: 3,
+        formats: ['pdf', 'docx'],
+      },
+    ]);
+    // The same bounds hold whatever the report holds: ids of files, per-model breakdowns and the like stay out.
+    expect(JSON.stringify(out)).not.toMatch(/openai:m|"a1"|byStage/u);
+    expect(compactReport(reportFixture() as never).project.stage).toBe('research');
   });
 });

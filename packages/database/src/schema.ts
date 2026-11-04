@@ -3107,6 +3107,8 @@ export const liveSessions = pgTable(
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
     lastActivityAt: timestamp('last_activity_at', { withTimezone: true }).notNull().defaultNow(),
     endedAt: timestamp('ended_at', { withTimezone: true }),
+    /** ADR-0055: when the session last read content that may carry instructions (taint). */
+    untrustedReadAt: timestamp('untrusted_read_at', { withTimezone: true }),
   },
   (table) => [
     index('live_sessions_user_idx').on(table.userId, table.startedAt),
