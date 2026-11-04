@@ -43,7 +43,7 @@ export function LiveHistory({
         // The summary is a nicety: failing to read it never hides the conversations.
         liveReadApi
           .cost(workspaceId, signal)
-          .then(setSpend)
+          .then((value) => setSpend(isCostSummary(value) ? value : null))
           .catch(() => undefined);
         setFailed(false);
       } catch {
@@ -230,6 +230,29 @@ export function LiveHistory({
         </ul>
       )}
     </section>
+  );
+}
+
+/** Anything that is not a whole summary is ignored: a missing summary must never break the page. */
+export function isCostSummary(value: unknown): value is LiveCostSummary {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Record<string, unknown>;
+  const period = (key: string) => {
+    const entry = record[key] as Record<string, unknown> | undefined;
+    return (
+      typeof entry === 'object' &&
+      entry !== null &&
+      ['costUsd', 'typedCostUsd', 'tokens', 'sessions'].every(
+        (field) => typeof entry[field] === 'number' && Number.isFinite(entry[field]),
+      )
+    );
+  };
+  return (
+    period('day') &&
+    period('week') &&
+    period('month') &&
+    typeof record['dailyCapUsd'] === 'number' &&
+    Number.isFinite(record['dailyCapUsd'])
   );
 }
 
