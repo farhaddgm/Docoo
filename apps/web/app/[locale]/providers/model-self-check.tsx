@@ -25,6 +25,9 @@ interface Result {
   priced: boolean;
 }
 
+/** The chooser's last entry: a model name the list does not hold, typed by hand. */
+const OTHER = '__other__';
+
 type Row = { state: 'waiting' } | { state: 'running' } | { state: 'done'; result: Result };
 
 /**
@@ -53,6 +56,8 @@ export function ModelSelfCheck({
   const base = `/workspaces/${workspaceId}`;
   const [connectionId, setConnectionId] = useState('');
   const [model, setModel] = useState('');
+  /** A model name typed by hand, for one the connection's list does not hold. */
+  const [custom, setCustom] = useState(false);
   const [steps, setSteps] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [running, setRunning] = useState(false);
@@ -224,6 +229,7 @@ export function ModelSelfCheck({
             connectionEdited.current = true;
             setSteps([]);
             setConnectionId(event.target.value);
+            setCustom(false);
             // A model of the old connection is not carried to a connection that does not offer it.
             setModel((before) =>
               modelAfterConnectionChange(models[event.target.value] ?? [], before),
@@ -238,24 +244,49 @@ export function ModelSelfCheck({
           ))}
         </select>
         <label htmlFor="selfcheck-model">{text.model}</label>
-        {choices.length > 0 ? (
-          <select
-            id="selfcheck-model"
-            dir="ltr"
-            value={model}
-            disabled={running}
-            onChange={(event) => {
-              modelEdited.current = true;
-              setModel(event.target.value);
-            }}
-          >
-            <option value="">{text.chooseModel}</option>
-            {choices.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.outside ? fill(text.outsideList, { model: item.label }) : item.label}
-              </option>
-            ))}
-          </select>
+        {offered.length > 0 ? (
+          <>
+            <select
+              id="selfcheck-model"
+              dir="ltr"
+              value={custom ? OTHER : model}
+              disabled={running}
+              onChange={(event) => {
+                modelEdited.current = true;
+                if (event.target.value === OTHER) {
+                  setCustom(true);
+                  return;
+                }
+                setCustom(false);
+                setModel(event.target.value);
+              }}
+            >
+              <option value="">{text.chooseModel}</option>
+              {choices.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.outside ? fill(text.outsideList, { model: item.label }) : item.label}
+                </option>
+              ))}
+              <option value={OTHER}>{text.otherModel}</option>
+            </select>
+            {custom && (
+              <>
+                <span aria-hidden="true" />
+                <input
+                  dir="ltr"
+                  value={model}
+                  disabled={running}
+                  placeholder={text.modelPlaceholder}
+                  aria-label={text.customModelLabel}
+                  autoComplete="off"
+                  onChange={(event) => {
+                    modelEdited.current = true;
+                    setModel(event.target.value);
+                  }}
+                />
+              </>
+            )}
+          </>
         ) : (
           <input
             id="selfcheck-model"
