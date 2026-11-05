@@ -10,6 +10,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Changed
 
+- **Dashboard tidied.** "Waiting for your answer or approval" now shows one line per item: the project's own name (not the task's English title) as a link to the project, with a long name ending in "…". In "Usage, last 30 days" the invocations and tokens tiles sit one under the other and their numbers no longer run out of the box (the headline number tiles wrap a very long number too). "Retries near the limit" was rewritten: for each stage close to its attempt limit it shows the project (linked to its workflow), the stage, a progress bar of the attempts used, how many attempts are left or that the limit is reached and waiting for your decision, and a short line on what to do. No migration.
 - **One progress card in the project Overview.** "Project journey" and "Milestone" said nearly the same thing and looked alike, so the Overview now shows only one of them: the journey for a project being worked on (draft, active, paused), and the milestone only for a project that has no journey (completed, archived, deleted). No migration.
 
 ## [0.50.0] — 2026-11-03

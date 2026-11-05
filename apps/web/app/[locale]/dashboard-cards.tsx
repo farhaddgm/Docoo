@@ -5,14 +5,17 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { apiGet } from '../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../i18n';
+import { formatDateTime, formatNumber, textDir, type Locale } from '../i18n';
 import { reportMessagesFor } from '../report-messages';
+import { workflowMessages } from './projects/[projectId]/workflow-messages';
 
 interface Dashboard {
   waiting: {
     total: number;
     items: {
       id: string;
+      kind: string;
+      /** The task's own title, written in English by the engine; the page does not show it. */
       title: string;
       projectId: string | null;
       projectTitle: string | null;
@@ -34,6 +37,7 @@ interface Dashboard {
   };
   retriesNearLimit: {
     id: string;
+    projectId: string;
     projectTitle: string;
     stage: string;
     attemptsUsed: number;
@@ -83,9 +87,16 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
   if (!data) return <p role="status">{content.loading}</p>;
 
   const number = (value: number) => formatNumber(locale, value);
-  /** A count that is not zero but should be is coloured, so the eye finds it first. */
-  const counts = (items: [string, number, (string | undefined)?, ('warn' | 'danger')?][]) => (
-    <dl className="counts">
+  const flow = workflowMessages(locale);
+  /**
+   * A count that is not zero but should be is coloured, so the eye finds it first. `stacked` puts
+   * one tile in each row, for numbers long enough not to share a row.
+   */
+  const counts = (
+    items: [string, number, (string | undefined)?, ('warn' | 'danger')?][],
+    stacked = false,
+  ) => (
+    <dl className={stacked ? 'counts counts-stacked' : 'counts'}>
       {items.map(([label, value, href, tone]) => (
         <div key={label} className={tone && value > 0 ? `count-${tone}` : undefined}>
           <dt>{href ? <Link href={href as Route}>{label}</Link> : label}</dt>
@@ -127,19 +138,26 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
           {data.waiting.items.length === 0 ? (
             <p className="muted">{text.waitingEmpty}</p>
           ) : (
-            <ul className="plain-list">
-              {data.waiting.items.map((item) => (
-                <li key={item.id}>
-                  {item.projectId ? (
-                    <Link href={`/${locale}/projects/${item.projectId}?tab=workflow` as Route}>
-                      <strong>{item.title}</strong>
-                    </Link>
-                  ) : (
-                    <strong>{item.title}</strong>
-                  )}
-                  {item.projectTitle && <span className="muted"> — {item.projectTitle}</span>}
-                </li>
-              ))}
+            <ul className="plain-list one-line-list">
+              {data.waiting.items.map((item) => {
+                // The project's own name, which is how the person knows it; the task's English
+                // title only stands in for a task that belongs to no project.
+                const label = item.projectTitle || flow.taskKinds[item.kind] || item.title;
+                return (
+                  <li key={item.id} dir={textDir(locale)}>
+                    {item.projectId ? (
+                      <Link
+                        href={`/${locale}/projects/${item.projectId}?tab=workflow` as Route}
+                        title={label}
+                      >
+                        {label}
+                      </Link>
+                    ) : (
+                      <span title={label}>{label}</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
@@ -205,23 +223,57 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
           {data.retriesNearLimit.length === 0 ? (
             <p className="muted">{text.retriesEmpty}</p>
           ) : (
-            <ul className="plain-list">
-              {data.retriesNearLimit.map((item) => (
-                <li key={item.id}>
-                  {item.projectTitle} · {item.stage}: {number(item.attemptsUsed)}/
-                  {number(item.attemptLimit)} {text.attempts}
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="plain-list">
+                {data.retriesNearLimit.map((item) => {
+                  const left = Math.max(item.attemptLimit - item.attemptsUsed, 0);
+                  const attempt = text.attemptsOf
+                    .replace('{used}', number(item.attemptsUsed))
+                    .replace('{limit}', number(item.attemptLimit));
+                  return (
+                    <li key={item.id} className="retry-item">
+                      <span className="one-line" dir={textDir(locale)}>
+                        <Link
+                          href={`/${locale}/projects/${item.projectId}?tab=workflow` as Route}
+                          title={item.projectTitle}
+                        >
+                          {item.projectTitle}
+                        </Link>
+                      </span>
+                      <span className="retry-meta">
+                        <span>
+                          {flow.stages[item.stage] ?? item.stage} · {attempt}
+                        </span>
+                        <span className={left === 0 ? 'badge state-failed' : 'badge state-paused'}>
+                          {left === 0
+                            ? text.attemptsReached
+                            : text.attemptsLeft.replace('{n}', number(left))}
+                        </span>
+                      </span>
+                      <progress
+                        className="progress-meter"
+                        max={item.attemptLimit}
+                        value={Math.min(item.attemptsUsed, item.attemptLimit)}
+                        aria-label={attempt}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="muted">{text.retriesHint}</p>
+            </>
           )}
         </section>
 
         <section className="card" aria-labelledby="usage-title">
           <h2 id="usage-title">{text.usage}</h2>
-          {counts([
-            [text.invocations, data.usage.invocations],
-            [text.tokens, data.usage.tokens],
-          ])}
+          {counts(
+            [
+              [text.invocations, data.usage.invocations],
+              [text.tokens, data.usage.tokens],
+            ],
+            true,
+          )}
           <p>
             {text.cost}: <strong>{money(locale, data.usage.costUsd)}</strong>
           </p>
