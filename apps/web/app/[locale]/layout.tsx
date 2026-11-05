@@ -9,6 +9,7 @@ import '../globals.css';
 import { AiActivityIndicator } from '../ai-activity';
 import { InfoTipHost } from '../info-tip';
 import { direction, isLocale } from '../i18n';
+import { LiveAssistantHost } from '../live-assistant/host';
 import { LocaleProvider } from '../locale-context';
 import { themeInitScript } from '../theme';
 
@@ -47,6 +48,7 @@ export default async function RootLayout({
           {children}
           <InfoTipHost />
           <AiActivityIndicator />
+          <LiveAssistantHost />
         </LocaleProvider>
       </body>
     </html>

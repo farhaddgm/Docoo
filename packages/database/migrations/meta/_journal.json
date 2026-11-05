@@ -589,6 +589,41 @@
       "when": 1793808767919,
       "tag": "0083_research_read_pages",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1793808768919,
+      "tag": "0084_live_assistant",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1793808769919,
+      "tag": "0085_live_assistant_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1793808770919,
+      "tag": "0086_live_assistant_taint",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1793808771919,
+      "tag": "0087_live_assistant_transcript_delete",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1793808772919,
+      "tag": "0088_live_assistant_text",
+      "breakpoints": true
     }
   ]
 }
