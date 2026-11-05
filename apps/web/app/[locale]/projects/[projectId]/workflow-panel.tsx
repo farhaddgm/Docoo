@@ -12,6 +12,7 @@ import { explainError, Notice, useAction } from '../../use-action';
 import { ReasonBar } from '../../reason-bar';
 import { DeliverablesPanel } from './deliverables-panel';
 import { summarizeProgress, type ProgressStep } from './progress-model';
+import { StageOutputDialog } from './stage-output-dialog';
 import { workflowMessages } from './workflow-messages';
 import { FieldLabel } from '../../../info-tip';
 
@@ -181,6 +182,8 @@ export function WorkflowPanel({
   const [cancelReason, setCancelReason] = useState('');
   const [redoStage, setRedoStage] = useState<string | null>(null);
   const [redoReason, setRedoReason] = useState('');
+  // The stage whose output the "view output" popup shows; read from the live overview below.
+  const [viewingStage, setViewingStage] = useState<string | null>(null);
   const signature = useRef('');
   const explain = useCallback(
     (error: unknown) => explainError(error, text.errors, common.loadFailed),
@@ -294,6 +297,9 @@ export function WorkflowPanel({
     (task) => task.kind === 'attempt_limit' && task.stageRunId,
   );
   const running = overview.stages.find((stage) => stage.stage === current?.currentStage);
+  const viewedStage = viewingStage
+    ? overview.stages.find((stage) => stage.stage === viewingStage)
+    : undefined;
 
   return (
     <div className="stack">
@@ -429,6 +435,17 @@ export function WorkflowPanel({
               )}
               {stage.passedByDecision && <span className="muted">{text.passedByDecision}</span>}
               {stage.carriedFromStageRunId && <span className="muted">{text.carried}</span>}
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={!stage.id || !stage.latestOutputId}
+                title={!stage.id || !stage.latestOutputId ? text.outputUnavailable : undefined}
+                aria-haspopup="dialog"
+                onClick={() => setViewingStage(stage.stage)}
+              >
+                {text.viewOutputButton}
+                <span className="visually-hidden"> {stageLabel(stage.stage)}</span>
+              </button>
               {(projectStatus === 'active' || projectStatus === 'completed') && (
                 <button
                   data-write-action
@@ -479,6 +496,21 @@ export function WorkflowPanel({
           ))}
         </ol>
       </section>
+
+      {viewedStage?.id && (
+        <StageOutputDialog
+          key={viewedStage.stage}
+          locale={locale}
+          base={base}
+          stage={{
+            id: viewedStage.id,
+            stage: viewedStage.stage,
+            latestOutputId: viewedStage.latestOutputId ?? null,
+          }}
+          onClose={() => setViewingStage(null)}
+          onOpenStage={onOpenStage}
+        />
+      )}
 
       <section className="card" aria-labelledby="tasks-title">
         <h2 id="tasks-title">

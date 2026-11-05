@@ -4,6 +4,16 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **View a stage's output from the workflow.** In a project's **Workflow** tab, every stage now has a "View output" button next to "Run again". It opens a large popup in the middle of the page with a short summary of the stage's latest output — the problem statement and goals, the first findings, ideas, outline items or scores — and a button to the stage's own tab for the full text. The button is disabled for a stage that has no output yet. No migration.
+
+### Changed
+
+- **Voice assistant settings are shorter.** From "AI and model" on, the blocks of the assistant's settings page (AI and model, Listening and wake-up, Caps, Confirmation, Conversations and privacy) stand two to a row instead of one under another, so the page is much shorter and needs far less scrolling; on a narrow screen they stay in one column, and on a phone a long option in a drop-down no longer stretches the cards past the screen. No migration.
+- **Dashboard tidied.** "Waiting for your answer or approval" now shows one line per item: the project's own name (not the task's English title) as a link to the project, with a long name ending in "…". In "Usage, last 30 days" the invocations and tokens tiles sit one under the other and their numbers no longer run out of the box (the headline number tiles wrap a very long number too). "Retries near the limit" was rewritten: for each stage close to its attempt limit it shows the project (linked to its workflow), the stage, a progress bar of the attempts used, how many attempts are left or that the limit is reached and waiting for your decision, and a short line on what to do. No migration.
+- **One progress card in the project Overview.** "Project journey" and "Milestone" said nearly the same thing and looked alike, so the Overview now shows only one of them: the journey for a project being worked on (draft, active, paused), and the milestone only for a project that has no journey (completed, archived, deleted). No migration.
+
 ## [0.51.0] — 2026-11-04
 
 The live assistant "Docoo" (ADR-0055) arrives in the Smart section, off by default and visible only to the system owner. This release carries the whole safe core and a typed conversation; the live voice connection to a provider is not part of it yet. Migrations 0084 to 0088 run on update.

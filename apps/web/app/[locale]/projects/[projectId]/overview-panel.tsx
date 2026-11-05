@@ -38,7 +38,10 @@ export function OverviewPanel({
   project: ProjectDetail;
   /** The latest workflow facts the journey is drawn from; null when they could not be read. */
   facts: WorkflowFacts | null;
-  /** The progress card; it comes after the journey, which is the main guide of the page. */
+  /**
+   * The progress card. It takes the journey's place for a project that has no journey (completed,
+   * archived or deleted); with a journey, the journey alone shows how far the project has come.
+   */
   milestone: ReactNode;
   onChanged: (project: ProjectDetail) => void;
   /** The project card asked for the edit form. */
@@ -172,7 +175,7 @@ export function OverviewPanel({
       />
 
       <Notice notice={notice} />
-      {hasJourney(project.status) && (
+      {hasJourney(project.status) ? (
         <JourneyCard
           locale={locale}
           project={project}
@@ -182,8 +185,9 @@ export function OverviewPanel({
           onOpenTab={onOpenTab}
           onCommand={onCommand}
         />
+      ) : (
+        milestone
       )}
-      {milestone}
       <OriginNote locale={locale} project={project} />
       <ExplorationOriginNote locale={locale} project={project} />
       <section className="card" aria-labelledby="problem-title">
