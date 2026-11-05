@@ -36,6 +36,7 @@ export type ProblemCode =
   | 'not_whole'
   | 'consent_needed'
   | 'model_needed'
+  | 'executor_model_needed'
   | 'projects_needed';
 
 export interface Problem {
@@ -80,14 +81,20 @@ export function validateDraft(draft: Draft): Problem[] {
     if (draft['live_assistant.disclosure_accepted'] !== true) {
       problems.push({ key: 'live_assistant.disclosure_accepted', code: 'consent_needed' });
     }
-    const needsModel = text(draft, 'live_assistant.mode') === 'realtime';
-    if (
-      needsModel &&
-      (text(draft, 'live_assistant.connection_id') === '' ||
-        text(draft, 'live_assistant.model').trim() === '')
-    ) {
-      problems.push({ key: 'live_assistant.model', code: 'model_needed' });
-    }
+  }
+  // The voice connection and its model go together; both empty is fine (typing needs neither). The
+  // assistant can be switched on without them: only a spoken conversation waits for them.
+  const voiceConnection = text(draft, 'live_assistant.connection_id') !== '';
+  const voiceModel = text(draft, 'live_assistant.model').trim() !== '';
+  if (voiceConnection !== voiceModel) {
+    problems.push({ key: 'live_assistant.model', code: 'model_needed' });
+  }
+  // The same for the model that answers typed requests: half a pair would be saved and then leave
+  // typing unavailable without a word.
+  const executorConnection = text(draft, 'live_assistant.executor_connection_id') !== '';
+  const executorModel = text(draft, 'live_assistant.executor_model').trim() !== '';
+  if (executorConnection !== executorModel) {
+    problems.push({ key: 'live_assistant.executor_model', code: 'executor_model_needed' });
   }
   if (text(draft, 'live_assistant.access_scope') === 'selected_projects') {
     const ids = draft['live_assistant.access_project_ids'];
