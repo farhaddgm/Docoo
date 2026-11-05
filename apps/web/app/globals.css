@@ -1356,6 +1356,17 @@ button:disabled {
   margin-block-end: 0;
 }
 
+/*
+ * A grid column grows to the widest thing in it, and a select is as wide as its longest option, so on
+ * a phone one select stretched every card of the assistant settings past the screen. Here the
+ * columns stay as wide as the screen and the controls shrink to fit.
+ */
+.live-settings,
+.live-settings .stack,
+.live-settings .field-stack {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .wizard-fields {
   margin: 0;
   padding: 0;

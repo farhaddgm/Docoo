@@ -262,7 +262,7 @@ export function LiveAssistantSettings({
     on ? [...new Set([...list, value])] : list.filter((item) => item !== value);
 
   return (
-    <div className="stack">
+    <div className="stack live-settings">
       <p className="notice info" role="status">
         {text.notReady}
       </p>
