@@ -67,7 +67,7 @@ test.describe('model self-check (AI-006)', () => {
     );
     await page.goto('/fa/providers');
     await expect(page.getByLabel(text.model, { exact: true })).toHaveValue('fake-standard');
-    await page.getByLabel(text.model, { exact: true }).fill('');
+    // Switching to a connection that does not offer the model drops it.
     await page.getByLabel(text.connection, { exact: true }).selectOption(created.connection.id);
     await expect(page.getByLabel(text.model, { exact: true })).toHaveValue('');
     await expect(page.getByRole('button', { name: text.start })).toBeDisabled();

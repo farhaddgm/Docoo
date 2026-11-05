@@ -91,7 +91,7 @@ export function LiveCard({
           )}
         </p>
       )}
-      {typingReason && !active && !reason && (
+      {typingReason && !active && (
         <p className="muted">
           {typingReason}{' '}
           <Link href={`/${locale}/live-assistant` as Route}>{text.card.openSettings}</Link>

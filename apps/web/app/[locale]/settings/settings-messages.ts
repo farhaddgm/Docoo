@@ -240,6 +240,7 @@ const messages = {
       chooseModel: 'یک مدل انتخاب کنید',
       noConnections: 'هنوز اتصالی ثبت نشده است. از صفحه «ارائه‌دهندگان AI» یکی بسازید.',
       noModels: 'فهرست مدل‌های این اتصال خالی است؛ در صفحه «ارائه‌دهندگان AI» به‌روزرسانی کنید.',
+      unknownConnection: 'اتصال ذخیره‌شده دیگر در دسترس نیست — دوباره انتخاب کنید',
       structuredOutputOnly:
         'فقط مدل‌های دارای خروجی ساختاریافته (لازم برای مرحله‌ها) فهرست شده‌اند.',
       saveModel: 'ذخیره مدل پروژه',
@@ -480,6 +481,7 @@ const messages = {
       chooseModel: 'Choose a model',
       noConnections: 'No connection yet. Add one on the "AI providers" page.',
       noModels: 'This connection has no models listed; refresh them on the "AI providers" page.',
+      unknownConnection: 'The saved connection is no longer available — choose again',
       structuredOutputOnly:
         'Only models with structured output (which the stages need) are listed.',
       saveModel: 'Save the project model',

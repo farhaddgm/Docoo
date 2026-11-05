@@ -5,7 +5,7 @@ const fa = {
   title: 'دستیار صوتی',
   subtitle: 'مشخص کنید دستیار صوتی چه کارهایی را و تا کجا انجام دهد.',
   notReady:
-    'دستیار هنوز به ارائه‌دهندهٔ صوتی وصل نشده است. تنظیمات از همین حالا ذخیره می‌شود و پس از وصل‌شدن اعمال می‌شود.',
+    'گفتگوی با صدا هنوز به ارائه‌دهندهٔ صوتی وصل نشده است، ولی نوشتن با دستیار از همین حالا کار می‌کند: دستیار را روشن کنید، هشدار حریم خصوصی را بپذیرید و مدل نوشتاری را انتخاب کنید (یا همان هوش مصنوعی فضای کار را بگذارید).',
   loadFailed: 'تنظیمات خوانده نشد.',
   saveFailed: 'ذخیره انجام نشد. دوباره تلاش کنید.',
   denied: 'فقط مالک سامانه می‌تواند این تنظیمات را عوض کند.',
@@ -19,7 +19,8 @@ const fa = {
     out_of_range: 'عدد باید در بازهٔ مجاز باشد.',
     not_whole: 'عدد باید صحیح باشد.',
     consent_needed: 'برای روشن‌کردن، باید هشدار حریم خصوصی را بپذیرید.',
-    model_needed: 'برای روشن‌کردن، اتصال و مدل صوتی را انتخاب کنید.',
+    model_needed: 'اتصال و مدل صوتی را با هم انتخاب کنید، یا هر دو را خالی بگذارید.',
+    executor_model_needed: 'اتصال و مدل نوشتاری را با هم انتخاب کنید، یا هر دو را خالی بگذارید.',
     projects_needed: 'دست‌کم یک پروژه انتخاب کنید یا «پروژه‌ای که باز است» را روشن کنید.',
   },
   general: {
@@ -79,7 +80,7 @@ const fa = {
   model: {
     title: 'هوش مصنوعی و مدل',
     intro:
-      'مدل صوتی بلادرنگ با دستیار گفتگو می‌کند. مدل مجری، کارها را برنامه‌ریزی می‌کند و پیشنهاد تغییر می‌سازد؛ اگر خالی بماند همان مدل تنظیمات سامانه به کار می‌رود.',
+      'دو مدل جدا دارید. «مدل نوشتاری» به درخواست‌های تایپ‌شده شما پاسخ می‌دهد و پیشنهاد تغییر می‌سازد؛ برای نوشتن با دستیار فقط همین لازم است. «مدل صوتی» فقط برای گفتگوی با صدا لازم است و هنوز به آن وصل نشده‌ایم.',
     mode: 'روش گفتگو',
     modes: {
       realtime: 'بلادرنگ (مدل صوتی زنده)',
@@ -89,12 +90,15 @@ const fa = {
     noConnection: '— انتخاب کنید —',
     noConnections: 'هنوز اتصالی در «ارائه‌دهندگان AI» ساخته نشده است.',
     modelId: 'مدل صوتی بلادرنگ',
-    modelHint: 'نام مدل را از فهرست پیشنهادی انتخاب کنید یا بنویسید.',
-    voice: 'صدا',
+    modelHint:
+      'عبارت realtime را بنویسید تا مدل‌های صوتی زنده پیشنهاد شود، یا نام مدل را کامل بنویسید. اگر صدا را هنوز راه نمی‌اندازید، خالی بگذارید.',
+    voice: 'نام صدا',
+    voiceHint: 'خالی بماند، صدای پیش‌فرض سرویس‌دهنده به کار می‌رود.',
+    unknownConnection: 'اتصال ذخیره‌شده دیگر در دسترس نیست — دوباره انتخاب کنید',
     language: 'زبان گفتگو',
     languages: { fa: 'فارسی', en: 'انگلیسی', auto: 'خودکار' },
-    executor: 'مدل مجری',
-    executorInherit: 'همان مدل تنظیمات سامانه',
+    executor: 'مدل نوشتاری (پاسخ به درخواست‌های تایپ‌شده)',
+    executorInherit: 'همان اتصال و مدل هوش مصنوعی فضای کار',
   },
   listening: {
     title: 'شنیدن و بیدارسازی',
@@ -150,7 +154,7 @@ const en: typeof fa = {
   title: 'Voice assistant',
   subtitle: 'Decide what the voice assistant may do, and how far.',
   notReady:
-    'The assistant is not connected to a voice provider yet. The settings are saved now and apply once it is connected.',
+    'Talking by voice is not connected to a voice provider yet, but writing to the assistant works now: switch it on, accept the privacy notice and choose the text model (or leave it on the workspace AI).',
   loadFailed: 'The settings could not be read.',
   saveFailed: 'Could not save. Try again.',
   denied: 'Only the owner of the system can change these settings.',
@@ -164,7 +168,9 @@ const en: typeof fa = {
     out_of_range: 'The number must be within the allowed range.',
     not_whole: 'The number must be a whole number.',
     consent_needed: 'To switch it on you must accept the privacy notice.',
-    model_needed: 'To switch it on, choose the connection and the voice model.',
+    model_needed: 'Choose the voice connection and its model together, or leave both empty.',
+    executor_model_needed:
+      'Choose the text connection and its model together, or leave both empty.',
     projects_needed: 'Choose at least one project, or switch on "the project that is open".',
   },
   general: {
@@ -227,7 +233,7 @@ const en: typeof fa = {
   model: {
     title: 'AI and model',
     intro:
-      'The realtime voice model talks with the assistant. The executor model plans the work and drafts changes; left empty, the model of the system settings is used.',
+      'There are two separate models. The "text model" answers what you type and drafts changes; it is all you need to write to the assistant. The "voice model" is only needed for talking by voice, and it is not connected yet.',
     mode: 'Conversation mode',
     modes: {
       realtime: 'Realtime (a live voice model)',
@@ -237,12 +243,15 @@ const en: typeof fa = {
     noConnection: '— choose —',
     noConnections: 'No connection exists yet; add one under AI providers.',
     modelId: 'Realtime voice model',
-    modelHint: 'Pick the model name from the suggestions or type it.',
-    voice: 'Voice',
+    modelHint:
+      'Type realtime to get the live voice models suggested, or write the full model name. Leave it empty if you are not setting up voice yet.',
+    voice: 'Voice name',
+    voiceHint: 'Left empty, the provider default voice is used.',
+    unknownConnection: 'The saved connection is no longer available — choose again',
     language: 'Conversation language',
     languages: { fa: 'Persian', en: 'English', auto: 'Automatic' },
-    executor: 'Executor model',
-    executorInherit: 'The model of the system settings',
+    executor: 'Text model (answers what you type)',
+    executorInherit: 'The workspace AI connection and model',
   },
   listening: {
     title: 'Listening and wake-up',
