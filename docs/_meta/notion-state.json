@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "b39f827740ab53deaa85b967c63129eb618e97df"
+    "source_commit": "7d3f7dee897697173964e1d084b30f2b558179e2"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,7 +62,7 @@
     }
   },
   "sync": {
-    "synced_at": "2026-11-05T07:34:40.796Z",
+    "synced_at": "2026-11-05T08:37:08.131Z",
     "created": 0,
     "updated": 1,
     "unchanged": 73,
@@ -795,13 +795,13 @@
       "version": "1.0.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "a2959710ee7cbf069b9b6eafb910baccc2023f36bcf1f20fdfc406199db6a130",
+      "checksum_sha256": "193275d526b65dc29ac1ea939441d07bea673a57bdcc3ab62dd168d14d34793d",
       "notion_page_id": "3ef5a24a-6668-8135-a88d-e9e876b34ecf",
       "notion_page_url": "https://app.notion.com/p/3ef5a24a66688135a88de9e876b34ecf",
       "index_row_page_id": "3ef5a24a-6668-819c-8303-f8a3426a4921",
       "index_row_page_url": "https://app.notion.com/p/3ef5a24a6668819c8303f8a3426a4921",
-      "synced_commit": "8a77815e7d09bff8036cf939284353f5db93dc21",
-      "synced_at": "2026-10-16T22:51:05.805Z"
+      "synced_commit": "7d3f7dee897697173964e1d084b30f2b558179e2",
+      "synced_at": "2026-11-05T08:37:08.131Z"
     },
     "DOCOO-ADR-0014": {
       "path": "docs/adr/0014-analyst-questions-and-answers.md",
