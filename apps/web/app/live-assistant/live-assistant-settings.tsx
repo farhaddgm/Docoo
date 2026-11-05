@@ -393,269 +393,272 @@ export function LiveAssistantSettings({
         </p>
       </section>
 
-      <section className="card stack" aria-labelledby="la-model">
-        <h2 id="la-model">{text.model.title}</h2>
-        <p className="muted">{text.model.intro}</p>
-        <Field label={text.model.mode}>
-          {(id) => (
-            <select
-              id={id}
-              value={asString(draft['live_assistant.mode'])}
-              onChange={(event) => set('live_assistant.mode', event.target.value)}
-            >
-              {liveAssistantModes.map((mode) => (
-                <option key={mode} value={mode}>
-                  {text.model.modes[mode]}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <Field label={text.model.connection}>
-          {(id) => (
-            <select
-              id={id}
-              value={connectionId}
-              onChange={(event) => {
-                setDraft({
-                  ...draft,
-                  'live_assistant.connection_id': event.target.value,
-                  'live_assistant.model': '',
-                });
-              }}
-            >
-              <option value="">{text.model.noConnection}</option>
-              {connections.map((connection) => (
-                <option key={connection.id} value={connection.id}>
-                  {connection.name} ({connection.provider})
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        {connections.length === 0 && <small className="muted">{text.model.noConnections}</small>}
-        <Field
-          label={text.model.modelId}
-          hint={text.model.modelHint}
-          problem={problemFor('live_assistant.model')}
-        >
-          {(id) => (
-            <>
+      {/* From here on the blocks are short enough to stand two to a row. */}
+      <div className="settings-columns">
+        <section className="card stack" aria-labelledby="la-model">
+          <h2 id="la-model">{text.model.title}</h2>
+          <p className="muted">{text.model.intro}</p>
+          <Field label={text.model.mode}>
+            {(id) => (
+              <select
+                id={id}
+                value={asString(draft['live_assistant.mode'])}
+                onChange={(event) => set('live_assistant.mode', event.target.value)}
+              >
+                {liveAssistantModes.map((mode) => (
+                  <option key={mode} value={mode}>
+                    {text.model.modes[mode]}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+          <Field label={text.model.connection}>
+            {(id) => (
+              <select
+                id={id}
+                value={connectionId}
+                onChange={(event) => {
+                  setDraft({
+                    ...draft,
+                    'live_assistant.connection_id': event.target.value,
+                    'live_assistant.model': '',
+                  });
+                }}
+              >
+                <option value="">{text.model.noConnection}</option>
+                {connections.map((connection) => (
+                  <option key={connection.id} value={connection.id}>
+                    {connection.name} ({connection.provider})
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+          {connections.length === 0 && <small className="muted">{text.model.noConnections}</small>}
+          <Field
+            label={text.model.modelId}
+            hint={text.model.modelHint}
+            problem={problemFor('live_assistant.model')}
+          >
+            {(id) => (
+              <>
+                <input
+                  id={id}
+                  type="text"
+                  list={`${id}-models`}
+                  maxLength={200}
+                  dir="ltr"
+                  value={asString(draft['live_assistant.model'])}
+                  onChange={(event) => set('live_assistant.model', event.target.value)}
+                />
+                <datalist id={`${id}-models`}>
+                  {models.map((model) => (
+                    <option key={model} value={model} />
+                  ))}
+                </datalist>
+              </>
+            )}
+          </Field>
+          <Field label={text.model.voice}>
+            {(id) => (
               <input
                 id={id}
                 type="text"
-                list={`${id}-models`}
                 maxLength={200}
                 dir="ltr"
-                value={asString(draft['live_assistant.model'])}
-                onChange={(event) => set('live_assistant.model', event.target.value)}
+                value={asString(draft['live_assistant.voice_id'])}
+                onChange={(event) => set('live_assistant.voice_id', event.target.value)}
               />
-              <datalist id={`${id}-models`}>
-                {models.map((model) => (
-                  <option key={model} value={model} />
+            )}
+          </Field>
+          <Field label={text.model.language}>
+            {(id) => (
+              <select
+                id={id}
+                value={asString(draft['live_assistant.language'])}
+                onChange={(event) => set('live_assistant.language', event.target.value)}
+              >
+                {liveAssistantLanguages.map((language) => (
+                  <option key={language} value={language}>
+                    {text.model.languages[language]}
+                  </option>
                 ))}
-              </datalist>
-            </>
+              </select>
+            )}
+          </Field>
+          <h3>{text.model.executor}</h3>
+          <ModelPicker
+            locale={locale}
+            workspaceId={workspaceId}
+            idPrefix="la-executor"
+            inheritLabel={text.model.executorInherit}
+            connectionId={asString(draft['live_assistant.executor_connection_id'])}
+            model={asString(draft['live_assistant.executor_model'])}
+            onChange={(connection, model) =>
+              setDraft({
+                ...draft,
+                'live_assistant.executor_connection_id': connection,
+                'live_assistant.executor_model': model,
+              })
+            }
+          />
+        </section>
+
+        <section className="card stack" aria-labelledby="la-listening">
+          <h2 id="la-listening">{text.listening.title}</h2>
+          <Field label={text.listening.mode}>
+            {(id) => (
+              <select
+                id={id}
+                value={asString(draft['live_assistant.listening_mode'])}
+                onChange={(event) => set('live_assistant.listening_mode', event.target.value)}
+              >
+                {liveAssistantListeningModes.map((mode) => (
+                  <option key={mode} value={mode}>
+                    {text.listening.modes[mode]}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+          {numberField(
+            'live_assistant.idle_sleep_s',
+            text.listening.idle,
+            liveAssistantLimits.idleSleepS,
+            '1',
           )}
-        </Field>
-        <Field label={text.model.voice}>
-          {(id) => (
+          <small className="muted">{text.listening.idleHint}</small>
+          <label className="voice-check">
             <input
-              id={id}
-              type="text"
-              maxLength={200}
-              dir="ltr"
-              value={asString(draft['live_assistant.voice_id'])}
-              onChange={(event) => set('live_assistant.voice_id', event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={text.model.language}>
-          {(id) => (
-            <select
-              id={id}
-              value={asString(draft['live_assistant.language'])}
-              onChange={(event) => set('live_assistant.language', event.target.value)}
-            >
-              {liveAssistantLanguages.map((language) => (
-                <option key={language} value={language}>
-                  {text.model.languages[language]}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <h3>{text.model.executor}</h3>
-        <ModelPicker
-          locale={locale}
-          workspaceId={workspaceId}
-          idPrefix="la-executor"
-          inheritLabel={text.model.executorInherit}
-          connectionId={asString(draft['live_assistant.executor_connection_id'])}
-          model={asString(draft['live_assistant.executor_model'])}
-          onChange={(connection, model) =>
-            setDraft({
-              ...draft,
-              'live_assistant.executor_connection_id': connection,
-              'live_assistant.executor_model': model,
-            })
-          }
-        />
-      </section>
-
-      <section className="card stack" aria-labelledby="la-listening">
-        <h2 id="la-listening">{text.listening.title}</h2>
-        <Field label={text.listening.mode}>
-          {(id) => (
-            <select
-              id={id}
-              value={asString(draft['live_assistant.listening_mode'])}
-              onChange={(event) => set('live_assistant.listening_mode', event.target.value)}
-            >
-              {liveAssistantListeningModes.map((mode) => (
-                <option key={mode} value={mode}>
-                  {text.listening.modes[mode]}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        {numberField(
-          'live_assistant.idle_sleep_s',
-          text.listening.idle,
-          liveAssistantLimits.idleSleepS,
-          '1',
-        )}
-        <small className="muted">{text.listening.idleHint}</small>
-        <label className="voice-check">
-          <input
-            type="checkbox"
-            checked={bool('live_assistant.wake_enabled')}
-            onChange={(event) => set('live_assistant.wake_enabled', event.target.checked)}
-          />{' '}
-          {text.listening.wake}
-        </label>
-        <small className="muted">{text.listening.wakeHint}</small>
-        <Field label={text.listening.wakePhrase}>
-          {(id) => (
-            <input
-              id={id}
-              type="text"
-              maxLength={60}
-              dir="ltr"
-              value={asString(draft['live_assistant.wake_phrase'])}
-              onChange={(event) => set('live_assistant.wake_phrase', event.target.value)}
-            />
-          )}
-        </Field>
-      </section>
-
-      <section className="card stack" aria-labelledby="la-limits">
-        <h2 id="la-limits">{text.limits.title}</h2>
-        <p className="muted">{text.limits.intro}</p>
-        {numberField(
-          'live_assistant.session_cost_cap_usd',
-          text.limits.sessionCost,
-          liveAssistantLimits.sessionCostCapUsd,
-          '0.5',
-        )}
-        {numberField(
-          'live_assistant.daily_cost_cap_usd',
-          text.limits.dailyCost,
-          liveAssistantLimits.dailyCostCapUsd,
-          '1',
-        )}
-        {numberField(
-          'live_assistant.session_max_minutes',
-          text.limits.sessionMinutes,
-          liveAssistantLimits.sessionMaxMinutes,
-          '1',
-        )}
-        {numberField(
-          'live_assistant.task_cost_cap_usd',
-          text.limits.taskCost,
-          liveAssistantLimits.taskCostCapUsd,
-          '0.05',
-        )}
-        {numberField(
-          'live_assistant.max_actions_per_task',
-          text.limits.maxActions,
-          liveAssistantLimits.maxActionsPerTask,
-          '1',
-        )}
-      </section>
-
-      <section className="card stack" aria-labelledby="la-confirm">
-        <h2 id="la-confirm">{text.confirm.title}</h2>
-        <p className="muted">{text.confirm.intro}</p>
-        {numberField(
-          'live_assistant.confirm_timeout_s',
-          text.confirm.timeout,
-          liveAssistantLimits.confirmTimeoutS,
-          '1',
-        )}
-        <Field label={text.confirm.strictness}>
-          {(id) => (
-            <select
-              id={id}
-              value={asString(draft['live_assistant.confirm_strictness'])}
-              onChange={(event) => set('live_assistant.confirm_strictness', event.target.value)}
-            >
-              {confirmStrictnessLevels.map((level) => (
-                <option key={level} value={level}>
-                  {text.confirm.strictnesses[level]}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <fieldset className="field-stack">
-          <legend>{text.confirm.t3Title}</legend>
-          <p className="muted">{text.confirm.t3Intro}</p>
-          {t3Categories.map((category) => (
-            <label key={category} className="voice-check">
+              type="checkbox"
+              checked={bool('live_assistant.wake_enabled')}
+              onChange={(event) => set('live_assistant.wake_enabled', event.target.checked)}
+            />{' '}
+            {text.listening.wake}
+          </label>
+          <small className="muted">{text.listening.wakeHint}</small>
+          <Field label={text.listening.wakePhrase}>
+            {(id) => (
               <input
-                type="checkbox"
-                checked={enabledT3.includes(category)}
-                onChange={(event) =>
-                  set(
-                    'live_assistant.t3_categories',
-                    toggle(enabledT3, category, event.target.checked),
-                  )
-                }
-              />{' '}
-              {text.confirm.t3[category]}
-            </label>
-          ))}
-        </fieldset>
-      </section>
+                id={id}
+                type="text"
+                maxLength={60}
+                dir="ltr"
+                value={asString(draft['live_assistant.wake_phrase'])}
+                onChange={(event) => set('live_assistant.wake_phrase', event.target.value)}
+              />
+            )}
+          </Field>
+        </section>
 
-      <section className="card stack" aria-labelledby="la-privacy">
-        <h2 id="la-privacy">{text.privacy.title}</h2>
-        <label className="voice-check">
-          <input
-            type="checkbox"
-            checked={bool('live_assistant.store_transcripts')}
-            onChange={(event) => set('live_assistant.store_transcripts', event.target.checked)}
-          />{' '}
-          {text.privacy.transcripts}
-        </label>
-        {numberField(
-          'live_assistant.transcript_retention_days',
-          text.privacy.retention,
-          liveAssistantLimits.transcriptRetentionDays,
-          '1',
-        )}
-        <label className="voice-check">
-          <input
-            type="checkbox"
-            checked={bool('live_assistant.store_audio')}
-            onChange={(event) => set('live_assistant.store_audio', event.target.checked)}
-          />{' '}
-          {text.privacy.audio}
-        </label>
-        <small className="muted">{text.privacy.audioHint}</small>
-      </section>
+        <section className="card stack" aria-labelledby="la-limits">
+          <h2 id="la-limits">{text.limits.title}</h2>
+          <p className="muted">{text.limits.intro}</p>
+          {numberField(
+            'live_assistant.session_cost_cap_usd',
+            text.limits.sessionCost,
+            liveAssistantLimits.sessionCostCapUsd,
+            '0.5',
+          )}
+          {numberField(
+            'live_assistant.daily_cost_cap_usd',
+            text.limits.dailyCost,
+            liveAssistantLimits.dailyCostCapUsd,
+            '1',
+          )}
+          {numberField(
+            'live_assistant.session_max_minutes',
+            text.limits.sessionMinutes,
+            liveAssistantLimits.sessionMaxMinutes,
+            '1',
+          )}
+          {numberField(
+            'live_assistant.task_cost_cap_usd',
+            text.limits.taskCost,
+            liveAssistantLimits.taskCostCapUsd,
+            '0.05',
+          )}
+          {numberField(
+            'live_assistant.max_actions_per_task',
+            text.limits.maxActions,
+            liveAssistantLimits.maxActionsPerTask,
+            '1',
+          )}
+        </section>
+
+        <section className="card stack" aria-labelledby="la-confirm">
+          <h2 id="la-confirm">{text.confirm.title}</h2>
+          <p className="muted">{text.confirm.intro}</p>
+          {numberField(
+            'live_assistant.confirm_timeout_s',
+            text.confirm.timeout,
+            liveAssistantLimits.confirmTimeoutS,
+            '1',
+          )}
+          <Field label={text.confirm.strictness}>
+            {(id) => (
+              <select
+                id={id}
+                value={asString(draft['live_assistant.confirm_strictness'])}
+                onChange={(event) => set('live_assistant.confirm_strictness', event.target.value)}
+              >
+                {confirmStrictnessLevels.map((level) => (
+                  <option key={level} value={level}>
+                    {text.confirm.strictnesses[level]}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+          <fieldset className="field-stack">
+            <legend>{text.confirm.t3Title}</legend>
+            <p className="muted">{text.confirm.t3Intro}</p>
+            {t3Categories.map((category) => (
+              <label key={category} className="voice-check">
+                <input
+                  type="checkbox"
+                  checked={enabledT3.includes(category)}
+                  onChange={(event) =>
+                    set(
+                      'live_assistant.t3_categories',
+                      toggle(enabledT3, category, event.target.checked),
+                    )
+                  }
+                />{' '}
+                {text.confirm.t3[category]}
+              </label>
+            ))}
+          </fieldset>
+        </section>
+
+        <section className="card stack" aria-labelledby="la-privacy">
+          <h2 id="la-privacy">{text.privacy.title}</h2>
+          <label className="voice-check">
+            <input
+              type="checkbox"
+              checked={bool('live_assistant.store_transcripts')}
+              onChange={(event) => set('live_assistant.store_transcripts', event.target.checked)}
+            />{' '}
+            {text.privacy.transcripts}
+          </label>
+          {numberField(
+            'live_assistant.transcript_retention_days',
+            text.privacy.retention,
+            liveAssistantLimits.transcriptRetentionDays,
+            '1',
+          )}
+          <label className="voice-check">
+            <input
+              type="checkbox"
+              checked={bool('live_assistant.store_audio')}
+              onChange={(event) => set('live_assistant.store_audio', event.target.checked)}
+            />{' '}
+            {text.privacy.audio}
+          </label>
+          <small className="muted">{text.privacy.audioHint}</small>
+        </section>
+      </div>
 
       <div className="toolbar" role="group">
         <button
