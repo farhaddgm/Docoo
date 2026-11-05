@@ -4,9 +4,9 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
-### Fixed
+## [0.52.0] — 2026-11-05
 
-- **The sidebar no longer jumps sideways between pages.** On a screen with a classic scrollbar, a page long enough to scroll is narrower by the scrollbar than one that is not, so the menu moved a few pixels when you went from one to the other. The room for the scrollbar is now always kept, so every page has the same width and nothing moves (in both languages). Phones and other overlay scrollbars are unaffected. No migration.
+Back-office polish. You can look at what each workflow stage produced without leaving the page, the dashboard and the project overview say more with less, the voice assistant settings page is about 40 % shorter and fits a phone, and a few small annoyances are gone: the sidebar jumping when a page starts to scroll, and the Smart error count shown twice. Interface changes only: no migration and no API change.
 
 ### Added
 
@@ -18,6 +18,11 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 - **Voice assistant settings are shorter.** From "AI and model" on, the blocks of the assistant's settings page (AI and model, Listening and wake-up, Caps, Confirmation, Conversations and privacy) stand two to a row instead of one under another, so the page is much shorter and needs far less scrolling; on a narrow screen they stay in one column, and on a phone a long option in a drop-down no longer stretches the cards past the screen. No migration.
 - **Dashboard tidied.** "Waiting for your answer or approval" now shows one line per item: the project's own name (not the task's English title) as a link to the project, with a long name ending in "…". In "Usage, last 30 days" the invocations and tokens tiles sit one under the other and their numbers no longer run out of the box (the headline number tiles wrap a very long number too). "Retries near the limit" was rewritten: for each stage close to its attempt limit it shows the project (linked to its workflow), the stage, a progress bar of the attempts used, how many attempts are left or that the limit is reached and waiting for your decision, and a short line on what to do. No migration.
 - **One progress card in the project Overview.** "Project journey" and "Milestone" said nearly the same thing and looked alike, so the Overview now shows only one of them: the journey for a project being worked on (draft, active, paused), and the milestone only for a project that has no journey (completed, archived, deleted). No migration.
+
+### Fixed
+
+- **The sidebar no longer jumps sideways between pages.** On a screen with a classic scrollbar, a page long enough to scroll is narrower by the scrollbar than one that is not, so the menu moved a few pixels when you went from one to the other. The room for the scrollbar is now always kept, so every page has the same width and nothing moves (in both languages). Phones and other overlay scrollbars are unaffected. No migration.
+- **Live assistant and model test.** Fixes to the error shown on the live assistant's card, to the assistant's own "AI and model" settings and to the model choices of the model test on the Providers page (#321). No migration.
 
 ## [0.51.0] — 2026-11-04
 
