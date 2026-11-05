@@ -530,12 +530,12 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
             name: item.name,
             provider: item.provider,
           }))}
-          modelIds={Object.fromEntries(
+          models={Object.fromEntries(
             modelConnections.map((item) => [
               item.id,
               (models[item.id] ?? [])
                 .filter((model) => model.capabilities.structuredOutput)
-                .map((model) => model.id),
+                .map((model) => ({ id: model.id, name: model.displayName || model.id })),
             ]),
           )}
           current={current}

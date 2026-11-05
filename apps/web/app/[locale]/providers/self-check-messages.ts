@@ -7,6 +7,10 @@ const messages = {
     connection: 'اتصال مورد آزمون',
     model: 'مدل مورد آزمون',
     modelPlaceholder: 'نام مدل',
+    chooseModel: '— یک مدل انتخاب کنید —',
+    outsideList: '{model} (در فهرست اتصال نیست)',
+    noModelList:
+      'فهرست مدل‌های این اتصال خالی است. آن را در بخش اتصال‌ها به‌روزرسانی کنید، یا نام مدل را خودتان بنویسید.',
     testedModel: 'مدل آزموده‌شده: {model}',
     start: 'اجرای تست کامل',
     running: 'در حال اجرا…',
@@ -88,6 +92,10 @@ const messages = {
     connection: 'Connection to test',
     model: 'Model to test',
     modelPlaceholder: 'Model name',
+    chooseModel: '— Choose a model —',
+    outsideList: '{model} (not in the connection list)',
+    noModelList:
+      'This connection has no models listed. Refresh them in the connections section, or type the model name yourself.',
     testedModel: 'Tested model: {model}',
     start: 'Run the full test',
     running: 'Running…',

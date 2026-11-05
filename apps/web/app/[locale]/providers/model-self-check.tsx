@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiGet, apiSend } from '../../api-client';
 import { formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
+import { modelAfterConnectionChange, modelChoices } from './model-choices';
 import { selfCheckMessages } from './self-check-messages';
 import { InfoTip, SectionTitle } from '../../info-tip';
 
@@ -35,7 +36,7 @@ export function ModelSelfCheck({
   locale,
   workspaceId,
   connections,
-  modelIds,
+  models,
   current,
   embedded = false,
 }: {
@@ -44,7 +45,8 @@ export function ModelSelfCheck({
   /** Drawn inside another box instead of as a box of its own. */
   embedded?: boolean;
   connections: readonly { id: string; name: string; provider: string }[];
-  modelIds: Readonly<Record<string, readonly string[]>>;
+  /** The provider's own model list of each connection. */
+  models: Readonly<Record<string, readonly { id: string; name: string }[]>>;
   current: { connectionId: string; model: string };
 }) {
   const text = selfCheckMessages(locale);
@@ -87,9 +89,8 @@ export function ModelSelfCheck({
   }, [base, connectionId]);
 
   const selected = connections.find((item) => item.id === connectionId);
-  const suggestions = connectionId
-    ? (modelIds[connections.find((item) => item.id === connectionId)?.id ?? ''] ?? [])
-    : [];
+  const offered = connectionId ? (models[connectionId] ?? []) : [];
+  const choices = modelChoices(offered, model);
   const resultSteps = tested?.steps ?? [];
   const done = resultSteps.flatMap((step) => {
     const row = rows[step];
@@ -223,6 +224,10 @@ export function ModelSelfCheck({
             connectionEdited.current = true;
             setSteps([]);
             setConnectionId(event.target.value);
+            // A model of the old connection is not carried to a connection that does not offer it.
+            setModel((before) =>
+              modelAfterConnectionChange(models[event.target.value] ?? [], before),
+            );
           }}
         >
           <option value="">—</option>
@@ -233,25 +238,41 @@ export function ModelSelfCheck({
           ))}
         </select>
         <label htmlFor="selfcheck-model">{text.model}</label>
-        <input
-          id="selfcheck-model"
-          dir="ltr"
-          list="selfcheck-model-options"
-          value={model}
-          disabled={running}
-          placeholder={text.modelPlaceholder}
-          autoComplete="off"
-          onChange={(event) => {
-            modelEdited.current = true;
-            setModel(event.target.value);
-          }}
-        />
-        <datalist id="selfcheck-model-options">
-          {suggestions.map((item) => (
-            <option key={item} value={item} />
-          ))}
-        </datalist>
+        {choices.length > 0 ? (
+          <select
+            id="selfcheck-model"
+            dir="ltr"
+            value={model}
+            disabled={running}
+            onChange={(event) => {
+              modelEdited.current = true;
+              setModel(event.target.value);
+            }}
+          >
+            <option value="">{text.chooseModel}</option>
+            {choices.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.outside ? fill(text.outsideList, { model: item.label }) : item.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id="selfcheck-model"
+            dir="ltr"
+            value={model}
+            disabled={running || !connectionId}
+            placeholder={text.modelPlaceholder}
+            autoComplete="off"
+            onChange={(event) => {
+              modelEdited.current = true;
+              setModel(event.target.value);
+            }}
+          />
+        )}
       </div>
+      {connectionId && offered.length === 0 && <p className="muted">{text.noModelList}</p>}
+      {connectionId && model.trim() === '' && !running && <p className="muted">{text.needModel}</p>}
       <div className="toolbar">
         <button
           className="primary-button"
