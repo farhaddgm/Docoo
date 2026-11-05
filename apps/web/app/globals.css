@@ -234,6 +234,22 @@ body {
   line-height: var(--line-height);
 }
 
+/*
+ * The room for the page's scrollbar is always kept. Without it a page long enough to scroll is
+ * narrower by a scrollbar than one that is not, and the sidebar and the content jump sideways when
+ * you go from one to the other. (An overlay scrollbar, as on phones and macOS, takes no room.)
+ */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* A browser that does not know scrollbar-gutter keeps the room by always showing the scrollbar. */
+@supports not (scrollbar-gutter: stable) {
+  html {
+    overflow-y: scroll;
+  }
+}
+
 /* The root keeps the browser size so every rem below means the same in every browser. */
 body {
   font-size: var(--font-size-md);

@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Fixed
+
+- **The sidebar no longer jumps sideways between pages.** On a screen with a classic scrollbar, a page long enough to scroll is narrower by the scrollbar than one that is not, so the menu moved a few pixels when you went from one to the other. The room for the scrollbar is now always kept, so every page has the same width and nothing moves (in both languages). Phones and other overlay scrollbars are unaffected. No migration.
+
 ### Added
 
 - **View a stage's output from the workflow.** In a project's **Workflow** tab, every stage now has a "View output" button next to "Run again". It opens a large popup in the middle of the page with a short summary of the stage's latest output — the problem statement and goals, the first findings, ideas, outline items or scores — and a button to the stage's own tab for the full text. The button is disabled for a stage that has no output yet. No migration.
