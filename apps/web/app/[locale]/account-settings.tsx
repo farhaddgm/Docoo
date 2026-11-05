@@ -1,6 +1,6 @@
 'use client';
 
-import { messagesFor, type Locale } from '../i18n';
+import type { Locale } from '../i18n';
 import { ThemePicker } from '../theme-toggle';
 import { AccountsScreen } from './accounts-screen';
 import { AccountSecurity } from './account-security';
@@ -26,7 +26,6 @@ const text = {
 /** Settings of the signed-in account; "Users & sign-in" lives here for administrators. */
 export function AccountSettings({ locale }: { readonly locale: Locale }) {
   const t = text[locale];
-  const shell = messagesFor(locale);
   return (
     <SignedIn locale={locale} title={t.title} subtitle={t.subtitle}>
       {(identity) => (
@@ -34,7 +33,6 @@ export function AccountSettings({ locale }: { readonly locale: Locale }) {
           <section className="card stack" aria-labelledby="appearance-title">
             <h2 id="appearance-title">{t.appearance}</h2>
             <ThemePicker locale={locale} inline />
-            <p className="muted">{shell.theme.pickerHint}</p>
           </section>
           <AccountSecurity locale={locale} user={identity.user} />
           {identity.user.role === 'super_admin' && (

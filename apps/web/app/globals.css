@@ -4392,27 +4392,42 @@ button.link-button {
   gap: var(--space-3);
 }
 
+/*
+ * The theme buttons of the account page: six to a row, small. The number to a row follows the width
+ * of the card they are in (the page has a sidebar beside it), not the width of the window.
+ */
+.theme-picker-inline {
+  container-type: inline-size;
+}
+
 .theme-picker-inline .theme-picker-list {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-2);
 }
 
 .theme-picker-inline .theme-choice {
   flex-direction: column;
   justify-content: center;
-  gap: var(--space-2);
-  min-height: 6.5rem;
-  padding: var(--space-3);
-  font-size: var(--font-size-md, 1rem);
+  gap: var(--space-1);
+  min-height: 4.25rem;
+  padding: var(--space-2);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
   text-align: center;
 }
 
 .theme-picker-inline .theme-swatch {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
-@media (max-width: 36rem) {
+@container (max-width: 38rem) {
+  .theme-picker-inline .theme-picker-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 22rem) {
   .theme-picker-inline .theme-picker-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
