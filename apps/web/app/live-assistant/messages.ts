@@ -52,6 +52,9 @@ export interface LiveMessages {
       readonly no_provider: string;
     };
     readonly openSettings: string;
+    /** The owner's card could not read the assistant's state; `{code}` says why. */
+    readonly loadFailed: string;
+    readonly retry: string;
     readonly nearCap: string;
     readonly used: string;
     readonly errors: Record<LiveError, string>;
@@ -186,6 +189,8 @@ const fa: LiveMessages = {
       no_provider: 'اتصال به سرویس صوتی هنوز راه‌اندازی نشده است.',
     },
     openSettings: 'باز کردن تنظیمات دستیار',
+    loadFailed: 'وضعیت دستیار زنده خوانده نشد (کد: {code}). این پیام را برای پشتیبان بفرستید.',
+    retry: 'تلاش دوباره',
     nearCap:
       'به سقف هزینه یا زمان نزدیک می‌شوید؛ گفتگو با رسیدن به سقف خودکار بسته می‌شود. سقف‌ها در تنظیمات دستیار قابل‌تغییرند.',
     typing: {
@@ -345,6 +350,9 @@ const en: LiveMessages = {
       no_provider: 'The connection to the voice service is not set up yet.',
     },
     openSettings: 'Open assistant settings',
+    loadFailed:
+      'The live assistant state could not be read (code: {code}). Send this message to support.',
+    retry: 'Try again',
     nearCap:
       'A cost or time cap is close; the conversation closes by itself when it is reached. The caps can be changed in the assistant settings.',
     typing: {

@@ -41,6 +41,9 @@ interface ProjectOption {
   title: string;
 }
 
+/** Providers with a live voice model; the voice connection is chosen among these. */
+const VOICE_PROVIDERS: ReadonlySet<string> = new Set(['openai', 'gemini']);
+
 const asString = (value: unknown): string => (typeof value === 'string' ? value : '');
 const asList = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
@@ -156,6 +159,9 @@ export function LiveAssistantSettings({
       </p>
     );
   }
+
+  // Live voice exists only at providers that offer it; a connection already saved stays listed.
+  const voiceConnections = connections.filter((item) => VOICE_PROVIDERS.has(item.provider));
 
   const problems = validateDraft(draft);
   const problemFor = (key: LiveAssistantSettingKey): string | undefined => {
@@ -427,15 +433,21 @@ export function LiveAssistantSettings({
                 }}
               >
                 <option value="">{text.model.noConnection}</option>
-                {connections.map((connection) => (
+                {voiceConnections.map((connection) => (
                   <option key={connection.id} value={connection.id}>
                     {connection.name} ({connection.provider})
                   </option>
                 ))}
+                {/* A saved connection that was disabled or removed must not look like "none". */}
+                {connectionId && !voiceConnections.some((c) => c.id === connectionId) && (
+                  <option value={connectionId}>{text.model.unknownConnection}</option>
+                )}
               </select>
             )}
           </Field>
-          {connections.length === 0 && <small className="muted">{text.model.noConnections}</small>}
+          {voiceConnections.length === 0 && (
+            <small className="muted">{text.model.noConnections}</small>
+          )}
           <Field
             label={text.model.modelId}
             hint={text.model.modelHint}
@@ -460,7 +472,7 @@ export function LiveAssistantSettings({
               </>
             )}
           </Field>
-          <Field label={text.model.voice}>
+          <Field label={text.model.voice} hint={text.model.voiceHint}>
             {(id) => (
               <input
                 id={id}
@@ -493,6 +505,7 @@ export function LiveAssistantSettings({
             workspaceId={workspaceId}
             idPrefix="la-executor"
             inheritLabel={text.model.executorInherit}
+            showCapabilityNote={false}
             connectionId={asString(draft['live_assistant.executor_connection_id'])}
             model={asString(draft['live_assistant.executor_model'])}
             onChange={(connection, model) =>
@@ -503,6 +516,11 @@ export function LiveAssistantSettings({
               })
             }
           />
+          {problemFor('live_assistant.executor_model') && (
+            <small className="notice error" role="alert">
+              {problemFor('live_assistant.executor_model')}
+            </small>
+          )}
         </section>
 
         <section className="card stack" aria-labelledby="la-listening">

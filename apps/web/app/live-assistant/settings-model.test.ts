@@ -78,11 +78,19 @@ describe('what stops a save', () => {
     expect(codes(draftFrom({}))).toEqual([]);
   });
 
-  it('refuses to switch on without the privacy notice accepted and a model chosen', () => {
+  it('refuses to switch on without the privacy notice accepted, and asks for no voice model', () => {
     expect(codes(withValues({ 'live_assistant.enabled': true }))).toEqual([
       'disclosure_accepted:consent_needed',
-      'model:model_needed',
     ]);
+    // Typing needs no voice connection at all: accepted notice alone is enough to switch on.
+    expect(
+      codes(
+        withValues({
+          'live_assistant.enabled': true,
+          'live_assistant.disclosure_accepted': true,
+        }),
+      ),
+    ).toEqual([]);
     expect(
       codes(
         withValues({
@@ -95,26 +103,33 @@ describe('what stops a save', () => {
     ).toEqual([]);
   });
 
-  it('needs no realtime model when the assistant runs in pipeline mode', () => {
+  it('wants the voice connection and its model together, never half', () => {
+    expect(codes(withValues({ 'live_assistant.connection_id': P1 }))).toEqual([
+      'model:model_needed',
+    ]);
+    expect(codes(withValues({ 'live_assistant.model': 'some-realtime-model' }))).toEqual([
+      'model:model_needed',
+    ]);
+    expect(
+      codes(withValues({ 'live_assistant.connection_id': P1, 'live_assistant.model': '   ' })),
+    ).toEqual(['model:model_needed']);
+  });
+
+  it('wants the text connection and its model together too, or typing stays off in silence', () => {
+    expect(codes(withValues({ 'live_assistant.executor_connection_id': P1 }))).toEqual([
+      'executor_model:executor_model_needed',
+    ]);
+    expect(codes(withValues({ 'live_assistant.executor_model': 'text-model' }))).toEqual([
+      'executor_model:executor_model_needed',
+    ]);
     expect(
       codes(
         withValues({
-          'live_assistant.enabled': true,
-          'live_assistant.disclosure_accepted': true,
-          'live_assistant.mode': 'pipeline',
+          'live_assistant.executor_connection_id': P1,
+          'live_assistant.executor_model': 'text-model',
         }),
       ),
     ).toEqual([]);
-  });
-
-  it('needs a model name, not only a connection, and not a blank one', () => {
-    const draft = withValues({
-      'live_assistant.enabled': true,
-      'live_assistant.disclosure_accepted': true,
-      'live_assistant.connection_id': P1,
-      'live_assistant.model': '   ',
-    });
-    expect(codes(draft)).toEqual(['model:model_needed']);
   });
 
   it('refuses a missing name and one that is too long', () => {
@@ -201,6 +216,7 @@ describe('the words of the page', () => {
       'not_whole',
       'consent_needed',
       'model_needed',
+      'executor_model_needed',
       'projects_needed',
     ];
     for (const locale of ['fa', 'en'] as const) {

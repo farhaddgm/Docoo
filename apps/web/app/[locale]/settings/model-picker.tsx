@@ -32,6 +32,7 @@ export function ModelPicker({
   disabled = false,
   idPrefix,
   inheritLabel,
+  showCapabilityNote = true,
   onChange,
 }: {
   locale: Locale;
@@ -42,6 +43,8 @@ export function ModelPicker({
   idPrefix: string;
   /** What the empty choice means; the default is the inherited value. */
   inheritLabel?: string;
+  /** The note that only models with structured output are listed; not true of every use. */
+  showCapabilityNote?: boolean;
   onChange: (connectionId: string, model: string) => void;
 }) {
   const text = settingsMessages(locale).picker;
@@ -97,6 +100,10 @@ export function ModelPicker({
               {connection.name} ({connection.provider})
             </option>
           ))}
+          {/* A saved connection that was disabled or removed must not look like "inherit". */}
+          {connections && connectionId && !connections.some((c) => c.id === connectionId) && (
+            <option value={connectionId}>{text.unknownConnection}</option>
+          )}
         </select>
       </div>
       {connectionId && (
@@ -118,7 +125,7 @@ export function ModelPicker({
           {usable.length === 0 ? (
             <p className="muted">{text.noModels}</p>
           ) : (
-            <p className="muted">{text.structuredOutputOnly}</p>
+            showCapabilityNote && <p className="muted">{text.structuredOutputOnly}</p>
           )}
         </div>
       )}
