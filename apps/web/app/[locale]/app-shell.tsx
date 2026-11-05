@@ -315,9 +315,7 @@ export function AppShell({
       {showNavigation && workspaceId && (
         <NotificationBell locale={locale} workspaceId={workspaceId} />
       )}
-      {showNavigation && workspaceId && isAdmin && (
-        <SmartToggle locale={locale} workspaceId={workspaceId} />
-      )}
+      {showNavigation && workspaceId && isAdmin && <SmartToggle locale={locale} />}
       {!showNavigation && <ThemePicker locale={locale} />}
       <a
         className="locale-link"
