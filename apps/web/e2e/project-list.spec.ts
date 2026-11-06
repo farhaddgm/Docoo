@@ -12,9 +12,7 @@ const text = projectMessages('fa');
 const stamp = Date.now().toString(36);
 
 test.describe('the project list filters and extra columns (UX §4)', () => {
-  test('filter by topic and text; owner and language columns; clear', async ({
-    page,
-  }) => {
+  test('filter by topic and text; owner and language columns; clear', async ({ page }) => {
     await signInWithKeyboard(page);
     const topicA = await createViaApi<{ topic: { id: string } }>(page, '/topics', {
       code: `pl-a-${stamp}`,
