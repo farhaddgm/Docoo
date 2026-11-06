@@ -88,7 +88,7 @@ export function SectionNav({ label, children }: { label: string; children: React
 
   const withNav = items.length >= 2;
   return (
-    <div className={withNav ? 'biz-profile section-nav' : 'section-nav'}>
+    <div className={withNav ? 'biz-profile stage-nav' : 'stage-nav'}>
       {withNav && (
         <aside className="biz-toc" aria-label={label}>
           <p className="biz-toc-title">{label}</p>

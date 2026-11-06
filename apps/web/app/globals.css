@@ -1656,6 +1656,8 @@ button:disabled {
 }
 
 .table-scroll {
+  /* A hidden label inside the table is placed against this box, so it cannot widen the page. */
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -2363,18 +2365,18 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   color: var(--color-muted);
 }
 
+/* The chat tab scrolls as a whole when the live section, history and box do not fit together. */
 .smart-body-chat {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .smart-chat {
   display: flex;
-  flex: 1;
+  flex: 1 0 auto;
   flex-direction: column;
   gap: var(--space-3);
-  min-height: 0;
 }
 
 .smart-chat-controls {
@@ -2411,10 +2413,11 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
 
 .smart-messages {
   display: grid;
-  flex: 1;
   align-content: start;
   gap: var(--space-3);
-  min-height: 6rem;
+  flex: 1 1 12rem;
+  min-height: 12rem;
+  max-height: max(12rem, 55vh);
   overflow-y: auto;
 }
 
@@ -2455,9 +2458,16 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   background: var(--color-surface-2);
 }
 
+/* The box to write in stays at the bottom of the window while the rest scrolls. */
 .smart-compose {
+  position: sticky;
+  inset-block-end: calc(var(--space-4) * -1);
+  z-index: 1;
   display: grid;
   gap: var(--space-2);
+  margin-block-end: calc(var(--space-4) * -1);
+  padding-block: var(--space-2) var(--space-4);
+  background: var(--color-surface);
 }
 
 .smart-list {
@@ -4621,6 +4631,7 @@ button.link-button {
 
 .notification-list {
   display: grid;
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -4630,17 +4641,15 @@ button.link-button {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-2);
-  border-block-end: 1px solid var(--color-border);
-}
-
-.notification-item:last-child {
-  border-block-end: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
 }
 
 .notification-item.unread {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
   background: var(--color-primary-soft);
-  border-radius: var(--radius-sm);
 }
 
 .notification-dot {
@@ -5976,6 +5985,299 @@ button.link-button {
 }
 
 /* A block reached from the side list stops below any sticky header. */
-.section-nav [data-nav] {
+.stage-nav [data-nav] {
   scroll-margin-block-start: var(--space-4);
+}
+
+/* ---------- Phones and touch screens ---------- */
+
+/* A grid item never stretches its column to the width of a wide table or code block inside it. */
+.stack {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.stack > *,
+.grid > *,
+.card {
+  min-width: 0;
+}
+
+@media (max-width: 60rem) {
+  /* The side list of a long tab becomes a row of chips that stays under the top bar. */
+  .biz-profile {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+
+  .biz-toc {
+    position: sticky;
+    top: 3.5rem;
+    z-index: 20;
+    display: block;
+    max-block-size: none;
+    margin-inline: calc(var(--space-3) * -1);
+    padding: var(--space-2) var(--space-3);
+    overflow: auto hidden;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--color-bg);
+  }
+
+  .biz-toc-title,
+  .biz-toc-group {
+    display: none;
+  }
+
+  .biz-toc ul {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .biz-toc li {
+    display: contents;
+  }
+
+  .biz-toc li > ul {
+    display: contents;
+  }
+
+  .biz-toc a {
+    flex: none;
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface);
+    white-space: nowrap;
+  }
+
+  .biz-toc a[aria-current='true'],
+  .biz-toc a:hover {
+    border-color: var(--color-primary);
+  }
+}
+
+@media (max-width: 40rem) {
+  .content {
+    padding: var(--space-4) var(--space-3) 3rem;
+  }
+
+  .card {
+    padding: var(--space-4);
+  }
+
+  .page-head {
+    margin-bottom: var(--space-4);
+  }
+
+  /* The top bar keeps its buttons and shortens the title with an ellipsis instead of cutting it. */
+  .topbar {
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
+  }
+
+  .topbar-title {
+    flex: 1 1 0;
+  }
+
+  .topbar-title h1 {
+    overflow: hidden;
+    font-size: var(--font-size-md);
+    text-overflow: ellipsis;
+  }
+
+  .topbar-actions {
+    flex: none;
+    gap: var(--space-1);
+  }
+
+  .locale-link {
+    padding-inline: var(--space-2);
+  }
+
+  /* Tabs scroll sideways in one row instead of stacking in several. */
+  .tabs {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .section-nav ul {
+    flex-wrap: nowrap;
+    margin-inline: calc(var(--space-3) * -1);
+    padding-inline: var(--space-3);
+    padding-block-end: var(--space-1);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .section-nav ul::-webkit-scrollbar {
+    display: none;
+  }
+
+  .section-nav li {
+    flex: none;
+  }
+
+  .section-nav li > button {
+    white-space: nowrap;
+  }
+
+  /* 16px text in fields: a smaller size makes iOS zoom the page when a field is focused. */
+  :where(
+    input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='hidden']),
+    select,
+    textarea
+  ) {
+    font-size: 1rem;
+  }
+
+  .toolbar.spread {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .stage-nav [data-nav],
+  .biz-section,
+  .biz-group {
+    scroll-margin-block-start: 7rem;
+  }
+
+  /* Facts and counts sit two to a row, so a long summary does not become a long scroll. */
+  .facts,
+  .counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .agent-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Fingers need about 44px: the same controls, larger, on touch screens. */
+@media (pointer: coarse) {
+  :where(.primary-button, .secondary-button, .link-button.secondary-button, .locale-link) {
+    min-height: 2.75rem;
+  }
+
+  :where(
+    input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='hidden']),
+    select
+  ) {
+    min-height: 2.75rem;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+
+  .menu-button,
+  .row-menu-button {
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+  }
+
+  .tab,
+  .section-nav li > button,
+  .step-button {
+    min-height: 2.75rem;
+  }
+
+  .back-link {
+    min-height: 2.75rem;
+  }
+
+  /* The help button keeps its look; its tappable area grows around it. */
+  .info-tip-button::after {
+    inset: -0.65rem;
+  }
+
+  label:has(> input[type='checkbox']),
+  label:has(> input[type='radio']),
+  .checkbox {
+    min-height: 2.75rem;
+  }
+}
+
+/* The voice row of a chat box: input and answer choices, then the two round buttons, in one line. */
+.voice-bar {
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+
+.voice-modes {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.voice-modes label {
+  display: inline-flex;
+  flex: 1 1 7rem;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.voice-modes label > span {
+  flex: none;
+}
+
+.smart-chat .voice-modes select,
+.voice-modes select {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  min-height: 2.25rem;
+  padding-block: var(--space-1);
+}
+
+.voice-bar > :is(button, .voice-speaker) {
+  flex: none;
+}
+
+.voice-bar .voice-icon-button {
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0;
+}
+
+@media (pointer: coarse) {
+  .notification-toolbar button,
+  main p > a:only-child {
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* Filters share rows on a phone, so a list is not pushed down a whole screen by them. */
+@media (max-width: 40rem) {
+  .filter-grid.filters-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .filter-grid.filters-row > .field:has(input[type='search']),
+  .filter-grid.filters-row > .field:has(input[type='text']) {
+    grid-column: 1 / -1;
+  }
+
+  .filter-grid.filters-row select,
+  .filter-grid.filters-row input {
+    text-overflow: ellipsis;
+  }
 }
