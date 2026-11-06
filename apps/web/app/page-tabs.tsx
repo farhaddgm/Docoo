@@ -81,7 +81,10 @@ export function PageTabs<K extends string>({
   );
 }
 
-/** The content of one tab; only the chosen one is drawn. */
+/**
+ * The content of one tab. Every panel stays mounted and the others are only hidden, so what was
+ * typed or loaded in a tab is still there when it is chosen again.
+ */
 export function PageTabPanel({
   idPrefix,
   tabKey,
@@ -93,10 +96,10 @@ export function PageTabPanel({
   active: string;
   children: ReactNode;
 }) {
-  if (active !== tabKey) return null;
   return (
     <div
       role="tabpanel"
+      hidden={active !== tabKey}
       id={`${idPrefix}-panel-${tabKey}`}
       aria-labelledby={`${idPrefix}-tab-${tabKey}`}
       className="stack"

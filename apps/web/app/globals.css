@@ -6281,3 +6281,8 @@ button.link-button {
     text-overflow: ellipsis;
   }
 }
+
+/* A tab panel that is not chosen is hidden, whatever display its layout class gives it. */
+[role='tabpanel'][hidden] {
+  display: none;
+}

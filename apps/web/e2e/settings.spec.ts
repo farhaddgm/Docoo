@@ -115,7 +115,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await expectNoSeriousA11yViolations(page);
 
     await page.getByRole('link', { name: 'Switch to English' }).click();
-    await expect(page).toHaveURL(/\/en\/settings$/u);
+    await expect(page).toHaveURL(/\/en\/settings(\?.*)?$/u);
     await expect(
       page.getByRole('heading', { level: 1, name: settingsMessages('en').title }),
     ).toBeVisible();

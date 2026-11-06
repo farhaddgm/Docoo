@@ -220,7 +220,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       .getByRole('row')
       .filter({ has: page.getByRole('rowheader', { name: `pa-${stamp}` }) });
     await revealRow(page, usedRow);
-    await usedRow.getByRole('button', { name: topicText.remove }).click();
+    await rowMenuItem(page, usedRow, topicText.remove);
     await expect(page.locator('#confirm-title')).toBeFocused();
     await expect(page.locator('.confirm-panel')).toContainText(code);
     await page.getByRole('button', { name: topicText.confirm }).click();

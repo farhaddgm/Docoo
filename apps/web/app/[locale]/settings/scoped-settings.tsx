@@ -263,11 +263,16 @@ export function ScopedSettings({
         />
       )}
       {tabbed
-        ? shown && (
-            <PageTabPanel idPrefix="settings-group" tabKey={shown.id} active={shown.id}>
-              {shown.node}
+        ? sections.map((item) => (
+            <PageTabPanel
+              key={item.id}
+              idPrefix="settings-group"
+              tabKey={item.id}
+              active={shown?.id ?? ''}
+            >
+              {item.node}
             </PageTabPanel>
-          )
+          ))
         : sections.map((item) => item.node)}
     </div>
   );
