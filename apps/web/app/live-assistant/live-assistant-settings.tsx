@@ -9,6 +9,7 @@ import {
   liveAssistantListeningModes,
   liveAssistantModes,
   t3Categories,
+  type LiveAssistantClientConfig,
   type LiveAssistantSettingKey,
 } from '@docoo/contracts';
 import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
@@ -26,6 +27,7 @@ import {
   type Draft,
   type Problem,
 } from './settings-model';
+import { liveReadApi } from './live-api';
 import { fillText, liveSettingsMessages } from './settings-messages';
 
 interface Connection {
@@ -97,6 +99,8 @@ export function LiveAssistantSettings({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [failure, setFailure] = useState('');
+  /** What the server says about the saved settings: can the assistant be written to now? */
+  const [readiness, setReadiness] = useState<LiveAssistantClientConfig | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -112,6 +116,11 @@ export function LiveAssistantSettings({
       setSaved(values);
       setConnections(list.items.filter((item) => item.status !== 'disabled'));
       setFailure('');
+      // A nicety: the page works without it, so a failure here only leaves the status out.
+      liveReadApi
+        .config(workspaceId)
+        .then(setReadiness)
+        .catch(() => setReadiness(null));
     } catch {
       setFailure(text.loadFailed);
     }
@@ -269,9 +278,24 @@ export function LiveAssistantSettings({
 
   return (
     <div className="stack live-settings">
-      <p className="notice info" role="status">
-        {text.notReady}
-      </p>
+      {readiness && (
+        <div className="stack" role="status">
+          <p className={readiness.textReady ? 'notice info' : 'notice warn'}>
+            {readiness.textReady ? (
+              <>
+                <strong>{text.status.ready}</strong>{' '}
+                {readiness.executorSource === 'own'
+                  ? text.status.readyOwn
+                  : text.status.readyWorkspace}
+              </>
+            ) : (
+              text.status.textNeeds[readiness.textUnavailableReason ?? 'executor_not_configured']
+            )}
+          </p>
+          <p className="muted">{text.status.voiceLater}</p>
+          {changedKeys(draft, saved).length > 0 && <p className="muted">{text.status.unsaved}</p>}
+        </div>
+      )}
 
       <section className="card stack" aria-labelledby="la-general">
         <h2 id="la-general">{text.general.title}</h2>
