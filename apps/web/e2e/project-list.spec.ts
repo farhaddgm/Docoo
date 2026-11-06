@@ -12,7 +12,7 @@ const text = projectMessages('fa');
 const stamp = Date.now().toString(36);
 
 test.describe('the project list filters and extra columns (UX §4)', () => {
-  test('filter by topic, language and text; owner and language columns; clear', async ({
+  test('filter by topic and text; owner and language columns; clear', async ({
     page,
   }) => {
     await signInWithKeyboard(page);
@@ -51,11 +51,9 @@ test.describe('the project list filters and extra columns (UX §4)', () => {
     await page.getByRole('button', { name: text.clearFilters }).click();
     await expect(page.getByRole('rowheader', { name: `plf-${stamp}` })).toBeVisible();
 
-    await filters.getByLabel(text.languageFilter).selectOption('fa');
-    await expect(page.getByRole('rowheader', { name: `plf-${stamp}` })).toBeVisible();
-    await expect(page.getByRole('rowheader', { name: `ple-${stamp}` })).toHaveCount(0);
+    // The output language is a column, not a filter.
+    await expect(filters.getByLabel(text.languageFilter)).toHaveCount(0);
 
-    await page.getByRole('button', { name: text.clearFilters }).click();
     await filters.getByLabel(text.searchLabel).fill(`ple-${stamp}`);
     await expect(page.getByRole('rowheader', { name: `ple-${stamp}` })).toBeVisible();
     await expect(page.getByRole('rowheader', { name: `plf-${stamp}` })).toHaveCount(0);
