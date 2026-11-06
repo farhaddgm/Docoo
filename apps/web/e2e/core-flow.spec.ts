@@ -1,7 +1,8 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { documentMessages } from '../app/[locale]/projects/[projectId]/document-messages';
 import { healthMessages } from '../app/[locale]/projects/[projectId]/health-messages';
+import { journeyMessages } from '../app/[locale]/projects/[projectId]/journey-messages';
 import { projectPageMessages } from '../app/[locale]/projects/[projectId]/messages';
 import { problemMessages } from '../app/[locale]/projects/[projectId]/problem-messages';
 import { solutionMessages } from '../app/[locale]/projects/[projectId]/solution-messages';
@@ -27,6 +28,7 @@ const projectText = projectMessages('fa');
 const wizardText = wizardMessages('fa');
 const detail = projectPageMessages('fa');
 const flow = workflowMessages('fa');
+const journeyText = journeyMessages('fa');
 const solutionText = solutionMessages('fa');
 const documentText = documentMessages('fa');
 const problemText = problemMessages('fa');
@@ -55,6 +57,12 @@ const healthBadge = (page: Page) =>
     .filter({ has: page.getByText(health.label, { exact: true }) })
     .locator('.badge');
 
+/** Opens the three-dot menu at the end of a row and picks one of its commands. */
+async function rowMenuItem(page: Page, row: Locator, name: string) {
+  await row.getByRole('button', { name: /اقدام‌های حوزه/u }).click();
+  await page.getByRole('menuitem', { name, exact: true }).click();
+}
+
 test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001, WF-003)', () => {
   test('topics: create, edit, archive and restore (TOP-001)', async ({ page }) => {
     await signInWithKeyboard(page);
@@ -78,7 +86,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expectNoSeriousA11yViolations(page);
 
     // Edit keeps the version history: the page sends If-Match with the loaded version.
-    await row.getByRole('button', { name: topicText.edit }).click();
+    await rowMenuItem(page, row, topicText.edit);
     await expect(
       page.getByRole('heading', { level: 2, name: topicText.editTitle.replace('{code}', code) }),
     ).toBeFocused();
@@ -90,7 +98,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(row.getByRole('cell').nth(1)).toHaveText('۲'); // version 2, in Persian digits
 
     // Archive shows its effect first and moves the topic to the archived view.
-    await row.getByRole('button', { name: topicText.archive }).click();
+    await rowMenuItem(page, row, topicText.archive);
     await expect(page.locator('#confirm-title')).toBeFocused();
     await expect(page.getByText(topicText.archiveEffect)).toBeVisible();
     await expectNoSeriousA11yViolations(page);
@@ -100,7 +108,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
 
     await page.locator('#topic-view').selectOption('archived');
     await expect(row).toHaveCount(1);
-    await row.getByRole('button', { name: topicText.restore }).click();
+    await rowMenuItem(page, row, topicText.restore);
     await expect(page.getByRole('status').filter({ hasText: topicText.restored })).toBeVisible();
     await page.locator('#topic-view').selectOption('active');
     await expect(row).toHaveCount(1);
@@ -159,9 +167,11 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(statusBadge(page)).toHaveText(detail.statuses['draft']!);
     await expect(page.getByText(expectedOutput)).toBeVisible();
     await expect(healthBadge(page)).toHaveText(health.levels['idle']!);
-    const milestone = page.getByRole('region', { name: health.milestone });
-    await expect(milestone.getByText(health.milestoneNone)).toBeVisible();
-    await expect(milestone.getByRole('listitem')).toHaveCount(5);
+    // A project that is still being worked on is guided by one card, the project journey; the
+    // progress ("milestone") card only stands in for it once the journey is gone (completed, below).
+    const journey = page.getByRole('region', { name: journeyText.title });
+    await expect(journey.locator('.journey-step')).toHaveCount(6);
+    await expect(page.getByRole('region', { name: health.milestone })).toHaveCount(0);
     await expect(page.getByRole('button', { name: detail.commands['pause']! })).toHaveCount(0);
     const topicItems = page.locator('#topics-title').locator('xpath=following-sibling::ol/li');
     await expect(topicItems.first()).toContainText(titles.second); // saved in the chosen priority
@@ -210,7 +220,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       .getByRole('row')
       .filter({ has: page.getByRole('rowheader', { name: `pa-${stamp}` }) });
     await revealRow(page, usedRow);
-    await usedRow.getByRole('button', { name: topicText.remove }).click();
+    await rowMenuItem(page, usedRow, topicText.remove);
     await expect(page.locator('#confirm-title')).toBeFocused();
     await expect(page.locator('.confirm-panel')).toContainText(code);
     await page.getByRole('button', { name: topicText.confirm }).click();
@@ -289,6 +299,27 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await page.getByRole('button', { name: detail.tabs.problem, exact: true }).click();
     await expect(page.getByText('بیان مسئله اصلاح‌شده توسط ادمین').first()).toBeVisible();
     await page.getByRole('button', { name: detail.tabs.workflow, exact: true }).click();
+
+    // "View output" on a stage opens a short reading of its latest output in a popup in the
+    // middle of the page, without leaving the workflow; a stage with no output has none to open.
+    const stageRows = page.locator('.stage-list > li');
+    await expect(
+      stageRows.nth(1).getByRole('button', { name: flow.viewOutputButton }),
+    ).toBeDisabled();
+    await stageRows.first().getByRole('button', { name: flow.viewOutputButton }).click();
+    const outputDialog = page.getByRole('dialog', {
+      name: flow.outputDialog.title.replace('{stage}', flow.stages['analysis']!),
+    });
+    await expect(outputDialog).toBeVisible();
+    await expect(outputDialog.getByText('بیان مسئله اصلاح‌شده توسط ادمین')).toBeVisible();
+    await expect(
+      outputDialog.getByRole('button', {
+        name: flow.viewOutput.replace('{stage}', flow.stages['analysis']!),
+      }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+    await page.keyboard.press('Escape');
+    await expect(outputDialog).toBeHidden();
 
     // Approve every stage in order until the run completes.
     for (const stage of ['analysis', 'research', 'ideation', 'documentation', 'evaluation']) {

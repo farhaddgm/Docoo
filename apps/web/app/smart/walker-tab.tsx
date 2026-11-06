@@ -122,21 +122,6 @@ export function WalkerTab({
 
       {progress && (
         <>
-          <div>
-            <progress
-              className="smart-progress"
-              max={progress.total}
-              value={progress.doneCount}
-              aria-label={text.walker.progress}
-            />
-            <p className="muted">
-              {fill(text.walker.progress, {
-                done: formatNumber(locale, progress.doneCount),
-                total: formatNumber(locale, progress.total),
-              })}
-            </p>
-          </div>
-
           <ol className="smart-steps" aria-label={text.panel.tabs.walker}>
             {progress.steps.map((item) => (
               <li key={item.key}>

@@ -135,7 +135,7 @@ export function DocumentsPanel({
   }
 
   return (
-    <section className="card" aria-labelledby="documents-title">
+    <section data-nav className="card" aria-labelledby="documents-title">
       <h2 id="documents-title">{text.listTitle}</h2>
       {failed ? (
         <p className="notice error" role="alert">
@@ -343,7 +343,7 @@ function DocumentView({
         </p>
       )}
 
-      <section className="card" aria-labelledby="document-heading">
+      <section data-nav className="card" aria-labelledby="document-heading">
         <h2 id="document-heading" dir={textDir(locale)}>
           {doc.title}
         </h2>
@@ -545,7 +545,7 @@ function DocumentView({
           }}
         />
       ) : (
-        <section className="card" aria-labelledby="content-title">
+        <section data-nav className="card" aria-labelledby="content-title">
           <h2 id="content-title">{text.content}</h2>
           {current ? (
             <DocumentContent locale={locale} content={current.content} />
@@ -569,7 +569,7 @@ function DocumentView({
         />
       )}
 
-      <section className="card" aria-labelledby="evaluation-title">
+      <section data-nav className="card" aria-labelledby="evaluation-title">
         <h2 id="evaluation-title">{text.evaluation}</h2>
         {!evaluation ? (
           <p className="muted">{text.evaluationNone}</p>
@@ -657,7 +657,7 @@ function DocumentView({
         )}
       </section>
 
-      <section className="card" aria-labelledby="exports-title">
+      <section data-nav className="card" aria-labelledby="exports-title">
         <SectionTitle id="exports-title" help={text.exportHelp}>
           {text.exports}
         </SectionTitle>
@@ -736,7 +736,7 @@ function DocumentView({
         )}
       </section>
 
-      <section className="card" aria-labelledby="versions-title">
+      <section data-nav className="card" aria-labelledby="versions-title">
         <h2 id="versions-title">{text.versions}</h2>
         <PagedRows rows={versions}>
           {(pageRows) => (

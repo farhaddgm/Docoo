@@ -145,7 +145,7 @@ export function ResearchPanel({
           onPlanChanged={() => setPlanTick((tick) => tick + 1)}
         />
       )}
-      <section className="card" aria-labelledby="research-title">
+      <section data-nav className="card" aria-labelledby="research-title">
         <div className="toolbar spread">
           <SectionTitle id="research-title" help={text.help}>
             {text.title}

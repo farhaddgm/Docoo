@@ -111,13 +111,15 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
 
     // Saved, not active: the header still shows the old version and the history lists both.
     await expect(headerBadge).toContainText(versionLabel(before));
+    await page.getByRole('tab', { name: text.tabs.history, exact: true }).click();
     const history = page.getByRole('region', { name: text.historyHeading });
     await expect(
       history.locator('.version-row').filter({ hasText: versionLabel(after) }),
     ).toBeVisible();
     await expect(history.locator('.version-row .badge.state-passed')).toHaveCount(1);
 
-    // Activate it with a reason.
+    // Activate it with a reason (the panel to do it sits under the editor).
+    await page.getByRole('tab', { name: text.tabs.editor, exact: true }).click();
     await fillReason(
       page,
       page.getByLabel(text.activateReason).and(page.locator('input')).first(),
@@ -125,6 +127,7 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
     );
     await page.getByRole('button', { name: fill(text.activateNow, { n: digits(after) }) }).click();
     await expect(headerBadge).toContainText(versionLabel(after));
+    await page.getByRole('tab', { name: text.tabs.history, exact: true }).click();
     await expect(
       history
         .locator('.version-row')
@@ -209,7 +212,12 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
       await expect(page.getByRole('group', { name: english.sections[section] })).toBeVisible();
     }
     await expect(page.getByRole('group', { name: english.modelHeading })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+    // History, performance and outputs sit in their own tabs.
+    await page.getByRole('tab', { name: english.tabs.history, exact: true }).click();
     await expect(page.getByRole('heading', { name: english.historyHeading })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+    await page.getByRole('tab', { name: english.tabs.activity, exact: true }).click();
     await expect(page.getByRole('heading', { name: english.outputsHeading })).toBeVisible();
     await expect(page.getByRole('heading', { name: english.performanceHeading })).toBeVisible();
     await expectNoSeriousA11yViolations(page);

@@ -119,7 +119,7 @@ export function QuestionQuality({
     );
 
   return (
-    <section className="card stack" aria-labelledby="quality-heading" aria-busy={busy}>
+    <section data-nav className="card stack" aria-labelledby="quality-heading" aria-busy={busy}>
       <SectionTitle as="h3" id="quality-heading" help={text.intro}>
         {text.title}
       </SectionTitle>

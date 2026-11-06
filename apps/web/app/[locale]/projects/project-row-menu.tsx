@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 
 import { direction, type Locale } from '../../i18n';
 
-export type RowCommand = 'report' | 'archive' | 'delete';
+export type RowCommand = 'report' | 'edit' | 'restore' | 'archive' | 'delete';
 
 /**
  * The three-dot button at the end of a project row. It opens a small menu: the project's report

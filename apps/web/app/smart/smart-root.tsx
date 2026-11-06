@@ -7,7 +7,7 @@ import { formatNumber, type Locale } from '../i18n';
 import type { SmartError } from './api';
 import type { ChatSeed } from './chat-tab';
 import { installErrorReporter, setReporterWorkspace } from './error-reporter';
-import { fill, smartMessagesFor } from './messages';
+import { smartMessagesFor } from './messages';
 import { smartPageContext } from './page-context';
 import { SmartPanel } from './panel';
 import { useSmartSummary } from './summary';
@@ -27,12 +27,13 @@ function useUi() {
   return useSyncExternalStore(smartUi.subscribe, smartUi.getSnapshot, smartUi.getServerSnapshot);
 }
 
-/** Header button: Smart on/off with the number of open errors (SMT-002). */
-export function SmartToggle({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
+/**
+ * Header button: Smart on/off (SMT-002). The number of open errors is not shown here: the floating
+ * button of the Smart window carries it.
+ */
+export function SmartToggle({ locale }: { locale: Locale }) {
   const text = smartMessagesFor(locale);
   const ui = useUi();
-  const summary = useSmartSummary(workspaceId, ui.enabled);
-  const open = ui.enabled && summary ? summary.openErrors : 0;
   return (
     <button
       type="button"
@@ -55,11 +56,6 @@ export function SmartToggle({ locale, workspaceId }: { locale: Locale; workspace
         <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z" />
       </svg>
       <span className="smart-toggle-label">{text.name}</span>
-      {open > 0 && (
-        <span className="badge" title={fill(text.openCount, { n: open })}>
-          {formatNumber(locale, open)}
-        </span>
-      )}
     </button>
   );
 }

@@ -19,6 +19,16 @@ const messages = {
     redo: 'اجرای دوباره',
     redoUnavailable: 'فقط مرحله کامل‌شده و وقتی اجرایی در جریان نیست دوباره اجرا می‌شود.',
     viewOutput: 'مشاهده خروجی در تب «{stage}»',
+    viewOutputButton: 'مشاهده خروجی',
+    outputUnavailable: 'این مرحله هنوز خروجی ندارد.',
+    outputDialog: {
+      title: 'خروجی مرحله {stage}',
+      close: 'بستن',
+      intro: 'خلاصهٔ کوتاهی از آخرین خروجی این مرحله. متن کامل را در تب خود مرحله می‌بینید.',
+      noOutput: 'این مرحله هنوز خروجی ندارد.',
+      noDigest: 'برای این خروجی خلاصه‌ای ساخته نشد؛ متن کامل را در تب مرحله ببینید.',
+      more: '{n} مورد دیگر هم هست.',
+    },
     redoHelp:
       'اجرای تازه‌ای ساخته می‌شود: مرحله‌های پیش از «{stage}» همان‌طور که هست می‌مانند و «{stage}» و مرحله‌های بعد از آن از اول انجام می‌شوند. اجرای فعلی و خروجی‌هایش نگه داشته می‌شود.',
     redoReason: 'دلیل انجام دوباره (لازم)',
@@ -387,6 +397,17 @@ const messages = {
     redo: 'Run again',
     redoUnavailable: 'Only a completed stage can be run again, and not while a run is in progress.',
     viewOutput: 'View the output in the “{stage}” tab',
+    viewOutputButton: 'View output',
+    outputUnavailable: 'This stage has no output yet.',
+    outputDialog: {
+      title: 'Output of the {stage} stage',
+      close: 'Close',
+      intro:
+        'A short summary of the latest output of this stage. The full text is in the stage’s own tab.',
+      noOutput: 'This stage has no output yet.',
+      noDigest: 'No summary could be made for this output; see the full text in the stage tab.',
+      more: '{n} more not shown.',
+    },
     redoHelp:
       'A new run is made: the stages before "{stage}" stay as they are, and "{stage}" and the stages after it are done again from the start. The current run and its outputs are kept.',
     redoReason: 'Reason for redoing (required)',

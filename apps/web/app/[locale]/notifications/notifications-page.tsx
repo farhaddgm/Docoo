@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { apiGet, apiSend } from '../../api-client';
-import { formatDateTime, formatNumber, type Locale } from '../../i18n';
+import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { SignedIn } from '../signed-in';
 import { explainError, Notice, useAction } from '../use-action';
 import { NOTIFICATIONS_CHANGED } from '../notification-bell';
@@ -152,6 +152,12 @@ function List({ locale, workspaceId }: { locale: Locale; workspaceId: string }) 
                       <>
                         {' · '}
                         <span dir="ltr">{item.project.code}</span>
+                        {item.project.title && (
+                          <>
+                            {' — '}
+                            <span dir={textDir(locale)}>{item.project.title}</span>
+                          </>
+                        )}
                       </>
                     )}
                     {item.stillWaiting !== null && (

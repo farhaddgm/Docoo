@@ -34,6 +34,7 @@ import {
 } from './settings-model';
 import { explainSettingError } from './settings-errors';
 import { SectionTitle } from '../../info-tip';
+import { PageTabPanel, PageTabs } from '../../page-tabs';
 
 export function displayValue(
   locale: Locale,
@@ -79,13 +80,17 @@ export function ScopedSettings({
   workspaceId,
   scopeType,
   scopeId,
+  tabbed = false,
 }: {
   locale: Locale;
   workspaceId: string;
   scopeType: Extract<Scope, 'workspace' | 'project'>;
   scopeId: string;
+  /** Shows one group of settings at a time, chosen from a row of tabs, instead of all of them. */
+  tabbed?: boolean;
 }) {
   const text = settingsMessages(locale);
+  const [groupTab, setGroupTab] = useState('');
   const isOwner = useSessionIdentity()?.user.isOwner === true;
   const readOnlyScope = useReadOnlyAccess();
   const base = `/workspaces/${workspaceId}/settings`;
@@ -126,50 +131,56 @@ export function ScopedSettings({
   }
   if (!definitions || !effective) return <p role="status">{text.loading}</p>;
 
-  return (
-    <div className="stack">
-      <p className="notice info">{text.scopeHelp[scopeType]}</p>
-      <Notice notice={action.notice} />
-      {SETTING_GROUPS.map((group) => {
-        const rows = group.keys
-          .map((key) => definitions.find((item) => item.key === key))
-          .filter(
-            (item): item is Definition =>
-              item !== undefined &&
-              !item.sensitive &&
-              item.allowedScopes.includes(scopeType) &&
-              // A project's model has its own section: connection and model go together.
-              !(scopeType === 'project' && PROVIDER_PAGE.has(item.key)) &&
-              !DUAL_PICKER.has(item.key),
-          );
-        if (rows.length === 0) return null;
-        const info = text.groups[group.id];
-        const row = (definition: Definition) => (
-          <SettingRow
-            key={definition.key}
-            locale={locale}
-            workspaceId={workspaceId}
-            scopeType={scopeType}
-            scopeId={scopeId}
-            definition={definition}
-            effective={effective}
-            assignment={assignments.get(definition.key) ?? null}
-            action={action}
-            onChanged={load}
-          />
+  const sections: { id: string; title: string; node: ReactNode }[] = [];
+  for (const group of SETTING_GROUPS) {
+    {
+      const rows = group.keys
+        .map((key) => definitions.find((item) => item.key === key))
+        .filter(
+          (item): item is Definition =>
+            item !== undefined &&
+            !item.sensitive &&
+            item.allowedScopes.includes(scopeType) &&
+            // A project's model has its own section: connection and model go together.
+            !(scopeType === 'project' && PROVIDER_PAGE.has(item.key)) &&
+            !DUAL_PICKER.has(item.key),
         );
-        if (group.id !== 'research') {
-          return (
+      if (rows.length === 0) continue;
+      const info = text.groups[group.id];
+      const row = (definition: Definition) => (
+        <SettingRow
+          key={definition.key}
+          locale={locale}
+          workspaceId={workspaceId}
+          scopeType={scopeType}
+          scopeId={scopeId}
+          definition={definition}
+          effective={effective}
+          assignment={assignments.get(definition.key) ?? null}
+          action={action}
+          onChanged={load}
+        />
+      );
+      if (group.id !== 'research') {
+        sections.push({
+          id: group.id,
+          title: info.title,
+          node: (
             <GroupSection key={group.id} title={info.title} help={info.help}>
               {rows.map(row)}
             </GroupSection>
-          );
-        }
-        // The research group leads with the four modes; the exact numbers behind them are the
-        // system owner's to change (ADR-0048), behind a fold so they do not crowd the page.
-        const plain = rows.filter((item) => !OWNER_ONLY_RESEARCH.has(item.key));
-        const exact = rows.filter((item) => OWNER_ONLY_RESEARCH.has(item.key));
-        return (
+          ),
+        });
+        continue;
+      }
+      // The research group leads with the four modes; the exact numbers behind them are the
+      // system owner's to change (ADR-0048), behind a fold so they do not crowd the page.
+      const plain = rows.filter((item) => !OWNER_ONLY_RESEARCH.has(item.key));
+      const exact = rows.filter((item) => OWNER_ONLY_RESEARCH.has(item.key));
+      sections.push({
+        id: group.id,
+        title: info.title,
+        node: (
           <GroupSection key={group.id} title={info.title} help={info.help}>
             {exact.length > 0 && (
               <li>
@@ -217,16 +228,52 @@ export function ScopedSettings({
               </li>
             )}
           </GroupSection>
-        );
-      })}
-      {isOwner && definitions.some((item) => DUAL_PICKER.has(item.key)) && (
+        ),
+      });
+    }
+  }
+  if (isOwner && definitions.some((item) => DUAL_PICKER.has(item.key))) {
+    sections.push({
+      id: 'dual-research',
+      title: text.dual.title,
+      node: (
         <DualResearchSection
+          key="dual-research"
           locale={locale}
           workspaceId={workspaceId}
           scopeType={scopeType}
           scopeId={scopeId}
         />
+      ),
+    });
+  }
+  const shown = sections.find((item) => item.id === groupTab) ?? sections[0];
+
+  return (
+    <div className="stack">
+      <p className="notice info">{text.scopeHelp[scopeType]}</p>
+      <Notice notice={action.notice} />
+      {tabbed && sections.length > 1 && (
+        <PageTabs
+          label={text.groupTabsLabel}
+          idPrefix="settings-group"
+          tabs={sections.map((item) => ({ key: item.id, label: item.title }))}
+          active={shown?.id ?? ''}
+          onChange={setGroupTab}
+        />
       )}
+      {tabbed
+        ? sections.map((item) => (
+            <PageTabPanel
+              key={item.id}
+              idPrefix="settings-group"
+              tabKey={item.id}
+              active={shown?.id ?? ''}
+            >
+              {item.node}
+            </PageTabPanel>
+          ))
+        : sections.map((item) => item.node)}
     </div>
   );
 }

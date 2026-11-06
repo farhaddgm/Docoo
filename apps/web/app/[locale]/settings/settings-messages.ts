@@ -4,6 +4,9 @@ import type { GroupId } from './settings-model';
 const messages = {
   fa: {
     title: 'تنظیمات سامانه',
+    tabsLabel: 'بخش‌های تنظیمات',
+    groupTabsLabel: 'گروه‌های تنظیمات',
+    tabs: { templates: 'قالب‌ها', general: 'تنظیمات', voice: 'صدا', integrations: 'اتصال‌ها' },
     subtitle:
       'مقدار پیش‌فرض همه پروژه‌های این workspace. هر تغییر با دلیل ثبت و نسخه‌دار می‌شود و فقط روی اجراهایی اثر دارد که بعد از آن شروع شوند.',
     scopeHelp: {
@@ -248,6 +251,14 @@ const messages = {
     genericError: 'انجام نشد. اتصال را بررسی کنید و دوباره تلاش کنید.',
   },
   en: {
+    tabsLabel: 'Settings sections',
+    groupTabsLabel: 'Setting groups',
+    tabs: {
+      templates: 'Templates',
+      general: 'Settings',
+      voice: 'Voice',
+      integrations: 'Integrations',
+    },
     title: 'System settings',
     subtitle:
       'The defaults of every project in this workspace. Each change is recorded with a reason and versioned, and only affects runs that start after it.',

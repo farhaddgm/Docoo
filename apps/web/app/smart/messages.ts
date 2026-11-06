@@ -10,7 +10,6 @@ const fa = {
   name: 'اسمارت',
   toggleOn: 'اسمارت روشن است؛ برای خاموش کردن بزنید',
   toggleOff: 'اسمارت خاموش است؛ برای روشن کردن بزنید',
-  openCount: '{n} مورد باز',
   panel: {
     label: 'پنجره اسمارت',
     tabs: { walker: 'واکر', chat: 'گفتگو', errors: 'خطاها' },
@@ -293,7 +292,6 @@ const en: SmartMessages = {
   name: 'Smart',
   toggleOn: 'Smart is on; press to turn it off',
   toggleOff: 'Smart is off; press to turn it on',
-  openCount: '{n} open',
   panel: {
     label: 'Smart window',
     tabs: { walker: 'Walker', chat: 'Chat', errors: 'Errors' },

@@ -48,12 +48,11 @@ for (const locale of ['fa', 'en'] as const) {
     await expect(page.locator('#project-kind')).toHaveCount(0);
     await expectNoSeriousA11yViolations(page);
 
-    // The ordinary list still shows both kinds and can filter.
+    // The ordinary list still shows both kinds.
     await page.goto(`/${locale}/projects`);
     await expect(page.getByRole('link', { name: ordinary })).toBeVisible();
     await expect(page.getByRole('link', { name: exploration })).toBeVisible();
-    await page.locator('#project-kind').selectOption('exploration');
-    await expect(page.getByRole('link', { name: ordinary })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: exploration })).toBeVisible();
+    // There is no kind filter on either list.
+    await expect(page.locator('#project-kind')).toHaveCount(0);
   });
 }

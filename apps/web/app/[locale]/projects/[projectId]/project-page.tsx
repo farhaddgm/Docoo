@@ -21,6 +21,7 @@ import { projectPageMessages } from './messages';
 import { healthMessages } from './health-messages';
 import { HealthBadge, HealthReasons, MilestoneCard } from './health-view';
 import { projectHealth, projectMilestone, type WorkflowFacts } from './project-health';
+import { SectionNav } from '../../../section-nav';
 import { AgentsPanel } from './agents-panel';
 import { BusinessPanel } from './business-panel';
 import { EvaluationPanel } from './evaluation-panel';
@@ -379,23 +380,23 @@ function ProjectView({
         />
       )}
       {tab === 'problem' && (
-        <ProblemPanel
-          locale={locale}
-          workspaceId={workspaceId}
-          projectId={projectId}
-          projectStatus={project.status}
-          refreshKey={refreshKey}
-          onChanged={changed}
-        />
-      )}
-      {tab === 'problem' && (
-        <StageAgentChat
-          locale={locale}
-          base={base}
-          stage="analysis"
-          refreshKey={refreshKey}
-          onChanged={changed}
-        />
+        <SectionNav label={text.sectionsNav}>
+          <ProblemPanel
+            locale={locale}
+            workspaceId={workspaceId}
+            projectId={projectId}
+            projectStatus={project.status}
+            refreshKey={refreshKey}
+            onChanged={changed}
+          />
+          <StageAgentChat
+            locale={locale}
+            base={base}
+            stage="analysis"
+            refreshKey={refreshKey}
+            onChanged={changed}
+          />
+        </SectionNav>
       )}
       {tab === 'workflow' && (
         <WorkflowPanel
@@ -409,70 +410,74 @@ function ProjectView({
         />
       )}
       {tab === 'research' && (
-        <ResearchPanel
-          locale={locale}
-          workspaceId={workspaceId}
-          projectId={projectId}
-          refreshKey={refreshKey}
-          onOpenWorkflow={() => choose('workflow')}
-          onChanged={changed}
-        />
-      )}
-      {tab === 'research' && (
-        <StageAgentChat
-          locale={locale}
-          base={base}
-          stage="research"
-          refreshKey={refreshKey}
-          onChanged={changed}
-        />
-      )}
-      {tab === 'solutions' && (
-        <SolutionsPanel
-          locale={locale}
-          workspaceId={workspaceId}
-          projectId={projectId}
-          readOnly={accessReadOnly || project.status === 'archived' || project.status === 'deleted'}
-          kind={project.kind ?? 'standard'}
-          onChanged={changed}
-        />
+        <SectionNav label={text.sectionsNav}>
+          <ResearchPanel
+            locale={locale}
+            workspaceId={workspaceId}
+            projectId={projectId}
+            refreshKey={refreshKey}
+            onOpenWorkflow={() => choose('workflow')}
+            onChanged={changed}
+          />
+          <StageAgentChat
+            locale={locale}
+            base={base}
+            stage="research"
+            refreshKey={refreshKey}
+            onChanged={changed}
+          />
+        </SectionNav>
       )}
       {tab === 'solutions' && (
-        <StageAgentChat
-          locale={locale}
-          base={base}
-          stage="ideation"
-          refreshKey={refreshKey}
-          onChanged={changed}
-        />
+        <SectionNav label={text.sectionsNav}>
+          <SolutionsPanel
+            locale={locale}
+            workspaceId={workspaceId}
+            projectId={projectId}
+            readOnly={
+              accessReadOnly || project.status === 'archived' || project.status === 'deleted'
+            }
+            kind={project.kind ?? 'standard'}
+            onChanged={changed}
+          />
+          <StageAgentChat
+            locale={locale}
+            base={base}
+            stage="ideation"
+            refreshKey={refreshKey}
+            onChanged={changed}
+          />
+        </SectionNav>
       )}
       {tab === 'documents' && (
-        <DocumentsPanel
-          locale={locale}
-          workspaceId={workspaceId}
-          projectId={projectId}
-          refreshKey={refreshKey}
-        />
-      )}
-      {tab === 'documents' && (
-        <StageAgentChat
-          locale={locale}
-          base={base}
-          stage="documentation"
-          refreshKey={refreshKey}
-          onChanged={changed}
-        />
+        <SectionNav label={text.sectionsNav}>
+          <DocumentsPanel
+            locale={locale}
+            workspaceId={workspaceId}
+            projectId={projectId}
+            refreshKey={refreshKey}
+          />
+          <StageAgentChat
+            locale={locale}
+            base={base}
+            stage="documentation"
+            refreshKey={refreshKey}
+            onChanged={changed}
+          />
+        </SectionNav>
       )}
       {tab === 'evaluation' && (
-        <EvaluationPanel
-          locale={locale}
-          workspaceId={workspaceId}
-          projectId={projectId}
-          refreshKey={refreshKey}
-          onOpenWorkflow={() => choose('workflow')}
-          onOpenSettings={() => choose('settings')}
-          onChanged={changed}
-        />
+        <SectionNav label={text.sectionsNav}>
+          <EvaluationPanel
+            locale={locale}
+            workspaceId={workspaceId}
+            projectId={projectId}
+            refreshKey={refreshKey}
+            onOpenWorkflow={() => choose('workflow')}
+            onOpenSettings={() => choose('settings')}
+            onChanged={changed}
+          />
+        </SectionNav>
       )}
       {tab === 'requirements' && (
         <RequirementsPanel

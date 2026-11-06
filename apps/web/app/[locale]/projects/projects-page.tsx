@@ -258,32 +258,6 @@ function Projects({
             </select>
           </div>
           <div className="field">
-            <label htmlFor="project-language">{text.languageFilter}</label>
-            <select
-              id="project-language"
-              value={filters.language}
-              onChange={(event) => setFilters({ ...filters, language: event.target.value })}
-            >
-              <option value="">{text.anyLanguage}</option>
-              <option value="fa">{text.languages.fa}</option>
-              <option value="en">{text.languages.en}</option>
-            </select>
-          </div>
-          {!kind && (
-            <div className="field">
-              <label htmlFor="project-kind">{text.kindFilter}</label>
-              <select
-                id="project-kind"
-                value={filters.kind}
-                onChange={(event) => setFilters({ ...filters, kind: event.target.value })}
-              >
-                <option value="">{text.anyKind}</option>
-                <option value="standard">{text.kinds.standard}</option>
-                <option value="exploration">{text.kinds.exploration}</option>
-              </select>
-            </div>
-          )}
-          <div className="field">
             <label htmlFor="project-from">{text.fromLabel}</label>
             <input
               id="project-from"

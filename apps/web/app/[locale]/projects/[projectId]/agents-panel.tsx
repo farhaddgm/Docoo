@@ -149,13 +149,16 @@ export function AgentsPanel({
           const open = editing === role;
           const active = formFor(role);
           return (
-            <li key={role} className="agent-row card stack">
-              <SectionTitle as="h3" help={text.roles[role].mission}>
-                {name}
-              </SectionTitle>
-              <p>
+            <li
+              key={role}
+              className={`agent-row card stack${open || active ? ' agent-row-wide' : ''}`}
+            >
+              <div className="agent-row-head">
+                <SectionTitle as="h3" help={text.roles[role].mission}>
+                  {name}
+                </SectionTitle>
                 <span className={`badge ${profile.customized ? 'state-warn' : ''}`}>{state}</span>
-              </p>
+              </div>
               {profile.behindDefault && (
                 <p className="notice error" role="status">
                   {fill(text.behind, {
@@ -165,7 +168,7 @@ export function AgentsPanel({
                 </p>
               )}
               {!readOnly && (
-                <p className="toolbar">
+                <p className="toolbar agent-row-actions">
                   {!profile.customized && (
                     <button
                       type="button"

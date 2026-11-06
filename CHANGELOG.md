@@ -4,6 +4,34 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.52.1] — 2026-11-06
+
+Patch release: the live assistant works again. Since 0.51.0 every request of the assistant's screen in the back office was sent to a path that does not exist, so the Smart chat tab could only show an error. Interface only: no migration and no API change.
+
+### Fixed
+
+- **The live assistant works again in the Smart chat tab.** The tab showed "The state of the live assistant could not be read (HTTP_404)" and "Try again" changed nothing, because the assistant's requests were sent to a path with the API version in it twice (the web server already adds it), which does not exist. The state, the cost summary, the conversation list and everything a conversation does (start, type, usage, confirm, cancel) now reach the API. New tests check the paths of every call and that no web code builds such a path. No migration.
+
+## [0.52.0] — 2026-11-05
+
+Back-office polish. You can look at what each workflow stage produced without leaving the page, the dashboard and the project overview say more with less, the voice assistant settings page is about 40 % shorter and fits a phone, and a few small annoyances are gone: the sidebar jumping when a page starts to scroll, and the Smart error count shown twice. Interface changes only: no migration and no API change.
+
+### Added
+
+- **View a stage's output from the workflow.** In a project's **Workflow** tab, every stage now has a "View output" button next to "Run again". It opens a large popup in the middle of the page with a short summary of the stage's latest output — the problem statement and goals, the first findings, ideas, outline items or scores — and a button to the stage's own tab for the full text. The button is disabled for a stage that has no output yet. No migration.
+
+### Changed
+
+- **Smart button and theme buttons.** The Smart button in the header no longer shows the number of open errors, because the floating Smart button at the bottom of the page already shows it. On the account settings page the theme buttons are smaller and stand six to a row instead of four (fewer when the card is narrow, by the card's own width), and the sentence under them ("A theme only changes how the backoffice looks…") is gone. The same sentence is still in the theme menu of the top bar. No migration.
+- **Voice assistant settings are shorter.** From "AI and model" on, the blocks of the assistant's settings page (AI and model, Listening and wake-up, Caps, Confirmation, Conversations and privacy) stand two to a row instead of one under another, so the page is much shorter and needs far less scrolling; on a narrow screen they stay in one column, and on a phone a long option in a drop-down no longer stretches the cards past the screen. No migration.
+- **Dashboard tidied.** "Waiting for your answer or approval" now shows one line per item: the project's own name (not the task's English title) as a link to the project, with a long name ending in "…". In "Usage, last 30 days" the invocations and tokens tiles sit one under the other and their numbers no longer run out of the box (the headline number tiles wrap a very long number too). "Retries near the limit" was rewritten: for each stage close to its attempt limit it shows the project (linked to its workflow), the stage, a progress bar of the attempts used, how many attempts are left or that the limit is reached and waiting for your decision, and a short line on what to do. No migration.
+- **One progress card in the project Overview.** "Project journey" and "Milestone" said nearly the same thing and looked alike, so the Overview now shows only one of them: the journey for a project being worked on (draft, active, paused), and the milestone only for a project that has no journey (completed, archived, deleted). No migration.
+
+### Fixed
+
+- **The sidebar no longer jumps sideways between pages.** On a screen with a classic scrollbar, a page long enough to scroll is narrower by the scrollbar than one that is not, so the menu moved a few pixels when you went from one to the other. The room for the scrollbar is now always kept, so every page has the same width and nothing moves (in both languages). Phones and other overlay scrollbars are unaffected. No migration.
+- **Live assistant and model test.** Fixes to the error shown on the live assistant's card, to the assistant's own "AI and model" settings and to the model choices of the model test on the Providers page (#321). No migration.
+
 ## [0.51.0] — 2026-11-04
 
 The live assistant "Docoo" (ADR-0055) arrives in the Smart section, off by default and visible only to the system owner. This release carries the whole safe core and a typed conversation; the live voice connection to a provider is not part of it yet. Migrations 0084 to 0088 run on update.

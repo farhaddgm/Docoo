@@ -211,7 +211,7 @@ export function ResearchFollowupPanel({
   const selected = chosen ?? followup.open.map((item) => item.id);
 
   return (
-    <section className="card stack" aria-labelledby={`${id}-title`}>
+    <section data-nav className="card stack" aria-labelledby={`${id}-title`}>
       <SectionTitle id={`${id}-title`} help={text.help}>
         {text.title}
       </SectionTitle>
