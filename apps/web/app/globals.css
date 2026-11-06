@@ -2704,6 +2704,37 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   gap: var(--space-3);
 }
 
+/* A project's agents sit in a grid of compact cards; one being edited takes the full width. */
+.agent-list {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  align-items: start;
+}
+
+.agent-row {
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.agent-row-wide {
+  grid-column: 1 / -1;
+}
+
+.agent-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.agent-row-head h3 {
+  margin: 0;
+}
+
+.agent-row-actions {
+  margin: 0;
+}
+
 .rule-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -5929,4 +5960,22 @@ button.link-button {
 .stage-progress {
   flex-basis: 100%;
   padding-block: var(--space-2);
+}
+
+/* The view filter and the table below it keep a clear gap. */
+.topic-list-head {
+  margin-block-end: var(--space-4);
+}
+
+/* The block of a tab that is current in its side list. */
+.biz-toc a[aria-current='true'] {
+  border-inline-start-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-weight: 700;
+}
+
+/* A block reached from the side list stops below any sticky header. */
+.section-nav [data-nav] {
+  scroll-margin-block-start: var(--space-4);
 }

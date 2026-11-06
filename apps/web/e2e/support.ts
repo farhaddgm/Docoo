@@ -174,3 +174,9 @@ export async function fillReason(page: Page, target: Locator, value: string) {
   await input.fill(value);
   await dialog.locator('.reason-dialog-head .secondary-button').click();
 }
+
+/** Opens one group of the system settings (a tab inside the "Settings" tab). */
+export async function openSettingsGroup(page: Page, groupTitle: string) {
+  await page.getByRole('tab', { name: 'تنظیمات', exact: true }).click();
+  await page.getByRole('tab', { name: groupTitle, exact: true }).click();
+}

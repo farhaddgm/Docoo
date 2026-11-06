@@ -127,7 +127,7 @@ export function EvaluationPanel({
 
   return (
     <div className="stack">
-      <section className="card stack" aria-labelledby="evaluation-title">
+      <section data-nav className="card stack" aria-labelledby="evaluation-title">
         <div className="toolbar spread">
           <h2 id="evaluation-title">{text.title}</h2>
           <button
@@ -168,7 +168,7 @@ export function EvaluationPanel({
         )}
       </section>
 
-      <section className="card stack" aria-labelledby="evaluation-settings">
+      <section data-nav className="card stack" aria-labelledby="evaluation-settings">
         <h3 id="evaluation-settings">{text.settings}</h3>
         <dl className="business-facts">
           {stage?.gateMode && (

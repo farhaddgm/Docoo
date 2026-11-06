@@ -13,6 +13,7 @@ import { useSessionIdentity } from '../signed-in';
 import { WorkspacePage } from '../workspace-page';
 import { topicMessages } from './messages';
 import { PagedRows } from '../../table-pager';
+import { ProjectRowMenu } from '../projects/project-row-menu';
 
 type TopicStatus = 'active' | 'archived' | 'deleted';
 type TopicLanguage = 'fa' | 'en';
@@ -167,7 +168,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
       <Notice notice={notice} />
 
       <section className="card" aria-labelledby="topic-list-title">
-        <div className="toolbar spread">
+        <div className="toolbar spread topic-list-head">
           <h2 id="topic-list-title">{text.list}</h2>
           <div className="toolbar">
             <label htmlFor="topic-view">{text.view}</label>
@@ -205,14 +206,14 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                 role="region"
                 aria-labelledby="topic-list-title"
               >
-                <table>
+                <table className="project-table">
                   <thead>
                     <tr>
                       <th scope="col">{text.code}</th>
                       <th scope="col">{text.topicTitle}</th>
                       <th scope="col">{text.version}</th>
                       <th scope="col">{view === 'deleted' ? text.purgeAfter : text.updated}</th>
-                      <th scope="col">
+                      <th scope="col" className="col-actions">
                         <span className="visually-hidden">{text.actions}</span>
                       </th>
                     </tr>
@@ -233,57 +234,37 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
                               : topic.updatedAt,
                           )}
                         </td>
-                        <td>
-                          <div className="toolbar">
-                            {topic.access === 'EDIT' && view === 'active' && (
-                              <button
-                                className="secondary-button"
-                                type="button"
-                                disabled={busy}
-                                aria-label={`${text.edit}: ${topic.title}`}
-                                onClick={() => {
-                                  setConfirming(null);
-                                  setNotice(null);
-                                  setEditing(topic);
-                                }}
-                              >
-                                {text.edit}
-                              </button>
-                            )}
-                            {topic.access === 'EDIT' && view === 'active' && (
-                              <button
-                                className="secondary-button"
-                                type="button"
-                                disabled={busy}
-                                aria-label={`${text.archive}: ${topic.title}`}
-                                onClick={() => void askConfirmation('archive', topic)}
-                              >
-                                {text.archive}
-                              </button>
-                            )}
-                            {topic.access === 'EDIT' && view !== 'active' && (
-                              <button
-                                className="secondary-button"
-                                type="button"
-                                disabled={busy}
-                                aria-label={`${text.restore}: ${topic.title}`}
-                                onClick={() => restore(topic)}
-                              >
-                                {text.restore}
-                              </button>
-                            )}
-                            {isAdmin && view !== 'deleted' && (
-                              <button
-                                className="secondary-button danger"
-                                type="button"
-                                disabled={busy}
-                                aria-label={`${text.remove}: ${topic.title}`}
-                                onClick={() => void askConfirmation('delete', topic)}
-                              >
-                                {text.remove}
-                              </button>
-                            )}
-                          </div>
+                        <td className="row-actions-cell">
+                          <ProjectRowMenu
+                            locale={locale}
+                            label={text.rowActionsFor.replace('{code}', topic.code)}
+                            labels={{
+                              edit: text.edit,
+                              archive: text.archive,
+                              restore: text.restore,
+                              delete: text.remove,
+                            }}
+                            disabled={busy}
+                            commands={[
+                              ...(topic.access === 'EDIT' && view === 'active'
+                                ? (['edit', 'archive'] as const)
+                                : []),
+                              ...(topic.access === 'EDIT' && view !== 'active'
+                                ? (['restore'] as const)
+                                : []),
+                              ...(isAdmin && view !== 'deleted' ? (['delete'] as const) : []),
+                            ]}
+                            onChoose={(command) => {
+                              if (command === 'edit') {
+                                setConfirming(null);
+                                setNotice(null);
+                                setEditing(topic);
+                              } else if (command === 'restore') restore(topic);
+                              else if (command === 'archive')
+                                void askConfirmation('archive', topic);
+                              else if (command === 'delete') void askConfirmation('delete', topic);
+                            }}
+                          />
                         </td>
                       </tr>
                     ))}

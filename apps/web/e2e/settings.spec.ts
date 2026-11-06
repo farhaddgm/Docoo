@@ -12,6 +12,7 @@ import {
   signInWithKeyboard,
   useFakeProvider,
   fillReason,
+  openSettingsGroup,
 } from './support';
 
 const settings = settingsMessages('fa');
@@ -49,9 +50,12 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await mainNavigation(page).getByRole('link', { name: 'تنظیمات سامانه' }).click();
     await expect(page).toHaveURL(/\/fa\/settings$/u);
     await expect(page.getByRole('heading', { level: 1, name: settings.title })).toBeVisible();
+    await page.getByRole('tab', { name: settings.tabs.general, exact: true }).click();
     for (const group of Object.values(settings.groups)) {
+      await page.getByRole('tab', { name: group.title, exact: true }).click();
       await expect(page.getByRole('heading', { level: 2, name: group.title })).toBeVisible();
     }
+    await openSettingsGroup(page, settings.groups.ai.title);
     // Honest about what has no effect yet, and where the model is chosen.
     // Both settings that used to be recorded only are applied now, so no row carries the note.
     await expect(page.getByText(settings.notEnforced)).toHaveCount(0);
@@ -61,6 +65,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await expectNoSeriousA11yViolations(page);
 
     // A change needs a reason and a value that passes the range.
+    await openSettingsGroup(page, settings.groups.solutions.title);
     const count = row(page, 'solution.count');
     await count.getByRole('spinbutton').fill('7');
     await expect(count.getByRole('button', { name: settings.save, exact: true })).toBeDisabled();
@@ -104,6 +109,7 @@ test.describe('settings, templates and the project wizard (STP-001..006)', () =>
     await expect(count.getByText(settings.sources.system, { exact: true }).first()).toBeVisible();
 
     // A boolean and a list setting.
+    await openSettingsGroup(page, settings.groups.workflow.title);
     const approval = row(page, 'workflow.require_human_approval');
     await expect(approval.getByRole('checkbox')).toBeChecked();
     await expectNoSeriousA11yViolations(page);
