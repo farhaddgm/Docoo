@@ -4,6 +4,15 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.53.0] — 2026-11-06
+
+Back-office layout and one clearer settings page. Interface only: no migration and no API change.
+
+### Changed
+
+- **The voice assistant settings page says what is really missing.** The top of the page used to show one fixed sentence about voice and typing every time, whatever the settings were, so it read like a pending problem. It now shows the server's own answer for the saved settings: "Writing to the assistant is ready" and which model answers (the one chosen for the assistant, or the workspace AI connection and model), or exactly what is missing (assistant off, privacy notice not accepted, no text model) and where to fix it. Talking by voice is named once as a later step. If there are unsaved edits, the page says the status is of the saved settings.
+- **Back-office layout** (#331). Tabs on the agent pages and the system settings page (the tab is kept in the address), a side list of blocks on the project's research, analysis, ideas, documents and evaluation tabs, a compact card grid on the project's agents tab, and a three-dot menu for editing, archiving, restoring and deleting a topic. The project list no longer has the output-language and kind filters, and the explorations list no longer has the output-language filter. On phones the pages are tighter and no longer widen when a table sits in a card, tabs and section lists scroll sideways, fields and buttons are bigger on touch screens, notifications are separated and show the project name beside its code, and the Smart window's chat tab scrolls as a whole with the write box in view. The Smart panel lost its walker progress bar and caption, and its chat controls were tidied.
+
 ## [0.52.1] — 2026-11-06
 
 Patch release: the live assistant works again. Since 0.51.0 every request of the assistant's screen in the back office was sent to a path that does not exist, so the Smart chat tab could only show an error. Interface only: no migration and no API change.
