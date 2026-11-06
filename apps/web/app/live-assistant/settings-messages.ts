@@ -4,8 +4,22 @@ import type { Locale } from '../i18n';
 const fa = {
   title: 'دستیار صوتی',
   subtitle: 'مشخص کنید دستیار صوتی چه کارهایی را و تا کجا انجام دهد.',
-  notReady:
-    'گفتگوی با صدا هنوز به ارائه‌دهندهٔ صوتی وصل نشده است، ولی نوشتن با دستیار از همین حالا کار می‌کند: دستیار را روشن کنید، هشدار حریم خصوصی را بپذیرید و مدل نوشتاری را انتخاب کنید (یا همان هوش مصنوعی فضای کار را بگذارید).',
+  status: {
+    ready: 'نوشتن با دستیار آماده است.',
+    readyOwn: 'پاسخ‌ها با مدل نوشتاری که خودتان انتخاب کرده‌اید ساخته می‌شود.',
+    readyWorkspace: 'پاسخ‌ها با اتصال و مدل هوش مصنوعی فضای کار ساخته می‌شود.',
+    voiceLater:
+      'گفتگو با صدا هنوز به ارائه‌دهندهٔ صوتی وصل نشده است؛ این مرحلهٔ بعد است و به نوشتن ربطی ندارد.',
+    unsaved: 'این وضعیت بر پایهٔ تنظیمات ذخیره‌شده است؛ تغییرهای ذخیره‌نشدهٔ شما هنوز در آن نیست.',
+    textNeeds: {
+      disabled:
+        'نوشتن آماده نیست: دستیار روشن نیست. «دستیار صوتی روشن باشد» را بزنید و ذخیره کنید.',
+      disclosure:
+        'نوشتن آماده نیست: هشدار حریم خصوصی هنوز پذیرفته نشده است. آن را بپذیرید و ذخیره کنید.',
+      executor_not_configured:
+        'نوشتن آماده نیست: مدل نوشتاری مشخص نیست. در بخش «مدل نوشتاری» یکی را انتخاب کنید، یا اتصال هوش مصنوعی فضای کار را در صفحهٔ «ارائه‌دهندگان AI» تنظیم کنید.',
+    },
+  },
   loadFailed: 'تنظیمات خوانده نشد.',
   saveFailed: 'ذخیره انجام نشد. دوباره تلاش کنید.',
   denied: 'فقط مالک سامانه می‌تواند این تنظیمات را عوض کند.',
@@ -153,8 +167,21 @@ const fa = {
 const en: typeof fa = {
   title: 'Voice assistant',
   subtitle: 'Decide what the voice assistant may do, and how far.',
-  notReady:
-    'Talking by voice is not connected to a voice provider yet, but writing to the assistant works now: switch it on, accept the privacy notice and choose the text model (or leave it on the workspace AI).',
+  status: {
+    ready: 'Writing to the assistant is ready.',
+    readyOwn: 'Answers come from the text model you chose.',
+    readyWorkspace: 'Answers come from the workspace AI connection and model.',
+    voiceLater:
+      'Talking by voice is not connected to a voice provider yet; that is a later step and has nothing to do with writing.',
+    unsaved: 'This status reflects the saved settings; your unsaved changes are not in it yet.',
+    textNeeds: {
+      disabled: 'Writing is not ready: the assistant is off. Tick "Voice assistant on" and save.',
+      disclosure:
+        'Writing is not ready: the privacy notice is not accepted yet. Accept it and save.',
+      executor_not_configured:
+        'Writing is not ready: no text model is set. Choose one under "Text model", or set up the workspace AI connection on the "AI providers" page.',
+    },
+  },
   loadFailed: 'The settings could not be read.',
   saveFailed: 'Could not save. Try again.',
   denied: 'Only the owner of the system can change these settings.',
