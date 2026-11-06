@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.52.1] — 2026-11-06
+
+Patch release: the live assistant works again. Since 0.51.0 every request of the assistant's screen in the back office was sent to a path that does not exist, so the Smart chat tab could only show an error. Interface only: no migration and no API change.
+
 ### Fixed
 
 - **The live assistant works again in the Smart chat tab.** The tab showed "The state of the live assistant could not be read (HTTP_404)" and "Try again" changed nothing, because the assistant's requests were sent to a path with the API version in it twice (the web server already adds it), which does not exist. The state, the cost summary, the conversation list and everything a conversation does (start, type, usage, confirm, cancel) now reach the API. New tests check the paths of every call and that no web code builds such a path. No migration.
