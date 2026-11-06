@@ -2378,14 +2378,30 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
 }
 
 .smart-chat-controls {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
   min-width: 0;
 }
 
+.smart-chat-controls button {
+  flex: none;
+}
+
+.smart-compose-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.smart-compose-actions button {
+  flex: 1;
+}
+
 /* The history list never grows past the window; long titles end in an ellipsis. */
 .smart-chat-controls select {
-  width: 100%;
+  flex: 1 1 8rem;
+  width: auto;
   max-width: 100%;
   min-width: 0;
   overflow: hidden;

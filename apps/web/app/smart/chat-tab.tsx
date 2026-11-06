@@ -257,16 +257,6 @@ export function ChatTab({
     <div className="smart-chat">
       <LiveSection workspaceId={workspaceId} locale={locale} />
       <div className="smart-chat-controls">
-        <div className="toolbar">
-          <button type="button" className="secondary-button" onClick={fresh}>
-            {text.chat.new}
-          </button>
-          {currentId && (
-            <button type="button" className="secondary-button" onClick={() => void remove()}>
-              {confirmRemove ? text.chat.removeConfirm : text.chat.remove}
-            </button>
-          )}
-        </div>
         <select
           aria-label={text.chat.history}
           value={currentId ?? ''}
@@ -281,6 +271,14 @@ export function ChatTab({
             </option>
           ))}
         </select>
+        <button type="button" className="secondary-button" onClick={fresh}>
+          {text.chat.new}
+        </button>
+        {currentId && (
+          <button type="button" className="secondary-button" onClick={() => void remove()}>
+            {confirmRemove ? text.chat.removeConfirm : text.chat.remove}
+          </button>
+        )}
       </div>
 
       <div className="smart-messages" role="log" aria-live="polite">
@@ -362,7 +360,7 @@ export function ChatTab({
             }
           }}
         />
-        <div className="toolbar">
+        <div className="smart-compose-actions">
           <button
             type="button"
             className="primary-button"
