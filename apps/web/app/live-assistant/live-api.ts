@@ -51,7 +51,11 @@ export interface LiveBackend {
   readonly getAction: (actionId: string) => Promise<LiveActionView>;
 }
 
-const base = (workspaceId: string) => `/v1/workspaces/${workspaceId}/live-assistant`;
+/**
+ * No version prefix here: the web server's rewrite of `/api/...` (next.config.ts) already adds it,
+ * so a path that carried it too reached the API with it twice, which no route matches (404).
+ */
+const base = (workspaceId: string) => `/workspaces/${workspaceId}/live-assistant`;
 
 export function liveBackendFor(workspaceId: string): LiveBackend {
   const root = base(workspaceId);
