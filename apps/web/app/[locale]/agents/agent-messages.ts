@@ -40,6 +40,8 @@ const messages = {
     projectHint:
       'برای یک پروژه مشخص می‌توانید از تب «ایجنت‌ها» در صفحه پروژه یک کپی مستقل از هر نقش بسازید.',
     back: 'بازگشت به ایجنت‌ها',
+    tabsLabel: 'بخش‌های صفحه ایجنت',
+    tabs: { editor: 'تعریف و ویرایش', history: 'نسخه‌ها', activity: 'عملکرد و خروجی‌ها' },
     loading: 'در حال بارگذاری…',
     failed: 'انجام نشد. اتصال اینترنت یا ورود به سامانه را بررسی کنید.',
     active: 'فعال',
@@ -273,6 +275,8 @@ const messages = {
     projectHint:
       'For one project, use the Agents tab on the project page to make an independent copy of any role.',
     back: 'Back to agents',
+    tabsLabel: 'Agent page sections',
+    tabs: { editor: 'Definition', history: 'Versions', activity: 'Performance & outputs' },
     loading: 'Loading…',
     failed: 'It could not be done. Check your connection or sign in again.',
     active: 'Active',

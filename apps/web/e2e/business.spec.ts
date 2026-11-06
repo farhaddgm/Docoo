@@ -77,7 +77,7 @@ test.describe('business from Contenter (BIZ-001..006)', () => {
 
   test('the connection page keeps the token write-only and shows the health of the connection', async () => {
     // The connection lives at the end of the system settings.
-    await page.goto('/fa/settings');
+    await page.goto('/fa/settings?tab=integrations');
     await expect(page.getByText(integ.notConfigured)).toBeVisible();
 
     await page.getByLabel(integ.apiUrl, { exact: true }).fill(`${contenter}/api`);

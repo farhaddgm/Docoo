@@ -511,7 +511,7 @@ export function StageChat({
   }, [count, locale, data]);
 
   return (
-    <section className="stack" aria-labelledby={`${id}-title`}>
+    <section data-nav className="stack" aria-labelledby={`${id}-title`}>
       <h3 id={`${id}-title`}>{text.title}</h3>
       <p className="muted">{canRevise ? text.help : text.askOnly}</p>
       {behind.length > 0 && (

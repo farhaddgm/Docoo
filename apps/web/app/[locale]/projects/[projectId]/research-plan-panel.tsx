@@ -189,7 +189,7 @@ export function ResearchPlanPanel({
 
   if (failed && !data) {
     return (
-      <section className="card" aria-labelledby={`${id}-title`}>
+      <section data-nav className="card" aria-labelledby={`${id}-title`}>
         <h2 id={`${id}-title`}>{text.title}</h2>
         <p className="notice error" role="alert">
           {text.loadFailed}
@@ -209,7 +209,7 @@ export function ResearchPlanPanel({
     );
 
   return (
-    <section className="card stack" aria-labelledby={`${id}-title`}>
+    <section data-nav className="card stack" aria-labelledby={`${id}-title`}>
       <SectionTitle id={`${id}-title`} help={text.help}>
         {text.title}
       </SectionTitle>

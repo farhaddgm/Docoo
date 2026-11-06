@@ -289,7 +289,7 @@ export function ProblemPanel({
     <div className="stack">
       <Notice notice={notice} />
 
-      <section className="card stack" aria-labelledby="problem-heading">
+      <section data-nav className="card stack" aria-labelledby="problem-heading">
         <h3 id="problem-heading">{text.title}</h3>
         {analysis.profile === 'quick' && (
           <p className="notice" role="status">
@@ -351,7 +351,7 @@ export function ProblemPanel({
       {analysis.progress.asked > 0 && <QuestionQuality locale={locale} base={base} />}
 
       {analysis.understanding && (
-        <section className="card stack" aria-labelledby="understanding-heading">
+        <section data-nav className="card stack" aria-labelledby="understanding-heading">
           <h3 id="understanding-heading">{text.understandingTitle}</h3>
           <div>
             <h4>{text.understood}</h4>
@@ -368,6 +368,7 @@ export function ProblemPanel({
 
       {openBatch && (
         <form
+          data-nav
           data-write-action
           className="card stack"
           aria-labelledby="batch-heading"
@@ -434,7 +435,7 @@ export function ProblemPanel({
         </form>
       )}
 
-      <section className="card stack" aria-labelledby="coverage-heading">
+      <section data-nav className="card stack" aria-labelledby="coverage-heading">
         <SectionTitle as="h3" id="coverage-heading" help={text.coverageHelp}>
           {text.coverageTitle}
         </SectionTitle>
@@ -487,7 +488,7 @@ export function ProblemPanel({
         </PagedRows>
       </section>
 
-      <section className="card stack" aria-labelledby="followups-heading">
+      <section data-nav className="card stack" aria-labelledby="followups-heading">
         <SectionTitle as="h3" id="followups-heading" help={text.followUpsHelp}>
           {text.followUpsTitle}
         </SectionTitle>
@@ -534,7 +535,7 @@ export function ProblemPanel({
         )}
       </section>
 
-      <section className="card stack" aria-labelledby="contradictions-heading">
+      <section data-nav className="card stack" aria-labelledby="contradictions-heading">
         <h3 id="contradictions-heading">{text.contradictionsTitle}</h3>
         {analysis.contradictions.length === 0 ? (
           <p>{text.contradictionsNone}</p>
@@ -560,7 +561,7 @@ export function ProblemPanel({
       </section>
 
       {analysis.finish.available && !readOnly && (
-        <section className="card stack" aria-labelledby="finish-heading">
+        <section data-nav className="card stack" aria-labelledby="finish-heading">
           <SectionTitle as="h3" id="finish-heading" help={text.finishHelp}>
             {text.finishTitle}
           </SectionTitle>
@@ -623,7 +624,7 @@ export function ProblemPanel({
         />
       )}
 
-      <section className="card stack" aria-labelledby="history-heading">
+      <section data-nav className="card stack" aria-labelledby="history-heading">
         <h3 id="history-heading">{text.historyTitle}</h3>
         {closedBatches.length === 0 ? (
           <p>{text.historyNone}</p>

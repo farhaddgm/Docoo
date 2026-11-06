@@ -185,7 +185,7 @@ export function ResearchConflictsPanel({
   if (!data || data.items.length === 0) return null;
 
   return (
-    <section className="card stack" aria-labelledby={`${id}-title`}>
+    <section data-nav className="card stack" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`}>{text.title}</h2>
       <p className="muted">{text.help}</p>
       <ol className="plain-list">

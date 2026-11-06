@@ -209,6 +209,7 @@ export function SolutionsPanel({
 
       {!readOnly && (
         <form
+          data-nav
           data-write-action
           className="card filter-form"
           onSubmit={generate}
@@ -362,7 +363,7 @@ export function SolutionsPanel({
         </form>
       </details>
 
-      <section className="stack" aria-labelledby="solutions-title">
+      <section data-nav className="stack" aria-labelledby="solutions-title">
         <div className="card">
           <h2 id="solutions-title">{text.listTitle}</h2>
           {set.items.length === 0 ? (
@@ -507,6 +508,7 @@ export function SolutionsPanel({
 
       {set.items.length > 0 && !readOnly && (
         <form
+          data-nav
           data-write-action
           className="card filter-form"
           onSubmit={select}
@@ -613,7 +615,7 @@ export function SolutionsPanel({
           </div>
         </form>
       )}
-      <section className="card stack" aria-labelledby="decision-journal-title">
+      <section data-nav className="card stack" aria-labelledby="decision-journal-title">
         <h2 id="decision-journal-title">{locale === 'fa' ? 'دفتر تصمیم' : 'Decision journal'}</h2>
         {decisions.length === 0 && (
           <p className="muted">

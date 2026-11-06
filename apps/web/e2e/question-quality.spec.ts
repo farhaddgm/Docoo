@@ -10,6 +10,7 @@ import {
   signInWithKeyboard,
   useFakeProvider,
   fillReason,
+  openSettingsGroup,
 } from './support';
 
 const detail = projectPageMessages('fa');
@@ -78,6 +79,7 @@ test.describe('question quality (QQ-001)', () => {
 
     // Only the chosen aspects are judged: pick "tone" alone in the settings and evaluate again.
     await page.goto('/fa/settings');
+    await openSettingsGroup(page, settings.groups.analysis.title);
     const criteria = page
       .locator('ul.plain-list > li')
       .filter({ has: page.locator('code:text-is("analysis.quality_criteria")') });
@@ -113,6 +115,7 @@ test.describe('question quality (QQ-001)', () => {
 
     // Leave the workspace as it was.
     await page.goto('/fa/settings');
+    await openSettingsGroup(page, settings.groups.analysis.title);
     await fillReason(page, criteria.getByLabel(settings.reasonLabel), 'بازگشت');
     await criteria.getByRole('button', { name: settings.resetWorkspace }).click();
     await expect(criteria.getByRole('checkbox', { checked: true })).toHaveCount(5);

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { documentMessages } from '../app/[locale]/projects/[projectId]/document-messages';
 import { healthMessages } from '../app/[locale]/projects/[projectId]/health-messages';
@@ -57,6 +57,12 @@ const healthBadge = (page: Page) =>
     .filter({ has: page.getByText(health.label, { exact: true }) })
     .locator('.badge');
 
+/** Opens the three-dot menu at the end of a row and picks one of its commands. */
+async function rowMenuItem(page: Page, row: Locator, name: string) {
+  await row.getByRole('button', { name: /اقدام‌های حوزه/u }).click();
+  await page.getByRole('menuitem', { name, exact: true }).click();
+}
+
 test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001, WF-003)', () => {
   test('topics: create, edit, archive and restore (TOP-001)', async ({ page }) => {
     await signInWithKeyboard(page);
@@ -80,7 +86,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expectNoSeriousA11yViolations(page);
 
     // Edit keeps the version history: the page sends If-Match with the loaded version.
-    await row.getByRole('button', { name: topicText.edit }).click();
+    await rowMenuItem(page, row, topicText.edit);
     await expect(
       page.getByRole('heading', { level: 2, name: topicText.editTitle.replace('{code}', code) }),
     ).toBeFocused();
@@ -92,7 +98,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(row.getByRole('cell').nth(1)).toHaveText('۲'); // version 2, in Persian digits
 
     // Archive shows its effect first and moves the topic to the archived view.
-    await row.getByRole('button', { name: topicText.archive }).click();
+    await rowMenuItem(page, row, topicText.archive);
     await expect(page.locator('#confirm-title')).toBeFocused();
     await expect(page.getByText(topicText.archiveEffect)).toBeVisible();
     await expectNoSeriousA11yViolations(page);
@@ -102,7 +108,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
 
     await page.locator('#topic-view').selectOption('archived');
     await expect(row).toHaveCount(1);
-    await row.getByRole('button', { name: topicText.restore }).click();
+    await rowMenuItem(page, row, topicText.restore);
     await expect(page.getByRole('status').filter({ hasText: topicText.restored })).toBeVisible();
     await page.locator('#topic-view').selectOption('active');
     await expect(row).toHaveCount(1);
@@ -214,7 +220,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       .getByRole('row')
       .filter({ has: page.getByRole('rowheader', { name: `pa-${stamp}` }) });
     await revealRow(page, usedRow);
-    await usedRow.getByRole('button', { name: topicText.remove }).click();
+    await rowMenuItem(page, usedRow, topicText.remove);
     await expect(page.locator('#confirm-title')).toBeFocused();
     await expect(page.locator('.confirm-panel')).toContainText(code);
     await page.getByRole('button', { name: topicText.confirm }).click();

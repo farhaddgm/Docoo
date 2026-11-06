@@ -14,6 +14,9 @@ import type { AgentRole, Definition, RoleDetail, RoleOutput } from './agent-type
 import { RoleEditor } from './role-editor';
 import { SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
+import { PageTabPanel, PageTabs, useTabParam } from '../../page-tabs';
+
+const ROLE_TABS = ['editor', 'history', 'activity'] as const;
 
 export function RolePage({ locale, role }: { locale: Locale; role: AgentRole }) {
   const text = agentMessages(locale);
@@ -126,6 +129,7 @@ function Role({
   const { busy, notice, run } = useAction(explain);
   const editorHeading = useRef<HTMLHeadingElement>(null);
   const reasonId = useId();
+  const [tab, setTab] = useTabParam(ROLE_TABS);
 
   const load = useCallback(async () => {
     const [role_, versions] = await Promise.all([
@@ -216,253 +220,268 @@ function Role({
         </p>
       </section>
 
-      <section className="card stack" aria-labelledby="editor-heading">
-        <h2 id="editor-heading" ref={editorHeading} tabIndex={-1}>
-          {text.editorHeading}
-        </h2>
-        <p className="muted">
-          {fill(text.editFrom, { n: formatNumber(locale, startFrom.sequence) })}
-        </p>
-        <RoleEditor
-          key={startFrom.id}
-          locale={locale}
-          workspaceId={workspaceId}
-          base={startFrom}
-          reference={detail}
-          serverWarnings={startFrom.id === detail.definition.id ? detail.modelWarnings : []}
-          saveLabel={text.save}
-          submit={async (changes, reason) => {
-            const result = await apiSend<{ definition: Definition }>(
-              'POST',
-              `${base}/definitions`,
-              {
-                changes,
-                reason,
-                baseVersionId: startFrom.id,
-                expectedSequence: detail.latestSequence,
-              },
-              { headers: { 'idempotency-key': idempotencyKey() } },
-            );
-            await load();
-            return result.definition;
-          }}
-          after={(saved) => (
-            <ActivatePanel
-              locale={locale}
-              saved={saved}
-              active={history.activeVersionId === saved.id}
-              busy={busy}
-              onActivate={activate}
-            />
-          )}
-        />
-      </section>
+      <PageTabs
+        label={text.tabsLabel}
+        idPrefix="role"
+        tabs={ROLE_TABS.map((key) => ({ key, label: text.tabs[key] }))}
+        active={tab}
+        onChange={setTab}
+      />
 
-      <section className="card stack" aria-labelledby="history-heading">
-        <SectionTitle id="history-heading" help={text.historyHelp}>
-          {text.historyHeading}
-        </SectionTitle>
-        <ReasonBar
-          locale={locale}
-          id={reasonId}
-          label={text.activateReason}
-          help={text.activateReasonHelp}
-          value={activateReason}
-          onChange={setActivateReason}
-        />
-        <Notice notice={notice} />
-        <ol className="version-list">
-          {history.items.map((item) => {
-            const label = fill(text.versionLabel, { n: formatNumber(locale, item.sequence) });
-            const isActive = item.id === history.activeVersionId;
-            return (
-              <li key={item.id} className="version-row">
-                <h3>
-                  {label} {isActive && <span className="badge state-passed">{text.active}</span>}
-                </h3>
-                <p className="muted">
-                  {text.createdAt}: {formatDateTime(locale, item.createdAt)}
-                </p>
-                <p>
-                  {text.reasonOf}: <span dir={textDir(locale)}>{item.reason}</span>
-                </p>
-                <p>
-                  <SectionChips definition={item} locale={locale} />
-                </p>
-                <p className="toolbar">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    disabled={busy}
-                    aria-label={`${text.editFromThis}: ${label}`}
-                    onClick={() => {
-                      setEditBase(item.id === detail.definition.id ? null : item);
-                      editorHeading.current?.focus();
-                    }}
-                  >
-                    {text.editFromThis}
-                  </button>
-                  {!isActive && (
+      <PageTabPanel idPrefix="role" tabKey="editor" active={tab}>
+        <section className="card stack" aria-labelledby="editor-heading">
+          <h2 id="editor-heading" ref={editorHeading} tabIndex={-1}>
+            {text.editorHeading}
+          </h2>
+          <p className="muted">
+            {fill(text.editFrom, { n: formatNumber(locale, startFrom.sequence) })}
+          </p>
+          <RoleEditor
+            key={startFrom.id}
+            locale={locale}
+            workspaceId={workspaceId}
+            base={startFrom}
+            reference={detail}
+            serverWarnings={startFrom.id === detail.definition.id ? detail.modelWarnings : []}
+            saveLabel={text.save}
+            submit={async (changes, reason) => {
+              const result = await apiSend<{ definition: Definition }>(
+                'POST',
+                `${base}/definitions`,
+                {
+                  changes,
+                  reason,
+                  baseVersionId: startFrom.id,
+                  expectedSequence: detail.latestSequence,
+                },
+                { headers: { 'idempotency-key': idempotencyKey() } },
+              );
+              await load();
+              return result.definition;
+            }}
+            after={(saved) => (
+              <ActivatePanel
+                locale={locale}
+                saved={saved}
+                active={history.activeVersionId === saved.id}
+                busy={busy}
+                onActivate={activate}
+              />
+            )}
+          />
+        </section>
+      </PageTabPanel>
+
+      <PageTabPanel idPrefix="role" tabKey="history" active={tab}>
+        <section className="card stack" aria-labelledby="history-heading">
+          <SectionTitle id="history-heading" help={text.historyHelp}>
+            {text.historyHeading}
+          </SectionTitle>
+          <ReasonBar
+            locale={locale}
+            id={reasonId}
+            label={text.activateReason}
+            help={text.activateReasonHelp}
+            value={activateReason}
+            onChange={setActivateReason}
+          />
+          <Notice notice={notice} />
+          <ol className="version-list">
+            {history.items.map((item) => {
+              const label = fill(text.versionLabel, { n: formatNumber(locale, item.sequence) });
+              const isActive = item.id === history.activeVersionId;
+              return (
+                <li key={item.id} className="version-row">
+                  <h3>
+                    {label} {isActive && <span className="badge state-passed">{text.active}</span>}
+                  </h3>
+                  <p className="muted">
+                    {text.createdAt}: {formatDateTime(locale, item.createdAt)}
+                  </p>
+                  <p>
+                    {text.reasonOf}: <span dir={textDir(locale)}>{item.reason}</span>
+                  </p>
+                  <p>
+                    <SectionChips definition={item} locale={locale} />
+                  </p>
+                  <p className="toolbar">
                     <button
                       type="button"
                       className="secondary-button"
-                      disabled={busy || activateReason.trim().length < 3}
-                      aria-label={`${item.sequence < detail.definition.sequence ? text.restore : text.activate}: ${label}`}
-                      onClick={() => void activate(item.id, activateReason.trim())}
+                      disabled={busy}
+                      aria-label={`${text.editFromThis}: ${label}`}
+                      onClick={() => {
+                        setEditBase(item.id === detail.definition.id ? null : item);
+                        setTab('editor');
+                        window.setTimeout(() => editorHeading.current?.focus(), 0);
+                      }}
                     >
-                      {item.sequence < detail.definition.sequence ? text.restore : text.activate}
+                      {text.editFromThis}
                     </button>
-                  )}
-                </p>
-              </li>
-            );
-          })}
-        </ol>
-        {history.nextBefore !== null && (
-          <p>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={busy}
-              onClick={() => void olderVersions()}
-            >
-              {text.showMore}
-            </button>
-          </p>
-        )}
-      </section>
-
-      <section className="card stack" aria-labelledby="performance-heading">
-        <h2 id="performance-heading">{text.performanceHeading}</h2>
-        {!performance ? (
-          <p className="muted">{text.performanceNone}</p>
-        ) : (
-          <>
-            <p className="muted">
-              {fill(text.performanceAt, {
-                date: formatDateTime(locale, performance.createdAt),
-                charter: performance.charterVersion,
-              })}
-            </p>
-            {performance.role ? (
-              <dl className="counts">
-                <div>
-                  <dt>{text.deviations}</dt>
-                  <dd>{formatNumber(locale, performance.role.deviations)}</dd>
-                </div>
-                <div>
-                  <dt>{text.invocations}</dt>
-                  <dd>{formatNumber(locale, performance.role.invocations)}</dd>
-                </div>
-                <div>
-                  <dt>{text.cost}</dt>
-                  <dd>{formatNumber(locale, performance.role.costUsd)}</dd>
-                </div>
-                <div>
-                  <dt>{text.latency}</dt>
-                  <dd>
-                    {performance.role.avgLatencyMs === null
-                      ? '—'
-                      : formatNumber(locale, performance.role.avgLatencyMs)}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{text.retries}</dt>
-                  <dd>{formatNumber(locale, performance.role.retries)}</dd>
-                </div>
-              </dl>
-            ) : (
-              <p className="muted">{text.noRoleData}</p>
-            )}
-            {performance.deviations.length > 0 && (
-              <ul className="plain-list">
-                {performance.deviations.map((deviation) => (
-                  <li key={deviation.rule}>
-                    <span className="badge">{deviation.severity}</span>{' '}
-                    <span dir={textDir(locale)}>{deviation.detail}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+                    {!isActive && (
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={busy || activateReason.trim().length < 3}
+                        aria-label={`${item.sequence < detail.definition.sequence ? text.restore : text.activate}: ${label}`}
+                        onClick={() => void activate(item.id, activateReason.trim())}
+                      >
+                        {item.sequence < detail.definition.sequence ? text.restore : text.activate}
+                      </button>
+                    )}
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+          {history.nextBefore !== null && (
             <p>
-              <Link href={`/${locale}/brain` as Route}>{text.fullReport}</Link>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={busy}
+                onClick={() => void olderVersions()}
+              >
+                {text.showMore}
+              </button>
             </p>
-          </>
-        )}
-      </section>
+          )}
+        </section>
+      </PageTabPanel>
 
-      <section className="card stack" aria-labelledby="outputs-heading">
-        <SectionTitle id="outputs-heading" help={text.outputsHelp}>
-          {text.outputsHeading}
-        </SectionTitle>
-        {!outputs ? (
-          <p role="status">{text.loading}</p>
-        ) : outputs.items.length === 0 ? (
-          <p className="muted">{text.outputsNone}</p>
-        ) : (
-          <PagedRows rows={outputs.items}>
-            {(pageRows) => (
-              <div className="table-scroll">
-                <table>
-                  <caption className="visually-hidden">{text.outputsHeading}</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">{text.outputColumns.project}</th>
-                      <th scope="col">{text.outputColumns.stage}</th>
-                      <th scope="col">{text.outputColumns.version}</th>
-                      <th scope="col">{text.outputColumns.definition}</th>
-                      <th scope="col">{text.outputColumns.date}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pageRows.map((item) => (
-                      <tr key={item.id}>
-                        <td dir={textDir(locale)}>
-                          {item.projectId ? (
-                            <Link href={`/${locale}/projects/${item.projectId}` as Route}>
-                              {item.projectTitle ?? item.projectId}
-                            </Link>
-                          ) : (
-                            fill(text.reportOf, {
-                              scope: text.scopes[item.scope ?? 'workspace'] ?? '',
-                            })
-                          )}
-                        </td>
-                        <td>{item.stage ? (text.stages[item.stage] ?? item.stage) : '—'}</td>
-                        <td>
-                          {item.versionNo === undefined
-                            ? '—'
-                            : formatNumber(locale, item.versionNo)}
-                        </td>
-                        <td>
-                          {item.definitionSequence
-                            ? fill(text.versionLabel, {
-                                n: formatNumber(locale, item.definitionSequence),
-                              })
-                            : '—'}
-                        </td>
-                        <td>{formatDateTime(locale, item.createdAt)}</td>
+      <PageTabPanel idPrefix="role" tabKey="activity" active={tab}>
+        <section className="card stack" aria-labelledby="performance-heading">
+          <h2 id="performance-heading">{text.performanceHeading}</h2>
+          {!performance ? (
+            <p className="muted">{text.performanceNone}</p>
+          ) : (
+            <>
+              <p className="muted">
+                {fill(text.performanceAt, {
+                  date: formatDateTime(locale, performance.createdAt),
+                  charter: performance.charterVersion,
+                })}
+              </p>
+              {performance.role ? (
+                <dl className="counts">
+                  <div>
+                    <dt>{text.deviations}</dt>
+                    <dd>{formatNumber(locale, performance.role.deviations)}</dd>
+                  </div>
+                  <div>
+                    <dt>{text.invocations}</dt>
+                    <dd>{formatNumber(locale, performance.role.invocations)}</dd>
+                  </div>
+                  <div>
+                    <dt>{text.cost}</dt>
+                    <dd>{formatNumber(locale, performance.role.costUsd)}</dd>
+                  </div>
+                  <div>
+                    <dt>{text.latency}</dt>
+                    <dd>
+                      {performance.role.avgLatencyMs === null
+                        ? '—'
+                        : formatNumber(locale, performance.role.avgLatencyMs)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{text.retries}</dt>
+                    <dd>{formatNumber(locale, performance.role.retries)}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="muted">{text.noRoleData}</p>
+              )}
+              {performance.deviations.length > 0 && (
+                <ul className="plain-list">
+                  {performance.deviations.map((deviation) => (
+                    <li key={deviation.rule}>
+                      <span className="badge">{deviation.severity}</span>{' '}
+                      <span dir={textDir(locale)}>{deviation.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p>
+                <Link href={`/${locale}/brain` as Route}>{text.fullReport}</Link>
+              </p>
+            </>
+          )}
+        </section>
+
+        <section className="card stack" aria-labelledby="outputs-heading">
+          <SectionTitle id="outputs-heading" help={text.outputsHelp}>
+            {text.outputsHeading}
+          </SectionTitle>
+          {!outputs ? (
+            <p role="status">{text.loading}</p>
+          ) : outputs.items.length === 0 ? (
+            <p className="muted">{text.outputsNone}</p>
+          ) : (
+            <PagedRows rows={outputs.items}>
+              {(pageRows) => (
+                <div className="table-scroll">
+                  <table>
+                    <caption className="visually-hidden">{text.outputsHeading}</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">{text.outputColumns.project}</th>
+                        <th scope="col">{text.outputColumns.stage}</th>
+                        <th scope="col">{text.outputColumns.version}</th>
+                        <th scope="col">{text.outputColumns.definition}</th>
+                        <th scope="col">{text.outputColumns.date}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </PagedRows>
-        )}
-        {outputs?.nextCursor && (
-          <p>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={busy}
-              onClick={() => void moreOutputs()}
-            >
-              {text.showMore}
-            </button>
-          </p>
-        )}
-      </section>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((item) => (
+                        <tr key={item.id}>
+                          <td dir={textDir(locale)}>
+                            {item.projectId ? (
+                              <Link href={`/${locale}/projects/${item.projectId}` as Route}>
+                                {item.projectTitle ?? item.projectId}
+                              </Link>
+                            ) : (
+                              fill(text.reportOf, {
+                                scope: text.scopes[item.scope ?? 'workspace'] ?? '',
+                              })
+                            )}
+                          </td>
+                          <td>{item.stage ? (text.stages[item.stage] ?? item.stage) : '—'}</td>
+                          <td>
+                            {item.versionNo === undefined
+                              ? '—'
+                              : formatNumber(locale, item.versionNo)}
+                          </td>
+                          <td>
+                            {item.definitionSequence
+                              ? fill(text.versionLabel, {
+                                  n: formatNumber(locale, item.definitionSequence),
+                                })
+                              : '—'}
+                          </td>
+                          <td>{formatDateTime(locale, item.createdAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </PagedRows>
+          )}
+          {outputs?.nextCursor && (
+            <p>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={busy}
+                onClick={() => void moreOutputs()}
+              >
+                {text.showMore}
+              </button>
+            </p>
+          )}
+        </section>
+      </PageTabPanel>
     </div>
   );
 }
