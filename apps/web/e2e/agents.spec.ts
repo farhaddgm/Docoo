@@ -212,7 +212,12 @@ test.describe('agents in Persian and English (AGT-001..005)', () => {
       await expect(page.getByRole('group', { name: english.sections[section] })).toBeVisible();
     }
     await expect(page.getByRole('group', { name: english.modelHeading })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+    // History, performance and outputs sit in their own tabs.
+    await page.getByRole('tab', { name: english.tabs.history, exact: true }).click();
     await expect(page.getByRole('heading', { name: english.historyHeading })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+    await page.getByRole('tab', { name: english.tabs.activity, exact: true }).click();
     await expect(page.getByRole('heading', { name: english.outputsHeading })).toBeVisible();
     await expect(page.getByRole('heading', { name: english.performanceHeading })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
