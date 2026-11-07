@@ -4,6 +4,15 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.54.0] — 2026-11-07
+
+The live assistant can now show things on the owner's screen: it opens a page, and it puts a draft into the new-project form for the owner to read and save. This release also rebuilds the infrastructure images with a patched library. No migration. The assistant's API answer gained two fields (`screen` and `steps`); the web and the API are released together.
+
+### Added
+
+- **The assistant opens pages and fills a draft** ([ADR-0055](docs/adr/0055-live-voice-assistant.md) §4-6). Asked in the typed conversation, or by voice later, the assistant can open a page for the owner (the project list, a project and one of its sections, the new-project form, costs, notifications, providers, knowledge and a few more) and put values into the **new-project form**: title, description, problem, expected output, code and output language. The form takes them the way typing would (a code is suggested from the title), shows "draft, nothing saved" at the top and marks the fields it filled. **The assistant never saves it: the owner reads the form and presses "Create".** Only these text fields can be filled; the model, the connection and every other setting of the project are never touched, and the assistant's own settings page is never filled. Pages are named from a fixed list, never an address, so the assistant cannot send the owner anywhere else. These two abilities need the access scope "all projects" or "back office".
+- **Steps under each typed answer.** A "What it did" list under the assistant's answer shows each step and where it stands (done, waiting for you, refused, failed).
+
 ### Security
 
 - Rebuild the Caddy, SeaweedFS, Temporal, WAL-G (PostgreSQL), rclone, Tempo and OpenTelemetry Collector images with `golang.org/x/net` v0.62.0 to address CVE-2026-78661 (a high-severity denial of service in its HTML parser, reported by the image scan). Tempo and the Collector also move `golang.org/x/crypto` to v0.58.0 and `golang.org/x/text` to v0.43.0, which that `x/net` requires. The application is unchanged: no migration and no API change.
