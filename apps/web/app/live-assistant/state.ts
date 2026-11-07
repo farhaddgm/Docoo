@@ -6,7 +6,7 @@
  * starts switched off.
  */
 
-import type { LiveActionView } from '@docoo/contracts';
+import type { LiveActionView, LiveAskStep } from '@docoo/contracts';
 
 export type LiveStatus = 'off' | 'starting' | 'awake' | 'asleep' | 'closing' | 'error';
 
@@ -58,6 +58,8 @@ export interface ChatLine {
   readonly text: string;
   /** A line the page wrote because the request failed, not something the assistant said. */
   readonly failed?: boolean;
+  /** What the assistant did to answer, step by step. */
+  readonly steps?: readonly LiveAskStep[];
 }
 
 /** The most chat lines kept on screen. */

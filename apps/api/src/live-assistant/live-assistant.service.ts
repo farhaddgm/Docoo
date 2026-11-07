@@ -702,6 +702,8 @@ export class LiveAssistantService {
       return {
         answer,
         actions,
+        screen: [...outcome.screen],
+        steps: [...outcome.steps],
         toolCalls: outcome.toolCalls,
         stop: outcome.stop,
         errorCode: outcome.errorCode,

@@ -1,3 +1,5 @@
+import { liveProjectTabs, liveScreenPages } from '@docoo/contracts';
+
 import type { LiveToolSpec } from './capabilities.js';
 
 /**
@@ -37,7 +39,47 @@ const lifecycle = (what: string, reason: 'required' | 'optional'): LiveToolSpec 
   }),
 });
 
+const choice = (description: string, values: readonly string[], allowEmpty: boolean) => ({
+  type: 'string',
+  description,
+  enum: allowEmpty ? [...values, ''] : [...values],
+});
+
 export const CAPABILITY_TOOLS: Readonly<Record<string, LiveToolSpec>> = {
+  'screen.open': {
+    description:
+      "Open a page on the owner's screen so they can see it. Changes nothing. For a project, give its id and, if you know which section, the tab. Say in one sentence what you opened.",
+    parameters: closed({
+      page: choice('Which page to open.', liveScreenPages, false),
+      projectId: text('Only for page "project": the project id, otherwise an empty string.'),
+      tab: choice(
+        'Only for page "project": the section to open, otherwise an empty string.',
+        liveProjectTabs,
+        true,
+      ),
+    }),
+  },
+  'screen.fill_form': {
+    description:
+      "Put a draft into the new-project form on the owner's screen (it opens the form if needed). NOTHING is saved: the owner reads it and presses Create themselves, so never say a project was created. Fill only what the owner told you; leave the rest as empty strings, and never invent details.",
+    parameters: closed({
+      form: choice('Which form.', ['new_project'], false),
+      title: text('The project title (at most 200 characters), or an empty string.'),
+      description: text('A short description, or an empty string.'),
+      initialProblem: text(
+        'The problem to solve, in the owner’s own words (at most 4000 characters), or an empty string.',
+      ),
+      expectedOutput: text('What the owner expects to receive, or an empty string.'),
+      code: text(
+        'A short code of letters, digits, dash or underscore, only if the owner gave one, otherwise an empty string.',
+      ),
+      outputLanguage: choice(
+        'The language of the outputs, or an empty string.',
+        ['fa', 'en'],
+        true,
+      ),
+    }),
+  },
   'projects.overview': {
     description:
       "List the owner's projects, most recently changed first, optionally only those whose code or title contains a word. Reads only. Use it to find a project's id.",

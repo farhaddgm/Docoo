@@ -1,5 +1,5 @@
 import type { LiveActionView, LiveAskAnswer, LiveSessionView } from '@docoo/contracts';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { LiveBackend } from './live-api';
 import { createLiveStore, type LiveStoreDeps } from './store';
@@ -25,6 +25,8 @@ const session = (): LiveSessionView =>
 const answer = (over: Partial<LiveAskAnswer> = {}): LiveAskAnswer => ({
   answer: 'Hello.',
   actions: [],
+  screen: [],
+  steps: [],
   toolCalls: 0,
   stop: 'answered',
   errorCode: null,
@@ -191,5 +193,94 @@ describe('the project the owner has open', () => {
     expect(projectIdFromPath(`/en/projects/${id.toUpperCase()}/report`)).toBe(id);
     expect(projectIdFromPath('/fa/projects')).toBeUndefined();
     expect(projectIdFromPath(null)).toBeUndefined();
+  });
+});
+
+describe('what the assistant shows on the screen', () => {
+  const instruction = {
+    type: 'fill',
+    form: 'new_project',
+    values: { title: 'Spring plan' },
+  } as const;
+
+  it('hands the page and the draft of an answer to the screen handler, and keeps the steps under the answer', async () => {
+    const { store } = setup(() =>
+      Promise.resolve(
+        answer({
+          screen: [instruction],
+          steps: [{ capability: 'screen.fill_form', summary: 'Put a draft', status: 'done' }],
+        }),
+      ),
+    );
+    const shown: unknown[] = [];
+    store.setScreenHandler((list) => shown.push(...list));
+    await store.start({ channel: 'text' });
+    await store.ask('start a project');
+    expect(shown).toEqual([instruction]);
+    expect(store.getSnapshot().chat.at(-1)?.steps).toEqual([
+      { capability: 'screen.fill_form', summary: 'Put a draft', status: 'done' },
+    ]);
+  });
+
+  it('shows nothing when the answer has nothing to show, and works without a handler', async () => {
+    const { store } = setup(() => Promise.resolve(answer()));
+    const shown: unknown[] = [];
+    store.setScreenHandler((list) => shown.push(...list));
+    await store.start({ channel: 'text' });
+    await store.ask('hi');
+    expect(shown).toEqual([]);
+    store.setScreenHandler(null);
+    expect(await store.ask('again')).toBe(true);
+  });
+});
+
+describe('the voice path shows things on the screen the same way', () => {
+  const executed = (result: unknown): LiveActionView =>
+    ({
+      id: '44444444-4444-4444-8444-444444444444',
+      sessionId: session().id,
+      capability: 'screen.open',
+      status: 'executed',
+      proposedAt: '2026-11-04T10:00:00.000000Z',
+      expiresAt: '2026-11-04T10:02:00.000000Z',
+      result,
+    }) as unknown as LiveActionView;
+
+  async function started(view: LiveActionView) {
+    const { store } = setup(() => Promise.resolve(answer()));
+    // The model's tool call goes to the gateway (`propose`); a finished one may carry a screen.
+    const backendPropose = vi.fn(() => Promise.resolve(view));
+    store.setBackend({
+      startSession: () => Promise.resolve(session()),
+      ask: () => Promise.resolve(answer()),
+      reportUsage: () =>
+        Promise.resolve({ session: session(), capStatus: 'ok' as const, capsReached: [] }),
+      appendMessages: () => Promise.resolve({ saved: 0 }),
+      endSession: () => Promise.resolve(session()),
+      proposeAction: backendPropose,
+      confirmAction: () => Promise.reject(new Error('unused')),
+      cancelAction: () => Promise.reject(new Error('unused')),
+      getAction: () => Promise.reject(new Error('unused')),
+    });
+    const shown: unknown[] = [];
+    store.setScreenHandler((list) => shown.push(...list));
+    await store.start({ channel: 'text' });
+    return { store, shown };
+  }
+
+  it('shows the page a finished call names', async () => {
+    const { store, shown } = await started(
+      executed({ screen: { type: 'open', page: 'costs' }, shown: 'Opened.' }),
+    );
+    await store.propose('screen.open', { page: 'costs' });
+    expect(shown).toEqual([{ type: 'open', page: 'costs' }]);
+  });
+
+  it('shows nothing for a result that carries no valid instruction', async () => {
+    const { store, shown } = await started(
+      executed({ screen: { type: 'open', page: '/admin/users' } }),
+    );
+    await store.propose('screen.open', { page: 'costs' });
+    expect(shown).toEqual([]);
   });
 });

@@ -16,6 +16,7 @@ import { LiveAssistantController } from './live-assistant.controller.js';
 import { LiveAssistantService } from './live-assistant.service.js';
 import { knowledgeCapabilities } from './knowledge-capabilities.js';
 import { projectCapabilities } from './project-capabilities.js';
+import { screenCapabilities } from './screen-capabilities.js';
 
 /** The live voice assistant (ADR-0055): sessions, the confirmation gateway and its ledger. */
 @Module({
@@ -49,6 +50,7 @@ import { projectCapabilities } from './project-capabilities.js';
         new LiveCapabilityRegistry([
           ...projectCapabilities({ projects, reports, notifications, workflow }),
           ...knowledgeCapabilities({ knowledge }),
+          ...screenCapabilities({ projects }),
         ]),
     },
   ],
