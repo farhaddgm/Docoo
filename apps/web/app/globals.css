@@ -5740,6 +5740,48 @@ button.link-button {
   }
 }
 
+.live-chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.live-chat-line {
+  margin: 0;
+}
+
+.live-chat-steps {
+  margin-block-start: var(--space-1);
+  font-size: 0.875rem;
+}
+
+.live-chat-steps ul {
+  margin: var(--space-1) 0 0;
+  padding-inline-start: 1.25rem;
+}
+
+/* What the assistant just touched on the page, so the owner sees where to look. */
+.live-flash {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 0.375rem;
+  animation: live-flash 1.2s ease-in-out 3;
+}
+
+@keyframes live-flash {
+  50% {
+    outline-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-flash {
+    animation: none;
+  }
+}
+
 .live-card {
   display: flex;
   flex-direction: column;

@@ -1,4 +1,4 @@
-import type { LiveActionView } from '@docoo/contracts';
+import type { LiveActionView, LiveAskStep, LiveScreenInstruction } from '@docoo/contracts';
 
 import {
   groupable,
@@ -22,6 +22,7 @@ import {
   type LiveStatus,
   type PillPosition,
 } from './state';
+import { screenOfResult } from './screen';
 import type { LiveTransport, LiveTransportFactory, LiveTransportHandlers } from './transport';
 
 /**
@@ -131,6 +132,8 @@ export function createLiveStore(deps: LiveStoreDeps) {
   // The server side of the session (ADR-0055 §4-5). Without a backend the store runs on its own,
   // which is how the tests and the development stand-in use it.
   let backend: LiveBackend | null = null;
+  // Shows what the assistant asks to show on the screen; none in tests unless they give one.
+  let showOnScreen: ((list: readonly LiveScreenInstruction[]) => void) | null = null;
   let sessionId: string | null = null;
   let costUsd = 0;
   /** Tokens the server's executor used for typed requests: the server counts them itself. */
@@ -267,6 +270,9 @@ export function createLiveStore(deps: LiveStoreDeps) {
       const view = await backend.proposeAction({ sessionId: id, capability, params, tainted });
       if (sessionId !== id) throw new Error('The live session ended.');
       accept(view, { report: false });
+      // A page to open or a draft for a form comes back in the result of a finished call.
+      const instruction = view.status === 'executed' ? screenOfResult(view.result) : null;
+      if (instruction) showOnScreen?.([instruction]);
       return view;
     } catch (error) {
       const closing = sessionErrorOf(error);
@@ -348,10 +354,21 @@ export function createLiveStore(deps: LiveStoreDeps) {
 
   // ---- typing to the assistant -------------------------------------------------------------
 
-  function addLine(role: 'user' | 'assistant', text: string, failed = false): void {
+  function addLine(
+    role: 'user' | 'assistant',
+    text: string,
+    failed = false,
+    steps: readonly LiveAskStep[] = [],
+  ): void {
     dispatch({
       type: 'chat',
-      line: { id: nextLine++, role, text, ...(failed ? { failed: true } : {}) },
+      line: {
+        id: nextLine++,
+        role,
+        text,
+        ...(failed ? { failed: true } : {}),
+        ...(steps.length > 0 ? { steps } : {}),
+      },
     });
   }
 
@@ -383,7 +400,8 @@ export function createLiveStore(deps: LiveStoreDeps) {
       executorTokens += used;
       dispatch({ type: 'usage', tokens: used });
       for (const view of answer.actions) accept(view, { report: false });
-      addLine('assistant', answer.answer);
+      addLine('assistant', answer.answer, false, answer.steps);
+      if (answer.screen.length > 0) showOnScreen?.(answer.screen);
       return true;
     } catch (error) {
       if (sessionId !== id) return false;
@@ -551,6 +569,10 @@ export function createLiveStore(deps: LiveStoreDeps) {
      */
     setBackend: (next: LiveBackend | null): void => {
       if (!isLiveActive(state.status) && state.status !== 'closing') backend = next;
+    },
+    /** Tells the store how to show a page or a form draft on the screen (the host gives the router). */
+    setScreenHandler: (next: ((list: readonly LiveScreenInstruction[]) => void) | null): void => {
+      showOnScreen = next;
     },
     /** Tells the store how to reach the provider; without one, starting reports "unavailable". */
     setTransportFactory: (next: LiveTransportFactory | null): void => {

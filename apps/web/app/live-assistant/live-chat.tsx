@@ -3,8 +3,8 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
-import type { Locale } from '../i18n';
-import { liveMessagesFor } from './messages';
+import { formatNumber, type Locale } from '../i18n';
+import { fill, liveMessagesFor } from './messages';
 import { liveAssistant } from './store';
 
 const PROJECT_IN_PATH =
@@ -55,6 +55,21 @@ export function LiveChat({ locale }: { readonly locale: Locale }) {
           >
             <strong>{text.roles[line.role]}: </strong>
             {line.failed ? (text.failures[line.text] ?? text.failureOther) : line.text}
+            {line.steps && line.steps.length > 0 && (
+              <details className="live-chat-steps">
+                <summary>
+                  {fill(text.steps, { n: formatNumber(locale, line.steps.length) })}
+                </summary>
+                <ul>
+                  {line.steps.map((step, index) => (
+                    <li key={index}>
+                      {step.summary} —{' '}
+                      <span data-status={step.status}>{text.stepStatus[step.status]}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </p>
         ))}
         {state.asking && <p className="muted">{text.thinking}</p>}

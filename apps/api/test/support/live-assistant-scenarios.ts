@@ -6,6 +6,7 @@ import { expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { defineCapability, LiveCapabilityRegistry } from '../../src/live-assistant/capabilities.js';
+import { screenCapabilities } from '../../src/live-assistant/screen-capabilities.js';
 import { MIN_SECOND_CONFIRMATION_MS } from '../../src/live-assistant/live-gateway.js';
 import type { LiveAssistantService } from '../../src/live-assistant/live-assistant.service.js';
 import { say, toolCall, use, type ScriptedModel } from './scripted-model.js';
@@ -106,6 +107,10 @@ export const scenarioRegistry = new LiveCapabilityRegistry([
       executions.push('projects.overview');
       return Promise.resolve({ count: 3 });
     },
+  }),
+  // The real screen capabilities: they only name a page or a draft for the browser.
+  ...screenCapabilities({
+    projects: { get: () => Promise.resolve({ title: 'Spring plan' }) } as never,
   }),
 ]);
 
@@ -1183,5 +1188,91 @@ export function liveAssistantScenarios(ctxOf: () => ScenarioCtx): void {
     const other = await ctx().service.costSummary(ctx().otherContext);
     expect(other.month.costUsd).toBe(0);
     expect(other.month.sessions).toBe(0);
+  });
+
+  it('shows a page and a form draft on the owner’s screen without anything to confirm, and records it', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    const session = await startText();
+    model().script(
+      use(
+        toolCall(
+          'screen_fill_form',
+          { form: 'new_project', title: 'Spring plan', initialProblem: 'Sales fell.', code: '' },
+          'a',
+        ),
+        toolCall('screen_open', { page: 'project', projectId: PROJECT, tab: 'workflow' }, 'b'),
+      ),
+      say('I opened it and put a draft in.'),
+    );
+    const answer = await ask(
+      session.id,
+      'start a project about falling sales, and show me the spring plan',
+    );
+    expect(answer.actions).toEqual([]);
+    expect(answer.screen).toEqual([
+      {
+        type: 'fill',
+        form: 'new_project',
+        values: { title: 'Spring plan', initialProblem: 'Sales fell.' },
+      },
+      { type: 'open', page: 'project', projectId: PROJECT, tab: 'workflow' },
+    ]);
+    expect(answer.steps.map((step) => [step.capability, step.status])).toEqual([
+      ['screen.fill_form', 'done'],
+      ['screen.open', 'done'],
+    ]);
+    expect(answer.steps[1]?.summary).toContain('Spring plan');
+    // Recorded like any other call, and nothing was waiting for a person.
+    expect(await ledger(session.id)).toEqual([
+      { capability: 'screen.fill_form', status: 'executed' },
+      { capability: 'screen.open', status: 'executed' },
+    ]);
+    const told = toolMessages(model().requests[1]!);
+    expect(JSON.stringify(told)).not.toContain('"values"');
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('refuses a draft the form would not take, and a page that is not a page, and shows nothing', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    const session = await startText();
+    model().script(
+      use(
+        toolCall('screen_fill_form', { form: 'new_project', code: 'has space' }, 'a'),
+        toolCall('screen_open', { page: '/admin/users', projectId: '', tab: '' }, 'b'),
+        toolCall('screen_open', { page: 'costs', projectId: PROJECT, tab: '' }, 'c'),
+      ),
+      say('Could not.'),
+    );
+    const answer = await ask(session.id, 'do odd things');
+    expect(answer.screen).toEqual([]);
+    expect(toolMessages(model().requests[1]!).map((m) => m['reason'])).toEqual([
+      'invalid_params',
+      'invalid_params',
+      'invalid_params',
+    ]);
+    expect(await ledger(session.id)).toEqual([
+      { capability: 'screen.fill_form', status: 'refused' },
+      { capability: 'screen.open', status: 'refused' },
+      { capability: 'screen.open', status: 'refused' },
+    ]);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('offers no screen tools when the assistant may use only chosen projects', async () => {
+    model().reset();
+    await ctx().configure({
+      ...EXECUTOR,
+      'live_assistant.access_scope': 'selected_projects',
+      'live_assistant.access_project_ids': [PROJECT],
+    });
+    const session = await startText();
+    model().script(say('Hello.'));
+    await ask(session.id, 'hi');
+    const offered = (model().requests[0]?.tools ?? []).map((tool) => tool.name);
+    expect(offered).toContain('project_read');
+    expect(offered.some((name) => name.startsWith('screen_'))).toBe(false);
+    await ctx().service.endSession(ctx().context, session.id, 'user');
   });
 }

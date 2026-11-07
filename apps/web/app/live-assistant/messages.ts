@@ -69,12 +69,17 @@ export interface LiveMessages {
       readonly stop: string;
       readonly roles: Record<'user' | 'assistant', string>;
       readonly waiting: string;
+      /** "What it did" under an answer: the count, and where each step stands. */
+      readonly steps: string;
+      readonly stepStatus: Record<'done' | 'waiting' | 'refused' | 'failed', string>;
       readonly notReady: Record<'disabled' | 'disclosure' | 'executor_not_configured', string>;
       /** Why a request failed, by the problem code the server gave. */
       readonly failures: Record<string, string>;
       readonly failureOther: string;
     };
   };
+  /** What the assistant puts on the screen. */
+  readonly screen: { readonly draftNote: string };
   readonly history: {
     readonly title: string;
     readonly empty: string;
@@ -204,6 +209,13 @@ const fa: LiveMessages = {
       stop: 'پایان گفتگوی نوشتاری',
       roles: { user: 'شما', assistant: 'دستیار' },
       waiting: 'تغییرهای پیشنهادی در کارت تأیید پایین صفحه منتظر شماست.',
+      steps: 'مراحل کار ({n})',
+      stepStatus: {
+        done: 'انجام شد',
+        waiting: 'منتظر تأیید شما',
+        refused: 'رد شد',
+        failed: 'ناموفق',
+      },
       notReady: {
         disabled: 'دستیار در تنظیمات خاموش است.',
         disclosure: 'هشدار حریم خصوصی هنوز در تنظیمات دستیار پذیرفته نشده است.',
@@ -217,6 +229,11 @@ const fa: LiveMessages = {
       failureOther: 'درخواست انجام نشد. دوباره تلاش کنید.',
     },
   },
+  screen: {
+    draftNote:
+      'داکو مقدارها را به‌صورت پیش‌نویس در فرم گذاشت. بررسی کنید، هر چه لازم است عوض کنید و خودتان «ایجاد» را بزنید؛ چیزی هنوز ثبت نشده است.',
+  },
+
   history: {
     title: 'گفتگوهای صوتی',
     empty: 'هنوز گفتگوی صوتی‌ای انجام نشده است.',
@@ -367,6 +384,13 @@ const en: LiveMessages = {
       roles: { user: 'You', assistant: 'Assistant' },
       waiting:
         'Proposed changes are waiting for you on the confirmation card at the bottom of the page.',
+      steps: 'What it did ({n})',
+      stepStatus: {
+        done: 'Done',
+        waiting: 'Waiting for you',
+        refused: 'Refused',
+        failed: 'Failed',
+      },
       notReady: {
         disabled: 'The assistant is switched off in settings.',
         disclosure: 'The privacy notice has not been accepted in the assistant settings yet.',
@@ -381,6 +405,11 @@ const en: LiveMessages = {
       failureOther: 'The request did not work. Try again.',
     },
   },
+  screen: {
+    draftNote:
+      'The assistant put the values into the form as a draft. Read them, change what you need and press Create yourself; nothing has been saved yet.',
+  },
+
   history: {
     title: 'Voice conversations',
     empty: 'No voice conversation yet.',

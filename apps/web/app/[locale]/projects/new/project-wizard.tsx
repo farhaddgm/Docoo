@@ -1,5 +1,6 @@
 'use client';
 
+import type { LiveNewProjectFill } from '@docoo/contracts';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -11,6 +12,13 @@ import {
   type ProblemTemplateId,
 } from '@docoo/contracts';
 import { formatNumber, type Locale, textDir } from '../../../i18n';
+import { liveMessagesFor } from '../../../live-assistant/messages';
+import { highlightFields } from '../../../live-assistant/screen';
+import {
+  filledFields,
+  NEW_PROJECT_IDS,
+  useAssistantForm,
+} from '../../../live-assistant/screen-forms';
 import { fill } from '../../agents/agent-messages';
 import { ModelPicker } from '../../settings/model-picker';
 import { ResearchPresetPicker } from '../../settings/research-presets';
@@ -178,6 +186,8 @@ export function ProjectWizard({
   const [opened, setOpened] = useState<Partial<Record<AdvancedSection, boolean>>>({});
   const [defaultCriteria, setDefaultCriteria] = useState<Criterion[] | null>(null);
   const [restored, setRestored] = useState(false);
+  /** The assistant put a draft into the form; the owner has not saved anything yet. */
+  const [assistantDraft, setAssistantDraft] = useState(false);
   const [ready, setReady] = useState(false);
   const [definitions, setDefinitions] = useState<Definition[]>([]);
   const [baseline, setBaseline] = useState<Effective | null>(null);
@@ -511,6 +521,24 @@ export function ProjectWizard({
     });
   }
 
+  /**
+   * The live assistant puts values into the basics the way typing would (so the code is suggested
+   * from the title and nothing is saved): the owner reads them, changes what they like and presses
+   * Create. Only these text fields can be filled; the model, the connection and every other
+   * setting stay as they are.
+   */
+  function applyAssistantFill(draft: LiveNewProjectFill) {
+    setStep(PROBLEM_STEP);
+    const blank = emptyProject(locale);
+    const fields = filledFields(draft);
+    for (const field of fields) {
+      changeBasics({ ...blank, [field]: draft[field] }, field);
+    }
+    setAssistantDraft(true);
+    highlightFields(fields.map((field) => NEW_PROJECT_IDS[field]));
+  }
+  useAssistantForm('new_project', ready, applyAssistantFill);
+
   const stepName = text.steps[step]!;
   const modelChanged = connectionId !== '' && model !== '';
   const criteriaChanged = customCriteria !== null;
@@ -640,6 +668,11 @@ export function ProjectWizard({
           <button type="button" className="link-like" onClick={discard}>
             {text.discardDraft}
           </button>
+        </p>
+      )}
+      {assistantDraft && (
+        <p className="notice info" role="status">
+          {liveMessagesFor(locale).screen.draftNote}
         </p>
       )}
       <Notice notice={action.notice} />

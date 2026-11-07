@@ -1,9 +1,12 @@
 'use client';
 
+import type { Route } from 'next';
+import { useRouter } from 'next/navigation';
 import { useEffect, useSyncExternalStore } from 'react';
 
 import { LiveConfirmations } from './live-confirmations';
 import { LiveAssistantPill } from './pill';
+import { screenBus, setScreenPush } from './screen';
 import { isLiveActive } from './state';
 import { liveAssistant } from './store';
 import { createFakeTransport, type FakeTransportOptions } from './transport';
@@ -19,6 +22,17 @@ export function LiveAssistantHost() {
     () => isLiveActive(liveAssistant.getSnapshot().status),
     () => false,
   );
+
+  // What the assistant shows on the screen goes through the application's own router.
+  const router = useRouter();
+  useEffect(() => {
+    setScreenPush((href) => router.push(href as Route));
+    liveAssistant.setScreenHandler((list) => screenBus.apply(list));
+    return () => {
+      liveAssistant.setScreenHandler(null);
+      setScreenPush(() => undefined);
+    };
+  }, [router]);
 
   // Reloading or closing the tab ends a live session for good, so the browser asks first.
   useEffect(() => {

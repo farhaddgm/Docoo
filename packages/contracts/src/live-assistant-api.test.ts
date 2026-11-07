@@ -7,6 +7,7 @@ import {
   endLiveSessionSchema,
   liveCancelReasons,
   liveRefusalReasons,
+  liveScreenInstructionSchema,
   liveSessionEndReasons,
   proposeLiveActionSchema,
   reportLiveUsageSchema,
@@ -110,5 +111,65 @@ describe('live assistant requests', () => {
     for (const list of [liveSessionEndReasons, liveRefusalReasons, liveCancelReasons]) {
       expect(new Set(list).size).toBe(list.length);
     }
+  });
+});
+
+describe('what the assistant may show on the screen', () => {
+  const project = '11111111-1111-4111-8111-111111111111';
+
+  it('opens a named page, never an address', () => {
+    expect(liveScreenInstructionSchema.safeParse({ type: 'open', page: 'costs' }).success).toBe(
+      true,
+    );
+    expect(
+      liveScreenInstructionSchema.safeParse({
+        type: 'open',
+        page: 'project',
+        projectId: project,
+        tab: 'workflow',
+      }).success,
+    ).toBe(true);
+    for (const bad of [
+      { type: 'open', page: '/admin/users' },
+      { type: 'open', page: 'https://evil.example' },
+      { type: 'open', page: 'costs', url: 'https://evil.example' },
+      { type: 'open', page: 'project', projectId: 'not-an-id' },
+      { type: 'open', page: 'project', tab: 'secrets' },
+      { type: 'navigate', page: 'costs' },
+    ]) {
+      expect(liveScreenInstructionSchema.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
+    }
+  });
+
+  it('fills the new-project form with a few text values and nothing else', () => {
+    const ok = {
+      type: 'fill',
+      form: 'new_project',
+      values: { title: 'Spring plan', initialProblem: 'Sales fell.', outputLanguage: 'fa' },
+    };
+    expect(liveScreenInstructionSchema.safeParse(ok).success).toBe(true);
+    for (const values of [
+      {},
+      { title: '' },
+      { title: 'x'.repeat(201) },
+      { code: '-bad code' },
+      { outputLanguage: 'de' },
+      { connectionId: project },
+      { model: 'gpt-x' },
+      { title: 'Spring plan', topics: ['a'] },
+    ]) {
+      expect(
+        liveScreenInstructionSchema.safeParse({ type: 'fill', form: 'new_project', values })
+          .success,
+        JSON.stringify(values),
+      ).toBe(false);
+    }
+    expect(
+      liveScreenInstructionSchema.safeParse({
+        type: 'fill',
+        form: 'settings',
+        values: { title: 'x' },
+      }).success,
+    ).toBe(false);
   });
 });

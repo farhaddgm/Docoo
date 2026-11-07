@@ -240,6 +240,98 @@ export const liveUsageAnswerSchema = z.object({
 export type LiveUsageAnswer = z.infer<typeof liveUsageAnswerSchema>;
 
 // ---------------------------------------------------------------------------------------------
+// What the assistant shows on the screen
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Pages the assistant may open for the owner. A name, never an address: the browser maps each to
+ * its own route, so a model cannot send the owner anywhere else.
+ */
+export const liveScreenPages = [
+  'projects',
+  'new_project',
+  'project',
+  'knowledge',
+  'notifications',
+  'costs',
+  'providers',
+  'topics',
+  'explorations',
+  'agents',
+  'brain',
+  'businesses',
+  'templates',
+] as const;
+export type LiveScreenPage = (typeof liveScreenPages)[number];
+
+/** The sections of one project's page (`?tab=`). */
+export const liveProjectTabs = [
+  'overview',
+  'business',
+  'knowledge',
+  'agents',
+  'settings',
+  'workflow',
+  'requirements',
+  'timeline',
+  'problem',
+  'research',
+  'solutions',
+  'documents',
+  'evaluation',
+] as const;
+export type LiveProjectTab = (typeof liveProjectTabs)[number];
+
+/**
+ * What goes into the new-project form as a draft. The owner reads it and presses "Create"
+ * themselves: nothing here saves, and nothing here touches the model, the connection or any other
+ * setting of the project. Limits are the form's own (the API allows more; a model need not write it).
+ */
+export const liveNewProjectFillFields = z.strictObject({
+  title: z.string().trim().min(1).max(200).optional(),
+  description: z.string().trim().max(2000).optional(),
+  initialProblem: z.string().trim().min(1).max(4000).optional(),
+  expectedOutput: z.string().trim().max(2000).optional(),
+  code: z
+    .string()
+    .trim()
+    .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/u)
+    .optional(),
+  outputLanguage: z.enum(['fa', 'en']).optional(),
+});
+/** At least one value must be given. */
+export const hasFillValue = (values: Record<string, unknown>): boolean =>
+  Object.values(values).some((value) => value !== undefined);
+export const liveNewProjectFillSchema = liveNewProjectFillFields.refine(hasFillValue, {
+  message: 'Give at least one value.',
+});
+export type LiveNewProjectFill = z.infer<typeof liveNewProjectFillSchema>;
+
+/** An instruction for the browser, from a screen capability's result. It changes no data. */
+export const liveScreenInstructionSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    type: z.literal('open'),
+    page: z.enum(liveScreenPages),
+    projectId: uuid.optional(),
+    tab: z.enum(liveProjectTabs).optional(),
+  }),
+  z.strictObject({
+    type: z.literal('fill'),
+    form: z.literal('new_project'),
+    values: liveNewProjectFillSchema,
+  }),
+]);
+export type LiveScreenInstruction = z.infer<typeof liveScreenInstructionSchema>;
+
+/** One step the executor took for a typed request, for the list under its answer. */
+export const liveAskStepSchema = z.object({
+  capability: z.string(),
+  summary: z.string(),
+  status: z.enum(['done', 'waiting', 'refused', 'failed']),
+});
+export type LiveAskStep = z.infer<typeof liveAskStepSchema>;
+
+// ---------------------------------------------------------------------------------------------
 // What it cost
 // ---------------------------------------------------------------------------------------------
 
@@ -290,6 +382,10 @@ export const liveAskAnswerSchema = z.object({
   answer: z.string(),
   /** The changes proposed while answering; each waits for a person to confirm it. */
   actions: z.array(liveActionViewSchema),
+  /** What to show on the screen (open a page, put a draft into a form); changes no data. */
+  screen: z.array(liveScreenInstructionSchema),
+  /** What the executor did, step by step, for the owner to read. */
+  steps: z.array(liveAskStepSchema),
   toolCalls: z.number().int(),
   stop: z.enum(liveAskStops),
   /** When a model call failed: its kind (never a message), so the screen can say what to check. */
