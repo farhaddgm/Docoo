@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Security
+
+- Rebuild the Caddy, SeaweedFS, Temporal, WAL-G (PostgreSQL), rclone, Tempo and OpenTelemetry Collector images with `golang.org/x/net` v0.62.0 to address CVE-2026-78661 (a high-severity denial of service in its HTML parser, reported by the image scan). Tempo and the Collector also move `golang.org/x/crypto` to v0.58.0 and `golang.org/x/text` to v0.43.0, which that `x/net` requires. The application is unchanged: no migration and no API change.
+
 ## [0.53.0] — 2026-11-06
 
 Back-office layout and one clearer settings page. Interface only: no migration and no API change.
