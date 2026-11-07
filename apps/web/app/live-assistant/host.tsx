@@ -26,7 +26,7 @@ export function LiveAssistantHost() {
   // What the assistant shows on the screen goes through the application's own router.
   const router = useRouter();
   useEffect(() => {
-    setScreenPush((href) => router.push(href as Route));
+    setScreenPush((href) => router.push(`${href}` as Route));
     liveAssistant.setScreenHandler((list) => screenBus.apply(list));
     return () => {
       liveAssistant.setScreenHandler(null);
