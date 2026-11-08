@@ -4,6 +4,20 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.55.0] — 2026-11-08
+
+The Smart chat tab is tidier, the side list of blocks on the project tabs shows real names, every screen that loads shows grey placeholders instead of a bare "Loading…", and the language switch on the sign-in page is a button. Interface only: no migration and no API change.
+
+### Changed
+
+- **Smart chat tab.** The live conversation's intro sits under an info icon beside its title, and the button that ends a typed conversation sits in the same row. Voice conversations are listed under collapsed age groups (last 24 hours, 7 days, 30 days, older) with a faint line between conversations. The cost block is a small table (total, voice, typed, tokens): the last 24 hours show at once and the 7 and 30 day rows open on request. The typed conversation is shown as bubbles, with its steps folded inside. The Smart chat's help line was removed and its question box shows two lines. The window's normal size is 10 % taller and its maximized size 10 % narrower; on phones it takes the height under the top bar.
+- **Loading placeholders.** About 45 screens (the lists and tables, the project tabs, knowledge, settings, accounts, agents) show grey shapes of the content to come instead of a "Loading…" line, so a page keeps its size when its data arrives. The signed-in layout (navigation and top bar) is drawn the same way while the session loads. Screen readers still hear what is loading, and the shimmer stops for people who ask their system for less motion.
+- **Sign-in page.** The language switch is a button that shows the other language instead of a dropdown.
+
+### Fixed
+
+- **The side list of blocks on the project tabs** showed the text "true" instead of each block's name. It now shows the name of the block, and a link scrolls to its block with room left under the top bar (and under the row of chips on small screens).
+
 ## [0.54.0] — 2026-11-07
 
 The live assistant can now show things on the owner's screen: it opens a page, and it puts a draft into the new-project form for the owner to read and save. This release also rebuilds the infrastructure images with a patched library. No migration. The assistant's API answer gained two fields (`screen` and `steps`); the web and the API are released together.
