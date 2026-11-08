@@ -2172,7 +2172,7 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   flex-direction: column;
   width: min(27.5rem, calc(100vw - 2rem));
   /* Never taller than the space under the 4rem top bar, so the Smart toggle stays clickable. */
-  height: min(42.625rem, calc(100vh - 5.5rem));
+  height: min(46.8875rem, calc(100vh - 5.5rem));
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -2185,7 +2185,7 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
 }
 
 .smart-panel.smart-maximized {
-  width: min(56rem, calc(100vw - 2rem));
+  width: min(50.4rem, calc(100vw - 2rem));
   height: calc(100vh - 5.5rem);
 }
 
