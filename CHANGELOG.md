@@ -4,6 +4,14 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.55.1] — 2026-11-08
+
+Patch release. No migration and no API change.
+
+### Fixed
+
+- **The draft step names the form's fields in the owner's words.** Under the live assistant's answer, the step for putting a draft into the new-project form read "(title, initialProblem)", the form's field keys, in the Persian interface too. It now reads "(عنوان، مسئله)" in Persian and "(title, problem)" in English (title, description, problem, expected output, code, output language).
+
 ## [0.55.0] — 2026-11-08
 
 The Smart chat tab is tidier, the side list of blocks on the project tabs shows real names, every screen that loads shows grey placeholders instead of a bare "Loading…", and the language switch on the sign-in page is a button. Interface only: no migration and no API change.
