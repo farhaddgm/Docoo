@@ -5,6 +5,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 
+import { SectionTitle } from '../info-tip';
 import { formatNumber, type Locale } from '../i18n';
 import { LiveChat } from './live-chat';
 import { fill, liveMessagesFor } from './messages';
@@ -55,18 +56,34 @@ export function LiveCard({
 
   return (
     <section className="live-card" aria-label={fill(text.card.title, name)}>
-      <h3>{fill(text.card.title, name)}</h3>
-      <p className="muted">{fill(text.card.intro, name)}</p>
+      <div className="live-card-head">
+        <SectionTitle as="h3" help={fill(text.card.intro, name)}>
+          {fill(text.card.title, name)}
+        </SectionTitle>
+        {typed && (
+          <button
+            type="button"
+            className="secondary-button"
+            aria-pressed={active}
+            disabled={busy}
+            onClick={() => void liveAssistant.stop()}
+          >
+            {text.card.typing.stop}
+          </button>
+        )}
+      </div>
       <div className="toolbar">
-        <button
-          type="button"
-          className={active ? 'secondary-button' : 'primary-button'}
-          aria-pressed={active}
-          disabled={busy || (!active && !canStart)}
-          onClick={() => void (active ? liveAssistant.stop() : liveAssistant.start())}
-        >
-          {typed ? text.card.typing.stop : label}
-        </button>
+        {!typed && (
+          <button
+            type="button"
+            className={active ? 'secondary-button' : 'primary-button'}
+            aria-pressed={active}
+            disabled={busy || (!active && !canStart)}
+            onClick={() => void (active ? liveAssistant.stop() : liveAssistant.start())}
+          >
+            {label}
+          </button>
+        )}
         {!active && !busy && (
           <button
             type="button"

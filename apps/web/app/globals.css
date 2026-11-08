@@ -2172,7 +2172,7 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
   flex-direction: column;
   width: min(27.5rem, calc(100vw - 2rem));
   /* Never taller than the space under the 4rem top bar, so the Smart toggle stays clickable. */
-  height: min(42.625rem, calc(100vh - 5.5rem));
+  height: min(46.8875rem, calc(100vh - 5.5rem));
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -2185,7 +2185,7 @@ h2[tabindex='-1']:focus:not(:focus-visible) {
 }
 
 .smart-panel.smart-maximized {
-  width: min(56rem, calc(100vw - 2rem));
+  width: min(50.4rem, calc(100vw - 2rem));
   height: calc(100vh - 5.5rem);
 }
 
@@ -4210,7 +4210,7 @@ button.link-button {
   text-align: center;
 }
 
-.login-language select {
+.login-language {
   width: 100%;
   min-height: 2.875rem;
   color: var(--color-primary-strong);
@@ -5740,26 +5740,126 @@ button.link-button {
   }
 }
 
+/* The typed conversation: one bubble per message, yours on the right, the assistant's on the left. */
 .live-chat-log {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   max-height: 22rem;
+  padding: var(--space-1);
   overflow-y: auto;
 }
 
 .live-chat-line {
+  display: grid;
+  gap: var(--space-1);
+  align-self: flex-end;
+  max-inline-size: 88%;
   margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+[dir='rtl'] .live-chat-line {
+  align-self: flex-start;
+}
+
+.live-chat-line[data-role='user'] {
+  border-color: transparent;
+  border-end-end-radius: 0.25rem;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.live-chat-line[data-role='user'] .live-chat-who {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.live-chat-line[data-role='assistant'] {
+  align-self: flex-start;
+  border-end-start-radius: 0.25rem;
+  background: var(--color-surface-2);
+}
+
+[dir='rtl'] .live-chat-line[data-role='assistant'] {
+  align-self: flex-end;
+}
+
+.live-chat-line[data-failed='true'] {
+  border-color: var(--color-danger-ink);
+  background: var(--color-danger-bg);
+}
+
+.live-chat-who {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.live-chat-text {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.live-chat-thinking .live-chat-text {
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-chat-thinking .live-chat-text {
+    animation: none;
+  }
 }
 
 .live-chat-steps {
   margin-block-start: var(--space-1);
-  font-size: 0.875rem;
+  padding-block-start: var(--space-1);
+  border-block-start: 1px solid var(--color-border);
+  font-size: 0.8125rem;
+}
+
+.live-chat-steps summary {
+  color: var(--color-muted);
+  cursor: pointer;
 }
 
 .live-chat-steps ul {
+  display: grid;
+  gap: var(--space-1);
   margin: var(--space-1) 0 0;
-  padding-inline-start: 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.live-chat-steps li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.live-chat-form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.live-chat-form textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
 }
 
 /* What the assistant just touched on the page, so the owner sees where to look. */
@@ -5794,6 +5894,22 @@ button.link-button {
 
 .live-card h3 {
   margin: 0;
+}
+
+/* The title with its help icon, and the button that ends a typed conversation opposite it. */
+.live-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* The title with its help icon beside it. */
+.live-card .heading-with-tip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .live-card p {
@@ -5919,11 +6035,107 @@ button.link-button {
   list-style: none;
 }
 
+/* The age groups open and close; every conversation inside is told from the next by a faint line. */
+.live-history-groups {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.live-history-group {
+  border-block-start: 1px solid var(--color-border);
+}
+
+.live-history-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.live-history-item {
+  padding-block: var(--space-2);
+  border-block-start: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.live-history-item:first-child {
+  border-block-start: 0;
+}
+
 .live-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'when toggle'
+    'meta meta';
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.live-history-when {
+  grid-area: when;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+  font-weight: 600;
+}
+
+.live-history-toggle {
+  grid-area: toggle;
+}
+
+.live-history-meta {
+  grid-area: meta;
+  font-size: 0.8125rem;
+}
+
+/* What it cost: the last 24 hours at once, the longer periods on request. */
+.live-spend {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+
+.live-spend-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+}
+
+.live-spend-table {
+  font-size: 0.8125rem;
+}
+
+.live-spend-table th,
+.live-spend-table td {
+  padding: var(--space-1) var(--space-2);
+  text-align: center;
+}
+
+.live-spend-table thead th {
+  background: none;
+  font-size: 0.6875rem;
+  white-space: normal;
+}
+
+.live-spend-table th[scope='row'] {
+  text-align: start;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.live-spend-toggle {
+  justify-self: start;
+  font-size: 0.8125rem;
 }
 
 .secondary-button.live-danger {
@@ -6026,9 +6238,20 @@ button.link-button {
   font-weight: 700;
 }
 
-/* A block reached from the side list stops below any sticky header. */
-.stage-nav [data-nav] {
-  scroll-margin-block-start: var(--space-4);
+/* A block reached from a side list stops below the sticky top bar (4rem) with a gap to spare. */
+.stage-nav [data-nav],
+.biz-section,
+.biz-group {
+  scroll-margin-block-start: 5.5rem;
+}
+
+/* Where the list is a row of chips under the top bar, the block also clears that row. */
+@media (max-width: 60rem) {
+  .stage-nav [data-nav],
+  .biz-section,
+  .biz-group {
+    scroll-margin-block-start: 8rem;
+  }
 }
 
 /* ---------- Phones and touch screens ---------- */
@@ -6187,12 +6410,6 @@ button.link-button {
     gap: var(--space-2);
   }
 
-  .stage-nav [data-nav],
-  .biz-section,
-  .biz-group {
-    scroll-margin-block-start: 7rem;
-  }
-
   /* Facts and counts sit two to a row, so a long summary does not become a long scroll. */
   .facts,
   .counts {
@@ -6327,4 +6544,162 @@ button.link-button {
 /* A tab panel that is not chosen is hidden, whatever display its layout class gives it. */
 [role='tabpanel'][hidden] {
   display: none;
+}
+
+/* On a phone the Smart window takes the height under the top bar, so the chat has room to show. */
+@media (max-width: 40rem) {
+  .smart-panel {
+    height: calc(100dvh - 5rem);
+  }
+}
+
+/* ---------- Loading placeholders (skeleton.tsx) ---------- */
+
+.skeleton-region {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.skeleton-panel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.skeleton-lines {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skeleton-line {
+  block-size: 0.875rem;
+}
+
+.skeleton-lines > .skeleton-line:last-child:not(:only-child) {
+  inline-size: 62%;
+}
+
+.skeleton-lines > .skeleton-line:nth-child(2n) {
+  inline-size: 88%;
+}
+
+.skeleton-title {
+  inline-size: 38%;
+  min-inline-size: 7rem;
+  block-size: 1.25rem;
+}
+
+.skeleton-figure {
+  inline-size: 55%;
+  block-size: 1.75rem;
+}
+
+.skeleton-dot {
+  flex: none;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: 50%;
+}
+
+.skeleton-table {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.skeleton-table-row {
+  display: grid;
+  gap: var(--space-4);
+  padding: 0.9rem var(--space-4);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.skeleton-table-row:last-child {
+  border-block-end: 0;
+}
+
+.skeleton-table-head {
+  background: var(--color-surface-2);
+}
+
+.skeleton-cell,
+.skeleton-cell-head {
+  block-size: 0.875rem;
+}
+
+.skeleton-cell-head {
+  inline-size: 60%;
+  block-size: 0.75rem;
+}
+
+.skeleton-table-row > .skeleton-cell:first-child {
+  inline-size: 70%;
+}
+
+.skeleton-list {
+  gap: 0;
+}
+
+.skeleton-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.skeleton-list-row:last-child {
+  border-block-end: 0;
+}
+
+.skeleton-list-row > .skeleton-lines {
+  flex: 1;
+  min-width: 0;
+}
+
+.skeleton-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.skeleton-tile {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+/* The shimmer stops for people who ask the system for less motion; the grey shapes stay. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* The navigation while the session loads: shapes in the sidebar's own colours. */
+.sidebar-loading .skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--sidebar-hover) 25%,
+    var(--sidebar-active) 50%,
+    var(--sidebar-hover) 75%
+  );
+  background-size: 200% 100%;
+}
+
+.sidebar-loading .nav-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skeleton-nav-label {
+  inline-size: 40%;
+  block-size: 0.625rem;
+  margin-block: var(--space-3) var(--space-1);
+}
+
+.skeleton-nav-item {
+  block-size: 2.25rem;
+  border-radius: var(--radius-sm);
 }

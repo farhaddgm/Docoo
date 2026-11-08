@@ -18,6 +18,7 @@ import { Notice, useAction, explainError } from '../use-action';
 import { ReasonBar } from '../reason-bar';
 import { templatesMessages } from './templates-messages';
 import { FieldLabel, SectionTitle } from '../../info-tip';
+import { PanelsSkeleton } from '../../skeleton';
 
 interface Template {
   key: string;
@@ -100,7 +101,7 @@ export function Templates({
       </p>
     );
   }
-  if (!catalog || !current) return <p role="status">{text.loading}</p>;
+  if (!catalog || !current) return <PanelsSkeleton label={text.loading} />;
   return (
     <div className="stack">
       <LevelsSection

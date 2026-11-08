@@ -15,6 +15,7 @@ import { summarizeProgress, type ProgressStep } from './progress-model';
 import { StageOutputDialog } from './stage-output-dialog';
 import { workflowMessages } from './workflow-messages';
 import { FieldLabel } from '../../../info-tip';
+import { ListSkeleton, PanelsSkeleton } from '../../../skeleton';
 
 interface Run {
   id: string;
@@ -288,7 +289,7 @@ export function WorkflowPanel({
       </p>
     );
   }
-  if (!overview) return <p role="status">{common.loading}</p>;
+  if (!overview) return <PanelsSkeleton label={common.loading} />;
 
   const current = overview.run;
   const stageLabel = (stage: string) => text.stages[stage] ?? stage;
@@ -840,7 +841,7 @@ function ReviewPanel({
           </div>
         </div>
       ) : !detail ? (
-        <p role="status">{common.loading}</p>
+        <ListSkeleton label={common.loading} rows={3} />
       ) : !output ? (
         <p className="muted">{text.noPendingOutput}</p>
       ) : (

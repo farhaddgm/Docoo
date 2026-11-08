@@ -14,6 +14,7 @@ import { knowledgeMessages, type KnowledgeText } from './knowledge-messages';
 import { MIN_RESOLUTION_LENGTH, type Conflict } from './knowledge-types';
 import { parseConflictAnalysis } from './reasons';
 import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
+import { ListSkeleton } from '../../skeleton';
 
 function analysisText(text: KnowledgeText, locale: Locale, raw: string): string {
   const analysis = parseConflictAnalysis(raw);
@@ -191,7 +192,7 @@ export function ConflictsPanel({ locale, workspaceId }: { locale: Locale; worksp
           {text.failed}
         </p>
       )}
-      {!failed && items === null && <p role="status">{text.loading}</p>}
+      {!failed && items === null && <ListSkeleton label={text.loading} />}
       {items?.length === 0 && (
         <p className="muted" role="status">
           {text.conflictsEmpty}

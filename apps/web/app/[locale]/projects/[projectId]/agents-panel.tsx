@@ -17,6 +17,7 @@ import { DiffView } from '../../agents/diff-view';
 import { RoleEditor } from '../../agents/role-editor';
 import { explainError, Notice, useAction } from '../../use-action';
 import { SectionTitle } from '../../../info-tip';
+import { TilesSkeleton } from '../../../skeleton';
 
 /** What a form below a role asks for: a reason, then the action. */
 type Form =
@@ -123,7 +124,7 @@ export function AgentsPanel({
       </p>
     );
   }
-  if (!profiles) return <p role="status">{text.loading}</p>;
+  if (!profiles) return <TilesSkeleton label={text.loading} count={6} />;
 
   const formFor = (role: AgentRole) => (form?.role === role ? form : null);
   const reasonOk = reason.trim().length >= 3;

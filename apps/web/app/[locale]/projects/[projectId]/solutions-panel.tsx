@@ -13,6 +13,7 @@ import { solutionMessages } from './solution-messages';
 import { SensitivityPanel } from './sensitivity-panel';
 import { FieldLabel, InfoTip, SectionTitle } from '../../../info-tip';
 import { higherScoredLeftOut, rebalanceWeights } from './criteria-weights';
+import { PanelsSkeleton } from '../../../skeleton';
 
 interface Criterion {
   key: string;
@@ -129,7 +130,7 @@ export function SolutionsPanel({
       </p>
     );
   }
-  if (!set) return <p role="status">{common.loading}</p>;
+  if (!set) return <PanelsSkeleton label={common.loading} />;
 
   const total = sum(draft);
   const criteriaChanged = JSON.stringify(draft) !== JSON.stringify(set.criteria.criteria);

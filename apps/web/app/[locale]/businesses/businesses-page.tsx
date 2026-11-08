@@ -16,6 +16,7 @@ import {
 } from '../projects/[projectId]/business-content';
 import { WorkspacePage } from '../workspace-page';
 import { businessesMessages } from './businesses-messages';
+import { PanelsSkeleton, TilesSkeleton } from '../../skeleton';
 
 interface BusinessPage {
   items: ContenterBusinessItem[];
@@ -120,7 +121,7 @@ function Businesses({ locale, workspaceId }: { locale: Locale; workspaceId: stri
           onClose={() => setOpened(null)}
         />
       )}
-      {state.kind === 'loading' && <p role="status">{text.loading}</p>}
+      {state.kind === 'loading' && <TilesSkeleton label={text.loading} count={3} />}
       {state.kind === 'failed' && (
         <p className="notice error" role="alert">
           {text.failed}
@@ -327,7 +328,7 @@ function BusinessDialog({
           </button>
         </div>
       </div>
-      {detail.kind === 'loading' && <p role="status">{text.detailLoading}</p>}
+      {detail.kind === 'loading' && <PanelsSkeleton label={text.detailLoading} count={2} />}
       {detail.kind === 'failed' && (
         <>
           <p className="notice error" role="alert">

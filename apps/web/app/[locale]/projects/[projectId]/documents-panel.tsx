@@ -15,6 +15,7 @@ import { DocumentWriter } from './document-writer';
 import { editorMessages } from './editor-messages';
 import { SectionTitle } from '../../../info-tip';
 import { PagedRows } from '../../../table-pager';
+import { PanelsSkeleton, TableSkeleton } from '../../../skeleton';
 
 interface DocumentSummary {
   id: string;
@@ -142,7 +143,7 @@ export function DocumentsPanel({
           {common.loadFailed}
         </p>
       ) : items === null ? (
-        <p role="status">{common.loading}</p>
+        <TableSkeleton label={common.loading} rows={4} cols={4} />
       ) : items.length === 0 ? (
         <p className="muted">{text.none}</p>
       ) : (
@@ -270,7 +271,7 @@ function DocumentView({
       </p>
     );
   }
-  if (!doc) return <p role="status">{common.loading}</p>;
+  if (!doc) return <PanelsSkeleton label={common.loading} />;
 
   const current = doc.currentVersion;
   const evaluation = doc.latestEvaluation;

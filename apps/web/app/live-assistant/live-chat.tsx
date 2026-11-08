@@ -47,14 +47,16 @@ export function LiveChat({ locale }: { readonly locale: Locale }) {
     <div className="live-chat">
       <div className="live-chat-log" role="log" aria-label={text.log} aria-live="polite">
         {state.chat.map((line) => (
-          <p
+          <article
             key={line.id}
             className="live-chat-line"
             data-role={line.role}
             data-failed={line.failed}
           >
-            <strong>{text.roles[line.role]}: </strong>
-            {line.failed ? (text.failures[line.text] ?? text.failureOther) : line.text}
+            <p className="live-chat-who">{text.roles[line.role]}</p>
+            <p className="live-chat-text">
+              {line.failed ? (text.failures[line.text] ?? text.failureOther) : line.text}
+            </p>
             {line.steps && line.steps.length > 0 && (
               <details className="live-chat-steps">
                 <summary>
@@ -63,16 +65,24 @@ export function LiveChat({ locale }: { readonly locale: Locale }) {
                 <ul>
                   {line.steps.map((step, index) => (
                     <li key={index}>
-                      {step.summary} —{' '}
-                      <span data-status={step.status}>{text.stepStatus[step.status]}</span>
+                      <span>{step.summary}</span>
+                      <span className="badge" data-status={step.status}>
+                        {text.stepStatus[step.status]}
+                      </span>
                     </li>
                   ))}
                 </ul>
               </details>
             )}
-          </p>
+          </article>
         ))}
-        {state.asking && <p className="muted">{text.thinking}</p>}
+        {state.asking && (
+          <article className="live-chat-line live-chat-thinking" data-role="assistant">
+            <p className="live-chat-text muted" role="status">
+              {text.thinking}
+            </p>
+          </article>
+        )}
         <div ref={end} />
       </div>
       {waiting && (
@@ -81,7 +91,7 @@ export function LiveChat({ locale }: { readonly locale: Locale }) {
         </p>
       )}
       <form
-        className="toolbar"
+        className="live-chat-form"
         onSubmit={(event) => {
           event.preventDefault();
           send();

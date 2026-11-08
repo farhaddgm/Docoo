@@ -23,6 +23,7 @@ import { sectionOpen } from './access';
 import type { SessionIdentity } from './signed-in';
 import { sidebarStorageKey } from '../theme';
 import { ThemePicker } from '../theme-toggle';
+import { Skeleton } from '../skeleton';
 
 /** Pages that exist; the others stay visible but disabled until their slice ships. */
 const implemented: Partial<Record<NavigationKey, string>> = {
@@ -191,6 +192,11 @@ interface AppShellProps {
   /** Signs out in place (the sign-in page then shows its notice); otherwise the shell reloads. */
   readonly onSignOut?: () => void;
   readonly signOutBusy?: boolean;
+  /**
+   * The session is still being read: draw the signed-in layout with grey shapes for the
+   * navigation, so the page does not jump from a bare page to the full one.
+   */
+  readonly loadingShell?: boolean;
   readonly children: ReactNode;
 }
 
@@ -207,6 +213,7 @@ export function AppShell({
   workspaceId,
   onSignOut,
   signOutBusy = false,
+  loadingShell = false,
   children,
 }: AppShellProps) {
   const content = messagesFor(locale);
@@ -346,6 +353,46 @@ export function AppShell({
       {content.skipToContent}
     </a>
   );
+
+  if (loadingShell) {
+    return (
+      <>
+        {skipLink}
+        <div className="shell">
+          <aside id="app-sidebar" className="sidebar sidebar-loading" aria-hidden="true">
+            <div className="sidebar-head">
+              <Brand />
+            </div>
+            <div className="sidebar-nav">
+              {[5, 4, 6].map((count, group) => (
+                <div className="nav-group" key={group}>
+                  <Skeleton className="skeleton-nav-label" />
+                  {Array.from({ length: count }, (_, row) => (
+                    <Skeleton key={row} className="skeleton-nav-item" />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </aside>
+          <div className="main-column">
+            <header className="topbar">
+              <div className="topbar-title">
+                <SectionTitle as="h1" id="page-title" focusable help={subtitle}>
+                  {title}
+                </SectionTitle>
+              </div>
+              {topbarActions}
+            </header>
+            <div className="content">
+              <main id="main-content" tabIndex={-1}>
+                {children}
+              </main>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (!showNavigation) {
     return (

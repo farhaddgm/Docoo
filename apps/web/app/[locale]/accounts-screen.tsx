@@ -14,6 +14,7 @@ import { AppShell } from './app-shell';
 import { AccountPolicyDialog, OwnerCrown } from './account-policy-dialog';
 import { cachedSession } from './session-cache';
 import type { SessionIdentity } from './signed-in';
+import { ListSkeleton, PanelSkeleton, TableSkeleton } from '../skeleton';
 
 type Locale = 'fa' | 'en';
 interface Workspace {
@@ -283,7 +284,7 @@ export function AccountsScreen({
         {body}
       </AppShell>
     );
-  if (guest) return shell(<p role="status">{t.loading}</p>);
+  if (guest) return shell(<PanelSkeleton label={t.loading} />);
   if (denied)
     return shell(
       <section className="auth-card">
@@ -306,7 +307,7 @@ export function AccountsScreen({
         </p>
       )}
       {!data || !identity ? (
-        <p role="status">{t.loading}</p>
+        <TableSkeleton label={t.loading} rows={5} cols={4} />
       ) : (
         <>
           {identity.user.isOwner && (
@@ -846,7 +847,7 @@ function AccessDialog({
           </p>
         )}
         {!data ? (
-          <p>{t.loading}</p>
+          <ListSkeleton label={t.loading} rows={3} />
         ) : (
           <ul className="account-access-list">
             {data[kind]

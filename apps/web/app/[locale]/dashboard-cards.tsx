@@ -8,6 +8,7 @@ import { apiGet } from '../api-client';
 import { formatDateTime, formatNumber, textDir, type Locale } from '../i18n';
 import { reportMessagesFor } from '../report-messages';
 import { workflowMessages } from './projects/[projectId]/workflow-messages';
+import { TilesSkeleton } from '../skeleton';
 
 interface Dashboard {
   waiting: {
@@ -84,7 +85,7 @@ export function DashboardCards({ locale, workspaceId }: { locale: Locale; worksp
   }, [workspaceId]);
 
   if (failed) return <p className="notice error">{content.loadFailed}</p>;
-  if (!data) return <p role="status">{content.loading}</p>;
+  if (!data) return <TilesSkeleton label={content.loading} />;
 
   const number = (value: number) => formatNumber(locale, value);
   const flow = workflowMessages(locale);

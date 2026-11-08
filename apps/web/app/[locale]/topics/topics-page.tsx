@@ -14,6 +14,7 @@ import { WorkspacePage } from '../workspace-page';
 import { topicMessages } from './messages';
 import { PagedRows } from '../../table-pager';
 import { ProjectRowMenu } from '../projects/project-row-menu';
+import { TableSkeleton, TextSkeleton } from '../../skeleton';
 
 type TopicStatus = 'active' | 'archived' | 'deleted';
 type TopicLanguage = 'fa' | 'en';
@@ -194,7 +195,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
             {common.loadFailed}
           </p>
         ) : items === null ? (
-          <p role="status">{common.loading}</p>
+          <TableSkeleton label={common.loading} rows={5} cols={5} />
         ) : items.length === 0 ? (
           <p className="muted">{text.empty}</p>
         ) : (
@@ -299,7 +300,7 @@ function Topics({ locale, workspaceId }: { locale: Locale; workspaceId: string }
           <p>{confirming.kind === 'archive' ? text.archiveEffect : text.deleteEffect}</p>
           <h3>{text.usedBy}</h3>
           {confirming.dependencies === null ? (
-            <p role="status">{common.loading}</p>
+            <TextSkeleton label={common.loading} lines={2} />
           ) : confirming.dependencies.length === 0 ? (
             <p className="muted">{text.notUsed}</p>
           ) : (

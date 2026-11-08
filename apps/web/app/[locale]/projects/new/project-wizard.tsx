@@ -70,6 +70,7 @@ import {
   type DraftSource,
 } from './wizard-model';
 import { FieldLabel, InfoTip, SectionTitle } from '../../../info-tip';
+import { PanelsSkeleton, TextSkeleton } from '../../../skeleton';
 
 const MAX_CODE = 64;
 
@@ -941,7 +942,7 @@ export function ProjectWizard({
                               onChange={setCriteria}
                             />
                           ) : (
-                            <p role="status">{text.criteriaLoading}</p>
+                            <TextSkeleton label={text.criteriaLoading} lines={3} />
                           ))}
                         {section.id === 'solutions' && customCriteria && (
                           <div>
@@ -1070,7 +1071,7 @@ function Review({
       </p>
     );
   }
-  if (!review) return <p role="status">{text.reviewLoading}</p>;
+  if (!review) return <PanelsSkeleton label={text.reviewLoading} count={2} />;
   const rows = SETTING_GROUPS.flatMap((group) => group.keys)
     .map((key) => definitions.find((item) => item.key === key))
     .filter(
