@@ -54,6 +54,16 @@ const PAGE_EN: Record<(typeof liveScreenPages)[number], string> = {
   templates: 'templates',
 };
 
+/** What the owner calls each field of the new-project form. */
+const FIELD_NAMES: Record<string, Record<LiveLocale, string>> = {
+  title: { fa: 'عنوان', en: 'title' },
+  description: { fa: 'شرح', en: 'description' },
+  initialProblem: { fa: 'مسئله', en: 'problem' },
+  expectedOutput: { fa: 'خروجی مورد انتظار', en: 'expected output' },
+  code: { fa: 'کد', en: 'code' },
+  outputLanguage: { fa: 'زبان خروجی', en: 'output language' },
+};
+
 const openParams = z
   .object({
     page: z.enum(liveScreenPages),
@@ -126,17 +136,19 @@ export function screenCapabilities(services: {
     meta: { name: 'screen.fill_form', klass: 'T0', area: 'projects_overview', write: false },
     tool: CAPABILITY_TOOLS['screen.fill_form'],
     params: fillParams,
-    describe: (params, locale) => ({
-      summary: t(
-        locale,
-        `گذاشتن پیش‌نویس در فرم ساخت پروژه (${Object.keys(params)
-          .filter((key) => key !== 'form')
-          .join('، ')})`,
-        `Put a draft into the new-project form (${Object.keys(params)
-          .filter((key) => key !== 'form')
-          .join(', ')})`,
-      ),
-    }),
+    describe: (params, locale) => {
+      // The owner reads the names of the fields in their own words, not the field keys.
+      const names = Object.keys(fillValues(params))
+        .map((key) => FIELD_NAMES[key]?.[locale] ?? key)
+        .join(locale === 'fa' ? '، ' : ', ');
+      return {
+        summary: t(
+          locale,
+          `گذاشتن پیش‌نویس در فرم ساخت پروژه (${names})`,
+          `Put a draft into the new-project form (${names})`,
+        ),
+      };
+    },
     execute: (_execution, params) => {
       // The contract decides what is allowed in; anything else fails here and nothing is shown.
       const checked = liveNewProjectFillSchema.parse(fillValues(params));
