@@ -7,6 +7,7 @@ import { formatDateTime, formatNumber, messagesFor, textDir, type Locale } from 
 import { reportMessagesFor } from '../../../report-messages';
 import { digestOutput, pickOutput } from './output-digest';
 import { workflowMessages } from './workflow-messages';
+import { TextSkeleton } from '../../../skeleton';
 
 interface OutputRow {
   id: string;
@@ -104,7 +105,7 @@ export function StageOutputDialog({
         </button>
       </div>
 
-      {load.kind === 'loading' && <p role="status">{common.loading}</p>}
+      {load.kind === 'loading' && <TextSkeleton label={common.loading} lines={5} />}
       {load.kind === 'failed' && (
         <div className="stack">
           <p className="notice error" role="alert">

@@ -18,6 +18,7 @@ import { ProjectAccessBoundary, useReadOnlyAccess } from '../../../resource-acce
 import { SignedIn } from '../../../signed-in';
 import { buildEvaluationReview, type EvaluationRatingDraft } from './evaluation-lab-form';
 import { textDir } from '../../../../i18n';
+import { PanelsSkeleton, TextSkeleton } from '../../../../skeleton';
 
 type Locale = 'fa' | 'en';
 class LabRequestError extends Error {
@@ -617,7 +618,7 @@ export function EvaluationLabScreen({
           {t.back}
         </Link>
       </header>
-      {state === 'loading' && <p role="status">{t.loading}</p>}
+      {state === 'loading' && <PanelsSkeleton label={t.loading} count={2} />}
       {state === 'guest' && (
         <p role="alert">
           {t.guest} <Link href={`/${locale}/auth/login` as Route}>{t.login}</Link>
@@ -792,7 +793,7 @@ export function EvaluationLabScreen({
               </button>
             )}
           </section>
-          {busy && <p role="status">{t.loading}</p>}
+          {busy && <TextSkeleton label={t.loading} lines={2} />}
           {pack && (
             <section className="card" aria-labelledby="lab-review">
               <h2 id="lab-review">{t.blind}</h2>

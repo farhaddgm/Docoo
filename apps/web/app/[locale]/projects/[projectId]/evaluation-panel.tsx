@@ -11,6 +11,7 @@ import { RequirementCoverage } from './requirements-panel';
 import { StageAgentChat } from './stage-chat';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
+import { PanelsSkeleton } from '../../../skeleton';
 
 interface StageItem {
   id: string | null;
@@ -123,7 +124,7 @@ export function EvaluationPanel({
       </p>
     );
   }
-  if (stage === undefined) return <p role="status">{common.loading}</p>;
+  if (stage === undefined) return <PanelsSkeleton label={common.loading} />;
 
   return (
     <div className="stack">

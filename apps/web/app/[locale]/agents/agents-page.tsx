@@ -9,6 +9,7 @@ import { formatDateTime, formatNumber, type Locale, textDir } from '../../i18n';
 import { SignedIn } from '../signed-in';
 import { agentMessages, fill } from './agent-messages';
 import type { RoleSummary } from './agent-types';
+import { TableSkeleton } from '../../skeleton';
 
 export function AgentsPage({ locale }: { locale: Locale }) {
   const text = agentMessages(locale);
@@ -46,7 +47,7 @@ function Roles({ locale, workspaceId }: { locale: Locale; workspaceId: string })
       </p>
     );
   }
-  if (!roles) return <p role="status">{text.loading}</p>;
+  if (!roles) return <TableSkeleton label={text.loading} rows={6} cols={4} />;
 
   return (
     <section className="card stack" aria-labelledby="agents-heading">

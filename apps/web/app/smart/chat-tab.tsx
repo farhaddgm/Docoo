@@ -282,7 +282,6 @@ export function ChatTab({
       </div>
 
       <div className="smart-messages" role="log" aria-live="polite">
-        {messages.length === 0 && !busy && <p className="muted">{text.chat.empty}</p>}
         {messages.map((message) => (
           <article
             key={message.id}
@@ -348,7 +347,7 @@ export function ChatTab({
         />
         <textarea
           value={input}
-          rows={3}
+          rows={2}
           maxLength={4000}
           placeholder={text.chat.placeholder}
           aria-label={text.chat.placeholder}

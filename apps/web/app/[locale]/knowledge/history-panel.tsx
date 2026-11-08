@@ -11,6 +11,7 @@ import { knowledgeMessages } from './knowledge-messages';
 import type { KnowledgeVersion, ListedReview } from './knowledge-types';
 import { brainTone } from './review-panel';
 import { SectionTitle } from '../../info-tip';
+import { ListSkeleton, TextSkeleton } from '../../skeleton';
 
 /** The versions of a knowledge item and every audit it went through (KNO-002). */
 export function HistoryPanel({
@@ -89,7 +90,7 @@ export function HistoryPanel({
           {text.failed}
         </p>
       )}
-      {!failed && versions === null && <p role="status">{text.loading}</p>}
+      {!failed && versions === null && <ListSkeleton label={text.loading} />}
       {versions && (
         <ol className="version-list">
           {versions.map((item) => {
@@ -131,7 +132,7 @@ export function HistoryPanel({
                 </p>
                 {open &&
                   (shown.content === null ? (
-                    <p role="status">{text.versionLoading}</p>
+                    <TextSkeleton label={text.versionLoading} lines={3} />
                   ) : (
                     <pre className="json-block" dir={textDir(locale)} tabIndex={0}>
                       {shown.content}

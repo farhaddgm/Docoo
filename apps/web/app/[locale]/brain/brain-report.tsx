@@ -14,6 +14,7 @@ import { PagedRows } from '../../table-pager';
 import { SignedIn } from '../signed-in';
 import { brainMessages, fill } from './brain-messages';
 import { Evaluations, type ModelEvaluationSummary, type RoleEvaluationView } from './evaluations';
+import { PanelsSkeleton } from '../../skeleton';
 
 interface ReportSummary {
   id: string;
@@ -328,7 +329,7 @@ function BrainReports({ locale, workspaceId }: { locale: Locale; workspaceId: st
         <section className="card" aria-labelledby="reports-title">
           <h2 id="reports-title">{words.history}</h2>
           {items === null ? (
-            <p role="status">{content.loading}</p>
+            <PanelsSkeleton label={content.loading} />
           ) : items.length === 0 ? (
             <p className="muted">{words.historyEmpty}</p>
           ) : (

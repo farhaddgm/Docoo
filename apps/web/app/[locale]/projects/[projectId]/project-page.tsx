@@ -37,6 +37,7 @@ import { SolutionsPanel } from './solutions-panel';
 import { TimelinePanel } from './timeline-panel';
 import { WorkflowPanel } from './workflow-panel';
 import { ProjectSettingsPanel } from './settings-panel';
+import { PanelsSkeleton } from '../../../skeleton';
 
 const tabs = [
   'overview',
@@ -174,7 +175,7 @@ function ProjectView({
     setRefreshKey((key) => key + 1);
   }, [reload]);
 
-  if (load === 'loading') return <p role="status">{common.loading}</p>;
+  if (load === 'loading') return <PanelsSkeleton label={common.loading} count={2} />;
   if (load === 'failed') {
     return (
       <p className="notice error" role="alert">

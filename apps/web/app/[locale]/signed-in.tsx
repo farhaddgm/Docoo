@@ -6,6 +6,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { messagesFor, type Locale } from '../i18n';
 import { AppShell } from './app-shell';
 import { cachedSession, rememberSession } from './session-cache';
+import { PanelsSkeleton } from '../skeleton';
 
 export interface SessionIdentity {
   user: {
@@ -84,8 +85,9 @@ export function SignedIn({
       identity={state.kind === 'ready' ? state.identity : undefined}
       showNavigation={state.kind === 'ready'}
       workspaceId={state.kind === 'ready' ? state.identity.workspaces[0]?.id : undefined}
+      loadingShell={state.kind === 'loading'}
     >
-      {state.kind === 'loading' && <p role="status">{shell.checkingSession}</p>}
+      {state.kind === 'loading' && <PanelsSkeleton label={shell.checkingSession} count={2} />}
       {state.kind === 'unavailable' && <p className="notice error">{shell.unavailable}</p>}
       {state.kind === 'guest' && <p role="status">{shell.checkingSession}</p>}
       {state.kind === 'ready' && (

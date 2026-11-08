@@ -7,6 +7,7 @@ import { formatDateTime, type Locale, textDir } from '../../../i18n';
 import { reportMessagesFor } from '../../../report-messages';
 import { projectPageMessages } from './messages';
 import { PagedRows } from '../../../table-pager';
+import { ListSkeleton } from '../../../skeleton';
 
 interface Entry {
   id: string;
@@ -59,7 +60,7 @@ export function TimelinePanel({
           {common.loadFailed}
         </p>
       ) : items === null ? (
-        <p role="status">{common.loading}</p>
+        <ListSkeleton label={common.loading} />
       ) : items.length === 0 ? (
         <p className="muted">{text.timelineEmpty}</p>
       ) : (

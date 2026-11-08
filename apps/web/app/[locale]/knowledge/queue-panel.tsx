@@ -19,6 +19,7 @@ import {
 } from './knowledge-types';
 import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
+import { TableSkeleton } from '../../skeleton';
 
 type View = 'documents' | 'claims';
 type Support = '' | 'yes' | 'no' | 'unaudited';
@@ -260,7 +261,7 @@ export function QueuePanel({
           {text.failed}
         </p>
       )}
-      {!failed && rows === null && <p role="status">{text.loading}</p>}
+      {!failed && rows === null && <TableSkeleton label={text.loading} rows={5} cols={5} />}
       {rows?.length === 0 && (
         <p className="muted" role="status">
           {view === 'claims'

@@ -15,6 +15,7 @@ import { RoleEditor } from './role-editor';
 import { SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
 import { PageTabPanel, PageTabs, useTabParam } from '../../page-tabs';
+import { ListSkeleton, PanelsSkeleton } from '../../skeleton';
 
 const ROLE_TABS = ['editor', 'history', 'activity'] as const;
 
@@ -196,7 +197,7 @@ function Role({
       </p>
     );
   }
-  if (!detail || !history) return <p role="status">{text.loading}</p>;
+  if (!detail || !history) return <PanelsSkeleton label={text.loading} />;
 
   const startFrom = editBase ?? detail.definition;
   const stageLabel = detail.stage ? (text.stages[detail.stage] ?? detail.stage) : text.sideRole;
@@ -414,7 +415,7 @@ function Role({
             {text.outputsHeading}
           </SectionTitle>
           {!outputs ? (
-            <p role="status">{text.loading}</p>
+            <ListSkeleton label={text.loading} rows={3} />
           ) : outputs.items.length === 0 ? (
             <p className="muted">{text.outputsNone}</p>
           ) : (
