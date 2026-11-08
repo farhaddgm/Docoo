@@ -5740,26 +5740,126 @@ button.link-button {
   }
 }
 
+/* The typed conversation: one bubble per message, yours on the right, the assistant's on the left. */
 .live-chat-log {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   max-height: 22rem;
+  padding: var(--space-1);
   overflow-y: auto;
 }
 
 .live-chat-line {
+  display: grid;
+  gap: var(--space-1);
+  align-self: flex-end;
+  max-inline-size: 88%;
   margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+[dir='rtl'] .live-chat-line {
+  align-self: flex-start;
+}
+
+.live-chat-line[data-role='user'] {
+  border-color: transparent;
+  border-end-end-radius: 0.25rem;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.live-chat-line[data-role='user'] .live-chat-who {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.live-chat-line[data-role='assistant'] {
+  align-self: flex-start;
+  border-end-start-radius: 0.25rem;
+  background: var(--color-surface-2);
+}
+
+[dir='rtl'] .live-chat-line[data-role='assistant'] {
+  align-self: flex-end;
+}
+
+.live-chat-line[data-failed='true'] {
+  border-color: var(--color-danger-ink);
+  background: var(--color-danger-bg);
+}
+
+.live-chat-who {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.live-chat-text {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.live-chat-thinking .live-chat-text {
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-chat-thinking .live-chat-text {
+    animation: none;
+  }
 }
 
 .live-chat-steps {
   margin-block-start: var(--space-1);
-  font-size: 0.875rem;
+  padding-block-start: var(--space-1);
+  border-block-start: 1px solid var(--color-border);
+  font-size: 0.8125rem;
+}
+
+.live-chat-steps summary {
+  color: var(--color-muted);
+  cursor: pointer;
 }
 
 .live-chat-steps ul {
+  display: grid;
+  gap: var(--space-1);
   margin: var(--space-1) 0 0;
-  padding-inline-start: 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.live-chat-steps li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.live-chat-form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.live-chat-form textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
 }
 
 /* What the assistant just touched on the page, so the owner sees where to look. */
@@ -5794,6 +5894,13 @@ button.link-button {
 
 .live-card h3 {
   margin: 0;
+}
+
+/* The title with its help icon beside it. */
+.live-card .heading-with-tip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .live-card p {
@@ -5919,11 +6026,107 @@ button.link-button {
   list-style: none;
 }
 
+/* The age groups open and close; every conversation inside is told from the next by a faint line. */
+.live-history-groups {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.live-history-group {
+  border-block-start: 1px solid var(--color-border);
+}
+
+.live-history-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.live-history-item {
+  padding-block: var(--space-2);
+  border-block-start: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.live-history-item:first-child {
+  border-block-start: 0;
+}
+
 .live-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'when toggle'
+    'meta meta';
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.live-history-when {
+  grid-area: when;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+  font-weight: 600;
+}
+
+.live-history-toggle {
+  grid-area: toggle;
+}
+
+.live-history-meta {
+  grid-area: meta;
+  font-size: 0.8125rem;
+}
+
+/* What it cost: the last 24 hours at once, the longer periods on request. */
+.live-spend {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+
+.live-spend-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+}
+
+.live-spend-table {
+  font-size: 0.8125rem;
+}
+
+.live-spend-table th,
+.live-spend-table td {
+  padding: var(--space-1) var(--space-2);
+  text-align: center;
+}
+
+.live-spend-table thead th {
+  background: none;
+  font-size: 0.6875rem;
+  white-space: normal;
+}
+
+.live-spend-table th[scope='row'] {
+  text-align: start;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.live-spend-toggle {
+  justify-self: start;
+  font-size: 0.8125rem;
 }
 
 .secondary-button.live-danger {
@@ -6327,4 +6530,11 @@ button.link-button {
 /* A tab panel that is not chosen is hidden, whatever display its layout class gives it. */
 [role='tabpanel'][hidden] {
   display: none;
+}
+
+/* On a phone the Smart window takes the height under the top bar, so the chat has room to show. */
+@media (max-width: 40rem) {
+  .smart-panel {
+    height: calc(100dvh - 5rem);
+  }
 }

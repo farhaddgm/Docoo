@@ -282,7 +282,6 @@ export function ChatTab({
       </div>
 
       <div className="smart-messages" role="log" aria-live="polite">
-        {messages.length === 0 && !busy && <p className="muted">{text.chat.empty}</p>}
         {messages.map((message) => (
           <article
             key={message.id}

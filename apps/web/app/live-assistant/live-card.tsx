@@ -5,6 +5,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 
+import { SectionTitle } from '../info-tip';
 import { formatNumber, type Locale } from '../i18n';
 import { LiveChat } from './live-chat';
 import { fill, liveMessagesFor } from './messages';
@@ -55,8 +56,9 @@ export function LiveCard({
 
   return (
     <section className="live-card" aria-label={fill(text.card.title, name)}>
-      <h3>{fill(text.card.title, name)}</h3>
-      <p className="muted">{fill(text.card.intro, name)}</p>
+      <SectionTitle as="h3" help={fill(text.card.intro, name)}>
+        {fill(text.card.title, name)}
+      </SectionTitle>
       <div className="toolbar">
         <button
           type="button"

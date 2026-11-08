@@ -94,11 +94,21 @@ export interface LiveMessages {
       readonly day: string;
       readonly week: string;
       readonly month: string;
-      /** "{used} of {cap} today", the daily cap being the limit that closes a session. */
-      readonly ofCap: string;
-      readonly typed: string;
+      /** "Daily cap: {cap}", the limit that closes a session. */
+      readonly cap: string;
       readonly none: string;
+      readonly columns: {
+        readonly period: string;
+        readonly total: string;
+        readonly voice: string;
+        readonly typed: string;
+        readonly tokens: string;
+      };
+      readonly more: string;
+      readonly less: string;
     };
+    /** The age groups the conversations are listed under. */
+    readonly groups: Record<'day' | 'week' | 'month' | 'older', string>;
     readonly noMessages: string;
     readonly noActions: string;
     readonly transcript: string;
@@ -248,9 +258,23 @@ const fa: LiveMessages = {
       day: '۲۴ ساعت گذشته',
       week: '۷ روز گذشته',
       month: '۳۰ روز گذشته',
-      ofCap: '{used} دلار از سقف روزانهٔ {cap} دلار',
-      typed: 'که {n} دلارش مجرای نوشتاری بود',
+      cap: 'سقف روزانه: {cap} دلار',
       none: 'هنوز هزینه‌ای ثبت نشده است.',
+      columns: {
+        period: 'دوره',
+        total: 'مجموع (دلار)',
+        voice: 'صوتی (دلار)',
+        typed: 'نوشتاری (دلار)',
+        tokens: 'توکن',
+      },
+      more: 'نمایش ۷ و ۳۰ روز',
+      less: 'فقط ۲۴ ساعت',
+    },
+    groups: {
+      day: '۲۴ ساعت اخیر',
+      week: '۷ روز اخیر',
+      month: '۳۰ روز اخیر',
+      older: 'قدیمی‌تر',
     },
     noMessages: 'متنی برای این گفتگو ذخیره نشده است.',
     noActions: 'تغییری پیشنهاد نشد.',
@@ -424,9 +448,23 @@ const en: LiveMessages = {
       day: 'Last 24 hours',
       week: 'Last 7 days',
       month: 'Last 30 days',
-      ofCap: '${used} of the ${cap} daily cap',
-      typed: 'of which ${n} was typed requests',
+      cap: 'Daily cap: ${cap}',
       none: 'Nothing spent yet.',
+      columns: {
+        period: 'Period',
+        total: 'Total (USD)',
+        voice: 'Voice (USD)',
+        typed: 'Typed (USD)',
+        tokens: 'Tokens',
+      },
+      more: 'Show 7 and 30 days',
+      less: 'Last 24 hours only',
+    },
+    groups: {
+      day: 'Last 24 hours',
+      week: 'Last 7 days',
+      month: 'Last 30 days',
+      older: 'Older',
     },
     noMessages: 'No text was stored for this conversation.',
     noActions: 'No change was proposed.',
