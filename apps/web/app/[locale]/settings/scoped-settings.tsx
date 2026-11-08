@@ -35,6 +35,7 @@ import {
 import { explainSettingError } from './settings-errors';
 import { SectionTitle } from '../../info-tip';
 import { PageTabPanel, PageTabs } from '../../page-tabs';
+import { ListSkeleton, PanelsSkeleton } from '../../skeleton';
 
 export function displayValue(
   locale: Locale,
@@ -129,7 +130,7 @@ export function ScopedSettings({
       </p>
     );
   }
-  if (!definitions || !effective) return <p role="status">{text.loading}</p>;
+  if (!definitions || !effective) return <PanelsSkeleton label={text.loading} />;
 
   const sections: { id: string; title: string; node: ReactNode }[] = [];
   for (const group of SETTING_GROUPS) {
@@ -770,7 +771,7 @@ function History({
     };
   }, [base, scopeType, scopeId, definition.key, refreshKey]);
 
-  if (items === null) return <p role="status">{text.loading}</p>;
+  if (items === null) return <ListSkeleton label={text.loading} />;
   if (items.length === 0) return <p className="muted">{text.historyEmpty}</p>;
   return (
     <ol className="version-list">

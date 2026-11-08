@@ -13,6 +13,7 @@ import { VoiceUsagePanel } from '../../voice/voice-usage';
 import { SignedIn } from '../signed-in';
 import { SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
+import { TilesSkeleton } from '../../skeleton';
 
 type GroupBy = 'stage' | 'project' | 'day' | 'model';
 
@@ -169,7 +170,7 @@ function Report({ locale, workspaceId }: { locale: Locale; workspaceId: string }
           </div>
         )}
         {usage === null ? (
-          <p role="status">{content.loading}</p>
+          <TilesSkeleton label={content.loading} />
         ) : (
           <PagedRows rows={usage.groups}>
             {(pageRows) => (

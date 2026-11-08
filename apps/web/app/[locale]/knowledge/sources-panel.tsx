@@ -35,6 +35,7 @@ import {
 } from './knowledge-types';
 import { ACCEPTED_EXTENSIONS, uploadSourceFile } from './source-upload';
 import { FieldLabel, GroupLabel, InfoTip, SectionTitle } from '../../info-tip';
+import { ListSkeleton } from '../../skeleton';
 
 type Mode = 'file' | 'text' | 'url';
 
@@ -290,7 +291,7 @@ export function SourcesPanel({
           {text.failed}
         </p>
       )}
-      {!failed && items === null && <p role="status">{text.loading}</p>}
+      {!failed && items === null && <ListSkeleton label={text.loading} />}
       {items?.length === 0 && (
         <p className="muted" role="status">
           {filtered ? text.sourcesEmptyFiltered : text.sourcesEmpty}

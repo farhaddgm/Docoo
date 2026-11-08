@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { ApiError, apiGet } from '../../../../api-client';
 import { formatDateTime, formatNumber, type Locale, textDir } from '../../../../i18n';
 import { projectReportMessages } from './report-messages';
+import { PanelsSkeleton } from '../../../../skeleton';
 
 interface UsageRow {
   key: string;
@@ -129,7 +130,7 @@ export function ProjectReportScreen({
     return (
       <div className="stack">
         {nav}
-        <p role="status">{text.loading}</p>
+        <PanelsSkeleton label={text.loading} />
       </div>
     );
 

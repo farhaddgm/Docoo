@@ -18,6 +18,7 @@ import { projectMessages } from './messages';
 import { projectPageMessages } from './[projectId]/messages';
 import { ProjectRowMenu, type RowCommand } from './project-row-menu';
 import { PagedRows } from '../../table-pager';
+import { TableSkeleton } from '../../skeleton';
 
 export interface ProjectSummary {
   id: string;
@@ -337,7 +338,7 @@ function Projects({
             {common.loadFailed}
           </p>
         ) : items === null ? (
-          <p role="status">{common.loading}</p>
+          <TableSkeleton label={common.loading} rows={6} cols={5} />
         ) : items.length === 0 ? (
           <>
             <p className="muted">{text.empty}</p>

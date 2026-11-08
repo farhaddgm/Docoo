@@ -12,6 +12,7 @@ import { knowledgeHelp } from './knowledge-help';
 import { knowledgeMessages } from './knowledge-messages';
 import { InfoTip, SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
+import { ListSkeleton } from '../../skeleton';
 
 interface Use {
   id: string;
@@ -78,7 +79,7 @@ export function UsesPanel({
           {text.usesFailed}
         </p>
       )}
-      {!failed && uses === null && <p role="status">{text.loading}</p>}
+      {!failed && uses === null && <ListSkeleton label={text.loading} />}
       {uses && uses.items.length === 0 && <p className="muted">{text.usesNone}</p>}
       {uses && uses.items.length > 0 && (
         <>

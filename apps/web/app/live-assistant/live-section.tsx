@@ -4,6 +4,7 @@ import type { LiveAssistantClientConfig } from '@docoo/contracts';
 import { useCallback, useEffect, useState } from 'react';
 
 import { ApiError } from '../api-client';
+import { PanelSkeleton } from '../skeleton';
 import type { Locale } from '../i18n';
 import { liveBackendFor, liveReadApi } from './live-api';
 import { assistantNameFor, LiveCard } from './live-card';
@@ -63,7 +64,7 @@ export function LiveSection({
       </section>
     );
   }
-  if (!config) return null;
+  if (!config) return <PanelSkeleton label={liveMessagesFor(locale).card.starting} lines={2} />;
   return (
     <>
       <LiveCard locale={locale} config={config} />

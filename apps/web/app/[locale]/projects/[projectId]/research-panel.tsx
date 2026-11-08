@@ -12,6 +12,7 @@ import { ResearchPlanPanel } from './research-plan-panel';
 import { ResearchMemoryPanel } from './research-memory-panel';
 import { StageOutput } from './stage-output';
 import { workflowMessages } from './workflow-messages';
+import { PanelsSkeleton } from '../../../skeleton';
 
 interface StageItem {
   id: string | null;
@@ -123,7 +124,7 @@ export function ResearchPanel({
       </p>
     );
   }
-  if (stage === undefined) return <p role="status">{common.loading}</p>;
+  if (stage === undefined) return <PanelsSkeleton label={common.loading} />;
 
   return (
     <div className="stack">

@@ -29,6 +29,7 @@ import {
 } from './settings-model';
 import { liveReadApi } from './live-api';
 import { fillText, liveSettingsMessages } from './settings-messages';
+import { PanelsSkeleton } from '../skeleton';
 
 interface Connection {
   id: string;
@@ -163,9 +164,7 @@ export function LiveAssistantSettings({
         {failure}
       </p>
     ) : (
-      <p className="muted" role="status">
-        {text.loading}
-      </p>
+      <PanelsSkeleton label={text.loading} count={2} />
     );
   }
 

@@ -9,6 +9,7 @@ import { formatNumber, type Locale, textDir } from '../../i18n';
 import { fill } from '../agents/agent-messages';
 import { businessMessages } from './business-messages';
 import type { ContenterBusinessItem } from './business-types';
+import { TextSkeleton } from '../../skeleton';
 
 interface BusinessPage {
   items: ContenterBusinessItem[];
@@ -176,7 +177,7 @@ export function BusinessPicker({
             </div>
           </div>
           {state.kind === 'loading' ? (
-            <p role="status">{text.loading}</p>
+            <TextSkeleton label={text.loading} lines={2} />
           ) : state.page.items.length === 0 ? (
             <p className="muted" role="status">
               {picker.none}

@@ -13,6 +13,7 @@ import {
 } from '@docoo/contracts';
 
 import { formatNumber } from '../i18n';
+import { TextSkeleton } from '../skeleton';
 
 type Locale = 'fa' | 'en';
 
@@ -366,7 +367,7 @@ export function AccountPolicyDialog({
           <Crown label={t.ownerOnly} />
         </h2>
         <p className="muted">{t.intro}</p>
-        {!loaded && !error && <p role="status">{t.loading}</p>}
+        {!loaded && !error && <TextSkeleton label={t.loading} lines={3} />}
         {loaded && (
           <form className="stack" onSubmit={(event) => void save(event)}>
             {viewer && <p className="notice">{t.viewerNote}</p>}

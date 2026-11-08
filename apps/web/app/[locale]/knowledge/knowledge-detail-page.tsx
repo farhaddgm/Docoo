@@ -21,6 +21,7 @@ import type { Conflict, KnowledgeDetail } from './knowledge-types';
 import { OverridePanel } from './override-panel';
 import { ReviewPanel } from './review-panel';
 import { UsesPanel } from './uses-panel';
+import { PanelsSkeleton } from '../../skeleton';
 
 export function KnowledgeDetailPage({
   locale,
@@ -84,7 +85,7 @@ function Detail({
     void reload();
   }, [reload]);
 
-  if (load === 'loading') return <p role="status">{text.loading}</p>;
+  if (load === 'loading') return <PanelsSkeleton label={text.loading} />;
   if (load === 'failed') {
     return (
       <p className="notice error" role="alert">

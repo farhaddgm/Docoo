@@ -6552,3 +6552,154 @@ button.link-button {
     height: calc(100dvh - 5rem);
   }
 }
+
+/* ---------- Loading placeholders (skeleton.tsx) ---------- */
+
+.skeleton-region {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.skeleton-panel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.skeleton-lines {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skeleton-line {
+  block-size: 0.875rem;
+}
+
+.skeleton-lines > .skeleton-line:last-child:not(:only-child) {
+  inline-size: 62%;
+}
+
+.skeleton-lines > .skeleton-line:nth-child(2n) {
+  inline-size: 88%;
+}
+
+.skeleton-title {
+  inline-size: 38%;
+  min-inline-size: 7rem;
+  block-size: 1.25rem;
+}
+
+.skeleton-figure {
+  inline-size: 55%;
+  block-size: 1.75rem;
+}
+
+.skeleton-dot {
+  flex: none;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: 50%;
+}
+
+.skeleton-table {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.skeleton-table-row {
+  display: grid;
+  gap: var(--space-4);
+  padding: 0.9rem var(--space-4);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.skeleton-table-row:last-child {
+  border-block-end: 0;
+}
+
+.skeleton-table-head {
+  background: var(--color-surface-2);
+}
+
+.skeleton-cell,
+.skeleton-cell-head {
+  block-size: 0.875rem;
+}
+
+.skeleton-cell-head {
+  inline-size: 60%;
+  block-size: 0.75rem;
+}
+
+.skeleton-table-row > .skeleton-cell:first-child {
+  inline-size: 70%;
+}
+
+.skeleton-list {
+  gap: 0;
+}
+
+.skeleton-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.skeleton-list-row:last-child {
+  border-block-end: 0;
+}
+
+.skeleton-list-row > .skeleton-lines {
+  flex: 1;
+  min-width: 0;
+}
+
+.skeleton-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.skeleton-tile {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+/* The shimmer stops for people who ask the system for less motion; the grey shapes stay. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* The navigation while the session loads: shapes in the sidebar's own colours. */
+.sidebar-loading .skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--sidebar-hover) 25%,
+    var(--sidebar-active) 50%,
+    var(--sidebar-hover) 75%
+  );
+  background-size: 200% 100%;
+}
+
+.sidebar-loading .nav-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skeleton-nav-label {
+  inline-size: 40%;
+  block-size: 0.625rem;
+  margin-block: var(--space-3) var(--space-1);
+}
+
+.skeleton-nav-item {
+  block-size: 2.25rem;
+  border-radius: var(--radius-sm);
+}

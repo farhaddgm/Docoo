@@ -14,6 +14,7 @@ import { projectMessages } from '../messages';
 import { ProjectWizard } from './project-wizard';
 import { dimensionSeed, type CandidateSeed } from './wizard-model';
 import { wizardMessages } from './wizard-messages';
+import { PanelsSkeleton } from '../../../skeleton';
 
 export function NewProjectPage({ locale }: { locale: Locale }) {
   const text = projectMessages(locale);
@@ -115,7 +116,8 @@ function NewProject({ locale, workspaceId }: { locale: Locale; workspaceId: stri
       </p>
     );
 
-  if (seedState.status === 'loading') return <p role="status">{wizard.seedLoading}</p>;
+  if (seedState.status === 'loading')
+    return <PanelsSkeleton label={wizard.seedLoading} count={2} />;
 
   return (
     <div className="stack">

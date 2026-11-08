@@ -9,6 +9,7 @@ import { businessMessages, joinList, sectionTitle } from '../business-messages';
 import type { ContextPreview, HistoryItem, RolePreview } from '../business-types';
 import { SectionTitle } from '../../../info-tip';
 import { PagedRows } from '../../../table-pager';
+import { ListSkeleton, PanelSkeleton } from '../../../skeleton';
 
 const failedText = (error: unknown, locale: Locale): string => {
   const text = businessMessages(locale);
@@ -79,7 +80,7 @@ export function AiView({
       </p>
     );
   }
-  if (!context) return <p role="status">{text.loading}</p>;
+  if (!context) return <PanelSkeleton label={text.loading} />;
   if (!context.linked) return <p className="muted">{ai.notLinked}</p>;
 
   return (
@@ -294,7 +295,7 @@ export function VersionsView({
       </p>
     );
   }
-  if (!items) return <p role="status">{text.loading}</p>;
+  if (!items) return <ListSkeleton label={text.loading} />;
 
   return (
     <section className="card stack" aria-labelledby="biz-versions">

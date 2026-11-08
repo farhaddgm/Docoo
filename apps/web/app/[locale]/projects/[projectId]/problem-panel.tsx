@@ -26,6 +26,7 @@ import { draftOf, draftProblem, QuestionEditor } from './question-editor';
 import { uploadProjectFile } from './upload-file';
 import { SectionTitle } from '../../../info-tip';
 import { PagedRows } from '../../../table-pager';
+import { PanelsSkeleton } from '../../../skeleton';
 
 const POLL_WORKING_MS = 4000;
 const POLL_IDLE_MS = 20000;
@@ -125,7 +126,7 @@ export function ProblemPanel({
       </p>
     );
   }
-  if (!analysis) return <p role="status">{common.loading}</p>;
+  if (!analysis) return <PanelsSkeleton label={common.loading} />;
 
   const readOnly = accessReadOnly || !['active', 'paused'].includes(projectStatus);
   const openBatch = batches.find((batch) => batch.id === analysis.openBatchId) ?? null;
