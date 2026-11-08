@@ -329,21 +329,19 @@ export function AuthShell({
               )}
             </div>
           )}
-          <label className="login-language">
-            <span className="visually-hidden">{content.languageLabel}</span>
-            <select
-              value={locale}
-              aria-label={content.languageLabel}
-              onChange={(event) => {
-                const next = event.target.value === 'fa' ? 'fa' : 'en';
-                if (next !== locale)
-                  location.assign(`${localizedPath(location.pathname, next)}${location.search}`);
-              }}
-            >
-              <option value="fa">فارسی</option>
-              <option value="en">English</option>
-            </select>
-          </label>
+          <button
+            type="button"
+            className="secondary-button login-language"
+            lang={locale === 'fa' ? 'en' : 'fa'}
+            aria-label={`${content.languageLabel}: ${locale === 'fa' ? 'English' : 'فارسی'}`}
+            onClick={() =>
+              location.assign(
+                `${localizedPath(location.pathname, locale === 'fa' ? 'en' : 'fa')}${location.search}`,
+              )
+            }
+          >
+            {locale === 'fa' ? 'English' : 'فارسی'}
+          </button>
         </main>
       </div>
     );

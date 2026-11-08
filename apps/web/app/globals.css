@@ -4210,7 +4210,7 @@ button.link-button {
   text-align: center;
 }
 
-.login-language select {
+.login-language {
   width: 100%;
   min-height: 2.875rem;
   color: var(--color-primary-strong);
