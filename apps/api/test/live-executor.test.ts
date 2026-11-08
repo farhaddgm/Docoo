@@ -794,6 +794,24 @@ describe('what the assistant shows on the screen', () => {
     expect(ok({ form: 'settings', title: 'x' })).toBe(false);
   });
 
+  it('fill: the preview names the fields in the owner’s words, never as field keys', () => {
+    const params = fill!.params.parse({
+      form: 'new_project',
+      title: 'Spring plan',
+      initialProblem: 'Sales fell.',
+      outputLanguage: 'fa',
+    });
+    expect(fill!.describe(params, 'fa', undefined).summary).toBe(
+      'گذاشتن پیش‌نویس در فرم ساخت پروژه (عنوان، مسئله، زبان خروجی)',
+    );
+    expect(fill!.describe(params, 'en', undefined).summary).toBe(
+      'Put a draft into the new-project form (title, problem, output language)',
+    );
+    for (const locale of ['fa', 'en'] as const) {
+      expect(fill!.describe(params, locale, undefined).summary).not.toMatch(/initialProblem/u);
+    }
+  });
+
   it('fill: the result is a draft instruction with only the values given, and says it is not saved', async () => {
     const params = fill!.params.parse({
       form: 'new_project',
