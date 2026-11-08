@@ -6238,9 +6238,20 @@ button.link-button {
   font-weight: 700;
 }
 
-/* A block reached from the side list stops below any sticky header. */
-.stage-nav [data-nav] {
-  scroll-margin-block-start: var(--space-4);
+/* A block reached from a side list stops below the sticky top bar (4rem) with a gap to spare. */
+.stage-nav [data-nav],
+.biz-section,
+.biz-group {
+  scroll-margin-block-start: 5.5rem;
+}
+
+/* Where the list is a row of chips under the top bar, the block also clears that row. */
+@media (max-width: 60rem) {
+  .stage-nav [data-nav],
+  .biz-section,
+  .biz-group {
+    scroll-margin-block-start: 8rem;
+  }
 }
 
 /* ---------- Phones and touch screens ---------- */
@@ -6397,12 +6408,6 @@ button.link-button {
   .toolbar.spread {
     flex-wrap: wrap;
     gap: var(--space-2);
-  }
-
-  .stage-nav [data-nav],
-  .biz-section,
-  .biz-group {
-    scroll-margin-block-start: 7rem;
   }
 
   /* Facts and counts sit two to a row, so a long summary does not become a long scroll. */

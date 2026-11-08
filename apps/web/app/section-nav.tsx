@@ -8,8 +8,17 @@ interface NavItem {
 }
 
 /** The text of the heading an element is labelled by, without the help button next to it. */
+/**
+ * The label a block names itself with. A bare `data-nav` attribute reaches the page as the text
+ * "true", which is a marker and never a name.
+ */
+export function explicitLabel(value: string | null): string {
+  const text = value?.trim() ?? '';
+  return text === '' || text === 'true' ? '' : text;
+}
+
 function headingText(element: HTMLElement): string {
-  const explicit = element.getAttribute('data-nav');
+  const explicit = explicitLabel(element.getAttribute('data-nav'));
   if (explicit) return explicit;
   const labelledBy = element.getAttribute('aria-labelledby');
   const heading = labelledBy ? document.getElementById(labelledBy.split(' ')[0] ?? '') : null;
