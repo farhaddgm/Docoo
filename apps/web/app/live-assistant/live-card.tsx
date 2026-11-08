@@ -56,19 +56,34 @@ export function LiveCard({
 
   return (
     <section className="live-card" aria-label={fill(text.card.title, name)}>
-      <SectionTitle as="h3" help={fill(text.card.intro, name)}>
-        {fill(text.card.title, name)}
-      </SectionTitle>
+      <div className="live-card-head">
+        <SectionTitle as="h3" help={fill(text.card.intro, name)}>
+          {fill(text.card.title, name)}
+        </SectionTitle>
+        {typed && (
+          <button
+            type="button"
+            className="secondary-button"
+            aria-pressed={active}
+            disabled={busy}
+            onClick={() => void liveAssistant.stop()}
+          >
+            {text.card.typing.stop}
+          </button>
+        )}
+      </div>
       <div className="toolbar">
-        <button
-          type="button"
-          className={active ? 'secondary-button' : 'primary-button'}
-          aria-pressed={active}
-          disabled={busy || (!active && !canStart)}
-          onClick={() => void (active ? liveAssistant.stop() : liveAssistant.start())}
-        >
-          {typed ? text.card.typing.stop : label}
-        </button>
+        {!typed && (
+          <button
+            type="button"
+            className={active ? 'secondary-button' : 'primary-button'}
+            aria-pressed={active}
+            disabled={busy || (!active && !canStart)}
+            onClick={() => void (active ? liveAssistant.stop() : liveAssistant.start())}
+          >
+            {label}
+          </button>
+        )}
         {!active && !busy && (
           <button
             type="button"

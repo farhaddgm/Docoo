@@ -5896,6 +5896,15 @@ button.link-button {
   margin: 0;
 }
 
+/* The title with its help icon, and the button that ends a typed conversation opposite it. */
+.live-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 /* The title with its help icon beside it. */
 .live-card .heading-with-tip {
   display: flex;
