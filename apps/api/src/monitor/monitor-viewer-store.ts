@@ -263,3 +263,15 @@ export async function viewerTranscript(client: PoolClient, limit: number) {
   ).rows;
   return rows.map((row) => ({ role: row.role, content: row.content, createdAt: row.created_at }));
 }
+
+/** The display name of the person at the screen, split the way the setting needs it. */
+export async function viewerPerson(client: PoolClient, userId: string) {
+  const row = (
+    await client.query<{ display_name: string | null }>(
+      `select display_name from users where id = $1`,
+      [userId],
+    )
+  ).rows[0];
+  const name = (row?.display_name ?? '').trim();
+  return { firstName: name.split(/\s+/u)[0] ?? '', fullName: name };
+}

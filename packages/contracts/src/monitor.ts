@@ -228,6 +228,13 @@ export const monitorSettingDefinitions = [
     'زبان نمایشگر: همان زبان رابط، فارسی یا انگلیسی',
     'Monitor language: the interface language, Persian or English',
   ),
+  bool(
+    'general',
+    'monitor.preview_before_open',
+    true,
+    'پیش از باز شدن نمایشگر، خلاصهٔ «حاضران چه می‌بینند» نشان داده شود و مالک تأیید کند',
+    'Before a monitor opens, show a summary of what the people in the room will see and ask the owner to confirm',
+  ),
 
   // -- viewer monitor: what the people in the room see ------------------------------------------
   {
@@ -645,7 +652,7 @@ export interface MonitorClientConfig {
 }
 
 /** What the owner can do to the monitors from the back office (freezing comes with real content). */
-export const monitorControlEvents = ['opened', 'blackout', 'resumed', 'stopped'] as const;
+export const monitorControlEvents = ['opened', 'closed', 'blackout', 'resumed', 'stopped'] as const;
 export type MonitorControlEvent = (typeof monitorControlEvents)[number];
 
 /** A control the owner used; the audit trail keeps what and which monitor, never any content. */

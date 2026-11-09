@@ -559,3 +559,14 @@
   font-size: 0.75em;
   opacity: 0.8;
 }
+
+.monitor-preview-list {
+  margin: 0;
+  padding-inline-start: 1.2em;
+  display: grid;
+  gap: 0.25em;
+}
+
+.monitor-preview-hidden {
+  opacity: 0.6;
+}

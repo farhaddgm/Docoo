@@ -563,6 +563,7 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
       expect(result.project?.topics).toEqual(['Retail ●●●']);
       expect(result.project?.business).toBeNull();
       expect(result.transcript).toBeNull();
+      expect(result.person).toEqual({ role: 'owner', name: null });
       expect(result.usage).toBeNull();
       const json = JSON.stringify(result);
       for (const forbidden of ['Acme', 'boss@', SECRET, ids.project, 'params']) {

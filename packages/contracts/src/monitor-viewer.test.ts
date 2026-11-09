@@ -86,6 +86,7 @@ const source = (over: Partial<ViewerMonitorSource> = {}): ViewerMonitorSource =>
     },
   ],
   assistantLive: true,
+  person: { firstName: 'Ali', fullName: 'Ali Rezaei' },
   topics: ['Retail', 'Acme sector'],
   businessName: 'Acme Ltd',
   transcript: [
@@ -296,6 +297,15 @@ describe('the viewer monitor', () => {
     expect(full?.map((l) => l.text)).toEqual([`Open ${MASK} please`, `Opening it, mail ${MASK}`]);
   });
 
+  it('names the speaker as far as the people setting allows', () => {
+    const at = (value: string, words: string[] = []) =>
+      view({ 'monitor.viewer.people': value, 'monitor.blocked_words': words }).person;
+    expect(at('hidden')).toBeNull();
+    expect(at('role')).toEqual({ role: 'owner', name: null });
+    expect(at('first_name')).toEqual({ role: 'owner', name: 'Ali' });
+    expect(at('full_name', ['Rezaei'])).toEqual({ role: 'owner', name: `Ali ${MASK}` });
+  });
+
   it('holds back what is newer than the delay', () => {
     const base = source();
     const fresh = source({
@@ -398,6 +408,7 @@ describe('nothing forbidden reaches a screen', () => {
       'documents',
       'gates',
       'generatedAt',
+      'person',
       'project',
       'research',
       'stages',

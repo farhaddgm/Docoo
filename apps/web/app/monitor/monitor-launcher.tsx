@@ -6,10 +6,11 @@ import type { Route } from 'next';
 import { useCallback, useEffect, useState } from 'react';
 
 import { ApiError, apiGet, apiSend } from '../api-client';
-import type { Locale } from '../i18n';
+import { formatNumber, type Locale } from '../i18n';
 import { PanelsSkeleton } from '../skeleton';
 import { sendCommand, useMonitorControl } from './control';
-import { monitorMessages } from './messages';
+import { monitorMessages, optionLabel, fillText } from './messages';
+import { isHiddenValue, previewKeys } from './preview';
 import { monitorWindowFeatures, monitorWindowName, monitorWindowPath } from './paths';
 
 import './monitor.css';
@@ -27,7 +28,8 @@ export function MonitorLauncher({
   readonly locale: Locale;
   readonly workspaceId: string;
 }) {
-  const text = monitorMessages(locale).launcher;
+  const messages = monitorMessages(locale);
+  const text = messages.launcher;
   const base = `/workspaces/${workspaceId}`;
   const control = useMonitorControl();
   const [config, setConfig] = useState<MonitorClientConfig | null>(null);
@@ -35,6 +37,7 @@ export function MonitorLauncher({
   const [note, setNote] = useState('');
   const [projects, setProjects] = useState<{ id: string; code: string; title: string }[]>([]);
   const [chosen, setChosen] = useState('');
+  const [previewing, setPreviewing] = useState<MonitorKind | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -61,7 +64,14 @@ export function MonitorLauncher({
     void apiSend('POST', `${base}/monitor/events`, { event, kind }).catch(() => undefined);
   };
 
+  /** Opens the summary first when the owner asked for it; otherwise opens the window at once. */
+  function request(kind: MonitorKind) {
+    if (config?.settings['monitor.preview_before_open'] === false) open(kind);
+    else setPreviewing(kind);
+  }
+
   function open(kind: MonitorKind) {
+    setPreviewing(null);
     setNote('');
     // The same name every time: a second click brings the one window of this kind forward.
     const opened = window.open(
@@ -129,7 +139,7 @@ export function MonitorLauncher({
                   type="button"
                   className="primary-button"
                   disabled={!enabled}
-                  onClick={() => open(kind)}
+                  onClick={() => request(kind)}
                 >
                   {text.open}
                 </button>
@@ -138,6 +148,48 @@ export function MonitorLauncher({
           );
         })}
       </div>
+
+      {previewing !== null && (
+        <section className="card stack monitor-preview" aria-labelledby="monitor-preview">
+          <h2 id="monitor-preview">{text.preview.title}</h2>
+          <p className="muted">{text.preview.text}</p>
+          <ul className="monitor-preview-list">
+            {previewKeys[previewing].map((key) => {
+              const value = String(config.settings[key as keyof typeof config.settings]);
+              return (
+                <li
+                  key={key}
+                  className={isHiddenValue(value) ? 'monitor-preview-hidden' : undefined}
+                >
+                  <strong>{text.preview.labels[key]}:</strong> {optionLabel(messages, key, value)}
+                </li>
+              );
+            })}
+            <li>
+              <strong>{text.preview.delay}:</strong>{' '}
+              {fillText(text.preview.seconds, {
+                n: formatNumber(locale, Number(config.settings['monitor.delay_s'])),
+              })}
+            </li>
+            <li>
+              <strong>{text.preview.redaction}:</strong>{' '}
+              {optionLabel(
+                messages,
+                'monitor.redaction',
+                String(config.settings['monitor.redaction']),
+              )}
+            </li>
+          </ul>
+          <div className="toolbar">
+            <button type="button" className="primary-button" onClick={() => open(previewing)}>
+              {text.preview.open}
+            </button>
+            <button type="button" className="secondary-button" onClick={() => setPreviewing(null)}>
+              {text.preview.cancel}
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="card stack" aria-labelledby="monitor-stage">
         <h2 id="monitor-stage">{text.stage.title}</h2>

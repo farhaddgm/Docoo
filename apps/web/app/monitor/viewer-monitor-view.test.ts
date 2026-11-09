@@ -17,6 +17,7 @@ const base: ViewerMonitorView = {
     topics: null,
     business: null,
   },
+  person: null,
   transcript: null,
   stages: [
     {

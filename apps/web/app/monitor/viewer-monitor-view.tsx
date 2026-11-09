@@ -189,7 +189,11 @@ export function ViewerMonitorView({
             <ol className="viewer-list">
               {view.transcript.map((line, index) => (
                 <li key={index} className={`voice-line voice-line-${line.role}`}>
-                  <span className="voice-who">{word(text.spoke, line.role)}</span>
+                  <span className="voice-who">
+                    {line.role === 'user' && view.person?.name
+                      ? view.person.name
+                      : word(text.spoke, line.role)}
+                  </span>
                   <span dir="auto">{line.text}</span>
                 </li>
               ))}

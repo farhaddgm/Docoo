@@ -26,6 +26,7 @@ import {
   viewerAgents,
   viewerDocuments,
   viewerGates,
+  viewerPerson,
   viewerProject,
   viewerResearch,
   viewerBusiness,
@@ -149,6 +150,7 @@ export class MonitorService {
         assistantLive: false,
         usage: [],
         research: [],
+        person: { firstName: '', fullName: '' },
         topics: [],
         businessName: null,
         transcript: [],
@@ -167,6 +169,7 @@ export class MonitorService {
           assistantLive: assistant.live,
           usage: await viewerUsage(client, projectId),
           research: await viewerResearch(client, projectId),
+          person: await viewerPerson(client, context.actorId),
           topics: await viewerTopics(client, projectId),
           businessName:
             settings['monitor.viewer.business_name'] === 'shown'

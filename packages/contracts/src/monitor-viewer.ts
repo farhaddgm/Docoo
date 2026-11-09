@@ -88,6 +88,7 @@ export interface ViewerMonitorSource {
   readonly research: readonly ViewerSourceResearch[];
   readonly topics: readonly string[];
   readonly businessName: string | null;
+  readonly person: { readonly firstName: string; readonly fullName: string };
   /** The lines of the voice conversation that is running now, oldest first. */
   readonly transcript: readonly {
     readonly role: 'user' | 'assistant';
@@ -121,6 +122,8 @@ export interface ViewerMonitorView {
     readonly topics: readonly string[] | null;
     readonly business: string | null;
   };
+  /** Who spoke in the assistant conversation, as far as the setting says. */
+  readonly person: null | { readonly role: 'owner'; readonly name: string | null };
   readonly transcript:
     | null
     | readonly {
@@ -219,6 +222,7 @@ export function projectViewerMonitor(
       generatedAt,
       delayS,
       project: null,
+      person: null,
       transcript: null,
       stages: [],
       gates: null,
@@ -275,6 +279,7 @@ export function projectViewerMonitor(
   const modelSetting = pick(settings, 'monitor.viewer.model_info', 'hidden');
   const tokensSetting = pick(settings, 'monitor.viewer.tokens', 'hidden');
   const costSetting = pick(settings, 'monitor.viewer.cost', 'hidden');
+  const peopleSetting = pick(settings, 'monitor.viewer.people', 'role');
   const transcriptSetting = pick(settings, 'monitor.viewer.assistant_transcript', 'hidden');
   const qualitySetting = pick(settings, 'monitor.viewer.quality_scores', 'score');
   const researchSetting = pick(settings, 'monitor.viewer.research_sources', 'full');
@@ -357,6 +362,18 @@ export function projectViewerMonitor(
           ? mask(source.businessName.slice(0, 200))
           : null,
     },
+    person:
+      peopleSetting === 'hidden'
+        ? null
+        : {
+            role: 'owner',
+            name:
+              peopleSetting === 'first_name'
+                ? mask(source.person.firstName)
+                : peopleSetting === 'full_name'
+                  ? mask(source.person.fullName)
+                  : null,
+          },
     transcript:
       transcriptSetting === 'hidden'
         ? null

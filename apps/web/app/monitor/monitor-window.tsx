@@ -113,6 +113,32 @@ export function MonitorWindow({
     if (shouldCloseWindow(view)) window.close();
   }, [view]);
 
+  // The trail records that the window was closed (never what it showed). a failure is not
+  // worth reporting.
+  const workspaceId = loaded.workspaceId;
+  useEffect(() => {
+    if (!workspaceId) return;
+    const report = () => {
+      const url = `/api/workspaces/${workspaceId}/monitor/events`;
+      const body = JSON.stringify({ event: 'closed', kind });
+      // A beacon is made for this: it leaves while the page is going away. keepalive is the fallback.
+      const sent =
+        typeof navigator.sendBeacon === 'function' &&
+        navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+      if (!sent) {
+        void fetch(url, {
+          method: 'POST',
+          keepalive: true,
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body,
+        }).catch(() => undefined);
+      }
+    };
+    window.addEventListener('pagehide', report);
+    return () => window.removeEventListener('pagehide', report);
+  }, [workspaceId, kind]);
+
   // The language of the window follows the settings; "ui" keeps the language of the back office.
   const chosen = settings?.['monitor.language'];
   const windowLocale: Locale = chosen === 'fa' || chosen === 'en' ? chosen : locale;
