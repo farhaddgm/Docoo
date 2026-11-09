@@ -12,6 +12,7 @@ import { ProjectAccessBoundary, useReadOnlyAccess } from '../../resource-access'
 import type { PolicySection } from '@docoo/contracts';
 import { sectionOpen } from '../../access';
 import { useSessionIdentity } from '../../signed-in';
+import { ShowOnProjectorButton } from '../../../monitor/show-on-projector';
 import { WorkspacePage } from '../../workspace-page';
 import { explainProject } from '../explain';
 import { quickDraftMessages } from '../quick-draft-messages';
@@ -330,6 +331,9 @@ function ProjectView({
         >
           {locale === 'fa' ? 'مقایسه کیفیت ایجنت‌ها' : 'Compare agent quality'}
         </Link>
+        {identity?.user.isOwner === true && (
+          <ShowOnProjectorButton locale={locale} workspaceId={workspaceId} projectId={projectId} />
+        )}
       </p>
       <nav className="section-nav" aria-label={text.sections}>
         <ul>

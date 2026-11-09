@@ -56,6 +56,7 @@ import {
   listSessions,
   purgeMessages,
   moveAction,
+  providerOfConnection,
   readAction,
   readSession,
   recordExecutorUsage,
@@ -216,6 +217,10 @@ export class LiveAssistantService {
         userId: context.actorId,
         mode: channel === 'text' ? 'text' : settings.mode,
         model: channel === 'text' ? settings.executorModel : settings.model,
+        provider: await providerOfConnection(
+          client,
+          channel === 'text' ? settings.executorConnectionId : settings.connectionId,
+        ),
         caps: settings.caps,
         rules: settings.rules,
       });

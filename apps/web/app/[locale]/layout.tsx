@@ -6,10 +6,8 @@ import type { ReactNode } from 'react';
 import '@fontsource-variable/vazirmatn/wght.css';
 
 import '../globals.css';
-import { AiActivityIndicator } from '../ai-activity';
-import { InfoTipHost } from '../info-tip';
+import { ChromeHosts } from '../chrome-hosts';
 import { direction, isLocale } from '../i18n';
-import { LiveAssistantHost } from '../live-assistant/host';
 import { LocaleProvider } from '../locale-context';
 import { themeInitScript } from '../theme';
 
@@ -46,9 +44,7 @@ export default async function RootLayout({
       <body>
         <LocaleProvider locale={locale}>
           {children}
-          <InfoTipHost />
-          <AiActivityIndicator />
-          <LiveAssistantHost />
+          <ChromeHosts />
         </LocaleProvider>
       </body>
     </html>

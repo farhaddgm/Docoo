@@ -3099,6 +3099,8 @@ export const liveSessions = pgTable(
     endReason: text('end_reason'),
     mode: text('mode').notNull(),
     model: text('model').notNull().default(''),
+    /** The provider kind the session ran on, taken when it started (ADR-0056); empty for older ones. */
+    provider: text('provider').notNull().default(''),
     accessRules: jsonb('access_rules').notNull(),
     caps: jsonb('caps').notNull(),
     inputTokens: bigint('input_tokens', { mode: 'number' }).notNull().default(0),
