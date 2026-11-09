@@ -44,6 +44,10 @@ async function main(): Promise<void> {
   }
 
   const pool = new Pool({ connectionString: databaseUrl, max: 8 });
+  // An idle connection can be dropped (database restart, network blip). Without an 'error' listener
+  // pg re-throws it as an uncaught exception and the whole process dies; with one, the pool
+  // discards the broken client and opens a new one on the next query.
+  pool.on('error', () => undefined);
   const objects = new S3ObjectStore(s3);
   await objects.ensureBucket();
   const activities = createActivities({
