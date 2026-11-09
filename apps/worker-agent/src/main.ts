@@ -42,6 +42,10 @@ async function main(): Promise<void> {
     max: 8,
     application_name: 'docoo-worker-agent',
   });
+  // An idle connection can be dropped (database restart, network blip). Without an 'error' listener
+  // pg re-throws it as an uncaught exception and the whole process dies; with one, the pool
+  // discards the broken client and opens a new one on the next query.
+  pool.on('error', () => undefined);
   // Workflow and queue SLIs (SRE-001): schedule-to-start latency, failures and completions
   // are scraped by Prometheus from this address; names match infra/prometheus/rules.
   const metricsAddress = process.env['TEMPORAL_METRICS_ADDRESS'];
