@@ -1,0 +1,39 @@
+import { Body, Controller, Get, HttpCode, Post, Req } from '@nestjs/common';
+import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { reportMonitorEventSchema } from '@docoo/contracts';
+import type { FastifyRequest } from 'fastify';
+
+import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
+import { badRequest } from '../common/problems.js';
+import { workspaceContext } from '../common/request-context.js';
+import { MonitorService } from './monitor.service.js';
+
+/**
+ * The monitors (ADR-0056). Only a super administrator may use them. Writing the settings goes
+ * through the general settings route, which is already for the owner alone.
+ */
+@ApiTags('monitor')
+@ApiCookieAuth('docoo_session')
+@Controller('workspaces/:workspaceId/monitor')
+export class MonitorController {
+  constructor(private readonly monitor: MonitorService) {}
+
+  @Get('config')
+  @ApiOperation({ summary: 'Whether each monitor is on, and how it should look (no secrets)' })
+  @RequireWorkspacePermission('monitor.use')
+  config(@Req() request: FastifyRequest) {
+    return this.monitor.clientConfig(workspaceContext(request));
+  }
+
+  @Post('events')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Record a control the owner used (opened, blackout, stopped, ...)' })
+  @RequireWorkspacePermission('monitor.use')
+  async event(@Req() request: FastifyRequest, @Body() body: unknown) {
+    const parsed = reportMonitorEventSchema.safeParse(body ?? {});
+    if (!parsed.success) {
+      throw badRequest('MONITOR_INVALID_REQUEST', 'Provide a valid monitor control event.');
+    }
+    await this.monitor.report(workspaceContext(request), parsed.data);
+  }
+}

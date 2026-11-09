@@ -81,6 +81,7 @@ export const navigation = [
   'costs',
   'smart',
   'liveAssistant',
+  'monitor',
   'settings',
 ] as const;
 
@@ -100,7 +101,7 @@ export const navigationGroups = [
       'patterns',
     ],
   },
-  { key: 'intelligence', items: ['agents', 'brain', 'smart', 'liveAssistant'] },
+  { key: 'intelligence', items: ['agents', 'brain', 'smart', 'liveAssistant', 'monitor'] },
   { key: 'setup', items: ['providers', 'costs', 'settings'] },
 ] as const satisfies readonly {
   key: 'work' | 'intelligence' | 'setup';
@@ -157,6 +158,7 @@ const messages = {
       costs: 'هزینه و مصرف',
       smart: 'اسمارت',
       liveAssistant: 'دستیار صوتی',
+      monitor: 'نمایشگر',
       settings: 'تنظیمات سامانه',
     } satisfies Record<NavigationKey, string>,
     dashboardTitle: 'نمای کلی',
@@ -257,6 +259,7 @@ const messages = {
       costs: 'Cost & usage',
       smart: 'Smart',
       liveAssistant: 'Voice assistant',
+      monitor: 'Monitor',
       settings: 'System settings',
     } satisfies Record<NavigationKey, string>,
     dashboardTitle: 'Overview',

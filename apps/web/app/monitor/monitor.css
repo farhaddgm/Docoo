@@ -1,0 +1,113 @@
+/* Monitor windows and pages (ADR-0056). A window is a bare page for a room screen. */
+.monitor-window {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 2rem;
+  background: #0b1220;
+  color: #f2f5fa;
+  overflow: auto;
+}
+
+.monitor-window.monitor-light {
+  background: #f6f8fb;
+  color: #0e1522;
+}
+
+@media (prefers-color-scheme: light) {
+  .monitor-window.monitor-auto {
+    background: #f6f8fb;
+    color: #0e1522;
+  }
+}
+
+.monitor-window.monitor-black {
+  background: #000;
+  color: #000;
+}
+
+.monitor-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.monitor-head h1 {
+  margin: 0;
+  font-size: 1.4em;
+}
+
+.monitor-badge {
+  padding: 0.15em 0.7em;
+  border-radius: 999px;
+  background: #c62828;
+  color: #fff;
+  font-size: 0.7em;
+  font-weight: 700;
+}
+
+.monitor-body {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.monitor-dim {
+  opacity: 0.7;
+  font-size: 0.8em;
+}
+
+.monitor-mark {
+  align-self: flex-end;
+  opacity: 0.35;
+  font-size: 0.6em;
+}
+
+.monitor-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* The back-office pages of the monitors. */
+.monitor-cards {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.monitor-presets {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
+.monitor-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--border, #c9d3e0);
+  border-radius: 0.6rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.monitor-preset:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.monitor-preset-on {
+  border-color: var(--accent, #2f6fed);
+  box-shadow: 0 0 0 1px var(--accent, #2f6fed);
+}
