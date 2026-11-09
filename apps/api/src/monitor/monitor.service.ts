@@ -27,6 +27,7 @@ import {
   viewerDocuments,
   viewerGates,
   viewerProject,
+  viewerResearch,
   viewerStages,
   viewerUsage,
 } from './monitor-viewer-store.js';
@@ -140,6 +141,7 @@ export class MonitorService {
         actions: [],
         assistantLive: false,
         usage: [],
+        research: [],
       };
       if (!project) return projectViewerMonitor(empty, settings);
       const assistant = await viewerActions(client, projectId);
@@ -154,6 +156,7 @@ export class MonitorService {
           actions: assistant.actions,
           assistantLive: assistant.live,
           usage: await viewerUsage(client, projectId),
+          research: await viewerResearch(client, projectId),
         },
         settings,
       );

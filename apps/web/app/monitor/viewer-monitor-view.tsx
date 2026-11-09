@@ -107,6 +107,20 @@ export function ViewerMonitorView({
               {view.documents.map((document, index) => (
                 <li key={index}>
                   <strong dir="auto">{document.title}</strong>
+                  {document.quality !== null && (
+                    <small
+                      className={
+                        document.quality.passed
+                          ? 'viewer-quality viewer-quality-pass'
+                          : 'viewer-quality viewer-quality-fail'
+                      }
+                    >
+                      {' '}
+                      {document.quality.passed ? text.qualityPass : text.qualityFail}
+                      {document.quality.score !== null &&
+                        ` · ${fill(text.qualityScore, { n: formatCount(locale, document.quality.score) })}`}
+                    </small>
+                  )}
                   {document.preview !== null && (
                     <p className="viewer-output-text" dir="auto">
                       {document.preview}
@@ -115,6 +129,44 @@ export function ViewerMonitorView({
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+        {view.research !== null && view.research.count > 0 && (
+          <section className="voice-panel" aria-label={text.researchTitle}>
+            <h3>{text.researchTitle}</h3>
+            <p className="viewer-assistant-state">
+              {fill(text.researchCount, {
+                n: formatCount(locale, view.research.count),
+                v: formatCount(locale, view.research.verified),
+              })}
+              {view.research.internal > 0 &&
+                ` · ${fill(text.researchInternal, { n: formatCount(locale, view.research.internal) })}`}
+            </p>
+            {view.research.sources !== null ? (
+              <ul className="viewer-list">
+                {view.research.sources.map((item, index) => (
+                  <li key={index}>
+                    <span dir="auto">{item.title ?? item.url ?? ''}</span>{' '}
+                    <small
+                      className={item.verified ? 'viewer-quality-pass' : 'viewer-quality-fail'}
+                    >
+                      {item.verified ? text.sourceVerified : text.sourceUnverified}
+                    </small>
+                    {item.url !== null && item.title !== null && (
+                      <small className="viewer-source-url" dir="ltr">
+                        {item.url}
+                      </small>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              view.research.domains !== null && (
+                <p className="viewer-domains" dir="ltr">
+                  {view.research.domains.join(' · ')}
+                </p>
+              )
+            )}
           </section>
         )}
         {view.agents !== null && view.agents.length > 0 && (

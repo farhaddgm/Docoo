@@ -41,3 +41,42 @@ export function contentTitle(value: unknown): string | null {
   }
   return null;
 }
+
+export interface ResearchSource {
+  readonly title: string | null;
+  readonly url: string | null;
+  readonly verified: boolean;
+}
+
+/**
+ * The sources the research stage cited, read from its stored output: every piece of evidence of
+ * every finding, one entry per address (or per title for a source of the organization's own
+ * knowledge). A source counts as verified when any of its quotes was found in the page.
+ */
+export function researchSourcesOf(content: unknown): ResearchSource[] {
+  if (content === null || typeof content !== 'object') return [];
+  const findings = (content as Record<string, unknown>)['findings'];
+  if (!Array.isArray(findings)) return [];
+  const found = new Map<string, { title: string | null; url: string | null; verified: boolean }>();
+  for (const finding of findings) {
+    const evidence = (finding as Record<string, unknown> | null)?.['evidence'];
+    if (!Array.isArray(evidence)) continue;
+    for (const item of evidence) {
+      if (item === null || typeof item !== 'object') continue;
+      const entry = item as Record<string, unknown>;
+      const url = typeof entry['url'] === 'string' && entry['url'] !== '' ? entry['url'] : null;
+      const title =
+        typeof entry['title'] === 'string' && entry['title'] !== '' ? entry['title'] : null;
+      const ref = typeof entry['ref'] === 'string' ? entry['ref'] : '';
+      const key = url ?? (title !== null ? `t:${title}` : `r:${ref}`);
+      const verified = entry['verified'] === true;
+      const before = found.get(key);
+      found.set(key, {
+        title: before?.title ?? title,
+        url,
+        verified: (before?.verified ?? false) || verified,
+      });
+    }
+  }
+  return [...found.values()];
+}

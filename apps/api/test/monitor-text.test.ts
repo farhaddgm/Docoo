@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { contentTitle, contentToText } from '../src/monitor/monitor-text.js';
+import { contentTitle, contentToText, researchSourcesOf } from '../src/monitor/monitor-text.js';
 
 describe('content as text', () => {
   it('keeps a string, writes numbers, and drops nothing but empty parts', () => {
@@ -30,5 +30,41 @@ describe('content as text', () => {
     expect(contentTitle({ other: 'x' })).toBeNull();
     expect(contentTitle('text')).toBeNull();
     expect(contentTitle([1])).toBeNull();
+  });
+});
+
+describe('research sources', () => {
+  const output = {
+    findings: [
+      {
+        evidence: [
+          { ref: 'W1', url: 'https://a.example/x', title: 'Page A', verified: false },
+          { ref: 'K1', title: 'Policy', verified: true },
+        ],
+      },
+      {
+        evidence: [
+          { ref: 'W1', url: 'https://a.example/x', title: 'Page A', verified: true },
+          { ref: 'W2', url: 'https://b.example/y', verified: false },
+        ],
+      },
+    ],
+  };
+
+  it('lists each source once, verified if any quote of it was found', () => {
+    expect(researchSourcesOf(output)).toEqual([
+      { title: 'Page A', url: 'https://a.example/x', verified: true },
+      { title: 'Policy', url: null, verified: true },
+      { title: null, url: 'https://b.example/y', verified: false },
+    ]);
+  });
+
+  it('gives nothing for content that is not a research output', () => {
+    expect(researchSourcesOf(null)).toEqual([]);
+    expect(researchSourcesOf('text')).toEqual([]);
+    expect(researchSourcesOf({ findings: 'x' })).toEqual([]);
+    expect(
+      researchSourcesOf({ findings: [null, { evidence: 5 }, { evidence: [null, 3] }] }),
+    ).toEqual([]);
   });
 });

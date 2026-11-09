@@ -35,6 +35,15 @@ export interface ViewerSourceDocument {
   readonly status: string;
   readonly preview: string | null;
   readonly updatedAt: string;
+  /** The latest quality evaluation of the document, if it has been evaluated. */
+  readonly quality: { readonly status: string; readonly overall: number } | null;
+}
+
+export interface ViewerSourceResearch {
+  readonly title: string | null;
+  /** The address of a web page; null for a source from the organization's own knowledge. */
+  readonly url: string | null;
+  readonly verified: boolean;
 }
 
 export interface ViewerSourceAgent {
@@ -75,6 +84,8 @@ export interface ViewerMonitorSource {
   readonly actions: readonly ViewerSourceAction[];
   readonly assistantLive: boolean;
   readonly usage: readonly ViewerSourceUsage[];
+  /** The sources the research stage cited. */
+  readonly research: readonly ViewerSourceResearch[];
 }
 
 // ---- what comes out -------------------------------------------------------------------------
@@ -108,7 +119,21 @@ export interface ViewerMonitorView {
         readonly title: string;
         readonly status: string;
         readonly preview: string | null;
+        readonly quality: null | { readonly passed: boolean; readonly score: number | null };
       }[];
+  readonly research: null | {
+    readonly count: number;
+    readonly verified: number;
+    readonly internal: number;
+    readonly domains: readonly string[] | null;
+    readonly sources:
+      | readonly {
+          readonly title: string | null;
+          readonly url: string | null;
+          readonly verified: boolean;
+        }[]
+      | null;
+  };
   readonly agents:
     | null
     | readonly {
@@ -180,6 +205,7 @@ export function projectViewerMonitor(
       stages: [],
       gates: null,
       documents: null,
+      research: null,
       agents: null,
       assistant: null,
       usage: null,
@@ -231,6 +257,40 @@ export function projectViewerMonitor(
   const modelSetting = pick(settings, 'monitor.viewer.model_info', 'hidden');
   const tokensSetting = pick(settings, 'monitor.viewer.tokens', 'hidden');
   const costSetting = pick(settings, 'monitor.viewer.cost', 'hidden');
+  const qualitySetting = pick(settings, 'monitor.viewer.quality_scores', 'score');
+  const researchSetting = pick(settings, 'monitor.viewer.research_sources', 'full');
+
+  let researchView: ViewerMonitorView['research'] = null;
+  if (researchSetting !== 'hidden') {
+    const web = source.research.filter((item) => item.url !== null);
+    const hostOf = (url: string): string | null => {
+      try {
+        return new URL(url).hostname.replace(/^www\./u, '');
+      } catch {
+        return null;
+      }
+    };
+    const hosts = web
+      .map((item) => hostOf(item.url ?? ''))
+      .filter((host): host is string => host !== null);
+    researchView = {
+      count: source.research.length,
+      verified: source.research.filter((item) => item.verified).length,
+      internal: source.research.length - web.length,
+      domains:
+        researchSetting === 'domains' || researchSetting === 'full'
+          ? [...new Set(hosts)].slice(0, MAX_ITEMS * 2).map((host) => mask(host))
+          : null,
+      sources:
+        researchSetting === 'full'
+          ? source.research.slice(0, MAX_ITEMS * 2).map((item) => ({
+              title: item.title === null ? null : mask(item.title.slice(0, 300)),
+              url: item.url === null ? null : mask(item.url.slice(0, 500)),
+              verified: item.verified,
+            }))
+          : null,
+    };
+  }
 
   let usage: ViewerMonitorView['usage'] = null;
   if (modelSetting !== 'hidden' || tokensSetting !== 'hidden' || costSetting !== 'hidden') {
@@ -290,7 +350,18 @@ export function projectViewerMonitor(
                 documentsSetting === 'preview' && document.preview !== null
                   ? mask(document.preview.slice(0, EXCERPT))
                   : null,
+              quality:
+                qualitySetting === 'hidden' || document.quality === null
+                  ? null
+                  : {
+                      passed: document.quality.status === 'passed',
+                      score:
+                        qualitySetting === 'score' && Number.isFinite(document.quality.overall)
+                          ? document.quality.overall
+                          : null,
+                    },
             })),
+    research: researchView,
     agents:
       agentsSetting === 'hidden'
         ? null

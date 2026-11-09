@@ -205,7 +205,7 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
         )
       ).rows[0]!.id;
     const analysis = await stage('analysis', 1, 'completed', 2);
-    await stage('research', 2, 'running', 1);
+    const research = await stage('research', 2, 'running', 1);
     const ideation = await stage('ideation', 3, 'failed', 3);
     const output = (
       await admin.query<{ id: string }>(
@@ -226,6 +226,61 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
       output,
       analysis,
     ]);
+    const researchOutput = (
+      await admin.query<{ id: string }>(
+        `insert into stage_outputs (workspace_id, stage_run_id, version_no, content, content_sha256, origin)
+         values ($1, $2, 1, $3::jsonb, 'x', 'model') returning id`,
+        [
+          ids.workspace,
+          research,
+          JSON.stringify({
+            findings: [
+              {
+                claim: 'c',
+                evidence: [
+                  {
+                    ref: 'W1',
+                    url: 'https://www.example.com/report',
+                    title: 'Acme report',
+                    verified: true,
+                  },
+                  { ref: 'K1', title: 'Internal policy', verified: false },
+                ],
+              },
+            ],
+            gaps: [],
+            conflicts: [],
+          }),
+        ],
+      )
+    ).rows[0]!.id;
+    await admin.query(`update stage_runs set latest_output_id = $1 where id = $2`, [
+      researchOutput,
+      research,
+    ]);
+    const document = (
+      await admin.query<{ id: string }>(
+        `insert into documents (workspace_id, project_id, title, level, language, status)
+         values ($1, $2, 'Report for Acme', 1, 'fa', 'draft') returning id`,
+        [ids.workspace, ids.project],
+      )
+    ).rows[0]!.id;
+    const version = (
+      await admin.query<{ id: string }>(
+        `insert into document_versions (document_id, workspace_id, version_no, content, content_sha256, char_count, count_algorithm, level, bounds, within_bounds, origin)
+         values ($1, $2, 1, '{"text":"Report body"}'::jsonb, 'x', 11, 'a', 1, '{}'::jsonb, true, 'model') returning id`,
+        [document, ids.workspace],
+      )
+    ).rows[0]!.id;
+    await admin.query(`update documents set current_version_id = $1 where id = $2`, [
+      version,
+      document,
+    ]);
+    await admin.query(
+      `insert into evaluations (workspace_id, document_id, document_version_id, rubric, status, overall, scores, evaluator)
+       values ($1, $2, $3, '{}'::jsonb, 'passed', 87.5, '[]'::jsonb, 'rules')`,
+      [ids.workspace, document, version],
+    );
     await admin.query(
       `insert into stage_attempts (workspace_id, stage_run_id, attempt_no, idempotency_key, status, error_code)
        values ($1, $2, 3, $3, 'permanent_failed', 'provider_error')`,
@@ -469,6 +524,16 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
         last: { tool: 'web_search' },
       });
       expect(result.assistant?.steps?.length).toBe(2);
+      expect(result.research).toMatchObject({ count: 2, verified: 1, internal: 1 });
+      expect(result.research?.sources?.[0]).toEqual({
+        title: '●●● report',
+        url: '●●●',
+        verified: true,
+      });
+      expect(result.documents?.[0]).toMatchObject({
+        title: 'Report for ●●●',
+        quality: { passed: true, score: 87.5 },
+      });
       expect(result.usage).toBeNull();
       const json = JSON.stringify(result);
       for (const forbidden of ['Acme', 'boss@', SECRET, ids.project, 'params']) {

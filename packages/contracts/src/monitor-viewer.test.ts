@@ -66,7 +66,13 @@ const source = (over: Partial<ViewerMonitorSource> = {}): ViewerMonitorSource =>
       status: 'draft',
       preview: 'Preview of Acme report '.repeat(30),
       updatedAt: ago(200),
+      quality: { status: 'passed', overall: 87.5 },
     },
+  ],
+  research: [
+    { title: 'Acme market report', url: 'https://www.example.com/report?id=1', verified: true },
+    { title: 'Another page', url: 'https://news.example.org/a', verified: false },
+    { title: 'Internal policy', url: null, verified: true },
   ],
   agents: [
     { role: 'analyst', calls: 4, lastTool: 'search', lastDecision: 'allowed', lastAt: ago(60) },
@@ -206,6 +212,62 @@ describe('the viewer monitor', () => {
     ).toEqual([0.5]);
   });
 
+  it('shows the quality of a document as pass or fail, or with the score', () => {
+    const at = (value: string) =>
+      view({ 'monitor.viewer.quality_scores': value }).documents?.[0]?.quality;
+    expect(at('hidden')).toBeNull();
+    expect(at('pass_fail')).toEqual({ passed: true, score: null });
+    expect(at('score')).toEqual({ passed: true, score: 87.5 });
+    const failed = source({
+      documents: [
+        { ...source().documents[0]!, quality: { status: 'failed_quality', overall: 40 } },
+      ],
+    });
+    expect(view({}, failed).documents?.[0]?.quality?.passed).toBe(false);
+    const none = source({ documents: [{ ...source().documents[0]!, quality: null }] });
+    expect(view({}, none).documents?.[0]?.quality).toBeNull();
+  });
+
+  it('shows the research sources as a count, the sites, or the full citations', () => {
+    const at = (value: string) => view({ 'monitor.viewer.research_sources': value }).research;
+    expect(at('hidden')).toBeNull();
+    expect(at('count')).toEqual({
+      count: 3,
+      verified: 2,
+      internal: 1,
+      domains: null,
+      sources: null,
+    });
+    expect(at('domains')).toMatchObject({
+      domains: ['example.com', 'news.example.org'],
+      sources: null,
+    });
+    expect(at('full')?.sources).toHaveLength(3);
+    expect(at('full')?.sources?.[2]).toEqual({
+      title: 'Internal policy',
+      url: null,
+      verified: true,
+    });
+  });
+
+  it('masks the research titles and addresses by the level and the blocked words', () => {
+    const strictFull = view({
+      'monitor.redaction': 'strict',
+      'monitor.viewer.research_sources': 'full',
+      'monitor.blocked_words': ['Acme'],
+    }).research;
+    expect(strictFull?.sources?.[0]).toEqual({
+      title: `${MASK} market report`,
+      url: MASK,
+      verified: true,
+    });
+    const standard = view({
+      'monitor.redaction': 'standard',
+      'monitor.viewer.research_sources': 'full',
+    }).research;
+    expect(standard?.sources?.[0]?.url).toBe('https://www.example.com/report?id=1');
+  });
+
   it('holds back what is newer than the delay', () => {
     const base = source();
     const fresh = source({
@@ -309,6 +371,7 @@ describe('nothing forbidden reaches a screen', () => {
       'gates',
       'generatedAt',
       'project',
+      'research',
       'stages',
       'usage',
     ]);

@@ -44,6 +44,7 @@ const base: ViewerMonitorView = {
   ],
   gates: null,
   documents: null,
+  research: null,
   agents: null,
   assistant: null,
   usage: null,
@@ -92,7 +93,7 @@ describe('the viewer monitor view', () => {
     const out = html({
       ...base,
       gates: [{ title: 'Approve the problem', status: 'pending' }],
-      documents: [{ title: 'Report', status: 'draft', preview: 'Preview text' }],
+      documents: [{ title: 'Report', status: 'draft', preview: 'Preview text', quality: null }],
       agents: [{ role: 'analyst', calls: 4, last: { tool: 'web_search', decision: 'allowed' } }],
       assistant: {
         live: true,
@@ -122,6 +123,60 @@ describe('the viewer monitor view', () => {
     ]) {
       expect(out).toContain(shown);
     }
+  });
+
+  it('draws document quality and research sources, as a count, the sites, or the full list', () => {
+    const text = monitorMessages('en').viewer;
+    const withParts = {
+      ...base,
+      documents: [
+        { title: 'Report', status: 'draft', preview: null, quality: { passed: true, score: 88 } },
+      ],
+    };
+    const out = html({
+      ...withParts,
+      research: {
+        count: 3,
+        verified: 2,
+        internal: 1,
+        domains: ['example.com'],
+        sources: [{ title: 'Page A', url: 'https://example.com/a', verified: true }],
+      },
+    });
+    for (const shown of [
+      text.qualityPass,
+      'score 88',
+      text.researchTitle,
+      '3 sources, 2 verified',
+      '1 from internal knowledge',
+      'Page A',
+      text.sourceVerified,
+      'https://example.com/a',
+    ]) {
+      expect(out).toContain(shown);
+    }
+    const sites = html({
+      ...withParts,
+      research: {
+        count: 3,
+        verified: 2,
+        internal: 0,
+        domains: ['example.com', 'news.org'],
+        sources: null,
+      },
+    });
+    expect(sites).toContain('example.com · news.org');
+    const failed = html({
+      ...withParts,
+      documents: [{ ...withParts.documents[0]!, quality: { passed: false, score: null } }],
+    });
+    expect(failed).toContain(text.qualityFail);
+    expect(
+      html({
+        ...base,
+        research: { count: 0, verified: 0, internal: 0, domains: null, sources: null },
+      }),
+    ).not.toContain(text.researchTitle);
   });
 
   it('shows the code alone when the name is hidden, and reads in Persian', () => {

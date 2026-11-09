@@ -9,7 +9,7 @@ import type {
 import type { PoolClient } from 'pg';
 
 import { isoColumn } from '../common/pagination.js';
-import { contentTitle, contentToText } from './monitor-text.js';
+import { contentTitle, contentToText, researchSourcesOf } from './monitor-text.js';
 
 /** The reads of the viewer monitor (ADR-0056 §7): one project, nothing written. */
 
@@ -89,9 +89,19 @@ export async function viewerDocuments(
   projectId: string,
 ): Promise<ViewerSourceDocument[]> {
   const rows = (
-    await client.query<{ title: string; status: string; content: unknown; updated_at: string }>(
-      `select d.title, d.status::text as status, v.content, ${isoColumn('d.updated_at', 'updated_at')}
+    await client.query<{
+      title: string;
+      status: string;
+      content: unknown;
+      updated_at: string;
+      quality_status: string | null;
+      quality_overall: number | null;
+    }>(
+      `select d.title, d.status::text as status, v.content, ${isoColumn('d.updated_at', 'updated_at')},
+              e.status::text as quality_status, e.overall::float8 as quality_overall
          from documents d left join document_versions v on v.id = d.current_version_id
+         left join lateral (select status, overall from evaluations
+                             where document_id = d.id order by created_at desc limit 1) e on true
         where d.project_id = $1 order by d.priority, d.created_at, d.id limit 12`,
       [projectId],
     )
@@ -101,7 +111,24 @@ export async function viewerDocuments(
     status: row.status,
     preview: row.content === null ? null : contentToText(row.content).slice(0, 600),
     updatedAt: row.updated_at,
+    quality:
+      row.quality_status === null || row.quality_overall === null
+        ? null
+        : { status: row.quality_status, overall: row.quality_overall },
   }));
+}
+
+/** The sources cited by the newest research output of the project. */
+export async function viewerResearch(client: PoolClient, projectId: string) {
+  const row = (
+    await client.query<{ content: unknown }>(
+      `select o.content from stage_runs s join stage_outputs o on o.id = s.latest_output_id
+        where s.project_id = $1 and s.stage = 'research'
+        order by s.created_at desc limit 1`,
+      [projectId],
+    )
+  ).rows[0];
+  return researchSourcesOf(row?.content);
 }
 
 export async function viewerAgents(
