@@ -294,6 +294,8 @@ function SettingRow({
         />
       );
       break;
+    case 'uuid':
+      return null;
     case 'words':
       control = <WordsField id={id} value={value} onChange={onChange} />;
       break;

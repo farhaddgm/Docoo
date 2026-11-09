@@ -94,6 +94,11 @@ describe('monitor setting definitions (migration 0089)', () => {
           expect(item.schema.minimum, item.key).toBe(definition.min);
           expect(item.schema.maximum, item.key).toBe(definition.max);
           break;
+        case 'uuid':
+          expect(item.schema.type, item.key).toBe('string');
+          expect(validateSettingValue(item.schema, '')).toBeNull();
+          expect(validateSettingValue(item.schema, 'not-an-id')).not.toBeNull();
+          break;
         case 'words':
           expect(item.schema.type, item.key).toBe('array');
           expect(item.schema.maxItems, item.key).toBe(definition.maxItems);

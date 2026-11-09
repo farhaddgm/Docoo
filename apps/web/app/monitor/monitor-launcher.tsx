@@ -33,10 +33,17 @@ export function MonitorLauncher({
   const [config, setConfig] = useState<MonitorClientConfig | null>(null);
   const [failure, setFailure] = useState('');
   const [note, setNote] = useState('');
+  const [projects, setProjects] = useState<{ id: string; code: string; title: string }[]>([]);
+  const [chosen, setChosen] = useState('');
 
   const load = useCallback(async () => {
     try {
-      setConfig(await apiGet<MonitorClientConfig>(`${base}/monitor/config`));
+      const loaded = await apiGet<MonitorClientConfig>(`${base}/monitor/config`);
+      setConfig(loaded);
+      setChosen(String(loaded.settings['monitor.viewer.project_id'] ?? ''));
+      apiGet<{ items: { id: string; code: string; title: string }[] }>(`${base}/projects?limit=100`)
+        .then((list) => setProjects(list.items))
+        .catch(() => setProjects([]));
       setFailure('');
     } catch (error) {
       setFailure(
@@ -68,6 +75,23 @@ export function MonitorLauncher({
     }
     opened.focus();
     report('opened', kind);
+  }
+
+  async function putOnStage(projectId: string) {
+    setNote('');
+    try {
+      await apiSend('PUT', `${base}/settings/assignments`, {
+        key: 'monitor.viewer.project_id',
+        scopeType: 'workspace',
+        scopeId: workspaceId,
+        value: projectId,
+        reason: 'monitor project on stage',
+      });
+      setChosen(projectId);
+      setNote(text.stage.saved);
+    } catch {
+      setNote(text.stage.failed);
+    }
   }
 
   function blackout(on: boolean) {
@@ -114,6 +138,43 @@ export function MonitorLauncher({
           );
         })}
       </div>
+
+      <section className="card stack" aria-labelledby="monitor-stage">
+        <h2 id="monitor-stage">{text.stage.title}</h2>
+        <p className="muted">{text.stage.text}</p>
+        <div className="toolbar">
+          <select
+            aria-labelledby="monitor-stage"
+            value={chosen}
+            onChange={(event) => setChosen(event.target.value)}
+          >
+            <option value="">{text.stage.none}</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.code} · {project.title}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="primary-button"
+            disabled={chosen === ''}
+            onClick={() => void putOnStage(chosen)}
+          >
+            {text.stage.show}
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={
+              String(config.settings['monitor.viewer.project_id'] ?? '') === '' && chosen === ''
+            }
+            onClick={() => void putOnStage('')}
+          >
+            {text.stage.clear}
+          </button>
+        </div>
+      </section>
 
       <section className="card stack" aria-labelledby="monitor-controls">
         <h2 id="monitor-controls">{text.controls.title}</h2>

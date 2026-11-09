@@ -341,6 +341,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/live-assistant/actions/:actionId/cancel': 'live_assistant.use',
   'GET workspaces/:workspaceId/monitor/config': 'monitor.use',
   'GET workspaces/:workspaceId/monitor/voice': 'monitor.use',
+  'GET workspaces/:workspaceId/monitor/viewer': 'monitor.use',
   'POST workspaces/:workspaceId/monitor/events': 'monitor.use',
 };
 

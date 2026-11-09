@@ -34,6 +34,15 @@ export class MonitorController {
     return this.monitor.voiceView(workspaceContext(request));
   }
 
+  @Get('viewer')
+  @ApiOperation({
+    summary: 'What the viewer monitor shows now: the steps of the project on the projector',
+  })
+  @RequireWorkspacePermission('monitor.use')
+  viewer(@Req() request: FastifyRequest) {
+    return this.monitor.viewerView(workspaceContext(request));
+  }
+
   @Post('events')
   @HttpCode(204)
   @ApiOperation({ summary: 'Record a control the owner used (opened, blackout, stopped, ...)' })

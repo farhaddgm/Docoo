@@ -62,6 +62,7 @@ export type MonitorSettingDefinition = Described & {
         readonly max: number;
         readonly default: number;
       }
+    | { readonly kind: 'uuid'; readonly default: string }
     | {
         readonly kind: 'words';
         readonly maxItems: number;
@@ -222,6 +223,14 @@ export const monitorSettingDefinitions = [
   ),
 
   // -- viewer monitor: what the people in the room see ------------------------------------------
+  {
+    group: 'viewer',
+    key: 'monitor.viewer.project_id',
+    kind: 'uuid',
+    default: '',
+    fa: 'پروژه‌ای که روی پروژکتور است (با دکمهٔ «نمایش روی پروژکتور» انتخاب می‌شود؛ خالی: هیچ)',
+    en: 'The project on the projector (chosen with the "show on the projector" button; empty: none)',
+  },
   choice(
     'viewer',
     'monitor.viewer.project_name',
@@ -563,6 +572,8 @@ export function normalizeBlockedWords(input: unknown): string[] {
   return words;
 }
 
+const UUID_VALUE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
 /** Whether a value is allowed for a setting (the same rule the server applies when saving). */
 export function isMonitorSettingValue(key: MonitorSettingKey, value: unknown): boolean {
   const definition = definitionOf(key);
@@ -585,6 +596,8 @@ export function isMonitorSettingValue(key: MonitorSettingKey, value: unknown): b
         value >= definition.min &&
         value <= definition.max
       );
+    case 'uuid':
+      return typeof value === 'string' && (value === '' || UUID_VALUE.test(value));
     case 'words':
       return (
         Array.isArray(value) &&

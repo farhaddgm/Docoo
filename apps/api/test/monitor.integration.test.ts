@@ -28,6 +28,7 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
     live: randomUUID(),
     ended: randomUUID(),
     foreign: randomUUID(),
+    project: randomUUID(),
   };
   const suffix = randomBytes(4).toString('hex');
   let admin: Client;
@@ -175,12 +176,76 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
           status,
           status === 'refused' ? 'not_allowed' : null,
           secondsAgo,
-          randomUUID(),
+          ids.project,
         ],
       );
     await card(ids.live, ids.owner, 'proposed', 'Open the project Acme', 50);
     await card(ids.live, ids.owner, 'refused', 'Delete the project Acme', 40);
     await card(ids.foreign, ids.other, 'proposed', `${SECRET} card`, 30);
+
+    // ---- a project on the projector, with everything the viewer monitor reads
+    await admin.query(
+      `insert into projects (id, workspace_id, code, title, initial_problem, status, current_stage)
+       values ($1, $2, $3, 'Acme market study', 'Problem', 'active', 'research')`,
+      [ids.project, ids.workspace, `ACME-${suffix}`],
+    );
+    const run = (
+      await admin.query<{ id: string }>(
+        `insert into workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id)
+         values ($1, $2, 1, $3) returning id`,
+        [ids.workspace, ids.project, `wf-${suffix}`],
+      )
+    ).rows[0]!.id;
+    const stage = async (kind: string, seq: number, status: string, attempts: number) =>
+      (
+        await admin.query<{ id: string }>(
+          `insert into stage_runs (workspace_id, run_id, project_id, stage, sequence, status, attempts_used, started_at)
+           values ($1, $2, $3, $4, $5, $6, $7, now() - interval '10 minutes') returning id`,
+          [ids.workspace, run, ids.project, kind, seq, status, attempts],
+        )
+      ).rows[0]!.id;
+    const analysis = await stage('analysis', 1, 'completed', 2);
+    await stage('research', 2, 'running', 1);
+    const ideation = await stage('ideation', 3, 'failed', 3);
+    const output = (
+      await admin.query<{ id: string }>(
+        `insert into stage_outputs (workspace_id, stage_run_id, version_no, content, content_sha256, origin, created_at)
+         values ($1, $2, 1, $3::jsonb, 'x', 'model', now() - interval '5 minutes') returning id`,
+        [
+          ids.workspace,
+          analysis,
+          JSON.stringify({
+            problemStatement: 'Acme needs a market study',
+            goals: ['grow', 'mail boss@acme.example'],
+            secretField: SECRET.toLowerCase().includes('x') ? 'ok' : 'ok',
+          }),
+        ],
+      )
+    ).rows[0]!.id;
+    await admin.query(`update stage_runs set latest_output_id = $1 where id = $2`, [
+      output,
+      analysis,
+    ]);
+    await admin.query(
+      `insert into stage_attempts (workspace_id, stage_run_id, attempt_no, idempotency_key, status, error_code)
+       values ($1, $2, 3, $3, 'permanent_failed', 'provider_error')`,
+      [ids.workspace, ideation, `att-${suffix}`],
+    );
+    await admin.query(
+      `insert into human_tasks (workspace_id, project_id, stage_run_id, kind, title, payload)
+       values ($1, $2, $3, 'gate', 'Approve the problem for Acme', '{}'::jsonb)`,
+      [ids.workspace, ids.project, analysis],
+    );
+    await admin.query(
+      `insert into agent_tool_calls (workspace_id, project_id, role, tool, decision, input_sha256)
+       values ($1, $2, 'analyst', 'web_search', 'allowed', repeat('a', 64))`,
+      [ids.workspace, ids.project],
+    );
+    await admin.query(
+      `insert into model_invocations (workspace_id, project_id, provider, model, purpose, status, input_tokens, output_tokens, cost_usd)
+       values ($1, $2, 'openai', 'gpt-x', 'test', 'succeeded', 1000, 500, 0.5)`,
+      [ids.workspace, ids.project],
+    );
   });
 
   afterAll(async () => {
@@ -358,5 +423,84 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
     await expect(
       admin.query(`update live_sessions set provider = 'gemini' where id = $1`, [ids.live]),
     ).rejects.toThrow(/cannot change/u);
+  });
+
+  describe('the viewer monitor', () => {
+    const viewer = () => monitor.viewerView(context());
+
+    it('answers nothing while the viewer monitor is switched off', async () => {
+      values = {};
+      const error = await viewer().catch((caught: unknown) => caught);
+      expect((error as HttpException).getStatus()).toBe(409);
+    });
+
+    it('waits, with no project, until the owner puts one on the projector', async () => {
+      values = { 'monitor.viewer.enabled': true };
+      const result = await viewer();
+      expect(result.project).toBeNull();
+      expect(result.stages).toEqual([]);
+    });
+
+    it('shows the steps of the project in full, masked, and nothing of cost or model by default', async () => {
+      values = {
+        'monitor.viewer.enabled': true,
+        'monitor.viewer.project_id': ids.project,
+        'monitor.blocked_words': ['Acme'],
+        'monitor.delay_s': 0,
+      };
+      const result = await viewer();
+      expect(result.project).toMatchObject({ name: '●●● market study', currentStage: 'research' });
+      expect(result.stages.map((item) => [item.stage, item.status])).toEqual([
+        ['analysis', 'completed'],
+        ['research', 'running'],
+        ['ideation', 'failed'],
+      ]);
+      expect(result.stages[0]?.output?.text).toContain(
+        'problemStatement: ●●● needs a market study',
+      );
+      expect(result.stages[2]?.error).toEqual({ message: 'provider_error' });
+      expect(result.gates?.[0]).toEqual({
+        title: 'Approve the problem for ●●●',
+        status: 'pending',
+      });
+      expect(result.agents?.[0]).toMatchObject({
+        role: 'analyst',
+        calls: 1,
+        last: { tool: 'web_search' },
+      });
+      expect(result.assistant?.steps?.length).toBe(2);
+      expect(result.usage).toBeNull();
+      const json = JSON.stringify(result);
+      for (const forbidden of ['Acme', 'boss@', SECRET, ids.project, 'params']) {
+        expect(json).not.toContain(forbidden);
+      }
+    });
+
+    it('shows model, tokens and cost of the project when the settings allow', async () => {
+      values = {
+        'monitor.viewer.enabled': true,
+        'monitor.viewer.project_id': ids.project,
+        'monitor.viewer.model_info': 'full',
+        'monitor.viewer.tokens': 'split',
+        'monitor.viewer.cost': 'total',
+        'monitor.delay_s': 0,
+      };
+      const result = await viewer();
+      expect(result.usage).toMatchObject({ tokensTotal: 1500, costUsd: 0.5 });
+      expect(result.usage?.models[0]).toMatchObject({
+        provider: 'openai',
+        model: 'gpt-x',
+        input: 1000,
+        output: 500,
+      });
+    });
+
+    it('shows nothing of a project that does not exist', async () => {
+      values = {
+        'monitor.viewer.enabled': true,
+        'monitor.viewer.project_id': randomUUID(),
+      };
+      expect((await viewer()).project).toBeNull();
+    });
   });
 });

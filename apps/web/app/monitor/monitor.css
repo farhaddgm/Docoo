@@ -378,3 +378,157 @@
 .voice-card-detail ol {
   margin: 0.2em 0 0;
 }
+
+/* The viewer monitor (ADR-0056 §7). */
+.viewer-monitor {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 2fr) minmax(16em, 1fr);
+  align-items: start;
+}
+
+.viewer-empty {
+  margin: auto;
+  text-align: center;
+}
+
+.viewer-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.viewer-head h2 {
+  margin: 0;
+  font-size: 1.4em;
+}
+
+.viewer-code {
+  opacity: 0.6;
+  font-weight: 400;
+}
+
+.viewer-status,
+.viewer-badge,
+.viewer-now {
+  padding: 0.1em 0.7em;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  font-size: 0.65em;
+}
+
+.viewer-now {
+  background: #2f6fed33;
+  border-color: #2f6fed;
+}
+
+.viewer-title {
+  margin: 0 0 0.4em;
+  font-size: 0.75em;
+  opacity: 0.7;
+}
+
+.viewer-stages,
+.viewer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5em;
+}
+
+.viewer-stage {
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-inline-start: 0.35em solid #8a94a6;
+  border-radius: 0.6em;
+  padding: 0.6em 0.8em;
+}
+
+.viewer-stage-current {
+  box-shadow: 0 0 0 2px #2f6fed66;
+}
+
+.viewer-stage-completed {
+  border-inline-start-color: #2e7d32;
+}
+
+.viewer-stage-running,
+.viewer-stage-retrying {
+  border-inline-start-color: #2f6fed;
+}
+
+.viewer-stage-waiting_for_human {
+  border-inline-start-color: #f9a825;
+}
+
+.viewer-stage-failed,
+.viewer-stage-rejected {
+  border-inline-start-color: #c62828;
+}
+
+.viewer-stage-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  flex-wrap: wrap;
+  font-size: 0.85em;
+}
+
+.viewer-output {
+  margin-top: 0.4em;
+  font-size: 0.8em;
+}
+
+.viewer-output-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.viewer-output-text {
+  margin: 0.2em 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 14em;
+  overflow: hidden;
+}
+
+.viewer-error {
+  margin: 0.4em 0 0;
+  color: #ef5350;
+  font-size: 0.8em;
+}
+
+.viewer-side {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.viewer-list {
+  font-size: 0.8em;
+}
+
+.viewer-assistant-state {
+  margin: 0 0 0.4em;
+  font-size: 0.8em;
+}
+
+.viewer-usage {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2em 0.8em;
+  margin: 0;
+  font-size: 0.8em;
+}
+
+.viewer-usage dd {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .viewer-monitor {
+    grid-template-columns: 1fr;
+  }
+}

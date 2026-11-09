@@ -7,6 +7,7 @@ import { ApiError, apiGet } from '../api-client';
 import type { Locale } from '../i18n';
 import { useMonitorControl } from './control';
 import { monitorMessages } from './messages';
+import { ViewerMonitorLive } from './viewer-monitor-live';
 import { VoiceMonitorLive } from './voice-monitor-live';
 import { shouldCloseWindow, watermarkText, windowView, type WindowLoad } from './window-model';
 
@@ -164,7 +165,7 @@ export function MonitorWindow({
           </header>
           <main
             className={
-              view === 'ready' && kind === 'voice'
+              view === 'ready' && loaded.workspaceId
                 ? 'monitor-body monitor-body-wide'
                 : 'monitor-body'
             }
@@ -173,6 +174,16 @@ export function MonitorWindow({
           >
             {view === 'ready' && kind === 'voice' && loaded.workspaceId ? (
               <VoiceMonitorLive
+                workspaceId={loaded.workspaceId}
+                refreshS={
+                  typeof settings?.['monitor.refresh_s'] === 'number'
+                    ? settings['monitor.refresh_s']
+                    : 3
+                }
+                locale={windowLocale}
+              />
+            ) : view === 'ready' && kind === 'viewer' && loaded.workspaceId ? (
+              <ViewerMonitorLive
                 workspaceId={loaded.workspaceId}
                 refreshS={
                   typeof settings?.['monitor.refresh_s'] === 'number'

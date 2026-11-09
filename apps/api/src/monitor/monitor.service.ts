@@ -2,9 +2,12 @@ import { Injectable } from '@nestjs/common';
 import {
   monitorSettingsFrom,
   pickCurrentSession,
+  projectViewerMonitor,
   projectVoiceMonitor,
   type MonitorClientConfig,
   type ReportMonitorEvent,
+  type ViewerMonitorSource,
+  type ViewerMonitorView,
   type VoiceMonitorSource,
   type VoiceMonitorView,
   type VoiceSourceAction,
@@ -18,6 +21,15 @@ import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { ConfigService } from '../config/config.service.js';
 import { liveSettingsFrom } from '../live-assistant/live-gateway.js';
 import { costPeriods } from '../live-assistant/live-store.js';
+import {
+  viewerActions,
+  viewerAgents,
+  viewerDocuments,
+  viewerGates,
+  viewerProject,
+  viewerStages,
+  viewerUsage,
+} from './monitor-viewer-store.js';
 import { databaseNowMs, voiceActions, voiceMessages, voiceSessions } from './monitor-store.js';
 
 /** How many of the newest sessions the screen may choose from. */
@@ -100,6 +112,51 @@ export class MonitorService {
         actions,
       };
       return projectVoiceMonitor(source, settings);
+    });
+  }
+
+  /**
+   * What the viewer monitor shows right now (ADR-0056 §7): the steps of the project the owner put
+   * on the screen, through `projectViewerMonitor`. Switched off, it answers nothing.
+   */
+  async viewerView(context: WorkspaceRequestContext): Promise<ViewerMonitorView> {
+    return this.database.run(context, async (client) => {
+      const resolved = await this.config.resolve(client, context, 'workspace', context.workspaceId);
+      const settings = monitorSettingsFrom(resolved.values);
+      if (settings['monitor.viewer.enabled'] !== true) {
+        throw conflict('MONITOR_OFF', 'The viewer monitor is switched off.');
+      }
+      const nowMs = await databaseNowMs(client);
+      const projectId = String(settings['monitor.viewer.project_id']);
+      const project =
+        projectId === '' ? null : await viewerProject(client, context.workspaceId, projectId);
+      const empty: ViewerMonitorSource = {
+        nowMs,
+        project: null,
+        stages: [],
+        gates: [],
+        documents: [],
+        agents: [],
+        actions: [],
+        assistantLive: false,
+        usage: [],
+      };
+      if (!project) return projectViewerMonitor(empty, settings);
+      const assistant = await viewerActions(client, projectId);
+      return projectViewerMonitor(
+        {
+          nowMs,
+          project,
+          stages: await viewerStages(client, projectId),
+          gates: await viewerGates(client, projectId),
+          documents: await viewerDocuments(client, projectId),
+          agents: await viewerAgents(client, projectId),
+          actions: assistant.actions,
+          assistantLive: assistant.live,
+          usage: await viewerUsage(client, projectId),
+        },
+        settings,
+      );
     });
   }
 
