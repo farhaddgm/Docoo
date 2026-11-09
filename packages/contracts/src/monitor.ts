@@ -373,8 +373,8 @@ export const monitorSettingDefinitions = [
     'monitor.voice.sessions',
     ['live', 'today', 'recent', 'all'],
     'live',
-    'گفتگوهای قابل مشاهده: فقط زنده، امروز، ۱۰ تای آخر یا همه',
-    'Conversations shown: only the live one, today, the last 10 or all',
+    'گفتگوهای قابل مشاهده: فقط زنده، ۲۴ ساعت اخیر، ۱۰ تای آخر یا همه',
+    'Conversations shown: only the live one, the last 24 hours, the last 10 or all',
   ),
   choice(
     'voice',
@@ -413,8 +413,8 @@ export const monitorSettingDefinitions = [
     'monitor.voice.cost',
     ['hidden', 'session', 'session_day', 'with_caps'],
     'hidden',
-    'هزینه: پنهان، نشست، نشست و امروز، یا با سقف‌ها',
-    'Cost: hidden, the session, session and today, or with the caps',
+    'هزینه: پنهان، نشست، نشست و ۲۴ ساعت اخیر، یا با سقف‌ها و ۳۰ روز اخیر',
+    'Cost: hidden, the session, session and the last 24 hours, or with the caps and the last 30 days',
   ),
   choice(
     'voice',

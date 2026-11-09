@@ -25,6 +25,15 @@ export class MonitorController {
     return this.monitor.clientConfig(workspaceContext(request));
   }
 
+  @Get('voice')
+  @ApiOperation({
+    summary: 'What the voice assistant monitor shows now, filtered by the monitor settings',
+  })
+  @RequireWorkspacePermission('monitor.use')
+  voice(@Req() request: FastifyRequest) {
+    return this.monitor.voiceView(workspaceContext(request));
+  }
+
   @Post('events')
   @HttpCode(204)
   @ApiOperation({ summary: 'Record a control the owner used (opened, blackout, stopped, ...)' })

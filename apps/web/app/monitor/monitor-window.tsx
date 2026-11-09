@@ -7,6 +7,7 @@ import { ApiError, apiGet } from '../api-client';
 import type { Locale } from '../i18n';
 import { useMonitorControl } from './control';
 import { monitorMessages } from './messages';
+import { VoiceMonitorLive } from './voice-monitor-live';
 import { shouldCloseWindow, watermarkText, windowView, type WindowLoad } from './window-model';
 
 import './monitor.css';
@@ -19,6 +20,7 @@ interface Loaded {
   readonly load: WindowLoad;
   readonly config?: MonitorClientConfig;
   readonly workspaceName?: string;
+  readonly workspaceId?: string;
 }
 
 /**
@@ -68,7 +70,12 @@ export function MonitorWindow({
           `/workspaces/${workspace.id}/monitor/config`,
           controller.signal,
         );
-        setLoaded({ load: 'ready', config, workspaceName: workspace.name });
+        setLoaded({
+          load: 'ready',
+          config,
+          workspaceName: workspace.name,
+          workspaceId: workspace.id,
+        });
       } catch (error) {
         if (controller.signal.aborted) return;
         setLoaded({
@@ -155,8 +162,26 @@ export function MonitorWindow({
               <span className="monitor-badge">{text.live}</span>
             )}
           </header>
-          <main className="monitor-body" role="status" aria-live="polite">
-            {view === 'ready' ? (
+          <main
+            className={
+              view === 'ready' && kind === 'voice'
+                ? 'monitor-body monitor-body-wide'
+                : 'monitor-body'
+            }
+            role="status"
+            aria-live="polite"
+          >
+            {view === 'ready' && kind === 'voice' && loaded.workspaceId ? (
+              <VoiceMonitorLive
+                workspaceId={loaded.workspaceId}
+                refreshS={
+                  typeof settings?.['monitor.refresh_s'] === 'number'
+                    ? settings['monitor.refresh_s']
+                    : 3
+                }
+                locale={windowLocale}
+              />
+            ) : view === 'ready' ? (
               <p>{text.building}</p>
             ) : (
               <>

@@ -291,7 +291,10 @@ notion_sync: true
 | مسیر                         | permission    |
 | ---------------------------- | ------------- |
 | `GET /monitor/config`        | `monitor.use` |
+| `GET /monitor/voice`         | `monitor.use` |
 | `POST /monitor/events` (۲۰۴) | `monitor.use` |
+
+`GET /monitor/voice` فقط‌خواندنی است و خروجی‌اش را «تصویرسازی» می‌سازد: آنچه تنظیم‌های `monitor.voice.*` پنهان کرده‌اند در پاسخ نیست (`null`)، متن‌های کار از پاک‌سازی و واژه‌های ممنوع می‌گذرند، و پارامتر و نتیجهٔ اقدام‌ها، شناسهٔ پروژه و اتصال، و دامنهٔ دقیق دسترسی هرگز در آن نیستند. فقط نشست‌های خودِ کاربر دیده می‌شود (RLS روی `live_sessions`، `live_messages` و `live_actions`)؛ نمایشگر نشست ادمین دیگر را نشان نمی‌دهد. اگر نمایشگر خاموش باشد `409` برمی‌گرداند.
 
 `POST /monitor/events` فقط می‌پذیرد که مالک کدام کنترل را به‌کار برد (`opened`، `blackout`، `resumed`، `stopped`) و برای کدام نمایشگر (`voice`، `viewer`، `all`)؛ در ممیزی به‌صورت `monitor.<event>` و بدون هیچ محتوایی ثبت می‌شود.
 

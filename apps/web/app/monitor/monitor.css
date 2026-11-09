@@ -111,3 +111,270 @@
   border-color: var(--accent, #2f6fed);
   box-shadow: 0 0 0 1px var(--accent, #2f6fed);
 }
+
+/* The voice assistant monitor (ADR-0056 §6): wide, left aligned, readable from across a room. */
+.monitor-body-wide {
+  place-items: start stretch;
+  text-align: start;
+  margin-top: 1rem;
+  overflow: auto;
+}
+
+.voice-monitor {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.voice-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.voice-head h2 {
+  margin: 0;
+  font-size: 1.3em;
+}
+
+.voice-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.15em 0.8em;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  font-size: 0.7em;
+}
+
+.voice-dot {
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  background: #8a94a6;
+}
+
+.voice-state-talking .voice-dot {
+  background: #2e7d32;
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+
+.voice-state-ready .voice-dot {
+  background: #f9a825;
+}
+
+@keyframes voice-pulse {
+  50% {
+    transform: scale(1.5);
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-state-talking .voice-dot {
+    animation: none;
+  }
+}
+
+.voice-lost {
+  margin: 0;
+  padding: 0.3em 0.8em;
+  border-radius: 0.5em;
+  background: #f9a8251f;
+  border: 1px solid #f9a82566;
+  font-size: 0.7em;
+}
+
+.voice-stats {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(15em, 1fr));
+}
+
+.voice-stat,
+.voice-panel {
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 0.7em;
+  padding: 0.7em 0.9em;
+  min-width: 0;
+}
+
+.voice-stat h3,
+.voice-panel h3 {
+  margin: 0 0 0.4em;
+  font-size: 0.7em;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.voice-stat dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15em 0.8em;
+  margin: 0;
+  font-size: 0.8em;
+}
+
+.voice-stat dt {
+  opacity: 0.65;
+}
+
+.voice-stat dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.voice-big {
+  margin: 0 0 0.2em;
+  font-size: 1.6em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.voice-estimate,
+.voice-unpriced {
+  font-size: 0.5em;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.voice-unpriced {
+  font-size: 0.7em;
+}
+
+.voice-caps {
+  display: grid;
+  gap: 0.35em;
+  margin-top: 0.5em;
+  font-size: 0.7em;
+}
+
+.voice-cap {
+  display: grid;
+  gap: 0.15em;
+}
+
+.voice-bar {
+  display: block;
+  height: 0.5em;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  overflow: hidden;
+}
+
+.voice-bar > span {
+  display: block;
+  height: 100%;
+  background: #2f6fed;
+}
+
+.voice-bar-hot > span {
+  background: #c62828;
+}
+
+.voice-columns {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(22em, 1fr));
+  align-items: start;
+}
+
+.voice-empty {
+  margin: 0;
+  font-size: 0.75em;
+  opacity: 0.65;
+}
+
+.voice-sessions,
+.voice-lines ol,
+.voice-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4em;
+}
+
+.voice-sessions li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2em 0.8em;
+  padding: 0.35em 0.5em;
+  border-radius: 0.4em;
+  font-size: 0.75em;
+}
+
+.voice-sessions li.voice-current {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.voice-live-tag {
+  color: #2e7d32;
+  font-weight: 700;
+}
+
+.voice-end {
+  opacity: 0.7;
+}
+
+.voice-line {
+  display: grid;
+  gap: 0.1em;
+  padding: 0.4em 0.6em;
+  border-radius: 0.5em;
+  font-size: 0.8em;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+.voice-line-assistant {
+  background: color-mix(in srgb, #2f6fed 18%, transparent);
+}
+
+.voice-who {
+  font-size: 0.75em;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.voice-card {
+  display: grid;
+  gap: 0.1em;
+  padding: 0.4em 0.6em;
+  border-radius: 0.5em;
+  font-size: 0.8em;
+  border-inline-start: 0.3em solid #8a94a6;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+.voice-card-executed {
+  border-inline-start-color: #2e7d32;
+}
+
+.voice-card-failed,
+.voice-card-refused {
+  border-inline-start-color: #c62828;
+}
+
+.voice-card-proposed,
+.voice-card-first_confirmed,
+.voice-card-confirmed {
+  border-inline-start-color: #f9a825;
+}
+
+.voice-card-status {
+  font-size: 0.75em;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.voice-card-detail {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+
+.voice-card-detail p,
+.voice-card-detail ol {
+  margin: 0.2em 0 0;
+}

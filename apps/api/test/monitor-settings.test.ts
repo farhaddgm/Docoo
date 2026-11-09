@@ -128,4 +128,17 @@ describe('migration journal', () => {
     expect(entry?.idx).toBe(before ? before.idx + 1 : -1);
     expect(entry && before ? entry.when > before.when : false).toBe(true);
   });
+
+  it('lists 0090_live_session_provider right after it, with the provider part of what a session started with', () => {
+    const journal = JSON.parse(readFileSync(join(migrations, 'meta/_journal.json'), 'utf8')) as {
+      entries: { idx: number; tag: string; when: number }[];
+    };
+    const at = journal.entries.findIndex((entry) => entry.tag === '0090_live_session_provider');
+    expect(journal.entries[at - 1]?.tag).toBe('0089_monitor_settings');
+    expect(journal.entries[at]?.idx).toBe((journal.entries[at - 1]?.idx ?? -2) + 1);
+    expect(journal.entries[at]!.when).toBeGreaterThan(journal.entries[at - 1]!.when);
+    const provider = readFileSync(join(migrations, '0090_live_session_provider.sql'), 'utf8');
+    expect(provider).toMatch(/ADD COLUMN provider text NOT NULL DEFAULT ''/u);
+    expect(provider).toMatch(/NEW\.provider <> OLD\.provider/u);
+  });
 });

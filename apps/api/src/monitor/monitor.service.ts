@@ -1,14 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import {
   monitorSettingsFrom,
+  pickCurrentSession,
+  projectVoiceMonitor,
   type MonitorClientConfig,
   type ReportMonitorEvent,
+  type VoiceMonitorSource,
+  type VoiceMonitorView,
+  type VoiceSourceAction,
+  type VoiceSourceMessage,
 } from '@docoo/contracts';
 
 import { writeAudit } from '../common/audit.js';
+import { conflict } from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { ConfigService } from '../config/config.service.js';
+import { liveSettingsFrom } from '../live-assistant/live-gateway.js';
+import { costPeriods } from '../live-assistant/live-store.js';
+import { databaseNowMs, voiceActions, voiceMessages, voiceSessions } from './monitor-store.js';
+
+/** How many of the newest sessions the screen may choose from. */
+const SESSIONS_READ = 50;
+/** More lines than a screen shows, so the delay and the filter still leave enough. */
+const LINES_READ = 80;
 
 /**
  * The monitors (ADR-0056): read-only windows the owner puts on a room screen. This first step has
@@ -32,6 +47,59 @@ export class MonitorService {
         voiceEnabled: settings['monitor.voice.enabled'] === true,
         settings,
       };
+    });
+  }
+
+  /**
+   * What the voice assistant monitor shows right now (ADR-0056 §6). Everything goes through
+   * `projectVoiceMonitor`: what a setting hides is not in the answer, and the texts are masked.
+   * A monitor that is switched off answers nothing.
+   */
+  async voiceView(context: WorkspaceRequestContext): Promise<VoiceMonitorView> {
+    return this.database.run(context, async (client) => {
+      const resolved = await this.config.resolve(client, context, 'workspace', context.workspaceId);
+      const settings = monitorSettingsFrom(resolved.values);
+      if (settings['monitor.voice.enabled'] !== true) {
+        throw conflict('MONITOR_OFF', 'The voice assistant monitor is switched off.');
+      }
+      const assistant = liveSettingsFrom(resolved.values);
+      const nowMs = await databaseNowMs(client);
+      const sessions = await voiceSessions(client, SESSIONS_READ);
+      const current = pickCurrentSession(
+        sessions,
+        String(settings['monitor.voice.sessions']),
+        nowMs,
+      );
+
+      // Only what a setting lets a screen show is read at all.
+      let messages: VoiceSourceMessage[] = [];
+      let actions: VoiceSourceAction[] = [];
+      if (current && settings['monitor.voice.transcript'] !== 'hidden') {
+        messages = await voiceMessages(client, current.id, LINES_READ);
+      }
+      if (current && settings['monitor.voice.action_cards'] !== 'hidden') {
+        actions = await voiceActions(client, current.id);
+      }
+      const showsCost = settings['monitor.voice.cost'] !== 'hidden';
+      const periods = showsCost ? await costPeriods(client, context.workspaceId) : null;
+      const none = { costUsd: 0, tokens: 0, sessions: 0 };
+
+      const voiceId = resolved.values['live_assistant.voice_id'];
+      const source: VoiceMonitorSource = {
+        nowMs,
+        assistant: {
+          displayName: assistant.displayName,
+          language: assistant.language,
+          voiceId: typeof voiceId === 'string' ? voiceId : '',
+        },
+        sessions,
+        day: periods ? periods.day : none,
+        month: periods ? periods.month : none,
+        dailyCostCapUsd: assistant.caps.dailyCostCapUsd,
+        messages,
+        actions,
+      };
+      return projectVoiceMonitor(source, settings);
     });
   }
 

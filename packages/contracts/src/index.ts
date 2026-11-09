@@ -21,3 +21,5 @@ export * from './voice.js';
 export * from './live-assistant.js';
 export * from './live-assistant-api.js';
 export * from './monitor.js';
+export * from './monitor-voice.js';
+export * from './redaction.js';
