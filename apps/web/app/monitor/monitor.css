@@ -549,3 +549,13 @@
   font-size: 0.8em;
   margin: 0;
 }
+
+.viewer-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 1.5em;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 0.75em;
+  opacity: 0.8;
+}

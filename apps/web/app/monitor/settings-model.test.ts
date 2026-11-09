@@ -108,3 +108,26 @@ describe('blocked words as text', () => {
     expect(textToWords('')).toEqual([]);
   });
 });
+
+describe('the disclosure', () => {
+  it('is needed before any monitor can be switched on, and not before', () => {
+    const base = draftFrom(undefined);
+    expect(validateDraft(base)).toEqual([]);
+    for (const key of ['monitor.viewer.enabled', 'monitor.voice.enabled'] as const) {
+      const on = { ...base, [key]: true };
+      expect(validateDraft(on)).toEqual([
+        { key: 'monitor.disclosure_accepted', code: 'consent_needed' },
+      ]);
+      expect(validateDraft({ ...on, 'monitor.disclosure_accepted': true })).toEqual([]);
+    }
+  });
+
+  it('is saved before the switches', () => {
+    const saved = draftFrom(undefined);
+    const draft = { ...saved, 'monitor.viewer.enabled': true, 'monitor.disclosure_accepted': true };
+    const keys = saveItems(draft, saved).map((item) => item.key);
+    expect(keys.indexOf('monitor.disclosure_accepted')).toBeLessThan(
+      keys.indexOf('monitor.viewer.enabled'),
+    );
+  });
+});

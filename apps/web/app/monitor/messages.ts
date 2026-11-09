@@ -106,6 +106,8 @@ const fa = {
     nothing: 'تغییری برای ذخیره نیست.',
     unsaved: 'تغییرهای ذخیره‌نشده دارید.',
     problem: 'مقدار این تنظیم مجاز نیست.',
+    consentNeeded:
+      'برای روشن‌کردن نمایشگر باید بپذیرید که حاضران در اتاق هر چیزی را که نمایشگر نشان می‌دهد می‌بینند.',
     back: 'بازگشت به نمایشگر',
   },
   voice: {
@@ -255,6 +257,10 @@ const fa = {
     qualityPass: 'ارزیابی: قبول',
     qualityFail: 'ارزیابی: رد',
     qualityScore: 'نمره {n}',
+    transcriptTitle: 'گفتگوی دستیار',
+    topicsLabel: 'حوزه‌ها',
+    businessLabel: 'کسب‌وکار',
+    spoke: { user: 'مالک', assistant: 'دستیار' },
     usageTitle: 'مصرف AI',
     tokens: 'توکن',
     cost: 'هزینه',
@@ -445,6 +451,8 @@ const en: typeof fa = {
     nothing: 'There is nothing to save.',
     unsaved: 'You have unsaved changes.',
     problem: 'This value is not allowed.',
+    consentNeeded:
+      'To switch a monitor on you must accept that the people in the room see everything it shows.',
     back: 'Back to the monitors',
   },
   voice: {
@@ -594,6 +602,10 @@ const en: typeof fa = {
     qualityPass: 'Evaluation: passed',
     qualityFail: 'Evaluation: failed',
     qualityScore: 'score {n}',
+    transcriptTitle: 'Assistant conversation',
+    topicsLabel: 'Topics',
+    businessLabel: 'Business',
+    spoke: { user: 'Owner', assistant: 'Assistant' },
     usageTitle: 'AI usage',
     tokens: 'Tokens',
     cost: 'Cost',

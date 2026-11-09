@@ -41,6 +41,20 @@ export function ViewerMonitorView({
         </h2>
         <span className="viewer-status">{word(text.projectStatus, project.status)}</span>
       </header>
+      {(project.topics && project.topics.length > 0) || project.business ? (
+        <p className="viewer-meta" dir="auto">
+          {project.business && (
+            <span>
+              {text.businessLabel}: {project.business}
+            </span>
+          )}
+          {project.topics && project.topics.length > 0 && (
+            <span>
+              {text.topicsLabel}: {project.topics.join('، ')}
+            </span>
+          )}
+        </p>
+      ) : null}
       {lost && <p className="voice-lost">{text.lost}</p>}
 
       <section aria-label={text.stagesTitle}>
@@ -107,7 +121,7 @@ export function ViewerMonitorView({
               {view.documents.map((document, index) => (
                 <li key={index}>
                   <strong dir="auto">{document.title}</strong>
-                  {document.quality !== null && (
+                  {document.quality && (
                     <small
                       className={
                         document.quality.passed
@@ -131,7 +145,7 @@ export function ViewerMonitorView({
             </ul>
           </section>
         )}
-        {view.research !== null && view.research.count > 0 && (
+        {view.research && view.research.count > 0 && (
           <section className="voice-panel" aria-label={text.researchTitle}>
             <h3>{text.researchTitle}</h3>
             <p className="viewer-assistant-state">
@@ -167,6 +181,19 @@ export function ViewerMonitorView({
                 </p>
               )
             )}
+          </section>
+        )}
+        {view.transcript && view.transcript.length > 0 && (
+          <section className="voice-panel" aria-label={text.transcriptTitle}>
+            <h3>{text.transcriptTitle}</h3>
+            <ol className="viewer-list">
+              {view.transcript.map((line, index) => (
+                <li key={index} className={`voice-line voice-line-${line.role}`}>
+                  <span className="voice-who">{word(text.spoke, line.role)}</span>
+                  <span dir="auto">{line.text}</span>
+                </li>
+              ))}
+            </ol>
           </section>
         )}
         {view.agents !== null && view.agents.length > 0 && (

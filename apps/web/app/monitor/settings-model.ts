@@ -43,7 +43,7 @@ export const presetChanges = (draft: Draft, preset: MonitorPreset): MonitorSetti
 export const changedKeys = (draft: Draft, saved: Draft): MonitorSettingKey[] =>
   monitorSettingKeys.filter((key) => !same(draft[key], saved[key]));
 
-export type ProblemCode = 'invalid_value';
+export type ProblemCode = 'invalid_value' | 'consent_needed';
 
 export interface Problem {
   readonly key: MonitorSettingKey;
@@ -56,6 +56,12 @@ export function validateDraft(draft: Draft): Problem[] {
   for (const key of monitorSettingKeys) {
     if (key === 'monitor.preset') continue;
     if (!isMonitorSettingValue(key, draft[key])) problems.push({ key, code: 'invalid_value' });
+  }
+  // A monitor can be switched on only after the owner accepted that the room sees what it shows.
+  const switchedOn =
+    draft['monitor.viewer.enabled'] === true || draft['monitor.voice.enabled'] === true;
+  if (switchedOn && draft['monitor.disclosure_accepted'] !== true) {
+    problems.push({ key: 'monitor.disclosure_accepted', code: 'consent_needed' });
   }
   return problems;
 }

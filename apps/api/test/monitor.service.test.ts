@@ -38,6 +38,7 @@ describe('MonitorService', () => {
 
   it('reads the settings of the workspace and ignores a value that is not allowed', async () => {
     const { monitor, config } = service({
+      'monitor.disclosure_accepted': true,
       'monitor.viewer.enabled': true,
       'monitor.viewer.cost': 'total',
       'monitor.voice.enabled': 'yes',
@@ -49,6 +50,12 @@ describe('MonitorService', () => {
     expect(result.voiceEnabled).toBe(false);
     expect(result.settings['monitor.viewer.cost']).toBe('total');
     expect(result.settings['monitor.delay_s']).toBe(3);
+  });
+
+  it('keeps a monitor off until the disclosure is accepted, whatever the switch says', async () => {
+    const { monitor } = service({ 'monitor.viewer.enabled': true, 'monitor.voice.enabled': true });
+    const config = await monitor.clientConfig(context);
+    expect([config.viewerEnabled, config.voiceEnabled]).toEqual([false, false]);
   });
 
   it('writes the control that was used to the audit trail, with no content', async () => {

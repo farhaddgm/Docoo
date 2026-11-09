@@ -86,6 +86,14 @@ export interface ViewerMonitorSource {
   readonly usage: readonly ViewerSourceUsage[];
   /** The sources the research stage cited. */
   readonly research: readonly ViewerSourceResearch[];
+  readonly topics: readonly string[];
+  readonly businessName: string | null;
+  /** The lines of the voice conversation that is running now, oldest first. */
+  readonly transcript: readonly {
+    readonly role: 'user' | 'assistant';
+    readonly content: string;
+    readonly createdAt: string;
+  }[];
 }
 
 // ---- what comes out -------------------------------------------------------------------------
@@ -110,7 +118,16 @@ export interface ViewerMonitorView {
     readonly code: string | null;
     readonly status: string;
     readonly currentStage: string;
+    readonly topics: readonly string[] | null;
+    readonly business: string | null;
   };
+  readonly transcript:
+    | null
+    | readonly {
+        readonly role: 'user' | 'assistant';
+        readonly text: string;
+        readonly at: string;
+      }[];
   readonly stages: readonly ViewerMonitorStage[];
   readonly gates: null | readonly { readonly title: string; readonly status: string }[];
   readonly documents:
@@ -202,6 +219,7 @@ export function projectViewerMonitor(
       generatedAt,
       delayS,
       project: null,
+      transcript: null,
       stages: [],
       gates: null,
       documents: null,
@@ -257,6 +275,7 @@ export function projectViewerMonitor(
   const modelSetting = pick(settings, 'monitor.viewer.model_info', 'hidden');
   const tokensSetting = pick(settings, 'monitor.viewer.tokens', 'hidden');
   const costSetting = pick(settings, 'monitor.viewer.cost', 'hidden');
+  const transcriptSetting = pick(settings, 'monitor.viewer.assistant_transcript', 'hidden');
   const qualitySetting = pick(settings, 'monitor.viewer.quality_scores', 'score');
   const researchSetting = pick(settings, 'monitor.viewer.research_sources', 'full');
 
@@ -328,7 +347,28 @@ export function projectViewerMonitor(
       code: nameSetting === 'hidden' ? null : mask(project.code),
       status: project.status,
       currentStage: project.currentStage,
+      topics:
+        pick(settings, 'monitor.viewer.topic_names', 'shown') === 'shown'
+          ? source.topics.slice(0, MAX_ITEMS).map((topic) => mask(topic.slice(0, 200)))
+          : null,
+      business:
+        pick(settings, 'monitor.viewer.business_name', 'hidden') === 'shown' &&
+        source.businessName !== null
+          ? mask(source.businessName.slice(0, 200))
+          : null,
     },
+    transcript:
+      transcriptSetting === 'hidden'
+        ? null
+        : source.transcript
+            .filter((line) => transcriptSetting === 'full' || line.role === 'assistant')
+            .filter((line) => visible(line.createdAt))
+            .slice(-MAX_ITEMS)
+            .map((line) => ({
+              role: line.role,
+              text: mask(line.content.slice(0, 1000)),
+              at: line.createdAt,
+            })),
     stages,
     gates:
       gatesSetting === 'hidden'

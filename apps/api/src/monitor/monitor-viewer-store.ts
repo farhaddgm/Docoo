@@ -222,3 +222,44 @@ export async function viewerUsage(
     costUsd: row.cost_usd,
   }));
 }
+
+/** The topic areas of the project. */
+export async function viewerTopics(client: PoolClient, projectId: string): Promise<string[]> {
+  const rows = (
+    await client.query<{ title: string }>(
+      `select t.title from project_topics pt join topics t on t.id = pt.topic_id
+        where pt.project_id = $1 order by pt.priority, t.title`,
+      [projectId],
+    )
+  ).rows;
+  return rows.map((row) => row.title);
+}
+
+/** The business the project is linked to, if any. */
+export async function viewerBusiness(
+  client: PoolClient,
+  projectId: string,
+): Promise<string | null> {
+  const row = (
+    await client.query<{ name: string }>(
+      `select name from project_businesses where project_id = $1`,
+      [projectId],
+    )
+  ).rows[0];
+  return row?.name ?? null;
+}
+
+/** The newest lines of the voice conversation running now (the person's own, by RLS). */
+export async function viewerTranscript(client: PoolClient, limit: number) {
+  const rows = (
+    await client.query<{ role: 'user' | 'assistant'; content: string; created_at: string }>(
+      `select role, content, created_at from (
+         select m.seq, m.role, m.content, ${isoColumn('m.created_at', 'created_at')}
+           from live_messages m join live_sessions s on s.id = m.session_id
+          where s.status = 'active' order by m.created_at desc, m.seq desc limit $1
+       ) lines order by created_at, seq`,
+      [limit],
+    )
+  ).rows;
+  return rows.map((row) => ({ role: row.role, content: row.content, createdAt: row.created_at }));
+}

@@ -162,6 +162,11 @@ export function MonitorSettings({
                 value={draft[definition.key]}
                 locale={locale}
                 invalid={problemKeys.has(definition.key)}
+                message={
+                  definition.key === 'monitor.disclosure_accepted'
+                    ? text.consentNeeded
+                    : text.problem
+                }
                 onChange={(value) => set(definition.key, value)}
               />
             ))}
@@ -210,12 +215,14 @@ function SettingRow({
   value,
   locale,
   invalid,
+  message,
   onChange,
 }: {
   readonly definition: MonitorSettingDefinition;
   readonly value: MonitorSettingValue;
   readonly locale: Locale;
   readonly invalid: boolean;
+  readonly message: string;
   readonly onChange: (value: MonitorSettingValue) => void;
 }) {
   const messages = monitorMessages(locale);
@@ -226,14 +233,21 @@ function SettingRow({
   switch (definition.kind) {
     case 'boolean':
       return (
-        <label className="voice-check">
-          <input
-            type="checkbox"
-            checked={value === true}
-            onChange={(event) => onChange(event.target.checked)}
-          />{' '}
-          {label}
-        </label>
+        <div className="field-stack">
+          <label className="voice-check">
+            <input
+              type="checkbox"
+              checked={value === true}
+              onChange={(event) => onChange(event.target.checked)}
+            />{' '}
+            {label}
+          </label>
+          {invalid && (
+            <small className="notice error" role="alert">
+              {message}
+            </small>
+          )}
+        </div>
       );
     case 'choice':
       control = (
@@ -309,7 +323,7 @@ function SettingRow({
       )}
       {invalid && (
         <small className="notice error" role="alert">
-          {messages.settings.problem}
+          {message}
         </small>
       )}
     </div>

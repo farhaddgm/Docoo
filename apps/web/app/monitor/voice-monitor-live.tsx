@@ -45,8 +45,14 @@ export function VoiceMonitorLive({
         });
         if (stopped) return;
         if (response.status === 409) setState({ view: null, status: 'off' });
-        else if (response.ok) setState({ view: (await response.json()) as View, status: 'ok' });
-        else setState((previous) => ({ view: previous.view, status: 'lost' }));
+        else if (response.ok) {
+          const body = (await response.json()) as View;
+          // An answer that is not a view (a proxy page, a half answer) must not break the screen.
+          const valid = Array.isArray(body.sessions) && typeof body.assistantName === 'string';
+          setState((previous) =>
+            valid ? { view: body, status: 'ok' } : { view: previous.view, status: 'lost' },
+          );
+        } else setState((previous) => ({ view: previous.view, status: 'lost' }));
       } catch {
         if (!stopped) setState((previous) => ({ view: previous.view, status: 'lost' }));
       }

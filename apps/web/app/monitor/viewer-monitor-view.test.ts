@@ -9,7 +9,15 @@ import { ViewerMonitorView as View } from './viewer-monitor-view';
 const base: ViewerMonitorView = {
   generatedAt: '2026-11-09T12:00:00.000Z',
   delayS: 3,
-  project: { name: 'Market study', code: 'MS-1', status: 'active', currentStage: 'research' },
+  project: {
+    name: 'Market study',
+    code: 'MS-1',
+    status: 'active',
+    currentStage: 'research',
+    topics: null,
+    business: null,
+  },
+  transcript: null,
   stages: [
     {
       stage: 'analysis',
@@ -179,11 +187,33 @@ describe('the viewer monitor view', () => {
     ).not.toContain(text.researchTitle);
   });
 
+  it('draws the topics, the business and the assistant conversation when the view holds them', () => {
+    const text = monitorMessages('en').viewer;
+    const out = html({
+      ...base,
+      project: { ...base.project!, topics: ['Retail', 'Food'], business: 'Shop Ltd' },
+      transcript: [
+        { role: 'assistant', text: 'Opening the project', at: '2026-11-09T11:58:00.000Z' },
+      ],
+    });
+    for (const shown of ['Retail، Food', 'Shop Ltd', text.transcriptTitle, 'Opening the project']) {
+      expect(out).toContain(shown);
+    }
+    expect(html(base)).not.toContain(text.transcriptTitle);
+  });
+
   it('shows the code alone when the name is hidden, and reads in Persian', () => {
     const out = html(
       {
         ...base,
-        project: { name: null, code: 'MS-1', status: 'active', currentStage: 'research' },
+        project: {
+          name: null,
+          code: 'MS-1',
+          status: 'active',
+          currentStage: 'research',
+          topics: null,
+          business: null,
+        },
       },
       'fa',
     );

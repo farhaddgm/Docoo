@@ -41,7 +41,11 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
     actorId,
     correlationId: randomUUID(),
   });
-  const config = { resolve: () => Promise.resolve({ values }) };
+  const config = {
+    resolve: () =>
+      Promise.resolve({ values: { 'monitor.disclosure_accepted': accepted, ...values } }),
+  };
+  let accepted = true;
   const view = () => monitor.voiceView(context());
 
   beforeAll(async () => {
@@ -272,6 +276,16 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
         [document, ids.workspace],
       )
     ).rows[0]!.id;
+    const topic = (
+      await admin.query<{ id: string }>(
+        `insert into topics (workspace_id, code, title) values ($1, $2, 'Retail Acme') returning id`,
+        [ids.workspace, `tp-${suffix}`],
+      )
+    ).rows[0]!.id;
+    await admin.query(
+      `insert into project_topics (workspace_id, project_id, topic_id, priority) values ($1, $2, $3, 1)`,
+      [ids.workspace, ids.project, topic],
+    );
     await admin.query(`update documents set current_version_id = $1 where id = $2`, [
       version,
       document,
@@ -310,6 +324,18 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
       await admin.query(`drop role ${roleName}`).catch(() => undefined);
       await admin.end();
     }
+  });
+
+  it('answers nothing until the owner accepted that the room sees what a monitor shows', async () => {
+    accepted = false;
+    values = { 'monitor.voice.enabled': true, 'monitor.viewer.enabled': true };
+    for (const read of [view, () => monitor.viewerView(context())]) {
+      const error = await read().catch((caught: unknown) => caught);
+      expect((error as HttpException).getStatus()).toBe(409);
+    }
+    const config = await monitor.clientConfig(context());
+    expect([config.viewerEnabled, config.voiceEnabled]).toEqual([false, false]);
+    accepted = true;
   });
 
   it('answers nothing while the monitor is switched off', async () => {
@@ -534,6 +560,9 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
         title: 'Report for ●●●',
         quality: { passed: true, score: 87.5 },
       });
+      expect(result.project?.topics).toEqual(['Retail ●●●']);
+      expect(result.project?.business).toBeNull();
+      expect(result.transcript).toBeNull();
       expect(result.usage).toBeNull();
       const json = JSON.stringify(result);
       for (const forbidden of ['Acme', 'boss@', SECRET, ids.project, 'params']) {
@@ -558,6 +587,25 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
         input: 1000,
         output: 500,
       });
+    });
+
+    it('shows the assistant conversation only when the setting allows, masked, from the running session', async () => {
+      values = {
+        'monitor.viewer.enabled': true,
+        'monitor.viewer.project_id': ids.project,
+        'monitor.viewer.assistant_transcript': 'full',
+        'monitor.blocked_words': ['Acme'],
+        'monitor.delay_s': 0,
+      };
+      const result = await viewer();
+      expect(result.transcript?.map((line) => line.text)).toEqual([
+        'Open the ●●● project',
+        'Opening it. Mail ●●●',
+        'Fresh line now',
+      ]);
+      expect(JSON.stringify(result)).not.toContain(SECRET);
+      values['monitor.viewer.assistant_transcript'] = 'assistant_only';
+      expect((await viewer()).transcript?.map((line) => line.role)).toEqual(['assistant']);
     });
 
     it('shows nothing of a project that does not exist', async () => {

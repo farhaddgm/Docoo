@@ -86,6 +86,12 @@ const source = (over: Partial<ViewerMonitorSource> = {}): ViewerMonitorSource =>
     },
   ],
   assistantLive: true,
+  topics: ['Retail', 'Acme sector'],
+  businessName: 'Acme Ltd',
+  transcript: [
+    { role: 'user', content: 'Open Acme please', createdAt: ago(60) },
+    { role: 'assistant', content: 'Opening it, mail boss@acme.example', createdAt: ago(55) },
+  ],
   usage: [
     { provider: 'openai', model: 'gpt-x', inputTokens: 1000, outputTokens: 500, costUsd: 0.5 },
   ],
@@ -268,6 +274,28 @@ describe('the viewer monitor', () => {
     expect(standard?.sources?.[0]?.url).toBe('https://www.example.com/report?id=1');
   });
 
+  it('shows the topics, the business name and the assistant conversation only as the settings say', () => {
+    const v = view({ 'monitor.blocked_words': ['Acme'] });
+    expect(v.project?.topics).toEqual(['Retail', `${MASK} sector`]);
+    expect(v.project?.business).toBeNull();
+    expect(v.transcript).toBeNull();
+    expect(view({ 'monitor.viewer.topic_names': 'hidden' }).project?.topics).toBeNull();
+    expect(
+      view({ 'monitor.viewer.business_name': 'shown', 'monitor.blocked_words': ['Ltd'] }).project
+        ?.business,
+    ).toBe(`Acme ${MASK}`);
+    expect(
+      view({ 'monitor.viewer.assistant_transcript': 'assistant_only' }).transcript?.map(
+        (l) => l.role,
+      ),
+    ).toEqual(['assistant']);
+    const full = view({
+      'monitor.viewer.assistant_transcript': 'full',
+      'monitor.blocked_words': ['Acme'],
+    }).transcript;
+    expect(full?.map((l) => l.text)).toEqual([`Open ${MASK} please`, `Opening it, mail ${MASK}`]);
+  });
+
   it('holds back what is newer than the delay', () => {
     const base = source();
     const fresh = source({
@@ -373,6 +401,7 @@ describe('nothing forbidden reaches a screen', () => {
       'project',
       'research',
       'stages',
+      'transcript',
       'usage',
     ]);
     expect(Object.keys(v.stages[0]!).sort()).toEqual([

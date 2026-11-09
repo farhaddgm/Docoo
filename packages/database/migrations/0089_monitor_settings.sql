@@ -4,6 +4,9 @@
 -- Only a super administrator can write them (workspace.configure outside a resource is platform only).
 -- Keep every row of this file equal to monitorSettingDefinitions in @docoo/contracts; a test does.
 INSERT INTO setting_definitions (key, value_schema, default_value, allowed_scopes, sensitive, description_fa, description_en) VALUES
+ ('monitor.disclosure_accepted', '{"type":"boolean"}', 'false', '{workspace}', false,
+  'مالک پذیرفته است که هر چیزی که نمایشگر نشان می‌دهد برای همهٔ حاضران در اتاق دیده می‌شود',
+  'The owner accepts that everything a monitor shows can be seen by everyone in the room'),
  ('monitor.viewer.enabled', '{"type":"boolean"}', 'false', '{workspace}', false,
   'نمایشگر بیننده (برای حاضران اتاق) روشن باشد',
   'The viewer monitor (for people in the room) is on'),

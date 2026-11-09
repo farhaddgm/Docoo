@@ -110,6 +110,13 @@ export const monitorSettingDefinitions = [
   // -- general: switches, safety and look --------------------------------------------------------
   bool(
     'general',
+    'monitor.disclosure_accepted',
+    false,
+    'مالک پذیرفته است که هر چیزی که نمایشگر نشان می‌دهد برای همهٔ حاضران در اتاق دیده می‌شود',
+    'The owner accepts that everything a monitor shows can be seen by everyone in the room',
+  ),
+  bool(
+    'general',
     'monitor.viewer.enabled',
     false,
     'نمایشگر بیننده (برای حاضران اتاق) روشن باشد',

@@ -28,10 +28,16 @@ import {
   viewerGates,
   viewerProject,
   viewerResearch,
+  viewerBusiness,
+  viewerTopics,
+  viewerTranscript,
   viewerStages,
   viewerUsage,
 } from './monitor-viewer-store.js';
 import { databaseNowMs, voiceActions, voiceMessages, voiceSessions } from './monitor-store.js';
+
+const accepted = (settings: Record<string, unknown>): boolean =>
+  settings['monitor.disclosure_accepted'] === true;
 
 /** How many of the newest sessions the screen may choose from. */
 const SESSIONS_READ = 50;
@@ -56,8 +62,9 @@ export class MonitorService {
       const resolved = await this.config.resolve(client, context, 'workspace', context.workspaceId);
       const settings = monitorSettingsFrom(resolved.values);
       return {
-        viewerEnabled: settings['monitor.viewer.enabled'] === true,
-        voiceEnabled: settings['monitor.voice.enabled'] === true,
+        // A monitor is on only after the owner accepted that the room sees what it shows.
+        viewerEnabled: settings['monitor.viewer.enabled'] === true && accepted(settings),
+        voiceEnabled: settings['monitor.voice.enabled'] === true && accepted(settings),
         settings,
       };
     });
@@ -72,7 +79,7 @@ export class MonitorService {
     return this.database.run(context, async (client) => {
       const resolved = await this.config.resolve(client, context, 'workspace', context.workspaceId);
       const settings = monitorSettingsFrom(resolved.values);
-      if (settings['monitor.voice.enabled'] !== true) {
+      if (settings['monitor.voice.enabled'] !== true || !accepted(settings)) {
         throw conflict('MONITOR_OFF', 'The voice assistant monitor is switched off.');
       }
       const assistant = liveSettingsFrom(resolved.values);
@@ -124,7 +131,7 @@ export class MonitorService {
     return this.database.run(context, async (client) => {
       const resolved = await this.config.resolve(client, context, 'workspace', context.workspaceId);
       const settings = monitorSettingsFrom(resolved.values);
-      if (settings['monitor.viewer.enabled'] !== true) {
+      if (settings['monitor.viewer.enabled'] !== true || !accepted(settings)) {
         throw conflict('MONITOR_OFF', 'The viewer monitor is switched off.');
       }
       const nowMs = await databaseNowMs(client);
@@ -142,6 +149,9 @@ export class MonitorService {
         assistantLive: false,
         usage: [],
         research: [],
+        topics: [],
+        businessName: null,
+        transcript: [],
       };
       if (!project) return projectViewerMonitor(empty, settings);
       const assistant = await viewerActions(client, projectId);
@@ -157,6 +167,15 @@ export class MonitorService {
           assistantLive: assistant.live,
           usage: await viewerUsage(client, projectId),
           research: await viewerResearch(client, projectId),
+          topics: await viewerTopics(client, projectId),
+          businessName:
+            settings['monitor.viewer.business_name'] === 'shown'
+              ? await viewerBusiness(client, projectId)
+              : null,
+          transcript:
+            settings['monitor.viewer.assistant_transcript'] === 'hidden'
+              ? []
+              : await viewerTranscript(client, 40),
         },
         settings,
       );

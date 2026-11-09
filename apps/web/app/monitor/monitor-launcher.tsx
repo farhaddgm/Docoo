@@ -42,7 +42,7 @@ export function MonitorLauncher({
       setConfig(loaded);
       setChosen(String(loaded.settings['monitor.viewer.project_id'] ?? ''));
       apiGet<{ items: { id: string; code: string; title: string }[] }>(`${base}/projects?limit=100`)
-        .then((list) => setProjects(list.items))
+        .then((list) => setProjects(list.items ?? []))
         .catch(() => setProjects([]));
       setFailure('');
     } catch (error) {
