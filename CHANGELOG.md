@@ -4,6 +4,23 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.56.0] — 2026-11-09
+
+Monitors: read-only windows the owner puts on a room screen or projector, one for the voice assistant and one for the people in the room. Adds two migrations (`0089_monitor_settings`, `0090_live_session_provider`).
+
+### Added
+
+- **Monitor menu entry and windows.** A "Monitor" entry in the side menu (owner only) opens each monitor in its own named browser window, with no menu, no links into the back office and no assistant. Only one window of each kind is open at a time. The owner can black the screens out, resume, or stop the broadcast, and a window closes itself after `monitor.max_play_hours`.
+- **Voice assistant monitor.** Shows the assistant's state, which AI and model it runs on, tokens and cost (marked as an estimate, or "unpriced"), the caps, the conversations, the conversation text and the assistant's action cards, as far as the settings allow (`GET /monitor/voice`).
+- **Viewer monitor.** Shows the project the owner put on the projector: its steps with status, times and the full output of each, pending approvals, documents with their evaluation result, the research sources, agents, the assistant's work on it, topics, business, the assistant conversation and AI usage, as far as the settings allow (`GET /monitor/viewer`). A "Show on the projector" button sits on the Monitor page and on every project's page.
+- **Monitor settings page.** 47 `monitor.*` settings with three ready profiles (meeting room, team, personal), a show/hide choice for every detail, blocked words, a deliberate delay (3 seconds by default), a disclosure the owner must accept, and a preview of what the room will see before a monitor opens. Everything starts off, in the careful meeting-room profile.
+- **`live_sessions.provider`.** A session records which provider it ran on when it starts; like its model it cannot change afterwards.
+
+### Security
+
+- What a setting hides never reaches a monitor: each answer is built field by field by a pure function, hidden parts are `null`, and only what may be shown is read. Texts are masked (emails, phones, internal addresses, paths, keys, ids; in the strict level also web addresses, amounts and long numbers) and the owner's blocked words are hidden; this cannot be turned off. A leak test covers every choice of every setting and 400 random mixes.
+- The new permission `monitor.use` belongs to the owner only; editors and viewers do not have it. The monitor records what control was used (`monitor.opened|closed|blackout|resumed|stopped`) and never what a monitor showed.
+
 ## [0.55.1] — 2026-11-08
 
 Patch release. No migration and no API change.
