@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Changed
+
+- NestJS `common`, `core`, `platform-fastify` and `testing` 12.2.0 → 12.3.2 together (the newest release past the 7-day supply-chain age gate); `@nestjs/swagger` 12.0.1 stays (peer range `^12.0.0`).
+
 ## [0.56.0] — 2026-11-09
 
 Monitors: read-only windows the owner puts on a room screen or projector, one for the voice assistant and one for the people in the room. Adds two migrations (`0089_monitor_settings`, `0090_live_session_provider`).
