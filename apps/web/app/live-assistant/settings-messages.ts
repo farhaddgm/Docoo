@@ -19,6 +19,25 @@ const fa = {
       executor_not_configured:
         'نوشتن آماده نیست: مدل نوشتاری مشخص نیست. در بخش «مدل نوشتاری» یکی را انتخاب کنید، یا اتصال هوش مصنوعی فضای کار را در صفحهٔ «ارائه‌دهندگان AI» تنظیم کنید.',
     },
+    voiceCheck: {
+      button: 'بررسی اتصال صدا از سرور',
+      running: 'در حال بررسی…',
+      note: 'این بررسی فقط در را باز می‌کند و چیزی نمی‌گوید؛ هزینه‌ای ندارد. اول تنظیمات را ذخیره کنید.',
+      ok: 'اتصال صدا از سرور کار می‌کند.',
+      failed: 'اتصال صدا برقرار نشد:',
+      failures: {
+        not_configured: 'اتصال و مدل صدا را انتخاب و ذخیره کنید.',
+        connection_unavailable:
+          'اتصال انتخاب‌شده در دسترس نیست؛ در صفحهٔ ارائه‌دهندگان آن را بررسی کنید.',
+        not_openai: 'صدای زنده فعلاً فقط با اتصال OpenAI کار می‌کند.',
+        auth: 'کلید این اتصال پذیرفته نشد.',
+        region: 'ارائه‌دهنده کشورِ محل سرور را نمی‌پذیرد.',
+        model: 'این مدل برای این کلید یافت نشد یا اجازه ندارد.',
+        network: 'سرور نتوانست به ارائه‌دهنده برسد.',
+        timeout: 'ارائه‌دهنده در مهلت جواب نداد.',
+        unexpected: 'پاسخ غیرمنتظره‌ای آمد.',
+      },
+    },
   },
   loadFailed: 'تنظیمات خوانده نشد.',
   saveFailed: 'ذخیره انجام نشد. دوباره تلاش کنید.',
@@ -180,6 +199,25 @@ const en: typeof fa = {
         'Writing is not ready: the privacy notice is not accepted yet. Accept it and save.',
       executor_not_configured:
         'Writing is not ready: no text model is set. Choose one under "Text model", or set up the workspace AI connection on the "AI providers" page.',
+    },
+    voiceCheck: {
+      button: 'Check the voice link from the server',
+      running: 'Checking…',
+      note: 'This only opens the door and says nothing; it costs nothing. Save the settings first.',
+      ok: 'The voice link from the server works.',
+      failed: 'The voice link did not work:',
+      failures: {
+        not_configured: 'Choose and save the voice connection and model.',
+        connection_unavailable:
+          'The chosen connection is unavailable; check it on the providers page.',
+        not_openai: 'Live voice works only with an OpenAI connection for now.',
+        auth: 'The key of this connection was not accepted.',
+        region: 'The provider does not accept the country the server runs in.',
+        model: 'This model was not found for this key, or it has no access.',
+        network: 'The server could not reach the provider.',
+        timeout: 'The provider did not answer in time.',
+        unexpected: 'An unexpected answer came back.',
+      },
     },
   },
   loadFailed: 'The settings could not be read.',

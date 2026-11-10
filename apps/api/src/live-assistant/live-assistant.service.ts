@@ -9,6 +9,7 @@ import {
   type LiveActionView,
   type LiveAssistantClientConfig,
   type LiveCostSummary,
+  type LiveVoiceCheck,
   type LiveCancelReason,
   type LiveMessageView,
   type LiveSessionEndReason,
@@ -31,6 +32,7 @@ import { PROVIDER_RUNTIME } from '../providers/providers.service.js';
 import { LIVE_CAPABILITIES, LiveCapabilityRegistry } from './capabilities.js';
 import { askAnswerText } from './live-ask-text.js';
 import { runExecutor } from './live-executor.js';
+import { checkRealtimeLink } from './realtime-link.js';
 import {
   decideProposal,
   judgeConfirmation,
@@ -168,6 +170,52 @@ export class LiveAssistantService {
         activeSessionId: await activeSessionId(client, context.actorId),
       };
     });
+  }
+
+  /**
+   * Opens the voice link to the provider from this server and closes it again, to tell the owner
+   * whether voice can work from here (the country the server runs in, the key, the model). Nothing
+   * is said over the link, so it costs nothing, and the key never leaves this method.
+   */
+  async checkVoiceLink(context: WorkspaceRequestContext): Promise<LiveVoiceCheck> {
+    const outcome = await this.database.run(context, async (client) => {
+      const settings = await this.settings(client, context);
+      const model = settings.model.trim();
+      if (settings.connectionId === '' || model === '') {
+        return { failure: 'not_configured' as const, model };
+      }
+      try {
+        const access = await this.runtime.realtimeAccessFor(client, settings.connectionId);
+        return { access, model };
+      } catch (error) {
+        const kind =
+          error instanceof Error && error.message === 'ai_connection_no_realtime'
+            ? ('not_openai' as const)
+            : ('connection_unavailable' as const);
+        return { failure: kind, model };
+      }
+    });
+    if ('failure' in outcome) {
+      return {
+        ok: false,
+        failure: outcome.failure,
+        model: outcome.model,
+        events: [],
+        latencyMs: null,
+      };
+    }
+    const result = await checkRealtimeLink({
+      apiKey: outcome.access.apiKey,
+      baseUrl: outcome.access.baseUrl,
+      model: outcome.model,
+    });
+    return {
+      ok: result.ok,
+      failure: result.failure,
+      model: outcome.model,
+      events: [...result.events],
+      latencyMs: result.latencyMs,
+    };
   }
 
   // ---- sessions --------------------------------------------------------------------------
