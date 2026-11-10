@@ -485,6 +485,13 @@ export const monitorSettingDefinitions = [
     'نام کاربر گفتگو: پنهان، فقط نقش، نام کوچک یا نام کامل',
     'Who spoke: hidden, role only, first name or full name',
   ),
+  bool(
+    'viewer',
+    'monitor.viewer.use_alias',
+    true,
+    'اگر پروژه نام نمایشی دارد، به‌جای نام واقعی آن روی نمایشگر بیننده نمایش داده شود',
+    'When a project has a display name, show it on the viewer monitor instead of the real name',
+  ),
 ] as const satisfies readonly MonitorSettingDefinition[];
 
 export type MonitorSettingKey = (typeof monitorSettingDefinitions)[number]['key'];
@@ -661,3 +668,9 @@ export const reportMonitorEventSchema = z.object({
   kind: z.enum([...monitorKinds, 'all']),
 });
 export type ReportMonitorEvent = z.infer<typeof reportMonitorEventSchema>;
+
+/** The display name of a project on the monitors; empty removes it. */
+export const monitorAliasSchema = z.strictObject({
+  alias: z.string().trim().max(80),
+});
+export type MonitorAliasInput = z.infer<typeof monitorAliasSchema>;

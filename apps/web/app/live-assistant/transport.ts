@@ -12,7 +12,9 @@ export interface LiveTransportHandlers {
    * they cost in dollars when the provider's price is known. The server checks its caps against
    * the totals the store reports.
    */
-  onUsage: (tokens: number, costUsd?: number) => void;
+  onUsage: (tokens: number, costUsd?: number, cachedTokens?: number) => void;
+  /** What the assistant is doing right now; the store reports it so a projector can show it. */
+  onActivity?: (activity: 'listening' | 'thinking' | 'speaking') => void;
   /** A finished line of the conversation, for the transcript the owner can read later. */
   onMessage: (role: 'user' | 'assistant', content: string) => void;
   /**

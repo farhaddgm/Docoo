@@ -220,16 +220,33 @@ export async function costPeriods(
 export async function recordUsage(
   client: PoolClient,
   sessionId: string,
-  usage: { inputTokens: number; outputTokens: number; costUsd: number },
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+    costUsd: number;
+    /** What the assistant is doing now, when the browser said; the last word stays otherwise. */
+    activity?: string | undefined;
+  },
 ): Promise<void> {
   await client.query(
     `update live_sessions
         set input_tokens = greatest(input_tokens, $2),
             output_tokens = greatest(output_tokens, $3),
-            cost_usd = greatest(cost_usd, $4),
+            cached_input_tokens = greatest(cached_input_tokens, $4),
+            cost_usd = greatest(cost_usd, $5),
+            activity = coalesce($6, activity),
+            activity_at = case when $6::text is null then activity_at else now() end,
             last_activity_at = now()
       where id = $1 and status = 'active'`,
-    [sessionId, usage.inputTokens, usage.outputTokens, usage.costUsd],
+    [
+      sessionId,
+      usage.inputTokens,
+      usage.outputTokens,
+      usage.cachedInputTokens,
+      usage.costUsd,
+      usage.activity ?? null,
+    ],
   );
 }
 
@@ -259,17 +276,31 @@ export async function markUntrustedRead(client: PoolClient, sessionId: string): 
 export async function recordExecutorUsage(
   client: PoolClient,
   sessionId: string,
-  usage: { inputTokens: number; outputTokens: number; costUsd: number; calls: number },
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+    costUsd: number;
+    calls: number;
+  },
 ): Promise<void> {
   await client.query(
     `update live_sessions
         set executor_input_tokens = executor_input_tokens + $2,
             executor_output_tokens = executor_output_tokens + $3,
-            executor_cost_usd = executor_cost_usd + $4,
-            executor_calls = executor_calls + $5,
+            executor_cached_input_tokens = executor_cached_input_tokens + $4,
+            executor_cost_usd = executor_cost_usd + $5,
+            executor_calls = executor_calls + $6,
             last_activity_at = now()
       where id = $1 and status = 'active'`,
-    [sessionId, usage.inputTokens, usage.outputTokens, usage.costUsd, usage.calls],
+    [
+      sessionId,
+      usage.inputTokens,
+      usage.outputTokens,
+      usage.cachedInputTokens,
+      usage.costUsd,
+      usage.calls,
+    ],
   );
 }
 

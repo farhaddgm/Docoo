@@ -76,6 +76,8 @@ export interface ExecutorOutput {
   readonly fatal: Error | null;
   readonly usage: {
     readonly inputTokens: number;
+    /** Of the input, what the provider read from its cache. */
+    readonly cachedInputTokens: number;
     readonly outputTokens: number;
     /** Known cost only; `costKnown` says whether every call had a price. */
     readonly costUsd: number;
@@ -225,6 +227,7 @@ export async function runExecutor(
   const screen: LiveScreenInstruction[] = [];
   const steps: LiveAskStep[] = [];
   let inputTokens = 0;
+  let cachedInputTokens = 0;
   let outputTokens = 0;
   let costUsd = 0;
   let costKnown = true;
@@ -237,7 +240,14 @@ export async function runExecutor(
   let hitLimit = false;
   let fatal: Error | null = null;
 
-  const usage = () => ({ inputTokens, outputTokens, costUsd, costKnown, modelCalls });
+  const usage = () => ({
+    inputTokens,
+    cachedInputTokens,
+    outputTokens,
+    costUsd,
+    costKnown,
+    modelCalls,
+  });
   const result = (): ExecutorOutput => ({
     answer,
     actions: [...proposed.values()],
@@ -339,6 +349,7 @@ export async function runExecutor(
     }
     modelCalls += 1;
     inputTokens += out.response.usage.inputTokens;
+    cachedInputTokens += out.response.usage.cachedInputTokens ?? 0;
     outputTokens += out.response.usage.outputTokens;
     if (out.costUsd === null) costKnown = false;
     else costUsd += out.costUsd;

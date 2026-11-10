@@ -6,7 +6,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { WorkspaceRequestContext } from '../src/common/request-context.js';
 import { WorkspaceDatabase } from '../src/common/workspace-database.js';
-import { insertSession, providerOfConnection } from '../src/live-assistant/live-store.js';
+import {
+  insertSession,
+  providerOfConnection,
+  recordExecutorUsage,
+  recordUsage,
+} from '../src/live-assistant/live-store.js';
 import { MonitorService } from '../src/monitor/monitor.service.js';
 import { adminUrl } from './support/harness.js';
 
@@ -414,6 +419,7 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
       input: 1200,
       output: 600,
       executor: { input: 200, output: 100, calls: 3 },
+      cached: null,
     });
     expect(result.cost).toMatchObject({ session: 0.6, unpriced: false, estimateLabel: true });
     expect(result.cost?.caps).toMatchObject({ sessionCapUsd: 5, dailyCapUsd: 20 });
@@ -615,6 +621,152 @@ describe.skipIf(!adminUrl)('voice monitor (real database)', () => {
         'monitor.viewer.project_id': randomUUID(),
       };
       expect((await viewer()).project).toBeNull();
+    });
+  });
+
+  describe('follow-ups: cache tokens, live activity and display names', () => {
+    const db = () => new WorkspaceDatabase(pool);
+
+    it('records the cache tokens of the browser and of the executor, and only lets them grow', async () => {
+      const owner = randomUUID();
+      await admin.query(
+        `insert into users (id, email, password_hash, display_name) values ($1, $2, 'x', 'Cache Owner')`,
+        [owner, `${owner}@mon-${suffix}.example.test`],
+      );
+      await admin.query(`insert into memberships (workspace_id, user_id) values ($1, $2)`, [
+        ids.workspace,
+        owner,
+      ]);
+      const caps = {
+        idleSleepS: 120,
+        sessionMaxMinutes: 30,
+        sessionCostCapUsd: 5,
+        dailyCostCapUsd: 20,
+        taskCostCapUsd: 1,
+        maxActionsPerTask: 8,
+        confirmTimeoutS: 300,
+      };
+      const sessionId = await db().run(context(owner), (client) =>
+        insertSession(client, {
+          workspaceId: ids.workspace,
+          userId: owner,
+          mode: 'realtime',
+          model: 'm',
+          provider: 'openai',
+          caps,
+          rules: [{ scope: { mode: 'all_projects' }, level: 'read' }],
+        }),
+      );
+      await db().run(context(owner), async (client) => {
+        await recordUsage(client, sessionId, {
+          inputTokens: 1000,
+          outputTokens: 200,
+          cachedInputTokens: 400,
+          costUsd: 0.2,
+          activity: 'speaking',
+        });
+        await recordExecutorUsage(client, sessionId, {
+          inputTokens: 100,
+          outputTokens: 50,
+          cachedInputTokens: 30,
+          costUsd: 0.01,
+          calls: 1,
+        });
+        // A smaller total changes nothing; a report without an activity keeps the last one.
+        await recordUsage(client, sessionId, {
+          inputTokens: 10,
+          outputTokens: 10,
+          cachedInputTokens: 5,
+          costUsd: 0,
+        });
+      });
+      const row = (
+        await admin.query<{
+          cached_input_tokens: string;
+          executor_cached_input_tokens: string;
+          activity: string;
+          activity_at: Date;
+        }>(
+          `select cached_input_tokens, executor_cached_input_tokens, activity, activity_at
+             from live_sessions where id = $1`,
+          [sessionId],
+        )
+      ).rows[0]!;
+      expect(Number(row.cached_input_tokens)).toBe(400);
+      expect(Number(row.executor_cached_input_tokens)).toBe(30);
+      expect(row.activity).toBe('speaking');
+      expect(row.activity_at).toBeInstanceOf(Date);
+      await expect(
+        admin.query(`update live_sessions set cached_input_tokens = 1 where id = $1`, [sessionId]),
+      ).rejects.toThrow(/usage only grows/u);
+      await expect(
+        admin.query(`update live_sessions set activity = 'dancing' where id = $1`, [sessionId]),
+      ).rejects.toThrow();
+      await admin.query(
+        `update live_sessions set status='ended', end_reason='user', ended_at=now() where id=$1`,
+        [sessionId],
+      );
+    });
+
+    it('shows the cache tokens and the live activity of the running session', async () => {
+      await admin.query(
+        `update live_sessions set cached_input_tokens = 300, executor_cached_input_tokens = 50,
+                activity = 'thinking', activity_at = now() where id = $1`,
+        [ids.live],
+      );
+      values = {
+        'monitor.voice.enabled': true,
+        'monitor.voice.tokens': 'split',
+        'monitor.voice.live_indicators': true,
+      };
+      const result = await view();
+      expect(result.tokens?.cached).toBe(350);
+      expect(result.indicator).toBe('thinking');
+      await admin.query(
+        `update live_sessions set activity_at = now() - interval '5 minutes' where id = $1`,
+        [ids.live],
+      );
+      expect((await view()).indicator).not.toBe('thinking');
+    });
+
+    it('gives a project a display name that the viewer shows instead of the real name', async () => {
+      const set = await monitor.setAlias(context(), ids.project, 'Project Falcon');
+      expect(set).toEqual({ alias: 'Project Falcon' });
+      expect(await monitor.alias(context(), ids.project)).toEqual({ alias: 'Project Falcon' });
+      values = {
+        'monitor.viewer.enabled': true,
+        'monitor.viewer.project_id': ids.project,
+        'monitor.delay_s': 0,
+      };
+      const named = await monitor.viewerView(context());
+      expect(named.project?.name).toBe('Project Falcon');
+      expect(JSON.stringify(named)).not.toContain('Acme market study');
+      values['monitor.viewer.use_alias'] = false;
+      expect((await monitor.viewerView(context())).project?.name).toBe('Acme market study');
+      const cleared = await monitor.setAlias(context(), ids.project, '');
+      expect(cleared).toEqual({ alias: null });
+      expect(await monitor.alias(context(), ids.project)).toEqual({ alias: null });
+    });
+
+    it('refuses a display name for a project that does not exist', async () => {
+      const error = await monitor
+        .setAlias(context(), randomUUID(), 'x')
+        .catch((caught: unknown) => caught);
+      expect((error as HttpException).getStatus()).toBe(404);
+    });
+
+    it('records no text of a display name in the audit trail', async () => {
+      await monitor.setAlias(context(), ids.project, 'Secret Falcon Name');
+      const rows = (
+        await admin.query<{ action: string; after: unknown }>(
+          `select action, after as after from audit_events
+            where target_id = $1 and action like 'monitor.alias%' order by occurred_at desc limit 1`,
+          [ids.project],
+        )
+      ).rows;
+      expect(rows[0]?.action).toBe('monitor.alias_set');
+      expect(JSON.stringify(rows[0]?.after)).not.toContain('Secret Falcon');
+      await monitor.setAlias(context(), ids.project, '');
     });
   });
 });

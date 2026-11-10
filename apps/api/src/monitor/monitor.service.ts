@@ -15,7 +15,7 @@ import {
 } from '@docoo/contracts';
 
 import { writeAudit } from '../common/audit.js';
-import { conflict } from '../common/problems.js';
+import { conflict, notFound } from '../common/problems.js';
 import type { WorkspaceRequestContext } from '../common/request-context.js';
 import { WorkspaceDatabase } from '../common/workspace-database.js';
 import { ConfigService } from '../config/config.service.js';
@@ -26,6 +26,7 @@ import {
   viewerAgents,
   viewerDocuments,
   viewerGates,
+  readAlias,
   viewerPerson,
   viewerProject,
   viewerResearch,
@@ -34,6 +35,7 @@ import {
   viewerTranscript,
   viewerStages,
   viewerUsage,
+  writeAlias,
 } from './monitor-viewer-store.js';
 import { databaseNowMs, voiceActions, voiceMessages, voiceSessions } from './monitor-store.js';
 
@@ -182,6 +184,41 @@ export class MonitorService {
         },
         settings,
       );
+    });
+  }
+
+  /** The display name of a project on the monitors, or null when it has none. */
+  async alias(
+    context: WorkspaceRequestContext,
+    projectId: string,
+  ): Promise<{ alias: string | null }> {
+    return this.database.run(context, async (client) => ({
+      alias: await readAlias(client, projectId),
+    }));
+  }
+
+  /** Sets (or, with an empty text, removes) the display name; the trail keeps no text of it. */
+  async setAlias(
+    context: WorkspaceRequestContext,
+    projectId: string,
+    alias: string,
+  ): Promise<{ alias: string | null }> {
+    return this.database.run(context, async (client) => {
+      const found = await writeAlias(
+        client,
+        context.workspaceId,
+        context.actorId,
+        projectId,
+        alias,
+      );
+      if (!found) throw notFound('PROJECT_NOT_FOUND', 'The project was not found.');
+      await writeAudit(client, context, {
+        action: alias === '' ? 'monitor.alias_cleared' : 'monitor.alias_set',
+        targetType: 'project',
+        targetId: projectId,
+        after: { length: alias.length },
+      });
+      return { alias: alias === '' ? null : alias };
     });
   }
 
