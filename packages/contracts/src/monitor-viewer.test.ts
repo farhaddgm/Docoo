@@ -20,6 +20,7 @@ const source = (over: Partial<ViewerMonitorSource> = {}): ViewerMonitorSource =>
     title: 'Acme market study',
     status: 'active',
     currentStage: 'research',
+    alias: null,
   },
   stages: [
     {
@@ -304,6 +305,26 @@ describe('the viewer monitor', () => {
     expect(at('role')).toEqual({ role: 'owner', name: null });
     expect(at('first_name')).toEqual({ role: 'owner', name: 'Ali' });
     expect(at('full_name', ['Rezaei'])).toEqual({ role: 'owner', name: `Ali ${MASK}` });
+  });
+
+  it('shows the display name instead of the real name, unless the setting says otherwise', () => {
+    const named = source({ project: { ...source().project!, alias: 'Project Falcon' } });
+    expect(view({}, named).project?.name).toBe('Project Falcon');
+    expect(view({ 'monitor.viewer.use_alias': false }, named).project?.name).toBe(
+      'Acme market study',
+    );
+    // No alias: the real name, as before.
+    expect(view({}).project?.name).toBe('Acme market study');
+    // The name setting still wins: code only and hidden never show an alias.
+    expect(view({ 'monitor.viewer.project_name': 'code' }, named).project?.name).toBeNull();
+    expect(view({ 'monitor.viewer.project_name': 'hidden' }, named).project?.name).toBeNull();
+  });
+
+  it('masks a display name like any other text, and keeps the real name out when an alias is used', () => {
+    const named = source({ project: { ...source().project!, alias: 'Falcon for Beta' } });
+    const out = view({ 'monitor.blocked_words': ['Beta'] }, named).project;
+    expect(out?.name).toBe(`Falcon for ${MASK}`);
+    expect(JSON.stringify(view({}, named))).not.toContain('Acme market study');
   });
 
   it('holds back what is newer than the delay', () => {

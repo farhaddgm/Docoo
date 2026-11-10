@@ -143,6 +143,9 @@ export function createLiveStore(deps: LiveStoreDeps) {
   let missed = 0;
   let stopBeating: (() => void) | null = null;
   let beating = false;
+  let cachedTokens = 0;
+  let reportedActivity: 'listening' | 'speaking' | 'thinking' = 'listening';
+  let lastSentActivity = '';
   const every =
     deps.timers?.every ??
     ((work: () => void, ms: number) => {
@@ -218,7 +221,16 @@ export function createLiveStore(deps: LiveStoreDeps) {
       inputTokens: Math.max(0, state.tokens - executorTokens),
       outputTokens: 0,
       costUsd: Math.round(costUsd * 1e6) / 1e6,
+      cachedInputTokens: cachedTokens,
+      activity: currentActivity(),
     };
+  }
+
+  /** What the assistant is doing now, for the monitor: asleep and thinking come from the store. */
+  function currentActivity(): 'listening' | 'thinking' | 'speaking' | 'asleep' {
+    if (state.status === 'asleep') return 'asleep';
+    if (state.asking) return 'thinking';
+    return reportedActivity;
   }
 
   /** The server ended the session (a cap, the owner's switch, another start): close down here. */
@@ -424,7 +436,9 @@ export function createLiveStore(deps: LiveStoreDeps) {
     beating = true;
     try {
       await flushLines();
-      const answer = await backend.reportUsage(id, totals());
+      const report = totals();
+      const answer = await backend.reportUsage(id, report);
+      lastSentActivity = report.activity;
       missed = 0;
       if (answer.session.status === 'ended') endedByServer(answer.session.endReason);
       else dispatch({ type: 'warning', on: answer.capStatus === 'warn' });
@@ -445,8 +459,17 @@ export function createLiveStore(deps: LiveStoreDeps) {
       if (transport === owner) act();
     };
     return {
-      onUsage: (tokens, cost) => {
+      onActivity: (activity) => {
         if (transport !== owner) return;
+        reportedActivity = activity;
+        // A change of state is worth an early report; the heartbeat alone would lag by seconds.
+        if (currentActivity() !== lastSentActivity) void beat();
+      },
+      onUsage: (tokens, cost, cached) => {
+        if (transport !== owner) return;
+        if (typeof cached === 'number' && Number.isFinite(cached) && cached > 0) {
+          cachedTokens += Math.floor(cached);
+        }
         dispatch({ type: 'usage', tokens });
         if (typeof cost === 'number' && Number.isFinite(cost) && cost > 0) costUsd += cost;
       },

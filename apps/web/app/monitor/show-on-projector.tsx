@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { apiSend } from '../api-client';
+import { apiGet, apiSend } from '../api-client';
 import type { Locale } from '../i18n';
 import { monitorMessages } from './messages';
 
@@ -21,6 +21,32 @@ export function ShowOnProjectorButton({
 }) {
   const text = monitorMessages(locale).launcher.stage;
   const [state, setState] = useState<'idle' | 'saved' | 'failed'>('idle');
+
+  const [alias, setAlias] = useState('');
+  const [aliasState, setAliasState] = useState<'idle' | 'saved' | 'failed'>('idle');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    apiGet<{ alias: string | null }>(
+      `/workspaces/${workspaceId}/monitor/alias/${projectId}`,
+      controller.signal,
+    )
+      .then((body) => setAlias(body.alias ?? ''))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [workspaceId, projectId]);
+
+  async function saveAlias() {
+    setAliasState('idle');
+    try {
+      await apiSend('PUT', `/workspaces/${workspaceId}/monitor/alias/${projectId}`, {
+        alias: alias.trim(),
+      });
+      setAliasState('saved');
+    } catch {
+      setAliasState('failed');
+    }
+  }
 
   async function show() {
     setState('idle');
@@ -43,6 +69,27 @@ export function ShowOnProjectorButton({
       <button type="button" className="secondary-button" onClick={() => void show()}>
         {text.show}
       </button>
+      <label className="show-on-projector-alias">
+        <small>{text.aliasLabel}</small>{' '}
+        <input
+          value={alias}
+          maxLength={80}
+          title={text.aliasHint}
+          onChange={(event) => {
+            setAlias(event.target.value);
+            setAliasState('idle');
+          }}
+        />
+      </label>
+      <button type="button" className="secondary-button" onClick={() => void saveAlias()}>
+        {text.aliasSave}
+      </button>
+      {aliasState !== 'idle' && (
+        <small role="status" className={aliasState === 'failed' ? 'notice error' : 'muted'}>
+          {' '}
+          {aliasState === 'saved' ? text.saved : text.failed}
+        </small>
+      )}
       {state !== 'idle' && (
         <small role="status" className={state === 'failed' ? 'notice error' : 'muted'}>
           {' '}

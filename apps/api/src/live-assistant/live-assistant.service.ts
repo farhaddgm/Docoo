@@ -18,7 +18,7 @@ import {
   type LiveAskAnswer,
   type LiveChannel,
   type ProposeLiveAction,
-  type ReportLiveUsage,
+  type ReportLiveUsageInput,
 } from '@docoo/contracts';
 import type { PoolClient } from 'pg';
 
@@ -267,7 +267,7 @@ export class LiveAssistantService {
   async reportUsage(
     context: WorkspaceRequestContext,
     sessionId: string,
-    usage: ReportLiveUsage,
+    usage: ReportLiveUsageInput,
   ): Promise<LiveUsageAnswer> {
     return this.database.run(context, async (client) => {
       const gate = await this.gate(client, context, sessionId, { touch: false });
@@ -280,7 +280,13 @@ export class LiveAssistantService {
           capsReached: [...(gate.caps ?? [])],
         } satisfies LiveUsageAnswer;
       }
-      await recordUsage(client, sessionId, usage);
+      await recordUsage(client, sessionId, {
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        cachedInputTokens: usage.cachedInputTokens ?? 0,
+        costUsd: usage.costUsd,
+        activity: usage.activity,
+      });
       let session = await readSession(client, sessionId);
       if (!session) throw notFound('LIVE_SESSION_NOT_FOUND', 'The live session was not found.');
       const status = evaluateCaps(
@@ -660,6 +666,7 @@ export class LiveAssistantService {
         await recordExecutorUsage(client, sessionId, {
           inputTokens: outcome.usage.inputTokens,
           outputTokens: outcome.usage.outputTokens,
+          cachedInputTokens: outcome.usage.cachedInputTokens,
           costUsd: outcome.usage.costUsd,
           calls: outcome.usage.modelCalls,
         });

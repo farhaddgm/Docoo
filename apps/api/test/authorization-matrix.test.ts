@@ -342,6 +342,8 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/monitor/config': 'monitor.use',
   'GET workspaces/:workspaceId/monitor/voice': 'monitor.use',
   'GET workspaces/:workspaceId/monitor/viewer': 'monitor.use',
+  'GET workspaces/:workspaceId/monitor/alias/:projectId': 'monitor.use',
+  'PUT workspaces/:workspaceId/monitor/alias/:projectId': 'monitor.use',
   'POST workspaces/:workspaceId/monitor/events': 'monitor.use',
 };
 

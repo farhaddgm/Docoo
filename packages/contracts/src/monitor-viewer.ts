@@ -76,6 +76,8 @@ export interface ViewerMonitorSource {
     readonly title: string;
     readonly status: string;
     readonly currentStage: string;
+    /** The display name the owner gave the project for screens; null when none. */
+    readonly alias: string | null;
   } | null;
   readonly stages: readonly ViewerSourceStage[];
   readonly gates: readonly ViewerSourceGate[];
@@ -348,7 +350,14 @@ export function projectViewerMonitor(
     generatedAt,
     delayS,
     project: {
-      name: nameSetting === 'real' ? mask(project.title) : null,
+      name:
+        nameSetting === 'real'
+          ? mask(
+              settings['monitor.viewer.use_alias'] !== false && project.alias !== null
+                ? project.alias
+                : project.title,
+            )
+          : null,
       code: nameSetting === 'hidden' ? null : mask(project.code),
       status: project.status,
       currentStage: project.currentStage,

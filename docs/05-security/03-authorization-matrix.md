@@ -288,16 +288,19 @@ notion_sync: true
 
 یک permission تازه: `monitor.use` فقط برای مالک (super admin)؛ ویرایشگر و مشاهده‌گر آن را ندارند. صفحهٔ «تنظیمات نمایشگر» هم فقط برای مالک است و نوشتن تنظیم‌های `monitor.*` همان مسیر عمومی تنظیمات و `workspace.configure` است، پس permission جدای `monitor.configure` لازم نیست. پنجرهٔ نمایشگر خودش صفحه‌ای بدون منو و پیوند به بک‌آفیس است و فقط همین دو مسیر را می‌خواند.
 
-| مسیر                         | permission    |
-| ---------------------------- | ------------- |
-| `GET /monitor/config`        | `monitor.use` |
-| `GET /monitor/voice`         | `monitor.use` |
-| `GET /monitor/viewer`        | `monitor.use` |
-| `POST /monitor/events` (۲۰۴) | `monitor.use` |
+| مسیر                                | permission    |
+| ----------------------------------- | ------------- |
+| `GET /monitor/config`               | `monitor.use` |
+| `GET /monitor/voice`                | `monitor.use` |
+| `GET /monitor/viewer`               | `monitor.use` |
+| `POST /monitor/events` (۲۰۴)        | `monitor.use` |
+| `GET/PUT /monitor/alias/:projectId` | `monitor.use` |
 
 `GET /monitor/voice` فقط‌خواندنی است و خروجی‌اش را «تصویرسازی» می‌سازد: آنچه تنظیم‌های `monitor.voice.*` پنهان کرده‌اند در پاسخ نیست (`null`)، متن‌های کار از پاک‌سازی و واژه‌های ممنوع می‌گذرند، و پارامتر و نتیجهٔ اقدام‌ها، شناسهٔ پروژه و اتصال، و دامنهٔ دقیق دسترسی هرگز در آن نیستند. فقط نشست‌های خودِ کاربر دیده می‌شود (RLS روی `live_sessions`، `live_messages` و `live_actions`)؛ نمایشگر نشست ادمین دیگر را نشان نمی‌دهد. اگر نمایشگر خاموش باشد `409` برمی‌گرداند.
 
 `GET /monitor/viewer` همین‌طور فقط‌خواندنی و از راه تصویرسازی است و فقط پروژه‌ای را می‌خواند که مالک با تنظیم `monitor.viewer.project_id` روی پروژکتور گذاشته؛ خاموش: `409`.
+
+`GET/PUT /monitor/alias/:projectId` نام نمایشی پروژه روی پروژکتور را می‌خواند/می‌نویسد (خالی = حذف، جدول `monitor_project_aliases` با RLS)؛ در ممیزی فقط طول نام ثبت می‌شود.
 
 `POST /monitor/events` فقط می‌پذیرد که مالک کدام کنترل را به‌کار برد (`opened`، `blackout`، `resumed`، `stopped`) و برای کدام نمایشگر (`voice`، `viewer`، `all`)؛ در ممیزی به‌صورت `monitor.<event>` و بدون هیچ محتوایی ثبت می‌شود.
 
