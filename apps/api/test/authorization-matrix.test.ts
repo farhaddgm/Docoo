@@ -36,6 +36,7 @@ import { ProvidersController } from '../src/providers/providers.controller.js';
 import { StageChatController } from '../src/stage-chat/stage-chat.controller.js';
 import { SmartController } from '../src/smart/smart.controller.js';
 import { LiveAssistantController } from '../src/live-assistant/live-assistant.controller.js';
+import { MonitorController } from '../src/monitor/monitor.controller.js';
 import { VoiceController } from '../src/voice/voice.controller.js';
 import { SourcesController } from '../src/sources/sources.controller.js';
 import { TopicsController } from '../src/topics/topics.controller.js';
@@ -338,6 +339,12 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/live-assistant/actions/:actionId': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/actions/:actionId/confirm': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/actions/:actionId/cancel': 'live_assistant.use',
+  'GET workspaces/:workspaceId/monitor/config': 'monitor.use',
+  'GET workspaces/:workspaceId/monitor/voice': 'monitor.use',
+  'GET workspaces/:workspaceId/monitor/viewer': 'monitor.use',
+  'GET workspaces/:workspaceId/monitor/alias/:projectId': 'monitor.use',
+  'PUT workspaces/:workspaceId/monitor/alias/:projectId': 'monitor.use',
+  'POST workspaces/:workspaceId/monitor/events': 'monitor.use',
 };
 
 const controllers = [
@@ -366,6 +373,7 @@ const controllers = [
   SmartController,
   VoiceController,
   LiveAssistantController,
+  MonitorController,
   NotificationsController,
 ];
 
@@ -403,6 +411,12 @@ describe('authorization matrix (AUTH-003, TC-AUTH-005)', () => {
     for (const permission of Object.values(expectedMatrix)) {
       expect(WORKSPACE_PERMISSIONS).toContain(permission);
     }
+  });
+
+  it('keeps the monitors for the owner: neither editor nor viewer may use them (ADR-0056)', () => {
+    expect(roleHasPermission('super_admin', 'monitor.use')).toBe(true);
+    expect(roleHasPermission('editor', 'monitor.use')).toBe(false);
+    expect(roleHasPermission('viewer', 'monitor.use')).toBe(false);
   });
 
   it('grants Super Admin every permission and unknown roles none', () => {

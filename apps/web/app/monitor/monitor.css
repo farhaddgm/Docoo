@@ -1,0 +1,590 @@
+/* Monitor windows and pages (ADR-0056). A window is a bare page for a room screen. */
+.monitor-window {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 2rem;
+  background: #0b1220;
+  color: #f2f5fa;
+  overflow: auto;
+}
+
+.monitor-window.monitor-light {
+  background: #f6f8fb;
+  color: #0e1522;
+}
+
+@media (prefers-color-scheme: light) {
+  .monitor-window.monitor-auto {
+    background: #f6f8fb;
+    color: #0e1522;
+  }
+}
+
+.monitor-window.monitor-black {
+  background: #000;
+  color: #000;
+}
+
+.monitor-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.monitor-head h1 {
+  margin: 0;
+  font-size: 1.4em;
+}
+
+.monitor-badge {
+  padding: 0.15em 0.7em;
+  border-radius: 999px;
+  background: #c62828;
+  color: #fff;
+  font-size: 0.7em;
+  font-weight: 700;
+}
+
+.monitor-body {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.monitor-dim {
+  opacity: 0.7;
+  font-size: 0.8em;
+}
+
+.monitor-mark {
+  align-self: flex-end;
+  opacity: 0.35;
+  font-size: 0.6em;
+}
+
+.monitor-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* The back-office pages of the monitors. */
+.monitor-cards {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.monitor-presets {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
+.monitor-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--border, #c9d3e0);
+  border-radius: 0.6rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.monitor-preset:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.monitor-preset-on {
+  border-color: var(--accent, #2f6fed);
+  box-shadow: 0 0 0 1px var(--accent, #2f6fed);
+}
+
+/* The voice assistant monitor (ADR-0056 §6): wide, left aligned, readable from across a room. */
+.monitor-body-wide {
+  place-items: start stretch;
+  text-align: start;
+  margin-top: 1rem;
+  overflow: auto;
+}
+
+.voice-monitor {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.voice-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.voice-head h2 {
+  margin: 0;
+  font-size: 1.3em;
+}
+
+.voice-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.15em 0.8em;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  font-size: 0.7em;
+}
+
+.voice-dot {
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  background: #8a94a6;
+}
+
+.voice-state-talking .voice-dot {
+  background: #2e7d32;
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+
+.voice-state-listening .voice-dot {
+  background: #1976d2;
+  animation: voice-pulse 2s ease-in-out infinite;
+}
+
+.voice-state-thinking .voice-dot {
+  background: #8e24aa;
+  animation: voice-pulse 0.8s ease-in-out infinite;
+}
+
+.voice-state-speaking .voice-dot {
+  background: #2e7d32;
+  animation: voice-pulse 0.5s ease-in-out infinite;
+}
+
+.voice-state-ready .voice-dot {
+  background: #f9a825;
+}
+
+@keyframes voice-pulse {
+  50% {
+    transform: scale(1.5);
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-state-talking .voice-dot,
+  .voice-state-listening .voice-dot,
+  .voice-state-thinking .voice-dot,
+  .voice-state-speaking .voice-dot {
+    animation: none;
+  }
+}
+
+.voice-lost {
+  margin: 0;
+  padding: 0.3em 0.8em;
+  border-radius: 0.5em;
+  background: #f9a8251f;
+  border: 1px solid #f9a82566;
+  font-size: 0.7em;
+}
+
+.voice-stats {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(15em, 1fr));
+}
+
+.voice-stat,
+.voice-panel {
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 0.7em;
+  padding: 0.7em 0.9em;
+  min-width: 0;
+}
+
+.voice-stat h3,
+.voice-panel h3 {
+  margin: 0 0 0.4em;
+  font-size: 0.7em;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.voice-stat dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15em 0.8em;
+  margin: 0;
+  font-size: 0.8em;
+}
+
+.voice-stat dt {
+  opacity: 0.65;
+}
+
+.voice-stat dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.voice-big {
+  margin: 0 0 0.2em;
+  font-size: 1.6em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.voice-estimate,
+.voice-unpriced {
+  font-size: 0.5em;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.voice-unpriced {
+  font-size: 0.7em;
+}
+
+.voice-caps {
+  display: grid;
+  gap: 0.35em;
+  margin-top: 0.5em;
+  font-size: 0.7em;
+}
+
+.voice-cap {
+  display: grid;
+  gap: 0.15em;
+}
+
+.voice-bar {
+  display: block;
+  height: 0.5em;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  overflow: hidden;
+}
+
+.voice-bar > span {
+  display: block;
+  height: 100%;
+  background: #2f6fed;
+}
+
+.voice-bar-hot > span {
+  background: #c62828;
+}
+
+.voice-columns {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(22em, 1fr));
+  align-items: start;
+}
+
+.voice-empty {
+  margin: 0;
+  font-size: 0.75em;
+  opacity: 0.65;
+}
+
+.voice-sessions,
+.voice-lines ol,
+.voice-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4em;
+}
+
+.voice-sessions li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2em 0.8em;
+  padding: 0.35em 0.5em;
+  border-radius: 0.4em;
+  font-size: 0.75em;
+}
+
+.voice-sessions li.voice-current {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.voice-live-tag {
+  color: #2e7d32;
+  font-weight: 700;
+}
+
+.voice-end {
+  opacity: 0.7;
+}
+
+.voice-line {
+  display: grid;
+  gap: 0.1em;
+  padding: 0.4em 0.6em;
+  border-radius: 0.5em;
+  font-size: 0.8em;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+.voice-line-assistant {
+  background: color-mix(in srgb, #2f6fed 18%, transparent);
+}
+
+.voice-who {
+  font-size: 0.75em;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.voice-card {
+  display: grid;
+  gap: 0.1em;
+  padding: 0.4em 0.6em;
+  border-radius: 0.5em;
+  font-size: 0.8em;
+  border-inline-start: 0.3em solid #8a94a6;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+.voice-card-executed {
+  border-inline-start-color: #2e7d32;
+}
+
+.voice-card-failed,
+.voice-card-refused {
+  border-inline-start-color: #c62828;
+}
+
+.voice-card-proposed,
+.voice-card-first_confirmed,
+.voice-card-confirmed {
+  border-inline-start-color: #f9a825;
+}
+
+.voice-card-status {
+  font-size: 0.75em;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.voice-card-detail {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+
+.voice-card-detail p,
+.voice-card-detail ol {
+  margin: 0.2em 0 0;
+}
+
+/* The viewer monitor (ADR-0056 §7). */
+.viewer-monitor {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 2fr) minmax(16em, 1fr);
+  align-items: start;
+}
+
+.viewer-empty {
+  margin: auto;
+  text-align: center;
+}
+
+.viewer-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.viewer-head h2 {
+  margin: 0;
+  font-size: 1.4em;
+}
+
+.viewer-code {
+  opacity: 0.6;
+  font-weight: 400;
+}
+
+.viewer-status,
+.viewer-badge,
+.viewer-now {
+  padding: 0.1em 0.7em;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  font-size: 0.65em;
+}
+
+.viewer-now {
+  background: #2f6fed33;
+  border-color: #2f6fed;
+}
+
+.viewer-title {
+  margin: 0 0 0.4em;
+  font-size: 0.75em;
+  opacity: 0.7;
+}
+
+.viewer-stages,
+.viewer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5em;
+}
+
+.viewer-stage {
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-inline-start: 0.35em solid #8a94a6;
+  border-radius: 0.6em;
+  padding: 0.6em 0.8em;
+}
+
+.viewer-stage-current {
+  box-shadow: 0 0 0 2px #2f6fed66;
+}
+
+.viewer-stage-completed {
+  border-inline-start-color: #2e7d32;
+}
+
+.viewer-stage-running,
+.viewer-stage-retrying {
+  border-inline-start-color: #2f6fed;
+}
+
+.viewer-stage-waiting_for_human {
+  border-inline-start-color: #f9a825;
+}
+
+.viewer-stage-failed,
+.viewer-stage-rejected {
+  border-inline-start-color: #c62828;
+}
+
+.viewer-stage-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  flex-wrap: wrap;
+  font-size: 0.85em;
+}
+
+.viewer-output {
+  margin-top: 0.4em;
+  font-size: 0.8em;
+}
+
+.viewer-output-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.viewer-output-text {
+  margin: 0.2em 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 14em;
+  overflow: hidden;
+}
+
+.viewer-error {
+  margin: 0.4em 0 0;
+  color: #ef5350;
+  font-size: 0.8em;
+}
+
+.viewer-side {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.viewer-list {
+  font-size: 0.8em;
+}
+
+.viewer-assistant-state {
+  margin: 0 0 0.4em;
+  font-size: 0.8em;
+}
+
+.viewer-usage {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2em 0.8em;
+  margin: 0;
+  font-size: 0.8em;
+}
+
+.viewer-usage dd {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .viewer-monitor {
+    grid-template-columns: 1fr;
+  }
+}
+
+.viewer-quality-pass {
+  color: #66bb6a;
+}
+
+.viewer-quality-fail {
+  color: #ef5350;
+}
+
+.viewer-source-url,
+.viewer-domains {
+  display: block;
+  opacity: 0.65;
+  overflow-wrap: anywhere;
+  font-size: 0.8em;
+  margin: 0;
+}
+
+.viewer-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 1.5em;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 0.75em;
+  opacity: 0.8;
+}
+
+.monitor-preview-list {
+  margin: 0;
+  padding-inline-start: 1.2em;
+  display: grid;
+  gap: 0.25em;
+}
+
+.monitor-preview-hidden {
+  opacity: 0.6;
+}

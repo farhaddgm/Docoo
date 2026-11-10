@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { contentSecurityPolicy } from './app/content-security-policy';
+import { isMonitorWindowPath } from './app/monitor/paths';
 
 /**
  * Sets the Content-Security-Policy on every page. It is built per request from the runtime
@@ -17,6 +18,11 @@ export function proxy(request: NextRequest) {
   response.headers.set('Cache-Control', 'private, no-store');
   if (request.nextUrl.pathname.endsWith('/auth/login-up'))
     response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  // A monitor window is a private page for a room screen: out of search results, no referrer.
+  if (isMonitorWindowPath(request.nextUrl.pathname)) {
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    response.headers.set('Referrer-Policy', 'no-referrer');
+  }
   response.headers.set('Content-Security-Policy', policy);
   return response;
 }

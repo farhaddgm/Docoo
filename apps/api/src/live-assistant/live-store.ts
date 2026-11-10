@@ -103,19 +103,22 @@ export async function insertSession(
     userId: string;
     mode: 'realtime' | 'pipeline' | 'text';
     model: string;
+    /** The provider kind the session runs on (ADR-0056); empty when it cannot be told. */
+    provider: string;
     caps: LiveAssistantCaps;
     rules: readonly AssistantAccessRule[];
   },
 ): Promise<string> {
   const row = (
     await client.query<{ id: string }>(
-      `insert into live_sessions (workspace_id, user_id, mode, model, caps, access_rules)
-       values ($1, $2, $3, $4, $5::jsonb, $6::jsonb) returning id`,
+      `insert into live_sessions (workspace_id, user_id, mode, model, provider, caps, access_rules)
+       values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb) returning id`,
       [
         input.workspaceId,
         input.userId,
         input.mode,
         input.model,
+        input.provider,
         JSON.stringify(input.caps),
         JSON.stringify(input.rules),
       ],
@@ -123,6 +126,23 @@ export async function insertSession(
   ).rows[0];
   if (!row) throw new Error('A live session was not created.');
   return row.id;
+}
+
+const CONNECTION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
+/** The provider kind of a connection of this workspace; empty when it is not set or not found. */
+export async function providerOfConnection(
+  client: PoolClient,
+  connectionId: string,
+): Promise<string> {
+  if (!CONNECTION_ID.test(connectionId)) return '';
+  const row = (
+    await client.query<{ provider: string }>(
+      `select provider::text as provider from provider_connections where id = $1`,
+      [connectionId],
+    )
+  ).rows[0];
+  return row?.provider ?? '';
 }
 
 export async function readSession(
@@ -200,16 +220,33 @@ export async function costPeriods(
 export async function recordUsage(
   client: PoolClient,
   sessionId: string,
-  usage: { inputTokens: number; outputTokens: number; costUsd: number },
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+    costUsd: number;
+    /** What the assistant is doing now, when the browser said; the last word stays otherwise. */
+    activity?: string | undefined;
+  },
 ): Promise<void> {
   await client.query(
     `update live_sessions
         set input_tokens = greatest(input_tokens, $2),
             output_tokens = greatest(output_tokens, $3),
-            cost_usd = greatest(cost_usd, $4),
+            cached_input_tokens = greatest(cached_input_tokens, $4),
+            cost_usd = greatest(cost_usd, $5),
+            activity = coalesce($6, activity),
+            activity_at = case when $6::text is null then activity_at else now() end,
             last_activity_at = now()
       where id = $1 and status = 'active'`,
-    [sessionId, usage.inputTokens, usage.outputTokens, usage.costUsd],
+    [
+      sessionId,
+      usage.inputTokens,
+      usage.outputTokens,
+      usage.cachedInputTokens,
+      usage.costUsd,
+      usage.activity ?? null,
+    ],
   );
 }
 
@@ -239,17 +276,31 @@ export async function markUntrustedRead(client: PoolClient, sessionId: string): 
 export async function recordExecutorUsage(
   client: PoolClient,
   sessionId: string,
-  usage: { inputTokens: number; outputTokens: number; costUsd: number; calls: number },
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+    costUsd: number;
+    calls: number;
+  },
 ): Promise<void> {
   await client.query(
     `update live_sessions
         set executor_input_tokens = executor_input_tokens + $2,
             executor_output_tokens = executor_output_tokens + $3,
-            executor_cost_usd = executor_cost_usd + $4,
-            executor_calls = executor_calls + $5,
+            executor_cached_input_tokens = executor_cached_input_tokens + $4,
+            executor_cost_usd = executor_cost_usd + $5,
+            executor_calls = executor_calls + $6,
             last_activity_at = now()
       where id = $1 and status = 'active'`,
-    [sessionId, usage.inputTokens, usage.outputTokens, usage.costUsd, usage.calls],
+    [
+      sessionId,
+      usage.inputTokens,
+      usage.outputTokens,
+      usage.cachedInputTokens,
+      usage.costUsd,
+      usage.calls,
+    ],
   );
 }
 
