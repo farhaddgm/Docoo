@@ -28,6 +28,10 @@ interface SessionRow extends QueryResultRow {
   executor_output_tokens: number;
   executor_cost_usd: number;
   executor_calls: number;
+  cached_input_tokens: number;
+  executor_cached_input_tokens: number;
+  activity: string | null;
+  activity_at: string | null;
   session_cost_cap_usd: number | null;
   access_scope: string | null;
   access_level: string | null;
@@ -51,6 +55,9 @@ export async function voiceSessions(
               s.executor_input_tokens::float8 as executor_input_tokens,
               s.executor_output_tokens::float8 as executor_output_tokens,
               s.executor_cost_usd::float8 as executor_cost_usd, s.executor_calls,
+              s.cached_input_tokens::float8 as cached_input_tokens,
+              s.executor_cached_input_tokens::float8 as executor_cached_input_tokens,
+              s.activity, ${isoColumn('s.activity_at', 'activity_at')},
               (s.caps->>'sessionCostCapUsd')::float8 as session_cost_cap_usd,
               s.access_rules->0->'scope'->>'mode' as access_scope,
               s.access_rules->0->>'level' as access_level,
@@ -82,6 +89,10 @@ export async function voiceSessions(
       executorOutputTokens: row.executor_output_tokens,
       executorCostUsd: row.executor_cost_usd,
       executorCalls: row.executor_calls,
+      cachedInputTokens: row.cached_input_tokens,
+      executorCachedInputTokens: row.executor_cached_input_tokens,
+      activity: row.activity,
+      activityAt: row.activity_at,
       sessionCostCapUsd: row.session_cost_cap_usd ?? 0,
       accessScope: row.access_scope,
       accessLevel: row.access_level,

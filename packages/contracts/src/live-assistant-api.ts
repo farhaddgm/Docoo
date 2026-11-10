@@ -80,10 +80,18 @@ export const startLiveSessionSchema = z.strictObject({
 });
 
 /** Totals so far, not increments: a repeated report changes nothing. */
+/** What the assistant is doing right now, as the browser last knew (ADR-0056 follow-ups). */
+export const liveActivities = ['listening', 'thinking', 'speaking', 'asleep'] as const;
+export type LiveActivity = (typeof liveActivities)[number];
+
 export const reportLiveUsageSchema = z.strictObject({
   inputTokens: z.number().int().min(0).max(1_000_000_000),
   outputTokens: z.number().int().min(0).max(1_000_000_000),
+  /** Input tokens the provider read from its cache; part of the input, not an addition to it. */
+  cachedInputTokens: z.number().int().min(0).max(1_000_000_000).default(0),
   costUsd: z.number().min(0).max(10_000),
+  /** What the assistant is doing now; absent when the browser does not know. */
+  activity: z.enum(liveActivities).optional(),
 });
 
 export const endLiveSessionSchema = z.strictObject({
@@ -127,6 +135,8 @@ export const confirmLiveActionSchema = z
 
 export type StartLiveSession = z.infer<typeof startLiveSessionSchema>;
 export type ReportLiveUsage = z.infer<typeof reportLiveUsageSchema>;
+/** What a caller may send: the cache count and the activity can be left out. */
+export type ReportLiveUsageInput = z.input<typeof reportLiveUsageSchema>;
 export type ProposeLiveAction = z.infer<typeof proposeLiveActionSchema>;
 export type ConfirmLiveAction = z.infer<typeof confirmLiveActionSchema>;
 

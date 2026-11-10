@@ -99,6 +99,12 @@ export function VoiceMonitorView({
                   <dd>{formatCount(locale, view.tokens.output)}</dd>
                 </>
               )}
+              {view.tokens.cached !== null && (
+                <>
+                  <dt>{text.tokens.cached}</dt>
+                  <dd>{formatCount(locale, view.tokens.cached)}</dd>
+                </>
+              )}
               {view.tokens.executor !== null && (
                 <>
                   <dt>{text.tokens.executor}</dt>

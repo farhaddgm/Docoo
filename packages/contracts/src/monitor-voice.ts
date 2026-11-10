@@ -32,6 +32,12 @@ export interface VoiceSourceSession {
   readonly executorOutputTokens: number;
   readonly executorCostUsd: number;
   readonly executorCalls: number;
+  /** Input tokens read from the provider's cache; part of the input counts above. */
+  readonly cachedInputTokens: number;
+  readonly executorCachedInputTokens: number;
+  /** What the browser last said the assistant was doing, and when (null: it never said). */
+  readonly activity: string | null;
+  readonly activityAt: string | null;
   readonly sessionCostCapUsd: number;
   readonly accessScope: string | null;
   readonly accessLevel: string | null;
@@ -123,8 +129,13 @@ export interface VoiceMonitorView {
   readonly assistantName: string;
   /** A session is running now. */
   readonly live: boolean;
-  /** `talking`: recent activity; `ready`: running and quiet; `off`: nothing running; null: hidden. */
-  readonly indicator: 'talking' | 'ready' | 'off' | null;
+  /**
+   * `listening`, `thinking`, `speaking`, `asleep`: what the browser reported a moment ago;
+   * `talking`: recent activity with no report; `ready`: running and quiet; `off`: nothing
+   * running; null: hidden.
+   */
+  readonly indicator:
+    'listening' | 'thinking' | 'speaking' | 'asleep' | 'talking' | 'ready' | 'off' | null;
   readonly model: null | {
     readonly provider: string | null;
     readonly model: string | null;
@@ -136,6 +147,8 @@ export interface VoiceMonitorView {
     readonly total: number;
     readonly input: number | null;
     readonly output: number | null;
+    /** Input tokens served from the provider's cache; null when none were reported. */
+    readonly cached: number | null;
     readonly executor: null | {
       readonly input: number;
       readonly output: number;
@@ -179,6 +192,9 @@ const DAY_MS = 86_400_000;
 const RECENT_COUNT = 10;
 /** A session that did something in the last seconds is "talking"; longer, it is only ready. */
 const TALKING_WINDOW_MS = 20_000;
+/** A report of what the assistant is doing counts for this long; the browser repeats it often. */
+const ACTIVITY_FRESH_MS = 45_000;
+const REPORTED_ACTIVITIES = ['listening', 'thinking', 'speaking', 'asleep'] as const;
 const MAX_LINES = 40;
 const MAX_CARDS = 20;
 const MAX_LINE_LENGTH = 2000;
@@ -295,6 +311,10 @@ export function projectVoiceMonitor(
       total: sessionTokens(current),
       input: splitting ? current.inputTokens + current.executorInputTokens : null,
       output: splitting ? current.outputTokens + current.executorOutputTokens : null,
+      cached:
+        splitting && current.cachedInputTokens + current.executorCachedInputTokens > 0
+          ? current.cachedInputTokens + current.executorCachedInputTokens
+          : null,
       executor:
         tokensSetting === 'split_executor'
           ? {
@@ -399,11 +419,18 @@ export function projectVoiceMonitor(
   let indicator: VoiceMonitorView['indicator'] = null;
   if (settings['monitor.voice.live_indicators'] === true) {
     const running = source.sessions.find((session) => session.status === 'active');
-    indicator = !running
-      ? 'off'
-      : source.nowMs - time(running.lastActivityAt) < TALKING_WINDOW_MS
-        ? 'talking'
-        : 'ready';
+    if (!running) indicator = 'off';
+    else {
+      const reported =
+        running.activity !== null &&
+        running.activityAt !== null &&
+        source.nowMs - time(running.activityAt) < ACTIVITY_FRESH_MS
+          ? REPORTED_ACTIVITIES.find((name) => name === running.activity)
+          : undefined;
+      indicator =
+        reported ??
+        (source.nowMs - time(running.lastActivityAt) < TALKING_WINDOW_MS ? 'talking' : 'ready');
+    }
   }
 
   return {
