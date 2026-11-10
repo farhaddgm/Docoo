@@ -277,7 +277,7 @@ notion_sync: true
 | ---------------------------------------------------------------------------------------------- | -------------------- |
 | `GET /live-assistant/config`                                                                   | `live_assistant.use` |
 | `POST\|GET /live-assistant/sessions`، `GET /live-assistant/sessions/{id}`                      | `live_assistant.use` |
-| `POST /live-assistant/sessions/{id}/usage`، `…/messages`، `…/ask`، `…/end`                     | `live_assistant.use` |
+| `POST /live-assistant/sessions/{id}/usage`، `…/messages`، `…/ask`، `…/end`، `…/voice-ticket`   | `live_assistant.use` |
 | `DELETE /live-assistant/sessions/{id}/messages`، `POST /live-assistant/messages/purge-expired` | `live_assistant.use` |
 | `POST /live-assistant/actions`، `GET /live-assistant/actions/{id}`                             | `live_assistant.use` |
 | `POST /live-assistant/actions/{id}/confirm`، `…/cancel`                                        | `live_assistant.use` |

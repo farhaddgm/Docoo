@@ -59,6 +59,16 @@ export class LiveAssistantController {
     return this.assistant.checkVoiceLink(workspaceContext(request));
   }
 
+  @Post('sessions/:sessionId/voice-ticket')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'A one-time ticket to open the voice link of an own live session (WebSocket)',
+  })
+  @RequireWorkspacePermission('live_assistant.use')
+  voiceTicket(@Req() request: FastifyRequest, @Param('sessionId') sessionId: string) {
+    return this.assistant.issueVoiceTicket(workspaceContext(request), idOf(sessionId));
+  }
+
   @Post('sessions')
   @HttpCode(201)
   @ApiOperation({ summary: 'Start a live session (ends one left running by this person)' })

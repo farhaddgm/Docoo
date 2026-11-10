@@ -292,5 +292,64 @@ describe.skipIf(!adminUrl)('live voice assistant (ADR-0055)', () => {
       expect([403, 404]).toContain(crossWorkspace.statusCode);
       await h.request('POST', api(`/sessions/${id}/end`), { cookie: cookieA, payload: {} });
     });
+
+    it('hands out a one-time voice ticket only for an own, open voice session', async () => {
+      await configure({});
+      const started = await h.request('POST', api('/sessions'), { cookie: cookieA, payload: {} });
+      const id = started.json<{ id: string }>().id;
+
+      const anonymous = await h.request('POST', api(`/sessions/${id}/voice-ticket`));
+      expect(anonymous.statusCode).toBe(401);
+
+      const issued = await h.request('POST', api(`/sessions/${id}/voice-ticket`), {
+        cookie: cookieA,
+        payload: {},
+      });
+      expect(issued.statusCode, issued.body).toBe(200);
+      const ticket = issued.json<{ ticket: string; path: string; expiresInMs: number }>();
+      expect(ticket.ticket.length).toBeGreaterThanOrEqual(32);
+      expect(ticket.path).toBe(
+        `/api/workspaces/${h.ids.workspaceA}/live-assistant/sessions/${id}/voice`,
+      );
+      expect(ticket.expiresInMs).toBe(30_000);
+
+      const unknown = await h.request(
+        'POST',
+        api('/sessions/99999999-9999-4999-8999-999999999999/voice-ticket'),
+        { cookie: cookieA, payload: {} },
+      );
+      expect(unknown.statusCode).toBe(404);
+
+      const cookieB = await h.login(h.emails.b);
+      const asOther = await h.request(
+        'POST',
+        `/v1/workspaces/${h.ids.workspaceB}/live-assistant/sessions/${id}/voice-ticket`,
+        { cookie: cookieB, payload: {} },
+      );
+      expect(asOther.statusCode).toBe(404);
+
+      await h.request('POST', api(`/sessions/${id}/end`), { cookie: cookieA, payload: {} });
+      const afterEnd = await h.request('POST', api(`/sessions/${id}/voice-ticket`), {
+        cookie: cookieA,
+        payload: {},
+      });
+      expect(afterEnd.statusCode).toBe(409);
+    });
+
+    it('gives no voice ticket for a typed session', async () => {
+      await configure({});
+      const started = await h.request('POST', api('/sessions'), {
+        cookie: cookieA,
+        payload: { channel: 'text' },
+      });
+      if (started.statusCode !== 201) return; // typing is not set up in this workspace
+      const id = started.json<{ id: string }>().id;
+      const ticket = await h.request('POST', api(`/sessions/${id}/voice-ticket`), {
+        cookie: cookieA,
+        payload: {},
+      });
+      expect(ticket.statusCode).toBe(409);
+      await h.request('POST', api(`/sessions/${id}/end`), { cookie: cookieA, payload: {} });
+    });
   });
 });

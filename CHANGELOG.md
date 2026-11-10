@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- Voice through the server, second step: the relay on the server. A one-time ticket (`POST /live-assistant/sessions/{id}/voice-ticket`) opens a WebSocket (`/v1/workspaces/{w}/live-assistant/sessions/{s}/voice`, same origin only) over which the browser sends microphone audio and receives the assistant's audio. The server holds the provider key, gives the realtime model a single tool (`ask_docoo`, carried out by the executor and the confirmation gateway as for typed requests), counts and prices the use, and applies the caps. The browser side (microphone, playback) follows in the next change; until then nothing opens this link. New dependency: `ws` 8.22.1.
+
 ## [0.58.0] — 2026-11-10
 
 Voice through the server, first step: a check of the voice link.

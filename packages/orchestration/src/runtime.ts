@@ -16,6 +16,7 @@ import {
   type ProviderKind,
   type SpeechProviderAdapter,
   type SpeechProviderKind,
+  type Usage,
 } from '@docoo/providers';
 import type { Pool, PoolClient } from 'pg';
 import { correlatedSpan, logCorrelation } from '@docoo/observability';
@@ -165,6 +166,17 @@ export class ProviderRuntime {
       throw new ProviderError('permanent', 'ai_connection_no_realtime');
     const apiKey = await this.decryptKey(client, connection);
     return { apiKey, baseUrl: connection.base_url };
+  }
+
+  /**
+   * What a stretch of live voice cost, from the entered price of the model (or the deliberately high
+   * fallback, so a missing price never switches the cost caps off). The audio is billed like the
+   * model's token prices; the exact audio rate is entered as the model's price by the owner.
+   */
+  async realtimeCostUsd(client: PoolClient, model: string, usage: Usage): Promise<number> {
+    // Only an OpenAI connection can carry the realtime voice (see realtimeAccessFor).
+    const price = await this.price(client, 'openai', model, model);
+    return estimateCostUsd(usage, price?.snapshot ?? FALLBACK_PRICE) ?? 0;
   }
 
   async adapterFor(
