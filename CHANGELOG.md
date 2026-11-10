@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.58.0] — 2026-11-10
+
+Voice through the server, first step: a check of the voice link.
+
 ### Added
 
 - Live assistant: a "check the voice link from the server" button in the assistant settings. The server opens the realtime voice link once with the chosen OpenAI connection and reports why it cannot work (country, key, model, network), without saying anything or spending tokens. First step of voice through the server, since the owner's network cannot reach the provider directly (ADR-0055).
