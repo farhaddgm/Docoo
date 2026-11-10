@@ -207,6 +207,7 @@ export function MonitorWindow({
                     : 3
                 }
                 locale={windowLocale}
+                onSessionEnded={() => setLoaded({ load: 'guest' })}
               />
             ) : view === 'ready' && kind === 'viewer' && loaded.workspaceId ? (
               <ViewerMonitorLive
@@ -217,6 +218,7 @@ export function MonitorWindow({
                     : 3
                 }
                 locale={windowLocale}
+                onSessionEnded={() => setLoaded({ load: 'guest' })}
               />
             ) : view === 'ready' ? (
               <p>{text.building}</p>

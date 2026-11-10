@@ -41,7 +41,16 @@ const answer = (session: LiveSessionView, capStatus: LiveUsageAnswer['capStatus'
 
 interface Calls {
   start: number;
-  usage: { id: string; totals: { inputTokens: number; outputTokens: number; costUsd: number } }[];
+  usage: {
+    id: string;
+    totals: {
+      inputTokens: number;
+      outputTokens: number;
+      costUsd: number;
+      cachedInputTokens?: number;
+      activity?: string;
+    };
+  }[];
   lines: { id: string; lines: { role: string; content: string }[] }[];
   end: { id: string; reason: string }[];
   order: string[];
@@ -156,7 +165,16 @@ describe('the session store with a server session (ADR-0055)', () => {
     handlers?.onUsage(5, -3);
     await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
     expect(calls.usage).toEqual([
-      { id: view().id, totals: { inputTokens: 160, outputTokens: 0, costUsd: 0.3 } },
+      {
+        id: view().id,
+        totals: {
+          inputTokens: 160,
+          outputTokens: 0,
+          costUsd: 0.3,
+          cachedInputTokens: 0,
+          activity: 'listening',
+        },
+      },
     ]);
     handlers?.onUsage(40);
     await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
@@ -164,6 +182,8 @@ describe('the session store with a server session (ADR-0055)', () => {
       inputTokens: 200,
       outputTokens: 0,
       costUsd: 0.3,
+      cachedInputTokens: 0,
+      activity: 'listening',
     });
     await store.stop();
     const count = calls.usage.length;
@@ -218,6 +238,29 @@ describe('the session store with a server session (ADR-0055)', () => {
       await vi.advanceTimersByTimeAsync(HEARTBEAT_MS * 2);
       expect(reports, String(endReason)).toBe(1);
     }
+  });
+
+  it('reports cache tokens and what the assistant is doing, at once when it changes', async () => {
+    const { backend, calls } = fakeBackend();
+    const store = make(backend);
+    await store.start();
+    handlers?.onUsage(100, 0.01, 40);
+    handlers?.onUsage(50, 0, 10);
+    await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
+    expect(calls.usage.at(-1)?.totals).toMatchObject({
+      cachedInputTokens: 50,
+      activity: 'listening',
+    });
+    const before = calls.usage.length;
+    handlers?.onActivity?.('speaking');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls.usage.length).toBe(before + 1);
+    expect(calls.usage.at(-1)?.totals.activity).toBe('speaking');
+    // The same state again is not worth an early report.
+    handlers?.onActivity?.('speaking');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls.usage.length).toBe(before + 1);
+    await store.stop();
   });
 
   it('shows the near-cap warning while the server says so, and clears it when it no longer does', async () => {

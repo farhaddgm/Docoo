@@ -1,7 +1,7 @@
 'use client';
 
 import type { VoiceMonitorView as View } from '@docoo/contracts';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { Locale } from '../i18n';
 import { monitorMessages } from './messages';
@@ -19,16 +19,22 @@ export function VoiceMonitorLive({
   workspaceId,
   refreshS,
   locale,
+  onSessionEnded,
 }: {
   readonly workspaceId: string;
   readonly refreshS: number;
   readonly locale: Locale;
+  /** The account's session ended (401/403): the window must show nothing of the work. */
+  readonly onSessionEnded?: () => void;
 }) {
   const text = monitorMessages(locale).voice;
   const [state, setState] = useState<{ view: View | null; status: Status }>({
     view: null,
     status: 'loading',
   });
+
+  const ended = useRef(onSessionEnded);
+  ended.current = onSessionEnded;
 
   useEffect(() => {
     let stopped = false;
@@ -44,6 +50,13 @@ export function VoiceMonitorLive({
           headers: { 'x-request-id': crypto.randomUUID() },
         });
         if (stopped) return;
+        if (response.status === 401 || response.status === 403) {
+          // The window lives and dies with the account's session: nothing stays on the screen.
+          stopped = true;
+          setState({ view: null, status: 'loading' });
+          ended.current?.();
+          return;
+        }
         if (response.status === 409) setState({ view: null, status: 'off' });
         else if (response.ok) {
           const body = (await response.json()) as View;

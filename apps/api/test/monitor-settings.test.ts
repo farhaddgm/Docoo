@@ -17,7 +17,10 @@ import { validateSettingValue, type SettingValueSchema } from '../src/config/set
  * a bound can never be changed in one and forgotten in the other.
  */
 const migrations = join(import.meta.dirname, '../../../packages/database/migrations');
-const sql = readFileSync(join(migrations, '0089_monitor_settings.sql'), 'utf8');
+// The monitor settings are seeded by the first migration and added to by later ones.
+const sql = ['0089_monitor_settings.sql', '0091_monitor_followups.sql']
+  .map((file) => readFileSync(join(migrations, file), 'utf8'))
+  .join('\n');
 
 interface Row {
   key: string;
@@ -51,7 +54,7 @@ const definitionOf = (key: string): MonitorSettingDefinition => {
   return found;
 };
 
-describe('monitor setting definitions (migration 0089)', () => {
+describe('monitor setting definitions (migrations 0089 and 0091)', () => {
   it('define exactly the keys of the contract, once each, in the same order', () => {
     expect(rows.map((item) => item.key)).toEqual([...monitorSettingKeys]);
     // Every row of the file was read: no definition escapes the check by being formatted oddly.
@@ -145,5 +148,24 @@ describe('migration journal', () => {
     const provider = readFileSync(join(migrations, '0090_live_session_provider.sql'), 'utf8');
     expect(provider).toMatch(/ADD COLUMN provider text NOT NULL DEFAULT ''/u);
     expect(provider).toMatch(/NEW\.provider <> OLD\.provider/u);
+  });
+
+  it('lists 0091_monitor_followups right after 0090, with the cache, the activity and the aliases', () => {
+    const journal = JSON.parse(readFileSync(join(migrations, 'meta/_journal.json'), 'utf8')) as {
+      entries: { idx: number; tag: string; when: number }[];
+    };
+    const at = journal.entries.findIndex((entry) => entry.tag === '0091_monitor_followups');
+    expect(journal.entries[at - 1]?.tag).toBe('0090_live_session_provider');
+    expect(journal.entries[at]?.idx).toBe((journal.entries[at - 1]?.idx ?? -2) + 1);
+    expect(journal.entries[at]!.when).toBeGreaterThan(journal.entries[at - 1]!.when);
+    const followups = readFileSync(join(migrations, '0091_monitor_followups.sql'), 'utf8');
+    expect(followups).toMatch(/ADD COLUMN cached_input_tokens bigint NOT NULL DEFAULT 0/u);
+    expect(followups).toMatch(/NEW\.cached_input_tokens < OLD\.cached_input_tokens/u);
+    expect(followups).toMatch(
+      /NEW\.executor_cached_input_tokens < OLD\.executor_cached_input_tokens/u,
+    );
+    expect(followups).toMatch(/NEW\.provider <> OLD\.provider/u);
+    expect(followups).toMatch(/ALTER TABLE monitor_project_aliases FORCE ROW LEVEL SECURITY/u);
+    expect(followups).toMatch(/activity IN \('listening','thinking','speaking','asleep'\)/u);
   });
 });

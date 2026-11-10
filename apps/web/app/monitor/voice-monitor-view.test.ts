@@ -46,6 +46,7 @@ const open: VoiceMonitorView = {
     total: 1800,
     input: 1200,
     output: 600,
+    cached: 350,
     executor: { input: 200, output: 100, calls: 3 },
   },
   cost: {

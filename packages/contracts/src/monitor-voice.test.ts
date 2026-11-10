@@ -38,6 +38,10 @@ const session = (over: Partial<VoiceSourceSession> = {}): VoiceSourceSession => 
   executorOutputTokens: 100,
   executorCostUsd: 0.1,
   executorCalls: 3,
+  cachedInputTokens: 300,
+  executorCachedInputTokens: 50,
+  activity: null,
+  activityAt: null,
   sessionCostCapUsd: 5,
   accessScope: 'all_projects',
   accessLevel: 'read',
@@ -206,12 +210,25 @@ describe('the model, tokens and cost', () => {
     const at = (value: string) =>
       projectVoiceMonitor(source(), settings({ 'monitor.voice.tokens': value })).tokens;
     expect(at('hidden')).toBeNull();
-    expect(at('total')).toEqual({ total: 1800, input: null, output: null, executor: null });
-    expect(at('split')).toEqual({ total: 1800, input: 1200, output: 600, executor: null });
+    expect(at('total')).toEqual({
+      total: 1800,
+      input: null,
+      output: null,
+      cached: null,
+      executor: null,
+    });
+    expect(at('split')).toEqual({
+      total: 1800,
+      input: 1200,
+      output: 600,
+      cached: 350,
+      executor: null,
+    });
     expect(at('split_executor')).toEqual({
       total: 1800,
       input: 1200,
       output: 600,
+      cached: 350,
       executor: { input: 200, output: 100, calls: 3 },
     });
   });
@@ -422,6 +439,41 @@ describe('the rest of what a screen can show', () => {
     expect(state({ lastActivityAt: ago(120) })).toBe('ready');
     expect(state({ status: 'ended', endReason: 'user' })).toBe('off');
     expect(state({}, false)).toBeNull();
+  });
+
+  it('shows what the assistant is doing when the browser said so a moment ago', () => {
+    const state = (over: Partial<VoiceSourceSession>) =>
+      projectVoiceMonitor(source({ sessions: [session(over)] }), settings()).indicator;
+    expect(state({ activity: 'speaking', activityAt: ago(5) })).toBe('speaking');
+    expect(state({ activity: 'listening', activityAt: ago(30) })).toBe('listening');
+    expect(state({ activity: 'thinking', activityAt: ago(2) })).toBe('thinking');
+    expect(state({ activity: 'asleep', activityAt: ago(10), lastActivityAt: ago(300) })).toBe(
+      'asleep',
+    );
+    // A report that is too old is not trusted: back to what the last message says.
+    expect(state({ activity: 'speaking', activityAt: ago(120), lastActivityAt: ago(300) })).toBe(
+      'ready',
+    );
+    expect(state({ activity: 'speaking', activityAt: ago(120), lastActivityAt: ago(5) })).toBe(
+      'talking',
+    );
+    // An unknown word is never shown.
+    expect(state({ activity: 'dancing', activityAt: ago(1), lastActivityAt: ago(300) })).toBe(
+      'ready',
+    );
+    // Nothing running: the report of an ended session does not count.
+    expect(
+      state({ status: 'ended', endReason: 'user', activity: 'speaking', activityAt: ago(1) }),
+    ).toBe('off');
+  });
+
+  it('leaves the cache tokens out when none were reported', () => {
+    const none = session({ cachedInputTokens: 0, executorCachedInputTokens: 0 });
+    const v = projectVoiceMonitor(
+      source({ sessions: [none] }),
+      settings({ 'monitor.voice.tokens': 'split' }),
+    );
+    expect(v.tokens?.cached).toBeNull();
   });
 
   it('shows nothing current, and not live, when no session is in scope', () => {

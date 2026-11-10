@@ -161,6 +161,21 @@
   animation: voice-pulse 1.2s ease-in-out infinite;
 }
 
+.voice-state-listening .voice-dot {
+  background: #1976d2;
+  animation: voice-pulse 2s ease-in-out infinite;
+}
+
+.voice-state-thinking .voice-dot {
+  background: #8e24aa;
+  animation: voice-pulse 0.8s ease-in-out infinite;
+}
+
+.voice-state-speaking .voice-dot {
+  background: #2e7d32;
+  animation: voice-pulse 0.5s ease-in-out infinite;
+}
+
 .voice-state-ready .voice-dot {
   background: #f9a825;
 }
@@ -173,7 +188,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .voice-state-talking .voice-dot {
+  .voice-state-talking .voice-dot,
+  .voice-state-listening .voice-dot,
+  .voice-state-thinking .voice-dot,
+  .voice-state-speaking .voice-dot {
     animation: none;
   }
 }

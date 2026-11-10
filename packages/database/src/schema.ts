@@ -3116,6 +3116,14 @@ export const liveSessions = pgTable(
     executorOutputTokens: bigint('executor_output_tokens', { mode: 'number' }).notNull().default(0),
     executorCostUsd: doublePrecision('executor_cost_usd').notNull().default(0),
     executorCalls: integer('executor_calls').notNull().default(0),
+    /** Input tokens read from the provider's cache (ADR-0056 follow-ups): voice, as the browser reports. */
+    cachedInputTokens: bigint('cached_input_tokens', { mode: 'number' }).notNull().default(0),
+    executorCachedInputTokens: bigint('executor_cached_input_tokens', { mode: 'number' })
+      .notNull()
+      .default(0),
+    /** What the assistant is doing now, as the browser last said, and when. */
+    activity: text('activity'),
+    activityAt: timestamp('activity_at', { withTimezone: true }),
   },
   (table) => [
     index('live_sessions_user_idx').on(table.userId, table.startedAt),

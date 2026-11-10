@@ -4,6 +4,19 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.57.0] — 2026-11-10
+
+Monitor follow-ups. Adds migration `0091_monitor_followups`.
+
+### Added
+
+- Voice monitor: a cache-token row (browser and executor counts are recorded and only grow) and a live state (listening, thinking, speaking, asleep) the browser reports with its heartbeat. Real voice-side values appear once the voice transport ships.
+- Per-project display name for the viewer monitor (field on the project page, owner only, setting `monitor.viewer.use_alias`); the audit trail records only its length.
+
+### Changed
+
+- A monitor window now shows nothing as soon as the account's session ends (401/403 on its next read).
+
 ## [0.56.0] — 2026-11-09
 
 Monitors: read-only windows the owner puts on a room screen or projector, one for the voice assistant and one for the people in the room. Adds two migrations (`0089_monitor_settings`, `0090_live_session_provider`).

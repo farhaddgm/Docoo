@@ -15,15 +15,68 @@ import { contentTitle, contentToText, researchSourcesOf } from './monitor-text.j
 
 export async function viewerProject(client: PoolClient, workspaceId: string, projectId: string) {
   const row = (
-    await client.query<{ code: string; title: string; status: string; current_stage: string }>(
-      `select code, title, status::text as status, current_stage from projects
-        where workspace_id = $1 and id = $2 and deleted_at is null`,
+    await client.query<{
+      code: string;
+      title: string;
+      status: string;
+      current_stage: string;
+      alias: string | null;
+    }>(
+      `select p.code, p.title, p.status::text as status, p.current_stage, a.alias
+         from projects p left join monitor_project_aliases a on a.project_id = p.id
+        where p.workspace_id = $1 and p.id = $2 and p.deleted_at is null`,
       [workspaceId, projectId],
     )
   ).rows[0];
   return row
-    ? { code: row.code, title: row.title, status: row.status, currentStage: row.current_stage }
+    ? {
+        code: row.code,
+        title: row.title,
+        status: row.status,
+        currentStage: row.current_stage,
+        alias: row.alias,
+      }
     : null;
+}
+
+/** The display name of a project on the monitors, if the owner gave it one. */
+export async function readAlias(client: PoolClient, projectId: string): Promise<string | null> {
+  const row = (
+    await client.query<{ alias: string }>(
+      `select alias from monitor_project_aliases where project_id = $1`,
+      [projectId],
+    )
+  ).rows[0];
+  return row?.alias ?? null;
+}
+
+/** Sets the display name, or removes it when it is empty. False: the project does not exist. */
+export async function writeAlias(
+  client: PoolClient,
+  workspaceId: string,
+  userId: string,
+  projectId: string,
+  alias: string,
+): Promise<boolean> {
+  const exists = (
+    await client.query(`select 1 from projects where id = $1 and workspace_id = $2`, [
+      projectId,
+      workspaceId,
+    ])
+  ).rowCount;
+  if (!exists) return false;
+  if (alias === '') {
+    await client.query(`delete from monitor_project_aliases where project_id = $1`, [projectId]);
+    return true;
+  }
+  await client.query(
+    `insert into monitor_project_aliases (workspace_id, project_id, alias, updated_by)
+     values ($1, $2, $3, $4)
+     on conflict (project_id) do update
+        set alias = excluded.alias, updated_by = excluded.updated_by, updated_at = now()`,
+    [workspaceId, projectId, alias, userId],
+  );
+  return true;
 }
 
 /** The stages of the newest run of the project, each with its latest output as text. */

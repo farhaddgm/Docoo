@@ -28,7 +28,13 @@ export interface LiveBackend {
   /** Totals so far, not increments; the server checks its caps against them and its own clock. */
   readonly reportUsage: (
     sessionId: string,
-    totals: { inputTokens: number; outputTokens: number; costUsd: number },
+    totals: {
+      inputTokens: number;
+      outputTokens: number;
+      costUsd: number;
+      cachedInputTokens?: number;
+      activity?: 'listening' | 'thinking' | 'speaking' | 'asleep';
+    },
   ) => Promise<LiveUsageAnswer>;
   readonly appendMessages: (
     sessionId: string,
