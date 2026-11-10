@@ -113,6 +113,9 @@ describe('the voice transport through the server', () => {
   it('builds the secure address from the page origin and one ticket', async () => {
     expect(webSocketOrigin('https://a.b')).toBe('wss://a.b');
     expect(webSocketOrigin('http://localhost:3000')).toBe('ws://localhost:3000');
+    expect(webSocketOrigin('http://127.0.0.1:3000')).toBe('ws://127.0.0.1:3000');
+    // Audio never goes over an unencrypted link to another host.
+    expect(() => webSocketOrigin('http://docoo.example')).toThrow();
     const r = rig();
     const started = r.transport.start(r.live.h, r.session);
     await r.tick();

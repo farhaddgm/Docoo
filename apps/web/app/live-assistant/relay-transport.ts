@@ -38,9 +38,17 @@ export interface RelayTransportDeps {
 
 const READY_TIMEOUT_MS = 15_000;
 
-/** `https://host` to `wss://host`, `http://…` to `ws://…`. */
+/**
+ * The WebSocket address of the page's own origin. A secure page gets a secure socket; a plain one
+ * only on this computer (development). Audio never goes over an unencrypted link to another host.
+ */
 export function webSocketOrigin(origin: string): string {
-  return origin.replace(/^http/iu, 'ws');
+  const url = new URL(origin);
+  const secure = url.protocol === 'https:';
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if (!secure && !local) throw new Error('The voice link needs a secure page.');
+  url.protocol = secure ? 'wss:' : 'ws:';
+  return url.origin;
 }
 
 function summaryOf(view: LiveActionView): string {
