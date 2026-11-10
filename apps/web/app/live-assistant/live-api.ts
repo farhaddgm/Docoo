@@ -6,6 +6,7 @@ import type {
   LiveMessageView,
   LiveSessionView,
   LiveUsageAnswer,
+  LiveVoiceCheck,
 } from '@docoo/contracts';
 
 import { apiGet, apiSend } from '../api-client';
@@ -97,6 +98,9 @@ export const liveReadApi = {
     apiGet<LiveAssistantClientConfig>(`${base(workspaceId)}/config`, signal),
   cost: (workspaceId: string, signal?: AbortSignal) =>
     apiGet<LiveCostSummary>(`${base(workspaceId)}/cost`, signal),
+  /** Opens the voice link from the server once and reports why not, if it fails. Costs nothing. */
+  voiceCheck: (workspaceId: string) =>
+    apiSend<LiveVoiceCheck>('POST', `${base(workspaceId)}/voice-check`, {}),
   sessions: (workspaceId: string, signal?: AbortSignal) =>
     apiGet<{ items: LiveSessionView[] }>(`${base(workspaceId)}/sessions`, signal),
   session: (workspaceId: string, sessionId: string, signal?: AbortSignal) =>

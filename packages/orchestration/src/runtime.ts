@@ -152,6 +152,21 @@ export class ProviderRuntime {
     );
   }
 
+  /**
+   * The address and key for a live voice link (ADR-0055): only an OpenAI connection can carry the
+   * realtime voice. The key is decrypted in memory for the caller, which must not log or store it.
+   */
+  async realtimeAccessFor(
+    client: PoolClient,
+    connectionId: string,
+  ): Promise<{ apiKey: string; baseUrl: string | null }> {
+    const connection = await this.loadConnection(client, connectionId);
+    if (connection.provider !== 'openai')
+      throw new ProviderError('permanent', 'ai_connection_no_realtime');
+    const apiKey = await this.decryptKey(client, connection);
+    return { apiKey, baseUrl: connection.base_url };
+  }
+
   async adapterFor(
     client: PoolClient,
     connectionId: string,

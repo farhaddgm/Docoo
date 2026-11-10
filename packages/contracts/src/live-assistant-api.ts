@@ -408,3 +408,31 @@ export const liveAskAnswerSchema = z.object({
   }),
 });
 export type LiveAskAnswer = z.infer<typeof liveAskAnswerSchema>;
+
+/**
+ * Why a check of the voice link failed, as a kind and never the provider's message: the screen says
+ * what to do for each. `region` is the provider refusing the country the server runs in.
+ */
+export const liveVoiceCheckFailures = [
+  'not_configured',
+  'connection_unavailable',
+  'not_openai',
+  'auth',
+  'region',
+  'model',
+  'network',
+  'timeout',
+  'unexpected',
+] as const;
+export type LiveVoiceCheckFailure = (typeof liveVoiceCheckFailures)[number];
+
+export const liveVoiceCheckSchema = z.object({
+  ok: z.boolean(),
+  failure: z.enum(liveVoiceCheckFailures).nullable(),
+  /** The model the check asked for. */
+  model: z.string(),
+  /** The kinds of the first events the provider sent (no content), for support. */
+  events: z.array(z.string().max(100)).max(10),
+  latencyMs: z.number().int().nullable(),
+});
+export type LiveVoiceCheck = z.infer<typeof liveVoiceCheckSchema>;

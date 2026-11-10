@@ -49,6 +49,16 @@ export class LiveAssistantController {
     return this.assistant.clientConfig(workspaceContext(request));
   }
 
+  @Post('voice-check')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Open the voice link from the server once, to see whether voice can work',
+  })
+  @RequireWorkspacePermission('live_assistant.use')
+  voiceCheck(@Req() request: FastifyRequest) {
+    return this.assistant.checkVoiceLink(workspaceContext(request));
+  }
+
   @Post('sessions')
   @HttpCode(201)
   @ApiOperation({ summary: 'Start a live session (ends one left running by this person)' })
