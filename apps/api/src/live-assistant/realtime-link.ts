@@ -118,9 +118,7 @@ export function checkRealtimeLink(input: LinkCheckInput): Promise<LinkCheckResul
     };
     socket.onerror = (event) => {
       const text =
-        event && typeof event === 'object' && 'message' in event
-          ? String(event.message)
-          : '';
+        event && typeof event === 'object' && 'message' in event ? String(event.message) : '';
       finish(text ? classifyRefusal(text) : 'network');
     };
     socket.onclose = (event) => {
