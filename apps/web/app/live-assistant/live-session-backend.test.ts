@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { LiveBackend } from './live-api';
 import { HEARTBEAT_MS, MAX_MISSED_HEARTBEATS, createLiveStore, type LiveStoreDeps } from './store';
-import type { LiveTransport, LiveTransportHandlers } from './transport';
+import type { LiveTransport, LiveTransportHandlers, LiveTransportSession } from './transport';
 
 const caps = {
   idleSleepS: 120,
@@ -96,6 +96,7 @@ describe('the session store with a server session (ADR-0055)', () => {
   let releases: number;
   let opened: number;
   let handlers: LiveTransportHandlers | undefined;
+  let startedWith: LiveTransportSession | undefined;
   let stopped: number;
 
   const deps = (): LiveStoreDeps => ({
@@ -113,8 +114,9 @@ describe('the session store with a server session (ADR-0055)', () => {
     now: () => 5000,
   });
   const transport = (): LiveTransport => ({
-    start: (h) => {
+    start: (h, session) => {
       handlers = h;
+      startedWith = session;
       opened += 1;
       return Promise.resolve();
     },
@@ -261,6 +263,48 @@ describe('the session store with a server session (ADR-0055)', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(calls.usage.length).toBe(before + 1);
     await store.stop();
+  });
+
+  it('gives the transport the session and a way to ask for a voice ticket', async () => {
+    const ticket = { ticket: 'T'.repeat(43), path: '/p', expiresInMs: 30000 };
+    const { backend } = fakeBackend({ voiceTicket: () => Promise.resolve(ticket) });
+    const store = make(backend);
+    await store.start();
+    expect(startedWith?.sessionId).toBe(view().id);
+    await expect(startedWith?.voiceTicket?.(view().id)).resolves.toEqual(ticket);
+    await store.stop();
+  });
+
+  it('takes the answer of a request the assistant made by voice like a typed one', async () => {
+    const { backend } = fakeBackend();
+    const store = make(backend);
+    await store.start();
+    const before = store.getSnapshot().tokens;
+    const used = {
+      answer: 'Paused.',
+      actions: [],
+      screen: [],
+      steps: [],
+      toolCalls: 1,
+      stop: 'answered' as const,
+      errorCode: null,
+      usage: { inputTokens: 30, outputTokens: 12, costUsd: 0.001 },
+    };
+    handlers?.onAnswer?.(used);
+    expect(store.getSnapshot().tokens).toBe(before + 42);
+    await store.stop();
+  });
+
+  it('asks the server why the link ended, at once, when the server ended the session', async () => {
+    const { backend } = fakeBackend({
+      reportUsage: () =>
+        Promise.resolve(answer(view({ status: 'ended', endReason: 'cap_cost' }), 'exceeded')),
+    });
+    const store = make(backend);
+    await store.start();
+    handlers?.onServerEnded?.();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.getSnapshot()).toMatchObject({ status: 'error', error: 'cap_reached' });
   });
 
   it('shows the near-cap warning while the server says so, and clears it when it no longer does', async () => {

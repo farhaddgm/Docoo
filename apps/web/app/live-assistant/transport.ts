@@ -1,4 +1,4 @@
-import type { LiveActionView } from '@docoo/contracts';
+import type { LiveActionView, LiveAskAnswer, LiveVoiceTicket } from '@docoo/contracts';
 
 /**
  * How the browser talks to the voice provider. The store knows only this interface, so the real
@@ -32,15 +32,30 @@ export interface LiveTransportHandlers {
    * it as an answer to that change; otherwise it is just conversation and changes nothing.
    */
   onSpeech: (transcript: string) => void;
+  /**
+   * The result of a request the assistant sent to Docoo while talking (the server ran it through the
+   * executor and the gateway): changes wait on the confirmation card, a page or a form draft is shown.
+   */
+  onAnswer?: (answer: LiveAskAnswer) => void;
+  /** The server ended the link because the session ended there (a cap, the owner, a new start). */
+  onServerEnded?: () => void;
   onSleep: () => void;
   onWake: () => void;
   /** The connection dropped by itself; the session is over. */
   onLost: () => void;
 }
 
+export interface LiveTransportSession {
+  readonly sessionId: string;
+  readonly voiceTicket?: (sessionId: string) => Promise<LiveVoiceTicket>;
+}
+
 export interface LiveTransport {
-  /** Resolves when the session is live; rejects if it cannot be opened. */
-  start: (handlers: LiveTransportHandlers) => Promise<void>;
+  /**
+   * Resolves when the session is live; rejects if it cannot be opened. `session` is what a transport
+   * that talks to the server needs: the session's id and how to ask for a one-time voice ticket.
+   */
+  start: (handlers: LiveTransportHandlers, session?: LiveTransportSession) => Promise<void>;
   /** Releases the microphone and the connection. Safe to call more than once or mid-start. */
   stop: () => Promise<void>;
   /** A change that was waiting has ended (done, failed, cancelled, expired): tell the model. */

@@ -1,4 +1,9 @@
-import type { LiveActionView, LiveAskStep, LiveScreenInstruction } from '@docoo/contracts';
+import type {
+  LiveActionView,
+  LiveAskAnswer,
+  LiveAskStep,
+  LiveScreenInstruction,
+} from '@docoo/contracts';
 
 import {
   groupable,
@@ -385,6 +390,19 @@ export function createLiveStore(deps: LiveStoreDeps) {
   }
 
   /**
+   * What the executor answered, typed or asked for by voice: its use is counted (the server already
+   * counts it in the session and its caps), the changes it proposed wait on the confirmation card,
+   * and a page to open or a form draft goes to the screen.
+   */
+  function ingestAnswer(answer: LiveAskAnswer): void {
+    const used = answer.usage.inputTokens + answer.usage.outputTokens;
+    executorTokens += used;
+    dispatch({ type: 'usage', tokens: used });
+    for (const view of answer.actions) accept(view, { report: false });
+    if (answer.screen.length > 0) showOnScreen?.(answer.screen);
+  }
+
+  /**
    * The owner typed something. The server's executor works through the gateway: what it proposes
    * comes back waiting on the confirmation card, never done. The answer, and what the executor
    * used, are shown here; the server already counts that use in the session and its caps.
@@ -408,12 +426,8 @@ export function createLiveStore(deps: LiveStoreDeps) {
         ...(currentProjectId ? { currentProjectId } : {}),
       });
       if (sessionId !== id) return false;
-      const used = answer.usage.inputTokens + answer.usage.outputTokens;
-      executorTokens += used;
-      dispatch({ type: 'usage', tokens: used });
-      for (const view of answer.actions) accept(view, { report: false });
+      ingestAnswer(answer);
       addLine('assistant', answer.answer, false, answer.steps);
-      if (answer.screen.length > 0) showOnScreen?.(answer.screen);
       return true;
     } catch (error) {
       if (sessionId !== id) return false;
@@ -485,6 +499,13 @@ export function createLiveStore(deps: LiveStoreDeps) {
       onSpeech: (transcript) => {
         if (transport === owner) void answerByVoice(transcript);
       },
+      onAnswer: (answer) => {
+        if (transport === owner && sessionId) ingestAnswer(answer);
+      },
+      onServerEnded: () => {
+        // The server closed the session (a cap, the owner's switch): ask it why, now, not at the next beat.
+        if (transport === owner) void beat();
+      },
       onSleep: live(() => dispatch({ type: 'sleep' })),
       onWake: live(() => dispatch({ type: 'wake' })),
       onLost: live(() => {
@@ -530,7 +551,15 @@ export function createLiveStore(deps: LiveStoreDeps) {
     const created = typed ? textTransport : factory!();
     transport = created;
     try {
-      await created.start(handlersFor(created));
+      await created.start(
+        handlersFor(created),
+        sessionId
+          ? {
+              sessionId,
+              ...(backend?.voiceTicket ? { voiceTicket: backend.voiceTicket } : {}),
+            }
+          : undefined,
+      );
     } catch {
       // Read afresh: stop() may have been pressed while the connection was opening.
       if (currentStatus() === 'closing') return;
