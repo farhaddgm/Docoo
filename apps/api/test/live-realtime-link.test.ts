@@ -46,7 +46,7 @@ describe('the realtime link check', () => {
       socket: s.factory,
     });
     expect(result).toMatchObject({ ok: true, failure: null, events: ['session.created'] });
-    expect(s.seen[0]?.headers.Authorization).toBe('Bearer sk-secret');
+    expect(s.seen[0]?.headers['Authorization']).toBe('Bearer sk-secret');
     expect(s.seen[0]?.url).not.toContain('sk-secret');
   });
 
