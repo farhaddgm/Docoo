@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Changed
+
+- Next.js 16.4.2 → 16.4.4 (the newest release past the 7-day supply-chain age gate).
+
 ## [0.56.0] — 2026-11-09
 
 Monitors: read-only windows the owner puts on a room screen or projector, one for the voice assistant and one for the people in the room. Adds two migrations (`0089_monitor_settings`, `0090_live_session_provider`).
