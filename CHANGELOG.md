@@ -4,6 +4,8 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.57.0] — 2026-11-10
+
 Monitor follow-ups. Adds migration `0091_monitor_followups`.
 
 ### Added
