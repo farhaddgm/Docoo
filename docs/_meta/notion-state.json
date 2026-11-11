@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "0b84e82c19fd7c494ea059b8011992ccabfd0169"
+    "source_commit": "c01fbd875f66699b1010c2edf6d95a4a2cc33dd3"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,7 +62,7 @@
     }
   },
   "sync": {
-    "synced_at": "2026-11-11T11:23:23.284Z",
+    "synced_at": "2026-11-11T11:51:22.780Z",
     "created": 0,
     "updated": 0,
     "unchanged": 74,
