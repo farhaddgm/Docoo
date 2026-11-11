@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Fixed
+
+- Voice assistant: the voice chosen in the assistant settings is now used for OpenAI sessions too (it was always `alloy`, although the page says an empty field means the provider default). An empty field still means `alloy`.
+
 ### Added
 
 - ElevenLabs as a working voice provider (ADR-0057): a pipeline engine behind the `VoiceEngine` port. Scribe v3 Live listens (turn prediction, Persian), Docoo's own executor and confirmation gateway are the brain (each finished line the person says is one request; a change still waits for the person to confirm), and Eleven v4 Turbo speaks over the Text-to-Dialogue socket, with HTTP streaming as the fallback when the socket gives nothing. Talking over the assistant stops its speech at once. Hearing time and characters spoken are counted by the voice price list (a missing price uses a deliberately high fallback), so the cost caps work for it. Both sockets ask ElevenLabs for zero retention (`enable_logging=false`); the link check asks the same, so a plan that cannot have it fails the check, not a conversation. An ElevenLabs connection needs a voice chosen before it can start. The privacy notice names the chosen provider. No migration.
