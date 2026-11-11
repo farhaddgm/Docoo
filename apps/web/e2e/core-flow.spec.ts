@@ -68,11 +68,11 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await signInWithKeyboard(page);
     const code = `topic-${stamp}`;
 
-    await mainNavigation(page).getByRole('link', { name: 'حوزه‌های موضوعی' }).click();
+    await mainNavigation(page).getByRole('link', { name: 'حوزه', exact: true }).click();
     await expect(page).toHaveURL(/\/fa\/topics$/u);
     await expect(page.getByRole('heading', { level: 1, name: topicText.title })).toBeVisible();
     await expect(
-      mainNavigation(page).getByRole('link', { name: 'حوزه‌های موضوعی' }),
+      mainNavigation(page).getByRole('link', { name: 'حوزه', exact: true }),
     ).toHaveAttribute('aria-current', 'page');
 
     await page.locator('#topic-code').fill(code);
@@ -128,7 +128,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
       title: titles.second,
     });
 
-    await mainNavigation(page).getByRole('link', { name: 'پروژه‌ها' }).click();
+    await mainNavigation(page).getByRole('link', { name: 'پروژه', exact: true }).click();
     await expect(page).toHaveURL(/\/fa\/projects$/u);
     await expectNoSeriousA11yViolations(page);
     await page.getByRole('link', { name: projectText.newProject }).click();
@@ -215,7 +215,7 @@ test.describe('topics, projects and workflow in the backoffice (TOP-001, PRJ-001
     await expect(statusBadge(page)).toHaveText(detail.statuses['active']!);
 
     // A topic that a project uses cannot be deleted; the panel names the project first.
-    await mainNavigation(page).getByRole('link', { name: 'حوزه‌های موضوعی' }).click();
+    await mainNavigation(page).getByRole('link', { name: 'حوزه', exact: true }).click();
     const usedRow = page
       .getByRole('row')
       .filter({ has: page.getByRole('rowheader', { name: `pa-${stamp}` }) });
