@@ -9,6 +9,7 @@ import { LiveAssistantPill } from './pill';
 import { screenBus, setScreenPush } from './screen';
 import { isLiveActive } from './state';
 import { liveAssistant } from './store';
+import { createRelayTransport } from './relay-transport';
 import { createFakeTransport, type FakeTransportOptions } from './transport';
 
 /**
@@ -44,6 +45,14 @@ export function LiveAssistantHost() {
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [active]);
+
+  // The real voice transport: audio through the Docoo server. A development script may replace it
+  // below with a stand-in; nothing else does.
+  useEffect(() => {
+    liveAssistant.setTransportFactory(() =>
+      createRelayTransport({ origin: () => window.location.origin }),
+    );
+  }, []);
 
   // Development and tests only: lets a script switch on a stand-in provider. Not in production builds.
   useEffect(() => {

@@ -18,6 +18,17 @@ export interface LinkSocket {
 
 export type LinkSocketFactory = (url: string, headers: Record<string, string>) => LinkSocket;
 
+/** A link the relay can also write to. */
+export interface RelaySocket extends LinkSocket {
+  send(data: string): void;
+}
+export type RelaySocketFactory = (url: string, headers: Record<string, string>) => RelaySocket;
+
+export const nodeRelaySocketFactory: RelaySocketFactory = (url, headers) =>
+  new (
+    WebSocket as unknown as new (u: string, o: { headers: Record<string, string> }) => RelaySocket
+  )(url, { headers });
+
 /** Node's own WebSocket client; it takes request headers as an option, which the browser's does not. */
 export const nodeSocketFactory: LinkSocketFactory = (url, headers) =>
   new (

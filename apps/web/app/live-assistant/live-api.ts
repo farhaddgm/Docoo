@@ -7,6 +7,7 @@ import type {
   LiveSessionView,
   LiveUsageAnswer,
   LiveVoiceCheck,
+  LiveVoiceTicket,
 } from '@docoo/contracts';
 
 import { apiGet, apiSend } from '../api-client';
@@ -17,6 +18,8 @@ import { apiGet, apiSend } from '../api-client';
  */
 export interface LiveBackend {
   readonly startSession: (channel?: 'voice' | 'text') => Promise<LiveSessionView>;
+  /** A one-time ticket to open the voice link of an own, open session. */
+  readonly voiceTicket?: (sessionId: string) => Promise<LiveVoiceTicket>;
   /** Type to the assistant: its model works through the gateway; changes come back waiting. */
   readonly ask: (
     sessionId: string,
@@ -69,6 +72,8 @@ export function liveBackendFor(workspaceId: string): LiveBackend {
   return {
     startSession: (channel = 'voice') =>
       apiSend<LiveSessionView>('POST', `${root}/sessions`, { channel }),
+    voiceTicket: (sessionId) =>
+      apiSend<LiveVoiceTicket>('POST', `${root}/sessions/${sessionId}/voice-ticket`, {}),
     ask: (sessionId, input) =>
       apiSend<LiveAskAnswer>('POST', `${root}/sessions/${sessionId}/ask`, input),
     reportUsage: (sessionId, totals) =>

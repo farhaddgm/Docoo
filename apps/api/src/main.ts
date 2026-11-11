@@ -14,6 +14,8 @@ import type { IncomingMessage } from 'node:http';
 import { correlationRecord, logCorrelation, withCorrelation } from '@docoo/observability';
 
 import { AppModule } from './app.module.js';
+import { attachVoiceGateway } from './live-assistant/live-voice-gateway.js';
+import { LiveAssistantService } from './live-assistant/live-assistant.service.js';
 import {
   requestCorrelation,
   RequestCorrelationInterceptor,
@@ -167,5 +169,13 @@ if (config.NODE_ENV !== 'production') {
     .build();
   SwaggerModule.setup('v1/openapi', app, SwaggerModule.createDocument(app, swaggerConfig));
 }
+
+// The live voice link (ADR-0055): the one WebSocket address; nothing else is upgraded.
+const liveAssistant = app.get(LiveAssistantService);
+attachVoiceGateway({
+  server: app.getHttpServer(),
+  allowedOrigin: config.WEB_ORIGIN,
+  accept: (upgrade, client) => liveAssistant.acceptVoiceLink(upgrade, client),
+});
 
 await app.listen(config.API_PORT, config.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
