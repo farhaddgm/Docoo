@@ -674,3 +674,72 @@ export const monitorAliasSchema = z.strictObject({
   alias: z.string().trim().max(80),
 });
 export type MonitorAliasInput = z.infer<typeof monitorAliasSchema>;
+
+// ---- share links ---------------------------------------------------------------------------
+
+/** Bounds of a share link (the migration repeats them). */
+export const monitorShareLimits = {
+  password: { min: 8, max: 128 },
+  maxSessions: { min: 1, max: 100, fallback: 5 },
+  label: { max: 80 },
+} as const;
+
+/**
+ * A link that shows one monitor to anyone who has the address and the password. The owner chooses
+ * the password, when the link stops working (null: never) and how many screens may watch at once.
+ */
+export const createMonitorShareLinkSchema = z.strictObject({
+  kind: z.enum(monitorKinds),
+  password: z.string().min(monitorShareLimits.password.min).max(monitorShareLimits.password.max),
+  expiresAt: z.iso
+    .datetime({ offset: true })
+    .nullable()
+    .refine((value) => value === null || Date.parse(value) > Date.now(), {
+      message: 'The expiry must be in the future.',
+    }),
+  maxSessions: z
+    .number()
+    .int()
+    .min(monitorShareLimits.maxSessions.min)
+    .max(monitorShareLimits.maxSessions.max),
+  label: z.string().trim().max(monitorShareLimits.label.max).default(''),
+});
+export type CreateMonitorShareLinkInput = z.infer<typeof createMonitorShareLinkSchema>;
+
+export const unlockMonitorShareSchema = z.strictObject({
+  password: z.string().min(1).max(monitorShareLimits.password.max),
+});
+export type UnlockMonitorShareInput = z.infer<typeof unlockMonitorShareSchema>;
+
+/** A link as the owner sees it. The address itself is shown once, when the link is made. */
+export interface MonitorShareLinkSummary {
+  readonly id: string;
+  readonly kind: MonitorKind;
+  readonly label: string;
+  readonly expiresAt: string | null;
+  readonly maxSessions: number;
+  readonly activeSessions: number;
+  readonly createdAt: string;
+  readonly status: 'active' | 'expired' | 'revoked';
+}
+
+export interface MonitorShareLinkCreated extends MonitorShareLinkSummary {
+  /** The secret part of the address: /monitor/share/{token}. Never returned again. */
+  readonly token: string;
+}
+
+/** What a visitor may know about a link before the password: nothing but its kind. */
+export interface MonitorShareInfo {
+  readonly kind: MonitorKind;
+}
+
+/** How the shared screen should look; the same settings the owner's window uses. */
+export interface MonitorShareLook {
+  readonly theme: 'dark' | 'light' | 'auto';
+  readonly fontScale: number;
+  readonly language: 'ui' | 'fa' | 'en';
+  readonly refreshS: number;
+  readonly liveBadge: boolean;
+  readonly watermark: 'none' | 'name' | 'name_time';
+  readonly workspaceName: string;
+}

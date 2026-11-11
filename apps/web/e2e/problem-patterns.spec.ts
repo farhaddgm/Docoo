@@ -147,7 +147,7 @@ for (const locale of ['fa', 'en'] as const) {
     await page.goto(`/${locale}/workspaces/${workspaceId}/problem-patterns`);
     const sidebar = page.locator('#app-sidebar');
     const patternsLink = sidebar.getByRole('link', {
-      name: locale === 'fa' ? 'الگوها' : 'Patterns',
+      name: locale === 'fa' ? 'الگو' : 'Patterns',
       exact: true,
     });
     await expect(sidebar).toBeVisible();
