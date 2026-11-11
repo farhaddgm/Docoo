@@ -11,6 +11,7 @@ import { PanelsSkeleton } from '../skeleton';
 import { sendCommand, useMonitorControl } from './control';
 import { monitorMessages, optionLabel, fillText } from './messages';
 import { isHiddenValue, previewKeys } from './preview';
+import { ShareLinks } from './share-links';
 import { monitorWindowFeatures, monitorWindowName, monitorWindowPath } from './paths';
 
 import './monitor.css';
@@ -254,6 +255,8 @@ export function MonitorLauncher({
           </p>
         )}
       </section>
+
+      <ShareLinks locale={locale} workspaceId={workspaceId} />
 
       <p>
         <Link href={`/${locale}/monitor/settings` as Route}>{text.settings}</Link>

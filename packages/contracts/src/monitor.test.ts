@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  createMonitorShareLinkSchema,
   detectMonitorPreset,
   isMonitorSettingValue,
   monitorDelayChoices,
@@ -180,5 +181,35 @@ describe('the owner controls', () => {
     );
     expect(reportMonitorEventSchema.safeParse({ event: 'opened', kind: 'tv' }).success).toBe(false);
     expect(reportMonitorEventSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('share link input', () => {
+  const ok = {
+    kind: 'viewer',
+    password: 'longenough',
+    expiresAt: null,
+    maxSessions: 5,
+  } as const;
+
+  it('accepts a password, no expiry and a screen limit', () => {
+    expect(createMonitorShareLinkSchema.parse(ok).label).toBe('');
+  });
+
+  it('refuses a short password, a past expiry and a limit outside the bounds', () => {
+    expect(createMonitorShareLinkSchema.safeParse({ ...ok, password: 'short' }).success).toBe(
+      false,
+    );
+    expect(
+      createMonitorShareLinkSchema.safeParse({ ...ok, expiresAt: '2020-01-01T00:00:00Z' }).success,
+    ).toBe(false);
+    expect(createMonitorShareLinkSchema.safeParse({ ...ok, maxSessions: 0 }).success).toBe(false);
+    expect(createMonitorShareLinkSchema.safeParse({ ...ok, maxSessions: 101 }).success).toBe(false);
+    expect(createMonitorShareLinkSchema.safeParse({ ...ok, kind: 'other' }).success).toBe(false);
+  });
+
+  it('accepts a future expiry', () => {
+    const future = new Date(Date.now() + 3_600_000).toISOString();
+    expect(createMonitorShareLinkSchema.safeParse({ ...ok, expiresAt: future }).success).toBe(true);
   });
 });

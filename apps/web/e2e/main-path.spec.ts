@@ -58,7 +58,7 @@ test.describe('main path in Persian and English (UX-001, AUTH-001)', () => {
       'aria-current',
       'page',
     );
-    await expect(nav.getByText('پروژه‌ها')).toBeVisible();
+    await expect(nav.getByText('پروژه', { exact: true })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 
     await page.getByRole('link', { name: 'Switch to English' }).click();
