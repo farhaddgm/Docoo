@@ -65,6 +65,8 @@ const fa = {
       'خاموش یعنی دکمهٔ «گفتگوی زنده» غیرفعال است و هیچ صدایی ضبط یا فرستاده نمی‌شود. با دکمهٔ خاموش هیچ‌چیز در پس‌زمینه کار نمی‌کند.',
     disclosure:
       'می‌پذیرم که صدای من و محتوای پروژه‌های داخل دامنهٔ دسترسی، برای پردازش به سرویس‌دهندهٔ صوتی انتخاب‌شده فرستاده می‌شود.',
+    disclosureNamed:
+      'می‌پذیرم که صدای من، متن گفتگو و محتوای پروژه‌های داخل دامنهٔ دسترسی، برای پردازش به {provider} فرستاده می‌شود.',
     displayName: 'نام نمایشی',
     spokenName: 'نام گفتاری (املای فونتیک برای تلفظ درست)',
     spokenHint: 'مثلاً «داکو». با این نام صدایش می‌کنید و همین‌طور تلفظ می‌شود.',
@@ -257,6 +259,8 @@ const en: typeof fa = {
       'Off means the "live conversation" button is disabled and no audio is recorded or sent. With the button off nothing runs in the background.',
     disclosure:
       'I accept that my voice and the content of the projects within the access scope are sent to the chosen voice provider to be processed.',
+    disclosureNamed:
+      'I accept that my voice, the text of the conversation and the content of the projects within the access scope are sent to {provider} to be processed.',
     displayName: 'Display name',
     spokenName: 'Spoken name (phonetic spelling for correct pronunciation)',
     spokenHint: 'For example "Docoo". You call it by this name and it is pronounced this way.',

@@ -4,6 +4,7 @@ import {
   ELEVENLABS_DEFAULT_TTS_MODEL,
   ELEVENLABS_STT_MODEL,
   evaluateCaps,
+  pipelineCostUsd,
   isLiveVoiceProvider,
   voiceModeOf,
   type LiveVoiceProvider,
@@ -41,6 +42,7 @@ import { askAnswerText } from './live-ask-text.js';
 import { runExecutor } from './live-executor.js';
 import { VoiceTickets, type VoiceTicketEntry } from './live-voice-tickets.js';
 import { checkElevenLabsLink } from './elevenlabs-link.js';
+import { createElevenLabsPipelineEngine } from './elevenlabs-pipeline-engine.js';
 import { createOpenAiRealtimeEngine } from './openai-realtime-engine.js';
 import { startVoiceRelay, type ClientLink, type RelayHost } from './live-voice-relay.js';
 import {
@@ -74,6 +76,7 @@ import {
   listSessions,
   purgeMessages,
   moveAction,
+  pipelinePrice,
   providerOfConnection,
   readAction,
   readSession,
@@ -130,12 +133,20 @@ function errorCodeOf(error: unknown): string {
  * The brands whose voice engine is built. ElevenLabs joins the set when its pipeline engine ships
  * (ADR-0057); until then choosing it is refused with a clear reason, not a failure at the link.
  */
-const ENGINES_BUILT: ReadonlySet<LiveVoiceProvider> = new Set(['openai']);
+const ENGINES_BUILT: ReadonlySet<LiveVoiceProvider> = new Set(['openai', 'elevenlabs']);
 
-/** Why the chosen connection's brand cannot carry the live voice; null when it can or none is set. */
-function providerBlocker(brand: string): 'provider_unsupported' | null {
+/**
+ * Why the chosen connection's brand cannot carry the live voice: its engine is not built, or the
+ * brand speaks with a voice the owner has not chosen yet (ElevenLabs). Null when it can, or when
+ * no connection is chosen (the settings blockers say that).
+ */
+function providerBlocker(
+  brand: string,
+  settings: LiveSettings,
+): 'provider_unsupported' | 'not_configured' | null {
   if (brand === '') return null;
-  return isLiveVoiceProvider(brand) && ENGINES_BUILT.has(brand) ? null : 'provider_unsupported';
+  if (!isLiveVoiceProvider(brand) || !ENGINES_BUILT.has(brand)) return 'provider_unsupported';
+  return brand === 'elevenlabs' && settings.voiceId === '' ? 'not_configured' : null;
 }
 
 function storable(result: unknown): unknown {
@@ -194,7 +205,7 @@ export class LiveAssistantService {
       const settings = await this.settings(client, context);
       const brand = await providerOfConnection(client, settings.connectionId);
       const voiceProvider = isLiveVoiceProvider(brand) ? brand : null;
-      const blocker = startBlocker(settings) ?? providerBlocker(brand);
+      const blocker = startBlocker(settings) ?? providerBlocker(brand, settings);
       const typing = textBlocker(settings);
       return {
         enabled: settings.enabled,
@@ -316,7 +327,7 @@ export class LiveAssistantService {
         client,
         channel === 'text' ? settings.executorConnectionId : settings.connectionId,
       );
-      const refused = channel === 'text' ? null : providerBlocker(brand);
+      const refused = channel === 'text' ? null : providerBlocker(brand, settings);
       if (refused) {
         throw conflict('LIVE_ASSISTANT_UNAVAILABLE', 'The live assistant is not ready to start.', {
           reason: refused,
@@ -549,7 +560,7 @@ export class LiveAssistantService {
         voice:
           gate.session.mode !== 'text' &&
           startBlocker(gate.settings) === null &&
-          providerBlocker(brand) === null,
+          providerBlocker(brand, gate.settings) === null,
       };
     });
     if ('closed' in open) this.throwClosed(open.closed);
@@ -582,25 +593,36 @@ export class LiveAssistantService {
       if (startBlocker(gate.settings) !== null) return null;
       const access = await this.runtime.voiceAccessFor(client2, gate.settings.connectionId);
       // A brand whose engine is not built yet is refused here as well, never half opened.
-      if (providerBlocker(access.provider) !== null) return null;
+      if (providerBlocker(access.provider, gate.settings) !== null) return null;
       return { settings: gate.settings, access };
     });
     if (!prepared) return false;
     const { settings, access } = prepared;
-    const host = this.relayHost(context, sessionId, settings);
+    const host = this.relayHost(context, sessionId, settings, access.provider);
     this.relays.get(sessionId)?.stop('superseded');
-    const provider = this.voiceSocketFactory(realtimeUrl(access.baseUrl, settings.model), {
-      Authorization: `Bearer ${access.apiKey}`,
-    });
-    const engine = createOpenAiRealtimeEngine({
-      socket: provider,
-      config: {
-        model: host.model,
-        voice: host.voice,
-        language: host.language,
-        instructions: host.instructions,
-      },
-    });
+    const engine =
+      access.provider === 'elevenlabs'
+        ? createElevenLabsPipelineEngine({
+            socket: this.voiceSocketFactory,
+            apiKey: access.apiKey,
+            baseUrl: access.baseUrl,
+            config: {
+              ttsModel: host.model,
+              voice: host.voice,
+              language: host.language === 'en' ? 'en' : 'fa',
+            },
+          })
+        : createOpenAiRealtimeEngine({
+            socket: this.voiceSocketFactory(realtimeUrl(access.baseUrl, settings.model), {
+              Authorization: `Bearer ${access.apiKey}`,
+            }),
+            config: {
+              model: host.model,
+              voice: host.voice,
+              language: host.language,
+              instructions: host.instructions,
+            },
+          });
     const relay = startVoiceRelay({ host, client, engine });
     this.relays.set(sessionId, relay);
     client.onClose(() => {
@@ -613,10 +635,14 @@ export class LiveAssistantService {
     context: WorkspaceRequestContext,
     sessionId: string,
     settings: LiveSettings,
+    brand: LiveVoiceProvider,
   ): RelayHost {
+    const pipeline = brand === 'elevenlabs';
+    // ElevenLabs: the model is the speaking model (the hearing model is fixed), the voice is the owner's.
+    const model = pipeline ? settings.model.trim() || ELEVENLABS_DEFAULT_TTS_MODEL : settings.model;
     return {
-      model: settings.model,
-      voice: 'alloy',
+      model,
+      voice: pipeline ? settings.voiceId : 'alloy',
       language: settings.language === 'en' ? 'en' : 'fa',
       instructions: voiceInstructions(settings),
       ask: (text) => this.ask(context, sessionId, { text, context: [] }),
@@ -624,12 +650,22 @@ export class LiveAssistantService {
         await this.appendMessages(context, sessionId, lines);
       },
       costOf: (usage) =>
-        this.database.run(context, (client) =>
-          this.runtime.realtimeCostUsd(client, settings.model, {
-            ...usage,
-            reasoningTokens: null,
-          }),
-        ),
+        this.database.run(context, async (client) => {
+          if (!pipeline) {
+            return this.runtime.realtimeCostUsd(client, settings.model, {
+              ...usage,
+              reasoningTokens: null,
+            });
+          }
+          const price = await pipelinePrice(
+            client,
+            context.workspaceId,
+            brand,
+            ELEVENLABS_STT_MODEL,
+            model,
+          );
+          return pipelineCostUsd(usage, price);
+        }),
       record: async (totals, activity) => {
         const answer = await this.reportUsage(context, sessionId, { ...totals, activity });
         return { ended: answer.session.status === 'ended' };

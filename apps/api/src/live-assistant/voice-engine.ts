@@ -33,6 +33,11 @@ export interface VoiceEngineEvents {
   toolCall(callId: string, request: string): void;
   /** One response is complete, with what it used when the provider says so. */
   responseDone(usage: EngineUsage | null): void;
+  /**
+   * Use that is not tied to a response (a pipeline listens for as long as the microphone is open,
+   * answer or not). It only counts; the activity of the session is left alone.
+   */
+  usage(usage: EngineUsage): void;
   /** The provider failed or closed the link; the session cannot continue. */
   failed(): void;
 }
@@ -44,8 +49,11 @@ export interface VoiceEngine {
   sendAudio(pcm: Buffer): void;
   /** The answer to a tool call; the engine makes the model continue with it. */
   answerTool(callId: string, output: string): void;
-  /** Tells the model what became of a change, so it can say so briefly. */
-  tell(text: string): void;
+  /**
+   * Tells the person what became of a change. A model-driven engine gives `instruction` to the
+   * model, which says it in its own words; a pipeline has no model and speaks `spoken` as it is.
+   */
+  tell(instruction: string, spoken: string): void;
   /** Stops what the assistant is saying now. */
   cancelSpeech(): void;
   close(): void;

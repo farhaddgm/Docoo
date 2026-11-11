@@ -31,15 +31,60 @@ export function elevenLabsEndpoints(baseUrl: string | null): ElevenLabsEndpoints
   return { ws: base.replace(/^http/iu, 'ws') };
 }
 
-export function sttUrl(baseUrl: string | null, model: string, language?: string): string {
-  const query = new URLSearchParams({ model_id: model, audio_format: 'pcm_16000' });
+/**
+ * Whether Docoo asks ElevenLabs for zero retention on both sockets (`enable_logging=false`). The
+ * documentation says zero retention may be limited to some plans; the link check sends the same
+ * flag, so a plan that cannot have it fails the check, not a conversation. One switch, one place.
+ */
+export const ELEVENLABS_ZERO_RETENTION = true;
+
+export interface SttUrlOptions {
+  readonly audioFormat?: string;
+  readonly commitStrategy?: 'manual' | 'vad' | 'turn_prediction';
+  readonly zeroRetention?: boolean;
+}
+
+export function sttUrl(
+  baseUrl: string | null,
+  model: string,
+  language?: string,
+  options: SttUrlOptions = {},
+): string {
+  const query = new URLSearchParams({
+    model_id: model,
+    audio_format: options.audioFormat ?? 'pcm_16000',
+  });
   if (language) query.set('language_code', language);
+  if (options.commitStrategy) query.set('commit_strategy', options.commitStrategy);
+  if (options.zeroRetention) query.set('enable_logging', 'false');
   return `${elevenLabsEndpoints(baseUrl).ws}/v1/speech-to-text/realtime?${query.toString()}`;
 }
 
-export function dialogueUrl(baseUrl: string | null, model: string): string {
+export interface DialogueUrlOptions {
+  readonly language?: string;
+  readonly zeroRetention?: boolean;
+}
+
+export function dialogueUrl(
+  baseUrl: string | null,
+  model: string,
+  options: DialogueUrlOptions = {},
+): string {
   const query = new URLSearchParams({ model_id: model, output_format: 'pcm_24000' });
+  if (options.language) query.set('language_code', options.language);
+  if (options.zeroRetention) query.set('enable_logging', 'false');
   return `${elevenLabsEndpoints(baseUrl).ws}/v1/text-to-dialogue/stream-input?${query.toString()}`;
+}
+
+/** The HTTP address of the same service, for the streaming fallback of the speaking side. */
+export function dialogueHttpUrl(baseUrl: string | null, options: DialogueUrlOptions = {}): string {
+  const base = (baseUrl ?? 'https://api.elevenlabs.io')
+    .trim()
+    .replace(/\/+$/u, '')
+    .replace(/\/v1$/u, '');
+  const query = new URLSearchParams({ output_format: 'pcm_24000' });
+  if (options.zeroRetention) query.set('enable_logging', 'false');
+  return `${base}/v1/text-to-dialogue/stream?${query.toString()}`;
 }
 
 export interface ElevenLabsCheckInput {
@@ -165,7 +210,9 @@ export async function checkElevenLabsLink(input: ElevenLabsCheckInput): Promise<
   const timeoutMs = input.timeoutMs ?? 10_000;
   const settleMs = input.settleMs ?? 1_500;
   const hearing = await openOnce({
-    url: sttUrl(input.baseUrl, input.sttModel),
+    url: sttUrl(input.baseUrl, input.sttModel, undefined, {
+      zeroRetention: ELEVENLABS_ZERO_RETENTION,
+    }),
     apiKey: input.apiKey,
     make,
     timeoutMs,
@@ -178,7 +225,7 @@ export async function checkElevenLabsLink(input: ElevenLabsCheckInput): Promise<
     return { ok: false, failure: hearing.failure, events: events.slice(0, 10), latencyMs: null };
   }
   const speaking = await openOnce({
-    url: dialogueUrl(input.baseUrl, input.ttsModel),
+    url: dialogueUrl(input.baseUrl, input.ttsModel, { zeroRetention: ELEVENLABS_ZERO_RETENTION }),
     apiKey: input.apiKey,
     make,
     timeoutMs,

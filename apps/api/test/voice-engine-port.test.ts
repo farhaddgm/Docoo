@@ -25,8 +25,10 @@ class ScriptedEngine implements VoiceEngine {
   answerTool(callId: string, output: string): void {
     this.toolAnswers.push({ callId, output });
   }
-  tell(text: string): void {
+  spokenTold: string[] = [];
+  tell(text: string, spoken: string): void {
     this.told.push(text);
+    this.spokenTold.push(spoken);
   }
   cancelSpeech(): void {
     this.cancelled += 1;
@@ -190,5 +192,26 @@ describe('the voice engine port (ADR-0057)', () => {
     );
     expect(engine.cancelled).toBe(1);
     expect(engine.told[0]).toContain('"pause" is now executed');
+    // An engine with no model speaks the plain summary instead of the instruction.
+    expect(engine.spokenTold[0]).toBe('Ok.');
+  });
+
+  it('counts use an engine reports outside a response, and leaves the activity alone', async () => {
+    const { engine, recorded, client } = rig();
+    engine.events.ready();
+    engine.events.speechStopped();
+    engine.events.usage({
+      inputTokens: 0,
+      outputTokens: 0,
+      cachedInputTokens: 0,
+      audioSeconds: 30,
+      characters: 0,
+    });
+    await tick();
+    expect(recorded.at(-1)).toMatchObject({ audioSeconds: 30, characters: 0 });
+    // Only the speech stop changed the activity; the report did not bring it back to listening.
+    expect(client.json().filter((m) => m['type'] === 'activity')).toEqual([
+      { type: 'activity', activity: 'thinking' },
+    ]);
   });
 });
