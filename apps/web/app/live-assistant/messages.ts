@@ -49,6 +49,7 @@ export interface LiveMessages {
       readonly disabled: string;
       readonly disclosure: string;
       readonly not_configured: string;
+      readonly provider_unsupported: string;
       readonly no_provider: string;
     };
     readonly openSettings: string;
@@ -200,7 +201,9 @@ const fa: LiveMessages = {
     notReady: {
       disabled: 'دستیار صوتی در تنظیمات خاموش است.',
       disclosure: 'هشدار حریم خصوصی هنوز در تنظیمات دستیار پذیرفته نشده است.',
-      not_configured: 'اتصال و مدل صوتی هنوز در تنظیمات دستیار انتخاب نشده است.',
+      not_configured: 'اتصال، مدل و صدا هنوز در تنظیمات دستیار کامل انتخاب نشده است.',
+      provider_unsupported:
+        'برای ارائه‌دهندهٔ این اتصال هنوز موتور گفتگوی زنده ساخته نشده است؛ در تنظیمات دستیار اتصال دیگری انتخاب کنید.',
       no_provider: 'اتصال به سرویس صوتی هنوز راه‌اندازی نشده است.',
     },
     openSettings: 'باز کردن تنظیمات دستیار',
@@ -387,7 +390,9 @@ const en: LiveMessages = {
       disabled: 'The voice assistant is switched off in settings.',
       disclosure: 'The privacy notice has not been accepted in the assistant settings yet.',
       not_configured:
-        'The voice connection and model are not chosen in the assistant settings yet.',
+        'The voice connection, model and voice are not fully chosen in the assistant settings yet.',
+      provider_unsupported:
+        "The live voice engine for this connection's provider is not built yet; choose another connection in the assistant settings.",
       no_provider: 'The connection to the voice service is not set up yet.',
     },
     openSettings: 'Open assistant settings',

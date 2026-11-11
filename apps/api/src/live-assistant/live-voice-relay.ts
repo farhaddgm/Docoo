@@ -6,14 +6,14 @@ import {
   type LiveVoiceServerMessage,
 } from '@docoo/contracts';
 
-import type { RelaySocket } from './realtime-link.js';
+import type { EngineUsage, VoiceEngine } from './voice-engine.js';
 
 /**
- * The relay between the browser and the provider's realtime voice service (ADR-0055 §4-3, relay
- * option): audio and a few small messages go in and out of the Docoo server, which holds the key,
- * counts the use, and runs everything the model asks for through the gateway. The model only ever
- * gets one tool, `ask_docoo`; what it asks is carried out by the executor and its confirmations,
- * exactly as for typed requests. All knowledge of the provider's wire protocol is in this file.
+ * The relay between the browser and a voice provider (ADR-0055 §4-3, ADR-0057): audio and a few
+ * small messages go in and out of the Docoo server, which holds the key, counts the use, and runs
+ * everything the model asks for through the gateway. The model only ever gets one tool,
+ * `ask_docoo`; what it asks is carried out by the executor and its confirmations, exactly as for
+ * typed requests. Nothing here knows a provider's protocol: that is the engine (`VoiceEngine`).
  */
 
 /** What the relay needs from the rest of the server; tests give a scripted one. */
@@ -35,11 +35,7 @@ export interface RelayHost {
   ): Promise<{ ended: boolean }>;
 }
 
-export interface RelayUsage {
-  readonly inputTokens: number;
-  readonly outputTokens: number;
-  readonly cachedInputTokens: number;
-}
+export type RelayUsage = EngineUsage;
 
 /** The part of the browser's socket the relay uses (the `ws` library's socket fits it). */
 export interface ClientLink {
@@ -52,26 +48,10 @@ export interface ClientLink {
 export interface RelayOptions {
   readonly host: RelayHost;
   readonly client: ClientLink;
-  readonly provider: RelaySocket;
+  readonly engine: VoiceEngine;
   /** How long the provider may take to accept the session. */
   readonly readyTimeoutMs?: number;
-  readonly now?: () => number;
 }
-
-const ASK_TOOL = {
-  type: 'function',
-  name: 'ask_docoo',
-  description:
-    'Ask Docoo to look something up or to do something, in the words of the person. Use it for anything about their projects, knowledge, notifications or settings. A change is never done at once: the person confirms it on screen.',
-  parameters: {
-    type: 'object',
-    properties: {
-      request: { type: 'string', description: "The person's request, in their own words." },
-    },
-    required: ['request'],
-    additionalProperties: false,
-  },
-} as const;
 
 /** What the model is told after the executor answered: short, with no raw data. */
 function toolOutputOf(answer: LiveAskAnswer): string {
@@ -88,37 +68,22 @@ function toolOutputOf(answer: LiveAskAnswer): string {
   });
 }
 
-function stringOf(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
-
-function numberOf(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
-}
-
-function requestOf(rawArguments: string): string {
-  try {
-    return stringOf(recordOf(JSON.parse(rawArguments) as unknown)['request']).slice(0, 1000);
-  } catch {
-    return '';
-  }
-}
-
-function recordOf(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-/** Starts the relay; resolves with a function that ends it. */
+/** Starts the relay; returns a function that ends it. */
 export function startVoiceRelay(options: RelayOptions): { stop: (reason: string) => void } {
-  const { host, client, provider } = options;
+  const { host, client, engine } = options;
   const timers = new Set<ReturnType<typeof setTimeout>>();
   let closed = false;
   let ready = false;
   let activity: LiveActivity = 'listening';
   let speaking = false;
-  const totals = { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, costUsd: 0 };
+  const totals = {
+    inputTokens: 0,
+    outputTokens: 0,
+    cachedInputTokens: 0,
+    audioSeconds: 0,
+    characters: 0,
+    costUsd: 0,
+  };
   let asking: Promise<void> = Promise.resolve();
 
   const toClient = (message: LiveVoiceServerMessage): void => {
@@ -127,14 +92,6 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
       client.send(JSON.stringify(message));
     } catch {
       /* the browser went away; its close event ends the relay */
-    }
-  };
-  const toProvider = (event: Record<string, unknown>): void => {
-    if (closed) return;
-    try {
-      provider.send(JSON.stringify(event));
-    } catch {
-      end('provider');
     }
   };
   const setActivity = (next: LiveActivity): void => {
@@ -149,11 +106,7 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     closed = true;
     for (const timer of timers) clearTimeout(timer);
     timers.clear();
-    try {
-      provider.close(1000);
-    } catch {
-      /* already closed */
-    }
+    engine.close();
     try {
       client.close(1000);
     } catch {
@@ -174,160 +127,110 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     }
   }
 
-  async function addUsage(response: Record<string, unknown>): Promise<void> {
-    const usage = recordOf(response['usage']);
-    const details = recordOf(usage['input_token_details']);
-    const step: RelayUsage = {
-      inputTokens: numberOf(usage['input_tokens']),
-      outputTokens: numberOf(usage['output_tokens']),
-      cachedInputTokens: numberOf(details['cached_tokens']),
-    };
-    if (step.inputTokens === 0 && step.outputTokens === 0) return;
+  async function addUsage(step: EngineUsage): Promise<void> {
     const cost = await host.costOf(step).catch(() => 0);
     totals.inputTokens += step.inputTokens;
     totals.outputTokens += step.outputTokens;
     totals.cachedInputTokens += step.cachedInputTokens;
+    totals.audioSeconds += step.audioSeconds ?? 0;
+    totals.characters += step.characters ?? 0;
     totals.costUsd = Math.round((totals.costUsd + cost) * 1e6) / 1e6;
     try {
       const outcome = await host.record({ ...totals }, activity);
-      toClient({ type: 'usage', ...totals });
+      toClient({
+        type: 'usage',
+        inputTokens: totals.inputTokens,
+        outputTokens: totals.outputTokens,
+        cachedInputTokens: totals.cachedInputTokens,
+        costUsd: totals.costUsd,
+      });
       if (outcome.ended) end('cap');
     } catch {
       /* the next report tries again; the browser's own heartbeat also reaches the server */
     }
   }
 
-  function answerTool(callId: string, rawArguments: string): void {
+  function answerTool(callId: string, request: string): void {
     asking = asking.then(async () => {
       if (closed) return;
-      const request = requestOf(rawArguments);
       let output: string;
       if (request.trim() === '') {
         output = JSON.stringify({ answer: 'No request was given.' });
       } else {
         setActivity('thinking');
         try {
-          const answer = await host.ask(request);
+          const answer = await host.ask(request.slice(0, 1000));
           toClient({ type: 'answer', answer });
           output = toolOutputOf(answer);
         } catch {
           output = JSON.stringify({ answer: 'Docoo could not carry this out right now.' });
         }
       }
-      toProvider({
-        type: 'conversation.item.create',
-        item: { type: 'function_call_output', call_id: callId, output },
-      });
-      toProvider({ type: 'response.create' });
+      if (!closed) engine.answerTool(callId, output);
     });
   }
 
-  function onProviderEvent(raw: unknown): void {
-    if (typeof raw !== 'string') return;
-    let event: Record<string, unknown>;
-    try {
-      event = recordOf(JSON.parse(raw) as unknown);
-    } catch {
-      return;
-    }
-    switch (stringOf(event['type'])) {
-      case 'session.updated': {
-        if (ready) return;
-        ready = true;
-        clearTimeout(readyTimer);
-        timers.delete(readyTimer);
-        toClient({ type: 'ready' });
-        return;
+  engine.start({
+    ready() {
+      if (ready || closed) return;
+      ready = true;
+      clearTimeout(readyTimer);
+      timers.delete(readyTimer);
+      toClient({ type: 'ready' });
+    },
+    speechStarted() {
+      speaking = false;
+      toClient({ type: 'interrupt' });
+      setActivity('listening');
+    },
+    speechStopped() {
+      setActivity('thinking');
+    },
+    audio(pcm) {
+      if (closed || pcm.length === 0) return;
+      if (!speaking) {
+        speaking = true;
+        setActivity('speaking');
       }
-      case 'input_audio_buffer.speech_started':
-        speaking = false;
-        toClient({ type: 'interrupt' });
-        setActivity('listening');
-        return;
-      case 'input_audio_buffer.speech_stopped':
-        setActivity('thinking');
-        return;
-      case 'response.output_audio.delta':
-      case 'response.audio.delta': {
-        const audio = stringOf(event['delta']);
-        if (audio === '') return;
-        if (!speaking) {
-          speaking = true;
-          setActivity('speaking');
-        }
-        try {
-          client.send(Buffer.from(audio, 'base64'));
-        } catch {
-          /* the browser went away */
-        }
-        return;
+      try {
+        client.send(pcm);
+      } catch {
+        /* the browser went away */
       }
-      case 'response.output_audio_transcript.done':
-      case 'response.audio_transcript.done': {
-        const text = stringOf(event['transcript']);
-        if (text.trim() === '') return;
-        toClient({ type: 'assistant', text: text.slice(0, 4000) });
-        void save('assistant', text);
-        return;
-      }
-      case 'conversation.item.input_audio_transcription.completed': {
-        const text = stringOf(event['transcript']);
-        if (text.trim() === '') return;
-        toClient({ type: 'user', text: text.slice(0, 4000) });
-        void save('user', text);
-        return;
-      }
-      case 'response.function_call_arguments.done': {
-        const callId = stringOf(event['call_id']);
-        if (stringOf(event['name']) !== 'ask_docoo' || callId === '') return;
-        answerTool(callId, stringOf(event['arguments']));
-        return;
-      }
-      case 'response.done': {
-        speaking = false;
-        void addUsage(recordOf(event['response']));
-        // A tool call is still being answered; only then does listening resume.
-        void asking.then(() => setActivity('listening'));
-        return;
-      }
-      case 'error':
-        end('provider');
-        return;
-      default:
-    }
-  }
-
-  provider.onopen = () => {
-    toProvider({
-      type: 'session.update',
-      session: {
-        type: 'realtime',
-        model: host.model,
-        instructions: host.instructions,
-        output_modalities: ['audio'],
-        audio: {
-          input: {
-            format: { type: 'audio/pcm', rate: 24000 },
-            transcription: { model: 'gpt-4o-mini-transcribe', language: host.language },
-            turn_detection: { type: 'semantic_vad' },
-          },
-          output: { format: { type: 'audio/pcm', rate: 24000 }, voice: host.voice },
-        },
-        tools: [ASK_TOOL],
-        tool_choice: 'auto',
-      },
-    });
-  };
-  provider.onmessage = (event) => onProviderEvent(event.data);
-  provider.onerror = () => end('provider');
-  provider.onclose = () => end('provider');
+    },
+    userText(text) {
+      if (text.trim() === '') return;
+      toClient({ type: 'user', text: text.slice(0, 4000) });
+      void save('user', text);
+    },
+    assistantText(text) {
+      if (text.trim() === '') return;
+      toClient({ type: 'assistant', text: text.slice(0, 4000) });
+      void save('assistant', text);
+    },
+    toolCall(callId, request) {
+      answerTool(callId, request);
+    },
+    responseDone(usage) {
+      speaking = false;
+      if (usage) void addUsage(usage);
+      // A tool call is still being answered; only then does listening resume.
+      void asking.then(() => setActivity('listening'));
+    },
+    usage(step) {
+      void addUsage(step);
+    },
+    failed() {
+      end('provider');
+    },
+  });
 
   client.onClose(() => end('ended'));
   client.onMessage((data, isBinary) => {
     if (closed) return;
     if (isBinary) {
       if (!ready || data.length === 0 || data.length > LIVE_VOICE_MAX_FRAME_BYTES) return;
-      toProvider({ type: 'input_audio_buffer.append', audio: data.toString('base64') });
+      engine.sendAudio(data);
       return;
     }
     let parsed: unknown;
@@ -339,25 +242,15 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     const message = liveVoiceClientMessageSchema.safeParse(parsed);
     if (!message.success) return;
     if (message.data.type === 'stop_speaking') {
-      toProvider({ type: 'response.cancel' });
+      engine.cancelSpeech();
       toClient({ type: 'interrupt' });
       return;
     }
     const { capability, status, summary } = message.data;
-    toProvider({
-      type: 'conversation.item.create',
-      item: {
-        type: 'message',
-        role: 'system',
-        content: [
-          {
-            type: 'input_text',
-            text: `Docoo: the change "${capability}" is now ${status}. ${summary} Tell the person briefly.`,
-          },
-        ],
-      },
-    });
-    toProvider({ type: 'response.create' });
+    engine.tell(
+      `Docoo: the change "${capability}" is now ${status}. ${summary} Tell the person briefly.`,
+      summary,
+    );
   });
 
   return { stop: (reason) => end(reason === 'cap' ? 'cap' : 'ended') };

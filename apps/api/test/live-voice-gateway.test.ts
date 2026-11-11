@@ -7,6 +7,7 @@ import type { LiveAskAnswer } from '@docoo/contracts';
 import { attachVoiceGateway } from '../src/live-assistant/live-voice-gateway.js';
 import { startVoiceRelay, type RelayHost } from '../src/live-assistant/live-voice-relay.js';
 import { VoiceTickets } from '../src/live-assistant/live-voice-tickets.js';
+import { createOpenAiRealtimeEngine } from '../src/live-assistant/openai-realtime-engine.js';
 import { nodeRelaySocketFactory } from '../src/live-assistant/realtime-link.js';
 
 const WORKSPACE = '11111111-1111-4111-8111-111111111111';
@@ -95,8 +96,16 @@ async function rig(): Promise<Rig> {
       startVoiceRelay({
         host,
         client,
-        provider: nodeRelaySocketFactory(`ws://127.0.0.1:${providerPort}/realtime?model=m`, {
-          Authorization: 'Bearer sk-test-key',
+        engine: createOpenAiRealtimeEngine({
+          socket: nodeRelaySocketFactory(`ws://127.0.0.1:${providerPort}/realtime?model=m`, {
+            Authorization: 'Bearer sk-test-key',
+          }),
+          config: {
+            model: host.model,
+            voice: host.voice,
+            language: host.language,
+            instructions: host.instructions,
+          },
         }),
       });
       return Promise.resolve(true);

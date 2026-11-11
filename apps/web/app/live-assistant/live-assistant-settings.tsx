@@ -46,7 +46,14 @@ interface ProjectOption {
 }
 
 /** Providers with a live voice model; the voice connection is chosen among these. */
-const VOICE_PROVIDERS: ReadonlySet<string> = new Set(['openai', 'gemini']);
+const VOICE_PROVIDERS: ReadonlySet<string> = new Set(['openai', 'elevenlabs', 'gemini']);
+
+/** The name the privacy notice gives for the brand of the chosen connection; '' when none or unknown. */
+function providerName(brand: string): string {
+  if (brand === 'openai') return 'OpenAI';
+  if (brand === 'elevenlabs') return 'ElevenLabs';
+  return '';
+}
 
 const asString = (value: unknown): string => (typeof value === 'string' ? value : '');
 const asList = (value: unknown): string[] =>
@@ -98,6 +105,11 @@ export function LiveAssistantSettings({
   const [connections, setConnections] = useState<Connection[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [models, setModels] = useState<string[]>([]);
+  /** For an ElevenLabs connection: the speaking models and the voices of its catalog. */
+  const [speech, setSpeech] = useState<{
+    models: string[];
+    voices: { id: string; name: string }[];
+  }>({ models: [], voices: [] });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [failure, setFailure] = useState('');
@@ -160,6 +172,31 @@ export function LiveAssistantSettings({
       active = false;
     };
   }, [base, connectionId]);
+
+  const chosenBrand = connections.find((item) => item.id === connectionId)?.provider ?? '';
+  const isEleven = chosenBrand === 'elevenlabs';
+  useEffect(() => {
+    if (!isEleven) {
+      setSpeech({ models: [], voices: [] });
+      return;
+    }
+    let active = true;
+    apiGet<{
+      models: { id: string; kind: string }[];
+      voices: { id: string; name: string }[];
+    }>(`${base}/voice/catalog?provider=elevenlabs`)
+      .then((result) => {
+        if (!active) return;
+        setSpeech({
+          models: result.models.filter((m) => m.kind === 'tts').map((m) => m.id),
+          voices: result.voices.map((v) => ({ id: v.id, name: v.name })),
+        });
+      })
+      .catch(() => active && setSpeech({ models: [], voices: [] }));
+    return () => {
+      active = false;
+    };
+  }, [base, isEleven]);
 
   if (!draft || !saved) {
     return failure ? (
@@ -343,7 +380,9 @@ export function LiveAssistantSettings({
             checked={bool('live_assistant.disclosure_accepted')}
             onChange={(event) => set('live_assistant.disclosure_accepted', event.target.checked)}
           />{' '}
-          {text.general.disclosure}
+          {providerName(chosenBrand)
+            ? text.general.disclosureNamed.replace('{provider}', providerName(chosenBrand))
+            : text.general.disclosure}
         </label>
         {problemFor('live_assistant.disclosure_accepted') && (
           <small className="notice error" role="alert">
@@ -501,9 +540,10 @@ export function LiveAssistantSettings({
           {voiceConnections.length === 0 && (
             <small className="muted">{text.model.noConnections}</small>
           )}
+          {isEleven && <p className="notice info">{text.model.elevenlabs.note}</p>}
           <Field
-            label={text.model.modelId}
-            hint={text.model.modelHint}
+            label={isEleven ? text.model.elevenlabs.modelId : text.model.modelId}
+            hint={isEleven ? text.model.elevenlabs.modelHint : text.model.modelHint}
             problem={problemFor('live_assistant.model')}
           >
             {(id) => (
@@ -518,23 +558,36 @@ export function LiveAssistantSettings({
                   onChange={(event) => set('live_assistant.model', event.target.value)}
                 />
                 <datalist id={`${id}-models`}>
-                  {models.map((model) => (
+                  {(isEleven ? speech.models : models).map((model) => (
                     <option key={model} value={model} />
                   ))}
                 </datalist>
               </>
             )}
           </Field>
-          <Field label={text.model.voice} hint={text.model.voiceHint}>
+          <Field
+            label={text.model.voice}
+            hint={isEleven ? text.model.elevenlabs.voiceHint : text.model.voiceHint}
+          >
             {(id) => (
-              <input
-                id={id}
-                type="text"
-                maxLength={200}
-                dir="ltr"
-                value={asString(draft['live_assistant.voice_id'])}
-                onChange={(event) => set('live_assistant.voice_id', event.target.value)}
-              />
+              <>
+                <input
+                  id={id}
+                  type="text"
+                  list={`${id}-voices`}
+                  maxLength={200}
+                  dir="ltr"
+                  value={asString(draft['live_assistant.voice_id'])}
+                  onChange={(event) => set('live_assistant.voice_id', event.target.value)}
+                />
+                <datalist id={`${id}-voices`}>
+                  {speech.voices.map((voice) => (
+                    <option key={voice.id} value={voice.id}>
+                      {voice.name}
+                    </option>
+                  ))}
+                </datalist>
+              </>
             )}
           </Field>
           <Field label={text.model.language}>

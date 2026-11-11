@@ -41,6 +41,8 @@ export interface LiveSettings {
   readonly mode: (typeof liveAssistantModes)[number];
   readonly connectionId: string;
   readonly model: string;
+  /** The voice of the speaking side (ElevenLabs; OpenAI uses its own default voice). */
+  readonly voiceId: string;
   /**
    * The text model that does the work for the assistant (ADR-0055 §4-1); typing needs it. It is the
    * executor pair of the settings, or, when the owner set neither, the workspace's own AI
@@ -141,6 +143,7 @@ export function liveSettingsFrom(values: Record<string, unknown>): LiveSettings 
     mode: oneOf('live_assistant.mode', liveAssistantModes),
     connectionId: text('live_assistant.connection_id', 36),
     model: text('live_assistant.model', 200),
+    voiceId: text('live_assistant.voice_id', 100).trim(),
     executorConnectionId,
     executorModel,
     executorSource: ownPair ? 'own' : 'workspace',

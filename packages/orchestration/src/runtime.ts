@@ -154,18 +154,32 @@ export class ProviderRuntime {
   }
 
   /**
-   * The address and key for a live voice link (ADR-0055): only an OpenAI connection can carry the
-   * realtime voice. The key is decrypted in memory for the caller, which must not log or store it.
+   * The address and key for a live voice link (ADR-0055, ADR-0057): the brand of the connection
+   * (OpenAI, or ElevenLabs for the pipeline). The key is decrypted in memory for the caller, which
+   * must not log or store it. Any other brand cannot carry the live voice.
    */
+  async voiceAccessFor(
+    client: PoolClient,
+    connectionId: string,
+  ): Promise<{ provider: 'openai' | 'elevenlabs'; apiKey: string; baseUrl: string | null }> {
+    const connection = await this.loadConnection(client, connectionId);
+    if (connection.provider !== 'openai' && connection.provider !== 'elevenlabs') {
+      throw new ProviderError('permanent', 'ai_connection_no_realtime');
+    }
+    const apiKey = await this.decryptKey(client, connection);
+    return { provider: connection.provider, apiKey, baseUrl: connection.base_url };
+  }
+
+  /** The key and address of an OpenAI connection for the realtime voice; other brands are refused. */
   async realtimeAccessFor(
     client: PoolClient,
     connectionId: string,
   ): Promise<{ apiKey: string; baseUrl: string | null }> {
-    const connection = await this.loadConnection(client, connectionId);
-    if (connection.provider !== 'openai')
+    const access = await this.voiceAccessFor(client, connectionId);
+    if (access.provider !== 'openai') {
       throw new ProviderError('permanent', 'ai_connection_no_realtime');
-    const apiKey = await this.decryptKey(client, connection);
-    return { apiKey, baseUrl: connection.base_url };
+    }
+    return { apiKey: access.apiKey, baseUrl: access.baseUrl };
   }
 
   /**

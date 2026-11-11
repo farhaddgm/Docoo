@@ -76,6 +76,60 @@ export const liveAssistantDefaults = {
 } as const;
 
 export const liveAssistantModes = ['realtime', 'pipeline'] as const;
+
+/**
+ * The brands that can carry the assistant's voice (ADR-0057). OpenAI hears and speaks itself
+ * (`realtime`); ElevenLabs is a pipeline: it hears (Scribe), Docoo's own executor answers, and it
+ * speaks (Eleven v4). The brand is taken from the provider connection the admin chose.
+ */
+export const liveVoiceProviders = ['openai', 'elevenlabs'] as const;
+export type LiveVoiceProvider = (typeof liveVoiceProviders)[number];
+
+export function isLiveVoiceProvider(value: string): value is LiveVoiceProvider {
+  return (liveVoiceProviders as readonly string[]).includes(value);
+}
+
+/** The kind of session a brand runs; what the settings say about the mode only applies to OpenAI. */
+export function voiceModeOf(provider: LiveVoiceProvider): 'realtime' | 'pipeline' {
+  return provider === 'elevenlabs' ? 'pipeline' : 'realtime';
+}
+
+/** The hearing model of the ElevenLabs pipeline; Docoo fixes it (the chosen model is the speaking one). */
+export const ELEVENLABS_STT_MODEL = 'scribe_v3_live';
+/** The speaking model suggested for the ElevenLabs pipeline: the only family documented with Persian. */
+export const ELEVENLABS_DEFAULT_TTS_MODEL = 'eleven_v4_turbo';
+
+/**
+ * What a pipeline costs when no price is entered for a model: deliberately above the list price
+ * (0.22 USD per hour of hearing, 0.04 USD per 1000 characters spoken) so a missing price can never
+ * switch the cost caps off.
+ */
+export const PIPELINE_FALLBACK_PRICE = {
+  sttPerMinute: 0.01,
+  ttsPer1kCharacters: 0.15,
+} as const;
+
+export interface PipelinePrice {
+  readonly sttPerMinute: number | null;
+  readonly ttsPer1kCharacters: number | null;
+}
+
+/**
+ * The cost of a stretch of pipeline use: seconds heard times the price per minute, plus characters
+ * spoken times the price per 1000. A component without a price uses the fallback; the result is
+ * rounded to a millionth of a dollar so adding many small steps leaves no floating-point dust.
+ */
+export function pipelineCostUsd(
+  usage: { readonly audioSeconds?: number | undefined; readonly characters?: number | undefined },
+  price: PipelinePrice | null,
+): number {
+  const seconds = Math.max(0, usage.audioSeconds ?? 0);
+  const characters = Math.max(0, usage.characters ?? 0);
+  const stt = price?.sttPerMinute ?? PIPELINE_FALLBACK_PRICE.sttPerMinute;
+  const tts = price?.ttsPer1kCharacters ?? PIPELINE_FALLBACK_PRICE.ttsPer1kCharacters;
+  const cost = (seconds / 60) * stt + (characters / 1000) * tts;
+  return Math.round(cost * 1_000_000) / 1_000_000;
+}
 export const liveAssistantLanguages = ['fa', 'en', 'auto'] as const;
 export const liveAssistantListeningModes = ['always', 'push_to_talk'] as const;
 export const confirmStrictnessLevels = ['standard', 'strict'] as const;
