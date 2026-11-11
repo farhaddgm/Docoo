@@ -29,12 +29,14 @@ const fa = {
         not_configured: 'اتصال و مدل صدا را انتخاب و ذخیره کنید.',
         connection_unavailable:
           'اتصال انتخاب‌شده در دسترس نیست؛ در صفحهٔ ارائه‌دهندگان آن را بررسی کنید.',
-        not_openai: 'صدای زنده فعلاً فقط با اتصال OpenAI کار می‌کند.',
+        not_openai: 'این اتصال صدای زنده ندارد؛ اتصال OpenAI یا ElevenLabs را انتخاب کنید.',
         auth: 'کلید این اتصال پذیرفته نشد.',
         region: 'ارائه‌دهنده کشورِ محل سرور را نمی‌پذیرد.',
         model: 'این مدل برای این کلید یافت نشد یا اجازه ندارد.',
         network: 'سرور نتوانست به ارائه‌دهنده برسد.',
         timeout: 'ارائه‌دهنده در مهلت جواب نداد.',
+        quota: 'سقف مصرف یا نرخ درخواست ارائه‌دهنده پر شده است.',
+        terms: 'شرایط استفادهٔ ارائه‌دهنده در داشبورد خودش هنوز پذیرفته نشده است.',
         unexpected: 'پاسخ غیرمنتظره‌ای آمد.',
       },
     },
@@ -127,6 +129,14 @@ const fa = {
       'عبارت realtime را بنویسید تا مدل‌های صوتی زنده پیشنهاد شود، یا نام مدل را کامل بنویسید. اگر صدا را هنوز راه نمی‌اندازید، خالی بگذارید.',
     voice: 'نام صدا',
     voiceHint: 'خالی بماند، صدای پیش‌فرض سرویس‌دهنده به کار می‌رود.',
+    elevenlabs: {
+      note: 'ElevenLabs به‌صورت خط لوله کار می‌کند: شنیدن با Scribe v3 Live (ثابت)، پاسخ با مجری خود Docoo، گفتن با مدل ElevenLabs. صدا و متن گفتگو به ElevenLabs هم می‌رود.',
+      modelId: 'مدل گفتن',
+      modelHint:
+        'مدل پیشنهادی eleven_v4_turbo است؛ فارسی فقط برای خانوادهٔ Eleven v3 و v4 در مستندات آمده است.',
+      voiceHint:
+        'صدا را از فهرست پیشنهادی انتخاب کنید یا شناسهٔ صدا را بنویسید. خالی بماند، صدای پیش‌فرض.',
+    },
     unknownConnection: 'اتصال ذخیره‌شده دیگر در دسترس نیست — دوباره انتخاب کنید',
     language: 'زبان گفتگو',
     languages: { fa: 'فارسی', en: 'انگلیسی', auto: 'خودکار' },
@@ -210,12 +220,14 @@ const en: typeof fa = {
         not_configured: 'Choose and save the voice connection and model.',
         connection_unavailable:
           'The chosen connection is unavailable; check it on the providers page.',
-        not_openai: 'Live voice works only with an OpenAI connection for now.',
+        not_openai: 'This connection has no live voice; choose an OpenAI or ElevenLabs connection.',
         auth: 'The key of this connection was not accepted.',
         region: 'The provider does not accept the country the server runs in.',
         model: 'This model was not found for this key, or it has no access.',
         network: 'The server could not reach the provider.',
         timeout: 'The provider did not answer in time.',
+        quota: 'The provider usage quota or rate limit is reached.',
+        terms: 'The terms of the provider are not accepted in its own dashboard yet.',
         unexpected: 'An unexpected answer came back.',
       },
     },
@@ -312,6 +324,14 @@ const en: typeof fa = {
       'Type realtime to get the live voice models suggested, or write the full model name. Leave it empty if you are not setting up voice yet.',
     voice: 'Voice name',
     voiceHint: 'Left empty, the provider default voice is used.',
+    elevenlabs: {
+      note: "ElevenLabs works as a pipeline: hearing with Scribe v3 Live (fixed), the answer from Docoo's own executor, speaking with an ElevenLabs model. The voice and the text of the conversation go to ElevenLabs as well.",
+      modelId: 'Speaking model',
+      modelHint:
+        'The suggested model is eleven_v4_turbo; the documentation lists Persian only for the Eleven v3 and v4 families.',
+      voiceHint:
+        'Pick a voice from the list or type its id. Left empty, the default voice is used.',
+    },
     unknownConnection: 'The saved connection is no longer available — choose again',
     language: 'Conversation language',
     languages: { fa: 'Persian', en: 'English', auto: 'Automatic' },

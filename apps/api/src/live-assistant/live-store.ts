@@ -145,6 +145,37 @@ export async function providerOfConnection(
   return row?.provider ?? '';
 }
 
+/**
+ * The prices entered for the two halves of a voice pipeline (ADR-0057): the hearing model priced
+ * per minute and the speaking model priced per 1000 characters, from the voice price list (the same
+ * list the voice page fills, ADR-0046). A half without a price is null; the caller then uses the
+ * deliberately high fallback, so a missing price never switches the caps off.
+ */
+export async function pipelinePrice(
+  client: PoolClient,
+  workspaceId: string,
+  brand: string,
+  sttModel: string,
+  ttsModel: string,
+): Promise<{ sttPerMinute: number | null; ttsPer1kCharacters: number | null }> {
+  const latest = async (kind: 'stt' | 'tts', model: string) =>
+    (
+      await client.query<{ per_minute: number | null; per_1k_characters: number | null }>(
+        `select per_minute, per_1k_characters
+           from voice_prices
+          where workspace_id = $1 and provider = $2::provider_kind and model = $3 and kind = $4
+            and effective_from <= now()
+          order by effective_from desc, created_at desc limit 1`,
+        [workspaceId, brand, model, kind],
+      )
+    ).rows[0];
+  const [stt, tts] = await Promise.all([latest('stt', sttModel), latest('tts', ttsModel)]);
+  return {
+    sttPerMinute: stt?.per_minute ?? null,
+    ttsPer1kCharacters: tts?.per_1k_characters ?? null,
+  };
+}
+
 export async function readSession(
   client: PoolClient,
   sessionId: string,

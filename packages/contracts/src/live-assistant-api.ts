@@ -148,6 +148,8 @@ export const liveAssistantUnavailableReasons = [
   'disabled',
   'disclosure',
   'not_configured',
+  /** The chosen connection is a brand that carries no live voice (yet). */
+  'provider_unsupported',
 ] as const;
 export type LiveAssistantUnavailableReason = (typeof liveAssistantUnavailableReasons)[number];
 
@@ -174,6 +176,8 @@ export const liveAssistantClientConfigSchema = z.object({
    * ADR-0055 ships, so the web keeps the activation button disabled even when `ready` is true.
    */
   providerConnected: z.boolean(),
+  /** The brand of the chosen voice connection (it decides the kind of session), or null when none. */
+  voiceProvider: z.enum(['openai', 'elevenlabs']).nullable(),
   displayName: z.string(),
   spokenName: z.string(),
   wakeEnabled: z.boolean(),
@@ -422,6 +426,10 @@ export const liveVoiceCheckFailures = [
   'model',
   'network',
   'timeout',
+  /** The provider's usage quota or rate limit is reached. */
+  'quota',
+  /** The provider's terms were not accepted in its dashboard. */
+  'terms',
   'unexpected',
 ] as const;
 export type LiveVoiceCheckFailure = (typeof liveVoiceCheckFailures)[number];

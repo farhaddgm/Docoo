@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- Voice brand of the assistant (ADR-0057): the brand (OpenAI or ElevenLabs) is read from the connection chosen in the assistant settings and decides the kind of session (realtime or pipeline). ElevenLabs connections can be chosen, with the speaking model and the voice from its catalog; until its engine ships, choosing it is refused with a clear reason. The voice link check works for both brands (for ElevenLabs it opens the live hearing and speaking sockets once, at no cost). The cost of a pipeline reads the voice price list, with a deliberately high price for a missing one. No migration.
+
 ### Changed
 
 - Voice relay: the provider's protocol moved behind a `VoiceEngine` port (ADR-0057). The OpenAI realtime protocol is the first engine; the relay core (browser link, caps, counting of use, transcript, the single `ask_docoo` tool) no longer knows any provider. No change in behaviour; it is the base for a second voice provider.

@@ -72,3 +72,21 @@
 ## ۸. بازگشت
 
 ارائه‌دهنده با تنظیم برمی‌گردد (اتصال OpenAI را انتخاب کنید)؛ هیچ داده یا agent در ElevenLabs ساخته نمی‌شود که پاک‌سازی بخواهد.
+
+## ۹. پیاده‌سازی مرحلهٔ ۳ (انتخاب ارائه‌دهنده) و یافته‌های پروتکل برای مرحلهٔ ۴
+
+**انتخاب در بک‌آفیس.** برند از روی اتصالی که ادمین در «دستیار صوتی» انتخاب می‌کند خوانده می‌شود (`openai` یا `elevenlabs`) و نوع نشست را تعیین می‌کند: OpenAI `realtime`، ElevenLabs `pipeline` (در جدول `live_sessions` همراه برند ذخیره می‌شود). تنظیم تازه و مهاجرت لازم نشد:
+
+- `live_assistant.model` برای OpenAI مدل صوتی بلادرنگ است و برای ElevenLabs **مدل گفتن** (پیشنهاد `eleven_v4_turbo`). مدل شنیدن را Docoo ثابت می‌گذارد (`scribe_v3_live`).
+- `live_assistant.voice_id` شناسهٔ صدای ElevenLabs است؛ فهرست مدل‌ها و صداها از کاتالوگ زندهٔ صفحهٔ صدا (ADR-0046) خوانده می‌شود.
+- تا آمدن موتور ElevenLabs (مرحلهٔ ۴) برندی که موتورش ساخته نشده با دلیل `provider_unsupported` رد می‌شود، پیش از باز شدن هر لینک.
+
+**بررسی لینک برای هر دو برند.** برای ElevenLabs سوکت شنیدن باید `session_started` بدهد و سوکت گفتن چند لحظه باز بماند؛ خطاها به نوع‌های `auth`، `quota`، `terms`، `model`، `region`، `network` و `timeout` تبدیل می‌شوند (هرگز متن ارائه‌دهنده یا کلید نشان داده نمی‌شود).
+
+**قیمت.** از فهرست قیمت صدای ADR-0046 (`voice_prices`) خوانده می‌شود: شنیدن بر حسب دقیقه، گفتن بر حسب هر ۱۰۰۰ نویسه. نبودِ قیمت یک نیمه را با قیمت جایگزین عمداً بالا (۰٫۶ دلار در ساعت و ۰٫۱۵ دلار در هر ۱۰۰۰ نویسه) حساب می‌کند تا سقف‌ها خاموش نشوند. قیمت‌های فهرست: Scribe v3 Live ۰٫۲۲ دلار در ساعت و Eleven v4 Turbo ۰٫۰۴ دلار در هر ۱۰۰۰ نویسه.
+
+**یافته‌های پروتکل برای موتور خط لوله** (از مستندات رسمی):
+
+- شنیدن: `wss://api.elevenlabs.io/v1/speech-to-text/realtime?model_id=scribe_v3_live&audio_format=pcm_16000`، سرآیند `xi-api-key` برای کلید سمت سرور. پیام‌ها با فیلد `message_type`: `session_started`، `partial_transcript`، `committed_transcript` (`text`)، خطاها (`auth_error`، `quota_exceeded`، …). صدا با `input_audio_chunk` (`audio_base_64`، `sample_rate`، `commit`). راهبرد commit: VAD (`vad_silence_threshold_secs` از ۰٫۱۹۲ تا ۳ ثانیه) یا `turn_prediction` (فقط Scribe v3 Live). حالت چندزبانه (`multilang_mode`) و `keyterms` برای نام پروژه‌ها.
+- گفتن: `wss://api.elevenlabs.io/v1/text-to-dialogue/stream-input?model_id=eleven_v4_turbo&output_format=pcm_24000`؛ مدل باید با `eleven_v3` یا `eleven_v4` شروع شود؛ پیام اول `voices`؛ بعد `inputs[{text, voice_id}]`؛ سرور تا حدود ۴۰ نویسه و ۸ واژه بافر می‌کند مگر `flush`؛ بی‌فعالیتی ۲۰ ثانیه مگر `keep_alive`؛ `eleven_v4_turbo` فقط یک صدا می‌پذیرد. `language_code` برای هر دو سوکت قابل‌تنظیم است.
+- حریم خصوصی: هر دو سوکت پارامتر `enable_logging` (پیش‌فرض true) دارند؛ موتور مرحلهٔ ۴ آن را `false` می‌فرستد و اثرش با کلید واقعی سنجیده می‌شود.
