@@ -59,6 +59,7 @@ import {
   sessionBlocker,
   startBlocker,
   textBlocker,
+  voiceFor,
   type LiveSettings,
 } from './live-gateway.js';
 import {
@@ -642,7 +643,7 @@ export class LiveAssistantService {
     const model = pipeline ? settings.model.trim() || ELEVENLABS_DEFAULT_TTS_MODEL : settings.model;
     return {
       model,
-      voice: pipeline ? settings.voiceId : 'alloy',
+      voice: voiceFor(brand, settings),
       language: settings.language === 'en' ? 'en' : 'fa',
       instructions: voiceInstructions(settings),
       ask: (text) => this.ask(context, sessionId, { text, context: [] }),

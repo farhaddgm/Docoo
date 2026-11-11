@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Fixed
+
+- Voice assistant: the voice chosen in the assistant settings is now used for OpenAI sessions too (it was always `alloy`, although the page says an empty field means the provider default). An empty field still means `alloy`.
+
 ## [0.60.0] — 2026-11-11
 
 ### Added
