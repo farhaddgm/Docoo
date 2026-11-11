@@ -36,20 +36,11 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Make apt tolerate a slow mirror
-        # The Ubuntu mirror sometimes stalls a single package for minutes; a short no-data timeout
-        # with retries lets apt move on instead of holding the job (and the dpkg lock) until it is
-        # cancelled.
-        run: |
-          sudo tee /etc/apt/apt.conf.d/80-ci-resilience >/dev/null <<'EOF'
-          Acquire::Retries "5";
-          Acquire::http::Timeout "30";
-          Acquire::https::Timeout "30";
-          EOF
       - name: Install OCR tools (Tesseract fas/eng, poppler)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-fas poppler-utils
+        # Waits out a short outage of the Ubuntu archive (apt alone retries for about eleven minutes
+        # and then fails) and fails clearly within a fixed budget when it stays down. See
+        # scripts/ci/install-ocr-tools.sh.
+        run: bash scripts/ci/install-ocr-tools.sh
       - name: Start ingestion services (S3, clamd with the EICAR test signature, Temporal)
         run: |
           docker run -d --name object-store -p 8333:8333 \
@@ -73,6 +64,7 @@ jobs:
       - run: pnpm docs:test
       - run: pnpm security:test
       - run: pnpm deploy:test
+      - run: pnpm ci:test
       - run: pnpm docs:sync:plan
       - run: pnpm db:migrate
         env:
@@ -228,20 +220,11 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Make apt tolerate a slow mirror
-        # The Ubuntu mirror sometimes stalls a single package for minutes; a short no-data timeout
-        # with retries lets apt move on instead of holding the job (and the dpkg lock) until it is
-        # cancelled.
-        run: |
-          sudo tee /etc/apt/apt.conf.d/80-ci-resilience >/dev/null <<'EOF'
-          Acquire::Retries "5";
-          Acquire::http::Timeout "30";
-          Acquire::https::Timeout "30";
-          EOF
       - name: Install OCR tools (Tesseract fas/eng, poppler)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-fas poppler-utils
+        # Waits out a short outage of the Ubuntu archive (apt alone retries for about eleven minutes
+        # and then fails) and fails clearly within a fixed budget when it stays down. See
+        # scripts/ci/install-ocr-tools.sh.
+        run: bash scripts/ci/install-ocr-tools.sh
       - name: Start ingestion services (S3, clamd with the EICAR test signature, Temporal)
         run: |
           docker run -d --name object-store -p 8333:8333 \
