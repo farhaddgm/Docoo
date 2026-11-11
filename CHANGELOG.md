@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Changed
+
+- Voice relay: the provider's protocol moved behind a `VoiceEngine` port (ADR-0057). The OpenAI realtime protocol is the first engine; the relay core (browser link, caps, counting of use, transcript, the single `ask_docoo` tool) no longer knows any provider. No change in behaviour; it is the base for a second voice provider.
+
 ## [0.59.0] — 2026-11-11
 
 ### Added
