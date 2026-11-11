@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Changed
+
+- Voice relay hardening: the browser link is limited. Microphone audio is accepted at up to twice real time (with a two-second burst) and anything beyond is dropped, control messages are limited to 20 a second, and a link that keeps going past the limits is closed. A browser that cannot take the assistant's audio as fast as it comes gets no unbounded buffer on the server: past 1 MiB waiting, the audio is dropped; past 4 MiB, the link is closed. A page that sends at real time is not affected.
+
 ## [0.60.0] — 2026-11-11
 
 ### Added

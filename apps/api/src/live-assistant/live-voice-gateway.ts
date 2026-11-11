@@ -33,6 +33,7 @@ function wrap(socket: WebSocket): ClientLink {
         listener(buffer, isBinary);
       }),
     onClose: (listener) => socket.on('close', listener),
+    bufferedBytes: () => socket.bufferedAmount,
   };
 }
 
