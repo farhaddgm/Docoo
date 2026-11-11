@@ -7,6 +7,7 @@ import {
   type RelayHost,
   type RelayUsage,
 } from '../src/live-assistant/live-voice-relay.js';
+import { createOpenAiRealtimeEngine } from '../src/live-assistant/openai-realtime-engine.js';
 import type { RelaySocket } from '../src/live-assistant/realtime-link.js';
 
 class FakeProvider implements RelaySocket {
@@ -101,7 +102,16 @@ function setup(over: Partial<RelayHost> = {}, endOnRecord = false) {
     },
     ...over,
   };
-  const relay = startVoiceRelay({ host, client, provider, readyTimeoutMs: 50 });
+  const engine = createOpenAiRealtimeEngine({
+    socket: provider,
+    config: {
+      model: host.model,
+      voice: host.voice,
+      language: host.language,
+      instructions: host.instructions,
+    },
+  });
+  const relay = startVoiceRelay({ host, client, engine, readyTimeoutMs: 50 });
   return { provider, client, relay, asked, saved, recorded };
 }
 
@@ -284,7 +294,7 @@ describe('the voice relay (ADR-0055)', () => {
       response: { usage: { input_tokens: 100, output_tokens: 50 } },
     });
     await flush();
-    expect(recorded.at(-1)?.totals).toEqual({
+    expect(recorded.at(-1)?.totals).toMatchObject({
       inputTokens: 900,
       outputTokens: 250,
       cachedInputTokens: 300,

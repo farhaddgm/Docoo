@@ -35,6 +35,7 @@ import { LIVE_CAPABILITIES, LiveCapabilityRegistry } from './capabilities.js';
 import { askAnswerText } from './live-ask-text.js';
 import { runExecutor } from './live-executor.js';
 import { VoiceTickets, type VoiceTicketEntry } from './live-voice-tickets.js';
+import { createOpenAiRealtimeEngine } from './openai-realtime-engine.js';
 import { startVoiceRelay, type ClientLink, type RelayHost } from './live-voice-relay.js';
 import {
   checkRealtimeLink,
@@ -537,7 +538,16 @@ export class LiveAssistantService {
     const provider = this.voiceSocketFactory(realtimeUrl(access.baseUrl, settings.model), {
       Authorization: `Bearer ${access.apiKey}`,
     });
-    const relay = startVoiceRelay({ host, client, provider });
+    const engine = createOpenAiRealtimeEngine({
+      socket: provider,
+      config: {
+        model: host.model,
+        voice: host.voice,
+        language: host.language,
+        instructions: host.instructions,
+      },
+    });
+    const relay = startVoiceRelay({ host, client, engine });
     this.relays.set(sessionId, relay);
     client.onClose(() => {
       if (this.relays.get(sessionId) === relay) this.relays.delete(sessionId);
