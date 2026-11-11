@@ -8,12 +8,14 @@ failures=0
 root="$(mktemp -d)"
 trap 'rm -rf "$root"' EXIT
 
-# The fake tools apt "installs": a tesseract that lists eng and fas, and a pdftoppm.
+# The fake tools apt "installs": a tesseract that lists eng and fas, and a pdftoppm. They have names
+# no real machine has, and the script is told to look for those names, so the result does not
+# depend on whether the machine running this test has the real tools (a CI runner does).
 fake_tools() {
   local dir="$1/bin"
-  printf '#!/usr/bin/env bash\nprintf "List of available languages (3):\\neng\\nfas\\nosd\\n"\n' >"$dir/tesseract"
-  printf '#!/usr/bin/env bash\nexit 0\n' >"$dir/pdftoppm"
-  chmod +x "$dir/tesseract" "$dir/pdftoppm"
+  printf '#!/usr/bin/env bash\nprintf "List of available languages (3):\\neng\\nfas\\nosd\\n"\n' >"$dir/fake-tesseract"
+  printf '#!/usr/bin/env bash\nexit 0\n' >"$dir/fake-pdftoppm"
+  chmod +x "$dir/fake-tesseract" "$dir/fake-pdftoppm"
 }
 export -f fake_tools
 
@@ -50,6 +52,7 @@ EOF
   chmod +x "$world/bin/"*
   export PATH="$world/bin:$PATH"
   export OCR_INSTALL_BUDGET=3 OCR_INSTALL_POLL=1 OCR_INSTALL_APT_TIMEOUT=5
+  export OCR_INSTALL_TESSERACT=fake-tesseract OCR_INSTALL_PDFTOPPM=fake-pdftoppm
 }
 
 run() {
@@ -57,7 +60,9 @@ run() {
   status=$?
 }
 installs() { cat "$world/state/installs" 2>/dev/null || echo 0; }
-apt_calls() { wc -l <"$world/state/apt.log" 2>/dev/null || echo 0; }
+apt_calls() {
+  if [[ -e "$world/state/apt.log" ]]; then wc -l <"$world/state/apt.log"; else echo 0; fi
+}
 
 case_already_installed() {
   new_world

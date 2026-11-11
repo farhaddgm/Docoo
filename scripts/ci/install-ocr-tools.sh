@@ -10,19 +10,23 @@
 #
 # Settings (environment, for tests): OCR_INSTALL_BUDGET seconds in total (480), OCR_INSTALL_POLL
 # seconds between checks (20), OCR_INSTALL_APT_TIMEOUT seconds for one apt command (150),
-# OCR_INSTALL_HOSTS the hosts apt may use (the Ubuntu archive and its mirrors).
+# OCR_INSTALL_HOSTS the hosts apt may use (the Ubuntu archive and its mirrors), and
+# OCR_INSTALL_TESSERACT / OCR_INSTALL_PDFTOPPM the names of the commands that show the tools are
+# there (so a test does not depend on what the machine running it has installed).
 set -uo pipefail
 
 BUDGET="${OCR_INSTALL_BUDGET:-480}"
 POLL="${OCR_INSTALL_POLL:-20}"
 APT_TIMEOUT="${OCR_INSTALL_APT_TIMEOUT:-150}"
 HOSTS="${OCR_INSTALL_HOSTS:-archive.ubuntu.com azure.archive.ubuntu.com security.ubuntu.com}"
+TESSERACT="${OCR_INSTALL_TESSERACT:-tesseract}"
+PDFTOPPM="${OCR_INSTALL_PDFTOPPM:-pdftoppm}"
 PACKAGES=(tesseract-ocr tesseract-ocr-eng tesseract-ocr-fas poppler-utils)
 
 installed() {
-  command -v tesseract >/dev/null 2>&1 && command -v pdftoppm >/dev/null 2>&1 || return 1
+  command -v "$TESSERACT" >/dev/null 2>&1 && command -v "$PDFTOPPM" >/dev/null 2>&1 || return 1
   local langs
-  langs="$(tesseract --list-langs 2>/dev/null)" || return 1
+  langs="$("$TESSERACT" --list-langs 2>/dev/null)" || return 1
   grep -qx eng <<<"$langs" && grep -qx fas <<<"$langs"
 }
 
