@@ -217,6 +217,9 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
       // A tool call is still being answered; only then does listening resume.
       void asking.then(() => setActivity('listening'));
     },
+    usage(step) {
+      void addUsage(step);
+    },
     failed() {
       end('provider');
     },
@@ -246,6 +249,7 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     const { capability, status, summary } = message.data;
     engine.tell(
       `Docoo: the change "${capability}" is now ${status}. ${summary} Tell the person briefly.`,
+      summary,
     );
   });
 

@@ -48,6 +48,13 @@ interface ProjectOption {
 /** Providers with a live voice model; the voice connection is chosen among these. */
 const VOICE_PROVIDERS: ReadonlySet<string> = new Set(['openai', 'elevenlabs', 'gemini']);
 
+/** The name the privacy notice gives for the brand of the chosen connection; '' when none or unknown. */
+function providerName(brand: string): string {
+  if (brand === 'openai') return 'OpenAI';
+  if (brand === 'elevenlabs') return 'ElevenLabs';
+  return '';
+}
+
 const asString = (value: unknown): string => (typeof value === 'string' ? value : '');
 const asList = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
@@ -373,7 +380,9 @@ export function LiveAssistantSettings({
             checked={bool('live_assistant.disclosure_accepted')}
             onChange={(event) => set('live_assistant.disclosure_accepted', event.target.checked)}
           />{' '}
-          {text.general.disclosure}
+          {providerName(chosenBrand)
+            ? text.general.disclosureNamed.replace('{provider}', providerName(chosenBrand))
+            : text.general.disclosure}
         </label>
         {problemFor('live_assistant.disclosure_accepted') && (
           <small className="notice error" role="alert">

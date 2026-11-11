@@ -15,7 +15,7 @@ import { adminUrl } from './support/harness.js';
 /**
  * The choice of the voice brand against a real database (ADR-0057): the brand comes from the
  * connection the admin chose; it decides the kind of session; a brand whose engine is not built
- * is refused with a reason before anything opens; and the pipeline prices come from the voice
+ * (or ElevenLabs without a voice) is refused with a reason before anything opens; and the pipeline prices come from the voice
  * price list. The settings are given directly, as the monitor test does.
  */
 describe.skipIf(!adminUrl)('the voice brand of the assistant (real database)', () => {
@@ -39,7 +39,11 @@ describe.skipIf(!adminUrl)('the voice brand of the assistant (real database)', (
     actorId: ids.owner,
     correlationId: randomUUID(),
   });
-  const choose = (connectionId: string, model = 'some-model') => {
+  const choose = (
+    connectionId: string,
+    model = 'some-model',
+    extra: Record<string, unknown> = {},
+  ) => {
     values = {
       ...liveAssistantSettingDefaults,
       'live_assistant.enabled': true,
@@ -47,6 +51,7 @@ describe.skipIf(!adminUrl)('the voice brand of the assistant (real database)', (
       'live_assistant.connection_id': connectionId,
       'live_assistant.model': model,
       'live_assistant.access_level': 'read',
+      ...extra,
     };
   };
 
@@ -112,12 +117,12 @@ describe.skipIf(!adminUrl)('the voice brand of the assistant (real database)', (
     });
   });
 
-  it('knows ElevenLabs as a pipeline brand, and refuses it with a reason until its engine ships', async () => {
+  it('knows ElevenLabs as a pipeline brand, and asks for its voice before it can start', async () => {
     choose(ids.eleven, 'eleven_v4_turbo');
     const config = await service.clientConfig(context());
     expect(config).toMatchObject({
       ready: false,
-      unavailableReason: 'provider_unsupported',
+      unavailableReason: 'not_configured',
       voiceProvider: 'elevenlabs',
       mode: 'pipeline',
     });
@@ -125,8 +130,28 @@ describe.skipIf(!adminUrl)('the voice brand of the assistant (real database)', (
       (error: unknown) =>
         error instanceof HttpException &&
         error.getStatus() === 409 &&
-        JSON.stringify(error.getResponse()).includes('provider_unsupported'),
+        JSON.stringify(error.getResponse()).includes('not_configured'),
     );
+  });
+
+  it('starts an ElevenLabs pipeline session once a voice is chosen, with its brand and kind stored', async () => {
+    choose(ids.eleven, 'eleven_v4_turbo', { 'live_assistant.voice_id': 'voice-123' });
+    expect(await service.clientConfig(context())).toMatchObject({
+      ready: true,
+      unavailableReason: null,
+      voiceProvider: 'elevenlabs',
+      mode: 'pipeline',
+    });
+    const voice = await service.startSession(context(), 'voice');
+    expect(voice).toMatchObject({ mode: 'pipeline', model: 'eleven_v4_turbo' });
+    const row = (
+      await admin.query(`select provider, mode from live_sessions where id = $1`, [voice.id])
+    ).rows[0] as { provider: string; mode: string };
+    expect(row).toEqual({ provider: 'elevenlabs', mode: 'pipeline' });
+    // A voice ticket can be asked for: the engine is built.
+    const ticket = await service.issueVoiceTicket(context(), voice.id);
+    expect(ticket.ticket).not.toBe('');
+    await service.endSession(context(), voice.id, 'user');
   });
 
   it('refuses a brand that has no live voice at all, and says nothing about an unset connection', async () => {

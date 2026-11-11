@@ -90,3 +90,18 @@
 - شنیدن: `wss://api.elevenlabs.io/v1/speech-to-text/realtime?model_id=scribe_v3_live&audio_format=pcm_16000`، سرآیند `xi-api-key` برای کلید سمت سرور. پیام‌ها با فیلد `message_type`: `session_started`، `partial_transcript`، `committed_transcript` (`text`)، خطاها (`auth_error`، `quota_exceeded`، …). صدا با `input_audio_chunk` (`audio_base_64`، `sample_rate`، `commit`). راهبرد commit: VAD (`vad_silence_threshold_secs` از ۰٫۱۹۲ تا ۳ ثانیه) یا `turn_prediction` (فقط Scribe v3 Live). حالت چندزبانه (`multilang_mode`) و `keyterms` برای نام پروژه‌ها.
 - گفتن: `wss://api.elevenlabs.io/v1/text-to-dialogue/stream-input?model_id=eleven_v4_turbo&output_format=pcm_24000`؛ مدل باید با `eleven_v3` یا `eleven_v4` شروع شود؛ پیام اول `voices`؛ بعد `inputs[{text, voice_id}]`؛ سرور تا حدود ۴۰ نویسه و ۸ واژه بافر می‌کند مگر `flush`؛ بی‌فعالیتی ۲۰ ثانیه مگر `keep_alive`؛ `eleven_v4_turbo` فقط یک صدا می‌پذیرد. `language_code` برای هر دو سوکت قابل‌تنظیم است.
 - حریم خصوصی: هر دو سوکت پارامتر `enable_logging` (پیش‌فرض true) دارند؛ موتور مرحلهٔ ۴ آن را `false` می‌فرستد و اثرش با کلید واقعی سنجیده می‌شود.
+
+## ۱۰. پیاده‌سازی مرحلهٔ ۴ (موتور خط لوله)
+
+فایل `elevenlabs-pipeline-engine.ts` پشت پورت `VoiceEngine`:
+
+- **مغز:** در موتور مدلی نیست. هر `committed_transcript` یک درخواست به مجری Docoo است (`toolCall`) و پاسخ مجری با Eleven v4 Turbo گفته می‌شود. تغییرها مثل همیشه منتظر تأیید می‌مانند و اگر تغییری منتظر باشد، جملهٔ «یک تغییر منتظر تأیید شماست» همیشه گفته می‌شود (فارسی یا انگلیسی بر اساس زبان دستیار).
+- **شنیدن:** `scribe_v3_live`، `audio_format=pcm_24000` (همان فرمت میکروفون)، `commit_strategy=turn_prediction`، `language_code` از زبان دستیار. اولین جزء گفتار (`partial_transcript` غیرخالی) قطع حرف است: گفتار در جریان بسته و صف خالی می‌شود.
+- **گفتن:** برای هر پاسخ یک سوکت Text-to-Dialogue تازه (این پروتکل لغو ندارد؛ قطع حرف یعنی بستن همان سوکت)، با `voices`، `inputs` به‌صورت جمله‌های کامل (هر تکه حداکثر ۴۰۰ نویسه، کل پاسخ حداکثر ۱۸۰۰) و `close_socket`. صدا `pcm_24000` است. اگر سوکت پیش از اولین صدا شکست بخورد یا خطا بدهد، یک بار با HTTP استریم (`/v1/text-to-dialogue/stream`) تلاش می‌شود؛ شکست هر دو نشست را می‌بندد.
+- **مصرف:** ثانیه‌های شنیده‌شده هر ۲۰ ثانیه و نویسه‌های گفته‌شده پس از هر گفتار با رویداد تازهٔ `usage` گزارش می‌شود (بدون دست‌زدن به وضعیت «گوش می‌دهم/فکر می‌کنم»)، تا سقف‌های هزینه و زمان حتی بدون پاسخ کار کنند. هزینه از `pipelinePrice` و `pipelineCostUsd` می‌آید.
+- **`tell`:** پورت حالا جملهٔ ساده را هم می‌گیرد؛ موتور مدل‌دار دستور را به مدل می‌دهد و خط لوله همان خلاصه را می‌گوید.
+- **حذف مسدودی:** `ENGINES_BUILT` شامل `elevenlabs` شد. اتصال ElevenLabs بدون صدای انتخاب‌شده `not_configured` می‌دهد. متن پذیرش حریم خصوصی نام ارائه‌دهنده را می‌گوید.
+
+**خطر باز (با کلید واقعی سنجیده شود).** مستندات می‌گوید حالت بدون نگه‌داری (`enable_logging=false`) ممکن است فقط برای برخی طرح‌ها (enterprise) باشد. موتور و بررسی لینک هر دو آن را می‌خواهند؛ اگر طرح کلید نپذیرد، بررسی لینک شکست می‌خورد و مالک همان‌جا می‌فهمد. اگر چنین شد، تصمیم با مالک است: ثابت `ELEVENLABS_ZERO_RETENTION` یا یک تنظیم صریح با هشدار حریم خصوصی. بی‌صدا به حالت ثبت‌شده برنمی‌گردیم.
+
+**نخوانده/نیازمند آزمون واقعی:** نام دقیق خطای سوکت گفتن، رفتار واقعی `turn_prediction` در فارسی، تأخیر هر نوبت، و اینکه آیا `partial_transcript` از پژواک بلندگو به قطع حرف کاذب می‌انجامد (مرورگر echo cancellation دارد).
