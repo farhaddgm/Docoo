@@ -51,6 +51,17 @@ export interface RelayOptions {
   readonly engine: VoiceEngine;
   /** How long the provider may take to accept the session. */
   readonly readyTimeoutMs?: number;
+  /**
+   * What earlier voice links of the same session already used. The server keeps the largest total it
+   * was told, so a link that starts from zero would hide its use until it passed the earlier ones;
+   * with the baseline it reports the sum. The browser is still told only this link's own use.
+   */
+  readonly baseline?: {
+    readonly inputTokens: number;
+    readonly outputTokens: number;
+    readonly cachedInputTokens: number;
+    readonly costUsd: number;
+  };
 }
 
 /** What the model is told after the executor answered: short, with no raw data. */
@@ -136,7 +147,19 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     totals.characters += step.characters ?? 0;
     totals.costUsd = Math.round((totals.costUsd + cost) * 1e6) / 1e6;
     try {
-      const outcome = await host.record({ ...totals }, activity);
+      const base = options.baseline;
+      const outcome = await host.record(
+        base
+          ? {
+              ...totals,
+              inputTokens: base.inputTokens + totals.inputTokens,
+              outputTokens: base.outputTokens + totals.outputTokens,
+              cachedInputTokens: base.cachedInputTokens + totals.cachedInputTokens,
+              costUsd: Math.round((base.costUsd + totals.costUsd) * 1e6) / 1e6,
+            }
+          : { ...totals },
+        activity,
+      );
       toClient({
         type: 'usage',
         inputTokens: totals.inputTokens,
@@ -244,6 +267,10 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     if (message.data.type === 'stop_speaking') {
       engine.cancelSpeech();
       toClient({ type: 'interrupt' });
+      return;
+    }
+    if (message.data.type === 'end_turn') {
+      if (ready && engine.endTurn()) setActivity('thinking');
       return;
     }
     const { capability, status, summary } = message.data;

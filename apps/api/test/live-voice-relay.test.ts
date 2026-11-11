@@ -76,7 +76,17 @@ const answer = (over: Partial<LiveAskAnswer> = {}): LiveAskAnswer => ({
   ...over,
 });
 
-function setup(over: Partial<RelayHost> = {}, endOnRecord = false) {
+function setup(
+  over: Partial<RelayHost> = {},
+  endOnRecord = false,
+  pushToTalk = false,
+  baseline?: {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+    costUsd: number;
+  },
+) {
   const provider = new FakeProvider();
   const client = new FakeClient();
   const asked: string[] = [];
@@ -109,9 +119,16 @@ function setup(over: Partial<RelayHost> = {}, endOnRecord = false) {
       voice: host.voice,
       language: host.language,
       instructions: host.instructions,
+      pushToTalk,
     },
   });
-  const relay = startVoiceRelay({ host, client, engine, readyTimeoutMs: 50 });
+  const relay = startVoiceRelay({
+    host,
+    client,
+    engine,
+    readyTimeoutMs: 50,
+    ...(baseline ? { baseline } : {}),
+  });
   return { provider, client, relay, asked, saved, recorded };
 }
 
@@ -353,5 +370,84 @@ describe('the voice relay (ADR-0055)', () => {
     provider.emit({ type: 'response.created', response: { id: 'resp_1', instructions: 'hidden' } });
     expect(JSON.stringify(client.json())).not.toContain('hidden');
     expect(JSON.stringify(client.json())).not.toContain('resp_1');
+  });
+
+  describe('push to talk', () => {
+    const turnDetectionOf = (provider: FakeProvider) =>
+      (provider.sent[0] as { session: { audio: { input: { turn_detection: unknown } } } }).session
+        .audio.input.turn_detection;
+
+    it("keeps the provider's own end of turn when the owner chose always listening", () => {
+      const { provider, client } = setup();
+      provider.onopen?.({});
+      expect(turnDetectionOf(provider)).toEqual({ type: 'semantic_vad' });
+      provider.emit({ type: 'session.updated' });
+      client.say(JSON.stringify({ type: 'end_turn' }));
+      // A page cannot force a turn when the provider decides by itself: nothing is sent.
+      expect(provider.kinds()).toEqual(['session.update']);
+      expect(client.json().filter((m) => m['type'] === 'activity')).toEqual([]);
+    });
+
+    it('turns off automatic turns and ends one only when the page lets go of the key', () => {
+      const { provider, client } = setup({}, false, true);
+      provider.onopen?.({});
+      expect(turnDetectionOf(provider)).toBeNull();
+      // Before the provider accepted the session, an end of turn means nothing.
+      client.say(JSON.stringify({ type: 'end_turn' }));
+      expect(provider.kinds()).toEqual(['session.update']);
+      provider.emit({ type: 'session.updated' });
+      client.say(Buffer.alloc(320, 1), true);
+      client.say(JSON.stringify({ type: 'end_turn' }));
+      expect(provider.kinds()).toEqual([
+        'session.update',
+        'input_audio_buffer.append',
+        'input_audio_buffer.commit',
+        'response.create',
+      ]);
+      expect(client.json().filter((m) => m['type'] === 'activity')).toEqual([
+        { type: 'activity', activity: 'thinking' },
+      ]);
+    });
+  });
+
+  describe('a link that continues a session (after sleep)', () => {
+    it('reports to the server the sum of the earlier links and this one, and tells the browser only this one', async () => {
+      const { provider, client, recorded } = setup({}, false, false, {
+        inputTokens: 1000,
+        outputTokens: 500,
+        cachedInputTokens: 200,
+        costUsd: 1,
+      });
+      provider.onopen?.({});
+      provider.emit({ type: 'session.updated' });
+      provider.emit({
+        type: 'response.done',
+        response: { usage: { input_tokens: 10, output_tokens: 5 } },
+      });
+      await flush();
+      expect(recorded.at(-1)?.totals).toMatchObject({
+        inputTokens: 1010,
+        outputTokens: 505,
+        cachedInputTokens: 200,
+        costUsd: 1.015,
+      });
+      expect(client.json().find((m) => m['type'] === 'usage')).toMatchObject({
+        inputTokens: 10,
+        outputTokens: 5,
+        costUsd: 0.015,
+      });
+    });
+
+    it('starts from nothing when there is no earlier link', async () => {
+      const { provider, recorded } = setup();
+      provider.onopen?.({});
+      provider.emit({ type: 'session.updated' });
+      provider.emit({
+        type: 'response.done',
+        response: { usage: { input_tokens: 10, output_tokens: 5 } },
+      });
+      await flush();
+      expect(recorded.at(-1)?.totals).toMatchObject({ inputTokens: 10, costUsd: 0.015 });
+    });
   });
 });

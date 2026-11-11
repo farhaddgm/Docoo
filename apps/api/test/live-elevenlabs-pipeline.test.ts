@@ -181,7 +181,7 @@ afterEach(async () => {
 });
 
 async function start(
-  overrides: { language?: 'fa' | 'en' } = {},
+  overrides: { language?: 'fa' | 'en'; pushToTalk?: boolean } = {},
   mutate?: (rig: Fake) => void,
 ): Promise<{
   rig: Fake;
@@ -195,7 +195,12 @@ async function start(
     socket: nodeRelaySocketFactory,
     apiKey: 'xi-secret',
     baseUrl: rig.baseUrl,
-    config: { ttsModel: 'eleven_v4_turbo', voice: 'voice-1', language: overrides.language ?? 'fa' },
+    config: {
+      ttsModel: 'eleven_v4_turbo',
+      voice: 'voice-1',
+      language: overrides.language ?? 'fa',
+      ...(overrides.pushToTalk ? { pushToTalk: true } : {}),
+    },
   });
   const { events, seen } = recorder();
   engine.start(events);
@@ -419,6 +424,40 @@ describe('the ElevenLabs pipeline engine', () => {
     engine.answerTool('c', JSON.stringify({ answer: 'x' }));
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(seen.done).toHaveLength(0);
+  });
+});
+
+describe('push to talk', () => {
+  it('asks for manual commits and commits when the page ends the turn', async () => {
+    const { rig, engine, seen } = await start({ pushToTalk: true });
+    const url = new URL(rig.hearingUrls[0] ?? '', 'http://x');
+    expect(url.searchParams.get('commit_strategy')).toBe('manual');
+    engine.sendAudio(Buffer.alloc(960, 1));
+    expect(engine.endTurn()).toBe(true);
+    await until(() => rig.hearingSeen.length === 2, 'chunk and commit');
+    expect(rig.hearingSeen[1]).toEqual({
+      message_type: 'input_audio_chunk',
+      audio_base_64: '',
+      sample_rate: 24000,
+      commit: true,
+    });
+    // The committed transcript goes on to the executor like any other line.
+    json(rig.hearing[0] as ServerSocket, {
+      message_type: 'committed_transcript',
+      text: 'پروژه‌ها را بگو',
+    });
+    await until(() => seen.toolCalls.length === 1, 'tool call');
+    engine.close();
+  });
+
+  it('leaves the end of a turn to the provider when listening is always on', async () => {
+    const { rig, engine } = await start();
+    const url = new URL(rig.hearingUrls[0] ?? '', 'http://x');
+    expect(url.searchParams.get('commit_strategy')).toBe('turn_prediction');
+    expect(engine.endTurn()).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(rig.hearingSeen).toHaveLength(0);
+    engine.close();
   });
 });
 
