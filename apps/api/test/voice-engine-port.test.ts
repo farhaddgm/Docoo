@@ -16,6 +16,13 @@ class ScriptedEngine implements VoiceEngine {
   told: string[] = [];
   cancelled = 0;
   closed = 0;
+  endedTurns = 0;
+  /** Whether the stand-in engine takes an end of turn (a push-to-talk one does). */
+  takesEndTurn = true;
+  endTurn(): boolean {
+    this.endedTurns += 1;
+    return this.takesEndTurn;
+  }
   start(events: VoiceEngineEvents): void {
     this.events = events;
   }
@@ -218,6 +225,29 @@ describe('the voice engine port (ADR-0057)', () => {
     expect(client.json().filter((m) => m['type'] === 'activity')).toEqual([
       { type: 'activity', activity: 'thinking' },
     ]);
+  });
+
+  describe('the end of a push-to-talk turn', () => {
+    const activities = (client: Link) => client.json().filter((m) => m['type'] === 'activity');
+
+    it('goes to the engine once the engine is ready, and shows that the assistant is thinking', () => {
+      const { engine, client } = rig();
+      client.say(JSON.stringify({ type: 'end_turn' }));
+      expect(engine.endedTurns).toBe(0); // not ready yet
+      engine.events.ready();
+      client.say(JSON.stringify({ type: 'end_turn' }));
+      expect(engine.endedTurns).toBe(1);
+      expect(activities(client)).toEqual([{ type: 'activity', activity: 'thinking' }]);
+    });
+
+    it('shows nothing when the engine does not take it as the end of a turn', () => {
+      const { engine, client } = rig();
+      engine.takesEndTurn = false;
+      engine.events.ready();
+      client.say(JSON.stringify({ type: 'end_turn' }));
+      expect(engine.endedTurns).toBe(1);
+      expect(activities(client)).toEqual([]);
+    });
   });
 
   describe('limits on the browser link (hardening)', () => {

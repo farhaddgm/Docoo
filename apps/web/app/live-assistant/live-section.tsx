@@ -46,7 +46,14 @@ export function LiveSection({
     liveAssistant.setBackend(liveBackendFor(workspaceId));
     liveReadApi
       .config(workspaceId, controller.signal)
-      .then(setConfig)
+      .then((loaded) => {
+        // How the owner chose to listen (settings) reaches the store before a session starts.
+        liveAssistant.setListening({
+          pushToTalk: loaded.listeningMode === 'push_to_talk',
+          idleSleepS: loaded.caps.idleSleepS,
+        });
+        setConfig(loaded);
+      })
       .catch((error: unknown) => {
         if (!controller.signal.aborted) setFailure(loadFailureCode(error));
       });

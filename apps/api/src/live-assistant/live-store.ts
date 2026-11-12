@@ -281,6 +281,42 @@ export async function recordUsage(
   );
 }
 
+/**
+ * What the voice provider has used in a session so far, from the raw columns (the session view adds
+ * the executor's use, which is counted apart). A voice link that opens later in the same session
+ * (waking from sleep) starts its totals from this, so the session's cost is the sum of its links
+ * and not the largest of them.
+ */
+export async function voiceUsage(
+  client: PoolClient,
+  sessionId: string,
+): Promise<{
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens: number;
+  costUsd: number;
+}> {
+  const row = (
+    await client.query<{
+      input_tokens: number;
+      output_tokens: number;
+      cached_input_tokens: number;
+      cost_usd: number;
+    }>(
+      `select input_tokens::float8 as input_tokens, output_tokens::float8 as output_tokens,
+              cached_input_tokens::float8 as cached_input_tokens, cost_usd::float8 as cost_usd
+         from live_sessions where id = $1`,
+      [sessionId],
+    )
+  ).rows[0];
+  return {
+    inputTokens: row?.input_tokens ?? 0,
+    outputTokens: row?.output_tokens ?? 0,
+    cachedInputTokens: row?.cached_input_tokens ?? 0,
+    costUsd: row?.cost_usd ?? 0,
+  };
+}
+
 /** How long after reading untrusted content a session's changes are confirmed more strictly. */
 export const TAINT_WINDOW_S = 600;
 

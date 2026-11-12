@@ -6,6 +6,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Added
 
+- Push to talk and sleep for the voice assistant (ADR-0055 §4-7, ADR-0057 §12). With "push to talk" chosen in the assistant settings, the microphone is heard only while the button on the pill is held (with the mouse, a finger, or Space/Enter on the focused button); letting go ends the turn and the assistant answers. Holding it again while the assistant speaks stops it. With either way of listening, the assistant now goes to sleep after the quiet time chosen in the settings (`idle_sleep_s`, 120 s by default) or on the pill's "Sleep" button: the voice link is closed and the microphone is let go, so nothing leaves the browser and nothing is paid for, while the session stays open. A click on "Wake up" (or pressing the push-to-talk button) opens the voice link again for the same session. It never sleeps while a change waits for you, while the assistant is speaking or thinking, or while the key is held. Waking with the phrase "Hi Docoo" is not built yet. The settings page already promised this; it now holds.
 - Monitor share links (migration 0092). The owner makes a link for the viewer or the voice monitor from the monitor page, with a password, an expiry (or none) and the most screens that may watch at once. Anyone with the address and the password sees the monitor at `/{locale}/monitor/share/{token}` without an account, through the same projection and settings as the owner's own window. The address and watcher sessions are stored as digests and the password as an argon2 hash; the address is shown once, wrong passwords are rate-limited, a screen away for 45 seconds loses its place, and a link can be revoked at once. API: `GET/POST /workspaces/{w}/monitor/links`, `DELETE .../links/{id}`, and the public `/public/monitor/{token}` (`GET`, `POST unlock`, `GET view`).
 
 ### Changed
@@ -14,6 +15,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Fixed
 
+- Voice assistant: a voice link that opens later in the same session (after sleep) now continues the session's totals. The server keeps the largest total it is told, so a link that began from zero would have hidden its cost until it passed the earlier ones, and the cost cap would have been reached too late.
 - Voice assistant: the voice chosen in the assistant settings is now used for OpenAI sessions too (it was always `alloy`, although the page says an empty field means the provider default). An empty field still means `alloy`.
 
 ## [0.60.0] — 2026-11-11

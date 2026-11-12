@@ -21,6 +21,14 @@ export interface LiveMessages {
     readonly closeTitle: string;
     readonly nearCap: string;
     readonly waiting: string;
+    /** Push to talk: the button to hold, and what the pill says while it is held. */
+    readonly talk: string;
+    readonly talking: string;
+    /** Sleep: put it to sleep, wake it, and what the pill says while the link opens again. */
+    readonly sleep: string;
+    readonly sleepTitle: string;
+    readonly wake: string;
+    readonly waking: string;
   };
   readonly confirm: {
     readonly title: string;
@@ -144,6 +152,12 @@ const fa: LiveMessages = {
     closeTitle: 'بستن و پایان گفتگوی زنده',
     nearCap: 'نزدیک سقف',
     waiting: 'منتظر تأیید شما',
+    talk: 'نگه دارید و حرف بزنید',
+    talking: 'در حال شنیدن…',
+    sleep: 'خواب',
+    sleepTitle: 'اتصال و میکروفون بسته می‌شود؛ هر وقت خواستید بیدارش کنید',
+    wake: 'بیدار کردن',
+    waking: 'در حال بیدار شدن…',
   },
   confirm: {
     title: 'تغییر پیشنهادی {name}',
@@ -331,6 +345,12 @@ const en: LiveMessages = {
     closeTitle: 'Close and end the live conversation',
     nearCap: 'Near the cap',
     waiting: 'Waiting for you',
+    talk: 'Hold to talk',
+    talking: 'Listening…',
+    sleep: 'Sleep',
+    sleepTitle: 'The link and the microphone close; wake it whenever you want',
+    wake: 'Wake up',
+    waking: 'Waking up…',
   },
   confirm: {
     title: 'Change proposed by {name}',

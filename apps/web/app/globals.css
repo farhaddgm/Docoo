@@ -5719,6 +5719,37 @@ button.link-button {
   cursor: pointer;
 }
 
+.live-pill-talk,
+.live-pill-wake,
+.live-pill-sleep {
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.5rem;
+  background: var(--color-primary-soft);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--font-size-xs, 0.75rem);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.live-pill-talk {
+  touch-action: none;
+}
+
+.live-pill-talk[aria-pressed='true'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.live-pill-talk:focus-visible,
+.live-pill-wake:focus-visible,
+.live-pill-sleep:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 .live-pill-close svg {
   inline-size: 0.8rem;
   block-size: 0.8rem;

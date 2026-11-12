@@ -53,6 +53,8 @@ export interface PipelineEngineOptions {
     readonly ttsModel: string;
     readonly voice: string;
     readonly language: 'fa' | 'en';
+    /** Push-to-talk: the page says when a turn ends (a manual commit), no turn prediction. */
+    readonly pushToTalk?: boolean;
   };
   /** Replaced by tests; the global `fetch` otherwise. */
   readonly fetch?: typeof fetch;
@@ -393,7 +395,7 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
         socket = options.socket(
           sttUrl(options.baseUrl, ELEVENLABS_HEARING_MODEL, config.language, {
             audioFormat: `pcm_${SAMPLE_RATE}`,
-            commitStrategy: 'turn_prediction',
+            commitStrategy: config.pushToTalk ? 'manual' : 'turn_prediction',
             zeroRetention,
           }),
           headers,
@@ -435,6 +437,25 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
     },
     cancelSpeech() {
       stopSpeaking();
+    },
+    endTurn() {
+      if (!config.pushToTalk || closed || !hearing || !ready) return false;
+      try {
+        // An empty chunk with the commit flag closes the segment: its transcript comes back as the
+        // committed one and goes to the executor like any other line.
+        hearing.send(
+          JSON.stringify({
+            message_type: 'input_audio_chunk',
+            audio_base_64: '',
+            sample_rate: SAMPLE_RATE,
+            commit: true,
+          }),
+        );
+      } catch {
+        fail();
+        return false;
+      }
+      return true;
     },
     close() {
       if (closed) return;

@@ -47,6 +47,8 @@ export interface LiveTransportHandlers {
 
 export interface LiveTransportSession {
   readonly sessionId: string;
+  /** Push-to-talk: the microphone is heard only between `setTalking(true)` and `setTalking(false)`. */
+  readonly pushToTalk?: boolean;
   readonly voiceTicket?: (sessionId: string) => Promise<LiveVoiceTicket>;
 }
 
@@ -60,6 +62,12 @@ export interface LiveTransport {
   stop: () => Promise<void>;
   /** A change that was waiting has ended (done, failed, cancelled, expired): tell the model. */
   reportAction?: (view: LiveActionView) => void;
+  /**
+   * The push-to-talk key goes down or up. Down: whatever the assistant is saying stops and the
+   * microphone is heard. Up: what was said is one turn and the assistant answers it. Without
+   * push-to-talk this does nothing.
+   */
+  setTalking?: (on: boolean) => void;
 }
 
 export type LiveTransportFactory = () => LiveTransport;

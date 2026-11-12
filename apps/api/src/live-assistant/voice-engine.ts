@@ -56,11 +56,19 @@ export interface VoiceEngine {
   tell(instruction: string, spoken: string): void;
   /** Stops what the assistant is saying now. */
   cancelSpeech(): void;
+  /**
+   * The person let go of the push-to-talk key: what they said is one turn, answer it now. True when
+   * the engine took it as the end of a turn; false when it did nothing (always-listening mode,
+   * where the provider finds the end of a turn itself, so a page cannot force one).
+   */
+  endTurn(): boolean;
   close(): void;
 }
 
 /** The part of the session an engine needs to know. */
 export interface VoiceEngineConfig {
+  /** The owner chose push-to-talk: no automatic end of turn, the page says when a turn ends. */
+  readonly pushToTalk?: boolean;
   readonly model: string;
   readonly voice: string;
   readonly language: string;
