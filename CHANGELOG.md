@@ -4,6 +4,8 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.61.0] — 2026-11-12
+
 ### Added
 
 - Push to talk and sleep for the voice assistant (ADR-0055 §4-7, ADR-0057 §12). With "push to talk" chosen in the assistant settings, the microphone is heard only while the button on the pill is held (with the mouse, a finger, or Space/Enter on the focused button); letting go ends the turn and the assistant answers. Holding it again while the assistant speaks stops it. With either way of listening, the assistant now goes to sleep after the quiet time chosen in the settings (`idle_sleep_s`, 120 s by default) or on the pill's "Sleep" button: the voice link is closed and the microphone is let go, so nothing leaves the browser and nothing is paid for, while the session stays open. A click on "Wake up" (or pressing the push-to-talk button) opens the voice link again for the same session. It never sleeps while a change waits for you, while the assistant is speaking or thinking, or while the key is held. Waking with the phrase "Hi Docoo" is not built yet. The settings page already promised this; it now holds.
