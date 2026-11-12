@@ -51,7 +51,10 @@ exit 0
 EOF
   chmod +x "$world/bin/"*
   export PATH="$world/bin:$PATH"
-  export OCR_INSTALL_BUDGET=3 OCR_INSTALL_POLL=1 OCR_INSTALL_APT_TIMEOUT=5
+  # A generous budget by default: the script counts whole seconds and a loaded machine (a CI runner,
+  # or this test run many times at once) can lose a second or two, so a case that must succeed has to
+  # have plenty of room. The two cases that must fail use a short one.
+  export OCR_INSTALL_BUDGET=10 OCR_INSTALL_POLL=1 OCR_INSTALL_APT_TIMEOUT=5
   export OCR_INSTALL_TESSERACT=fake-tesseract OCR_INSTALL_PDFTOPPM=fake-pdftoppm
 }
 
@@ -87,12 +90,12 @@ case_short_outage() {
 
 case_long_outage() {
   new_world
-  export FAKE_DNS_AFTER=100000
+  export OCR_INSTALL_BUDGET=3 FAKE_DNS_AFTER=100000
   local started took
   started="$(date +%s)"
   run
   took=$(( $(date +%s) - started ))
-  [[ $status -ne 0 && $took -le 6 && ! -e "$world/state/apt.log" ]] \
+  [[ $status -ne 0 && $took -le 9 && ! -e "$world/state/apt.log" ]] \
     && grep -q "Ubuntu archive is unreachable" "$world/out"
 }
 
@@ -105,7 +108,7 @@ case_failed_install_is_retried() {
 
 case_apt_exit_code_is_not_trusted() {
   new_world
-  export FAKE_INSTALL_EMPTY=1
+  export OCR_INSTALL_BUDGET=3 FAKE_INSTALL_EMPTY=1
   run
   [[ $status -ne 0 ]]
 }

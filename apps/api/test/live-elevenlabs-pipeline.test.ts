@@ -484,9 +484,13 @@ describe('the relay core with the pipeline engine', () => {
       baseUrl: rig.baseUrl,
       config: { ttsModel: host.model, voice: host.voice, language: 'fa' },
     });
+    // The microphone is limited to about real time (hardening), so the clock of the relay moves one
+    // second for each one-second frame, as it does with a real page.
+    let clock = 0;
     const relay = startVoiceRelay({
       host,
       engine,
+      now: () => clock,
       client: {
         send: (data) => void out.push(data),
         close: () => undefined,
@@ -496,7 +500,10 @@ describe('the relay core with the pipeline engine', () => {
     });
     await until(() => out.some((m) => typeof m === 'string' && m.includes('"ready"')), 'ready');
     // Thirty one-second frames, as the browser sends them (each is below the relay's frame limit).
-    for (let second = 0; second < 30; second += 1) onData(Buffer.alloc(24_000 * 2), true);
+    for (let second = 0; second < 30; second += 1) {
+      clock += 1_000;
+      onData(Buffer.alloc(24_000 * 2), true);
+    }
     json(rig.hearing[0] as ServerSocket, {
       message_type: 'committed_transcript',
       text: 'پروژه‌ها را بگو',

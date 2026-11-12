@@ -8,6 +8,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 - Monitor share links (migration 0092). The owner makes a link for the viewer or the voice monitor from the monitor page, with a password, an expiry (or none) and the most screens that may watch at once. Anyone with the address and the password sees the monitor at `/{locale}/monitor/share/{token}` without an account, through the same projection and settings as the owner's own window. The address and watcher sessions are stored as digests and the password as an argon2 hash; the address is shown once, wrong passwords are rate-limited, a screen away for 45 seconds loses its place, and a link can be revoked at once. API: `GET/POST /workspaces/{w}/monitor/links`, `DELETE .../links/{id}`, and the public `/public/monitor/{token}` (`GET`, `POST unlock`, `GET view`).
 
+### Changed
+
+- Voice relay hardening: the browser link is limited. Microphone audio is accepted at up to twice real time (with a two-second burst) and anything beyond is dropped, control messages are limited to 20 a second, and a link that keeps going past the limits is closed. A browser that cannot take the assistant's audio as fast as it comes gets no unbounded buffer on the server: past 1 MiB waiting, the audio is dropped; past 4 MiB, the link is closed. A page that sends at real time is not affected.
+
 ### Fixed
 
 - Voice assistant: the voice chosen in the assistant settings is now used for OpenAI sessions too (it was always `alloy`, although the page says an empty field means the provider default). An empty field still means `alloy`.
