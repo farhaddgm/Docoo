@@ -37,7 +37,7 @@ test('an administrator who is not the owner does not see the owner pages', async
   for (const name of ['ارائه‌دهندگان AI', 'اتصال‌ها', 'تنظیمات سامانه', 'Audit Log', 'ایجنت‌ها']) {
     await expect(nav.getByRole('link', { name })).toHaveCount(0);
   }
-  await expect(nav.getByRole('link', { name: 'پروژه‌ها' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'پروژه', exact: true })).toBeVisible();
   for (const path of ownerPages) {
     await page.goto(path);
     await expect(page.locator('p[role=alert]')).toHaveText(

@@ -15,6 +15,7 @@ import {
   MIN_SECOND_CONFIRMATION_MS,
   nextStepOf,
   startBlocker,
+  voiceFor,
   type LiveSettings,
 } from '../src/live-assistant/live-gateway.js';
 
@@ -467,5 +468,20 @@ describe('reading a confirmation', () => {
     ] as const) {
       expect(nextStepOf(status)).toBeNull();
     }
+  });
+});
+
+describe('the voice a session speaks with', () => {
+  const settings = (voiceId: string): LiveSettings =>
+    liveSettingsFrom({ ...liveAssistantSettingDefaults, 'live_assistant.voice_id': voiceId });
+
+  it("uses the owner's choice for either brand, trimmed", () => {
+    expect(voiceFor('openai', settings('  marin '))).toBe('marin');
+    expect(voiceFor('elevenlabs', settings('voice-123'))).toBe('voice-123');
+  });
+
+  it('falls back to the OpenAI default when none is chosen, and to nothing for ElevenLabs', () => {
+    expect(voiceFor('openai', settings(''))).toBe('alloy');
+    expect(voiceFor('elevenlabs', settings(''))).toBe('');
   });
 });

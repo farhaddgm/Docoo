@@ -79,7 +79,7 @@ test.describe('knowledge and audit in Persian and English (KNW-001..008)', () =>
     await page.goto('/fa');
     await page
       .getByRole('navigation', { name: 'ناوبری اصلی' })
-      .getByRole('link', { name: 'دانش و ممیزی' })
+      .getByRole('link', { name: 'دانش', exact: true })
       .click();
     await expect(page.getByRole('heading', { level: 1, name: text.title })).toBeVisible();
     for (const name of Object.values(text.tabs)) {

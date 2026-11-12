@@ -48,6 +48,11 @@ class ScriptedEngine implements VoiceEngine {
 class Link implements ClientLink {
   out: (string | Buffer)[] = [];
   closed = false;
+  /** What the browser still has not taken, for the slow-browser checks. */
+  buffered = 0;
+  bufferedBytes(): number {
+    return this.buffered;
+  }
   private onData: (data: Buffer, isBinary: boolean) => void = () => undefined;
   send(data: string | Buffer): void {
     this.out.push(data);
@@ -82,7 +87,7 @@ const answer: LiveAskAnswer = {
   usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
 };
 
-function rig() {
+function rig(clock?: () => number) {
   const engine = new ScriptedEngine();
   const client = new Link();
   const asked: string[] = [];
@@ -103,7 +108,7 @@ function rig() {
       return Promise.resolve({ ended: false });
     },
   };
-  startVoiceRelay({ host, client, engine, readyTimeoutMs: 40 });
+  startVoiceRelay({ host, client, engine, readyTimeoutMs: 40, ...(clock ? { now: clock } : {}) });
   return { engine, client, asked, recorded };
 }
 
@@ -242,6 +247,75 @@ describe('the voice engine port (ADR-0057)', () => {
       client.say(JSON.stringify({ type: 'end_turn' }));
       expect(engine.endedTurns).toBe(1);
       expect(activities(client)).toEqual([]);
+    });
+  });
+
+  describe('limits on the browser link (hardening)', () => {
+    const closedReasons = (client: Link) =>
+      client
+        .json()
+        .filter((m) => m['type'] === 'closed')
+        .map((m) => m['reason']);
+
+    it('lets a page that sends at real time through, whatever the frame size', () => {
+      let at = 0;
+      const { engine, client } = rig(() => at);
+      engine.events.ready();
+      // 100 ms of audio (4 800 bytes) every 100 ms, for ten seconds.
+      for (let i = 0; i < 100; i += 1) {
+        at += 100;
+        client.say(Buffer.alloc(4_800, 1), true);
+      }
+      expect(engine.audioIn).toHaveLength(100);
+      expect(closedReasons(client)).toEqual([]);
+    });
+
+    it('drops a flood of microphone audio past the burst and closes the link that keeps at it', () => {
+      const { engine, client } = rig(() => 0); // time stands still: nothing refills
+      engine.events.ready();
+      for (let i = 0; i < 400; i += 1) client.say(Buffer.alloc(32_768, 1), true);
+      // Two seconds of audio (96 000 bytes at 24 kHz, 16-bit) fit: two frames of 32 768.
+      expect(engine.audioIn).toHaveLength(2);
+      expect(closedReasons(client)).toEqual(['error']);
+      expect(engine.closed).toBe(1);
+    });
+
+    it('forgives a page that is only a little fast', () => {
+      let at = 0;
+      const { engine, client } = rig(() => at);
+      engine.events.ready();
+      // Three times real time for ten seconds: many frames are dropped, but each accepted one
+      // takes a strike back, so the link stays open.
+      for (let i = 0; i < 200; i += 1) {
+        at += 50;
+        client.say(Buffer.alloc(7_200, 1), true); // 150 ms of audio every 50 ms
+      }
+      expect(engine.audioIn.length).toBeGreaterThan(60);
+      expect(engine.audioIn.length).toBeLessThan(200);
+      expect(closedReasons(client)).toEqual([]);
+    });
+
+    it('limits control messages too', () => {
+      const { engine, client } = rig(() => 0);
+      engine.events.ready();
+      for (let i = 0; i < 300; i += 1) client.say(JSON.stringify({ type: 'stop_speaking' }));
+      expect(engine.cancelled).toBe(40);
+      expect(closedReasons(client)).toEqual(['error']);
+    });
+
+    it('holds back audio for a browser that cannot take it, and closes a link that is far behind', () => {
+      const { engine, client } = rig();
+      engine.events.ready();
+      client.buffered = 2 * 1024 * 1024; // past the soft limit
+      engine.events.audio(Buffer.from('abcd'));
+      expect(client.out.some((item) => Buffer.isBuffer(item))).toBe(false);
+      expect(closedReasons(client)).toEqual([]);
+      client.buffered = 0; // caught up
+      engine.events.audio(Buffer.from('abcd'));
+      expect(client.out.some((item) => Buffer.isBuffer(item))).toBe(true);
+      client.buffered = 5 * 1024 * 1024; // past the hard limit
+      engine.events.audio(Buffer.from('abcd'));
+      expect(closedReasons(client)).toEqual(['error']);
     });
   });
 });
