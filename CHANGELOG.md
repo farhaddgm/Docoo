@@ -4,9 +4,19 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.62.0] — 2026-11-13
+
 ### Added
 
 - Independent web search, first slice (ADR-0026 addendum 1.2, issue 137): the `WebSearchPort` in `@docoo/ingestion` and adapters for Exa and Tavily. A search never throws; it returns hits or a typed reason (unauthorized, quota exhausted, rate limited, timeout, unavailable, bad response, rejected, aborted, network), so the caller can carry on with the model's own search alone, as the owner decided. Not wired into the research stage yet, no setting, no key storage: nothing changes for a project. Checked against both real services (SPK-001 keys) as well as with a fake `fetch`.
+
+### Fixed
+
+- Voice assistant settings: the realtime voice model and the voice fields were a text box with the browser's own suggestion list, which only offers entries that match what is already typed, so a filled field showed no choices. They are now a list that always shows the whole catalog (realtime models first for OpenAI), with an "other" choice to type a value that is not in the catalog.
+
+### Changed
+
+- Voice assistant settings: the check of the voice link from the server is now its own card with a status badge, a "check again" button, the reason in words, and a collapsible technical section (model, response time, the kinds of the provider's first events; no content), so an "unexpected answer" can be traced without developer tools.
 
 ## [0.61.1] — 2026-11-13
 
