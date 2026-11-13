@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- Independent web search, first slice (ADR-0026 addendum 1.2, issue 137): the `WebSearchPort` in `@docoo/ingestion` and adapters for Exa and Tavily. A search never throws; it returns hits or a typed reason (unauthorized, quota exhausted, rate limited, timeout, unavailable, bad response, rejected, aborted, network), so the caller can carry on with the model's own search alone, as the owner decided. Not wired into the research stage yet, no setting, no key storage: nothing changes for a project. Checked against both real services (SPK-001 keys) as well as with a fake `fetch`.
+
 ## [0.61.1] — 2026-11-13
 
 Maintenance: one fix to the share links, the dependency updates, and the tests and documents around them. No new feature.
