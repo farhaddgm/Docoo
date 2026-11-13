@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 export type EvaluationCaseLanguage = 'fa' | 'en';
 export type EvaluationAgentRole = 'analyst' | 'researcher' | 'ideator' | 'documenter' | 'evaluator';
-export type EvaluationProvider = 'openai' | 'gemini' | 'anthropic' | 'deterministic';
+export type EvaluationProvider = 'openai' | 'gemini' | 'anthropic' | 'xai' | 'deterministic';
 
 export interface EvaluationDatasetCase {
   readonly id: string;
@@ -645,7 +645,11 @@ function isAgentRole(value: unknown): value is EvaluationAgentRole {
 
 function isProvider(value: unknown): value is EvaluationProvider {
   return (
-    value === 'openai' || value === 'gemini' || value === 'anthropic' || value === 'deterministic'
+    value === 'openai' ||
+    value === 'gemini' ||
+    value === 'anthropic' ||
+    value === 'xai' ||
+    value === 'deterministic'
   );
 }
 

@@ -18,12 +18,12 @@ export const DEFAULT_PRICE_CATALOG_URL =
 /** Short name stored with every price that came from the catalog. */
 export const PRICE_CATALOG_SOURCE = 'litellm';
 
-export type CatalogProvider = 'openai' | 'gemini' | 'anthropic';
+export type CatalogProvider = 'openai' | 'gemini' | 'anthropic' | 'xai';
 
 /** One usable price of one model, in USD per million tokens. */
 export interface CatalogPrice {
   readonly provider: CatalogProvider;
-  /** The model id as the provider's own API names it (Gemini without the `gemini/` prefix). */
+  /** The model id as the provider's own API names it (Gemini and xAI without their prefix). */
   readonly model: string;
   /** The key of the entry in the catalog file, kept as the reference of the price. */
   readonly key: string;
@@ -60,6 +60,7 @@ const PROVIDERS: Readonly<Record<string, CatalogProvider>> = {
   openai: 'openai',
   anthropic: 'anthropic',
   gemini: 'gemini',
+  xai: 'xai',
 };
 /** Text models only: embeddings, images, speech and the like can never answer a platform call. */
 const TEXT_MODES = new Set(['chat', 'responses', 'completion']);
@@ -75,6 +76,7 @@ export function perMillion(perToken: number): number {
 
 function modelIdOf(provider: CatalogProvider, key: string): string | null {
   if (provider === 'gemini') return key.startsWith('gemini/') ? key.slice('gemini/'.length) : null;
+  if (provider === 'xai') return key.startsWith('xai/') ? key.slice('xai/'.length) : null;
   // Keys with a slash (`low/1024-x-1024/gpt-image-1`, `openai/...`) are variants, not model ids.
   return key.includes('/') ? null : key;
 }

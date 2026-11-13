@@ -784,6 +784,7 @@ export const providerKind = pgEnum('provider_kind', [
   'anthropic',
   'fake',
   'elevenlabs',
+  'xai',
 ]);
 export const providerStatus = pgEnum('provider_status', [
   'unconfigured',

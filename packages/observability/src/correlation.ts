@@ -92,7 +92,7 @@ export function correlationRecord(
     record['level'] = details['logLevel'];
   for (const [key, values] of Object.entries({
     service: ['api', 'worker-agent', 'worker-ingestion', 'provider-runtime'],
-    provider: ['openai', 'anthropic', 'google', 'gemini', 'openrouter', 'fake'],
+    provider: ['openai', 'anthropic', 'google', 'gemini', 'xai', 'openrouter', 'fake'],
     outcome: ['succeeded', 'failed', 'cancelled'],
     method: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
   })) {

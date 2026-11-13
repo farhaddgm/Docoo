@@ -13,6 +13,7 @@ import {
   FALLBACK_PRICE,
   isGeminiTextModel,
   isOpenAiTextModel,
+  isXaiTextModel,
   outputBudgetTokens,
   providerErrorDetail,
   FAKE_REFUSED_MODEL_PREFIX,
@@ -41,6 +42,9 @@ interface Captured {
   body: Record<string, unknown> | null;
 }
 
+const testModelId = (kind: Exclude<ProviderKind, 'fake'>): string =>
+  kind === 'openai' ? 'gpt-test' : kind === 'xai' ? 'grok-test' : `${kind}-test`;
+
 /** Replies in the documented response shape of each provider. */
 function providerReply(kind: Exclude<ProviderKind, 'fake'>, url: string): unknown {
   if (url.includes('/models') && !url.includes(':generateContent')) {
@@ -61,12 +65,20 @@ function providerReply(kind: Exclude<ProviderKind, 'fake'>, url: string): unknow
     // The OpenAI account also lists models that cannot chat; the adapter must leave them out.
     return {
       data: [
-        { id: kind === 'openai' ? 'gpt-test' : `${kind}-test`, display_name: `${kind} test` },
+        { id: testModelId(kind), display_name: `${kind} test`, context_length: 500_000 },
         ...(kind === 'openai'
           ? [
               { id: 'text-embedding-3-small' },
               { id: 'whisper-1' },
               { id: 'gpt-4o-realtime-preview' },
+            ]
+          : []),
+        // An xAI account also lists image, video, voice and multi-agent models.
+        ...(kind === 'xai'
+          ? [
+              { id: 'grok-imagine-image' },
+              { id: 'grok-voice-3.0' },
+              { id: 'grok-4.20-multi-agent-0309' },
             ]
           : []),
       ],
@@ -89,6 +101,27 @@ function providerReply(kind: Exclude<ProviderKind, 'fake'>, url: string): unknow
           input_tokens: 120,
           // OpenAI counts the 5 reasoning tokens inside output_tokens; the adapter splits them out.
           output_tokens: 35,
+          input_tokens_details: { cached_tokens: 20 },
+          output_tokens_details: { reasoning_tokens: 5 },
+        },
+      };
+    case 'xai':
+      return {
+        id: 'xai_123',
+        model: 'grok-test',
+        status: 'completed',
+        output: [
+          {
+            type: 'message',
+            role: 'assistant',
+            content: [{ type: 'output_text', text: JSON.stringify(answer), annotations: [] }],
+          },
+        ],
+        // xAI reports the 5 reasoning tokens next to the output tokens: total = 120 + 30 + 5.
+        usage: {
+          input_tokens: 120,
+          output_tokens: 30,
+          total_tokens: 155,
           input_tokens_details: { cached_tokens: 20 },
           output_tokens_details: { reasoning_tokens: 5 },
         },
@@ -169,7 +202,7 @@ describe('provider adapters share one contract (AI-002)', () => {
     idempotencyKey: 'attempt-1',
   };
 
-  for (const kind of ['openai', 'gemini', 'anthropic'] as const) {
+  for (const kind of ['openai', 'gemini', 'anthropic', 'xai'] as const) {
     it(`${kind}: one structured call normalises to the same result`, async () => {
       captured.length = 0;
       failWith = null;
@@ -185,9 +218,12 @@ describe('provider adapters share one contract (AI-002)', () => {
       const sent = captured[0]!;
       expect(sent.method).toBe('POST');
       // The secret travels only in the provider's auth header.
-      const auth = { openai: 'authorization', gemini: 'x-goog-api-key', anthropic: 'x-api-key' }[
-        kind
-      ];
+      const auth = {
+        openai: 'authorization',
+        gemini: 'x-goog-api-key',
+        anthropic: 'x-api-key',
+        xai: 'authorization',
+      }[kind];
       expect(String(sent.headers[auth])).toContain(`key-${kind}`);
       expect(JSON.stringify(sent.body)).not.toContain(`key-${kind}`);
       if (kind === 'openai') {
@@ -196,6 +232,18 @@ describe('provider adapters share one contract (AI-002)', () => {
           model: 'test-model',
           store: false,
           instructions: 'You review retail pricing.',
+          text: { format: { type: 'json_schema', name: 'review', strict: true } },
+        });
+      } else if (kind === 'xai') {
+        expect(sent.url).toBe('/xai/responses');
+        expect(String(sent.headers['authorization'])).toBe('Bearer key-xai');
+        // xAI documents no idempotency header.
+        expect(sent.headers['idempotency-key']).toBeUndefined();
+        expect(sent.body).toMatchObject({
+          model: 'test-model',
+          store: false,
+          instructions: 'You review retail pricing.',
+          max_output_tokens: 500,
           text: { format: { type: 'json_schema', name: 'review', strict: true } },
         });
       } else if (kind === 'gemini') {
@@ -221,7 +269,7 @@ describe('provider adapters share one contract (AI-002)', () => {
       const models = await adapter.listModels();
       expect(models).toEqual([
         expect.objectContaining({
-          id: kind === 'openai' ? 'gpt-test' : `${kind}-test`,
+          id: testModelId(kind),
           provider: kind,
         }),
       ]);
@@ -413,6 +461,16 @@ describe('real-provider safety (cost ceiling, output limits, model lists)', () =
       'davinci-002',
     ])
       expect(isOpenAiTextModel(id), id).toBe(false);
+    for (const id of ['grok-4.7', 'grok-4.5', 'grok-4.20-0309-reasoning', 'grok-build-0.1'])
+      expect(isXaiTextModel(id), id).toBe(true);
+    for (const id of [
+      'grok-imagine-image',
+      'grok-imagine-video-1.5',
+      'grok-voice-3.0',
+      'grok-4.20-multi-agent-0309',
+      'gpt-5',
+    ])
+      expect(isXaiTextModel(id), id).toBe(false);
     expect(isGeminiTextModel('models/gemini-2.5-pro')).toBe(true);
     expect(isGeminiTextModel('gemini-2.5-flash')).toBe(true);
     for (const id of [

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { evaluationExperimentIdSchema } from './evaluation-lab.js';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
-const provider = z.enum(['openai', 'gemini', 'anthropic', 'deterministic']);
+const provider = z.enum(['openai', 'gemini', 'anthropic', 'xai', 'deterministic']);
 
 /** Written before a provider can be called. No credentials or request text belong here. */
 export const evaluationInvocationIntentSchema = z

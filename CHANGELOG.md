@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- xAI Grok as a fourth model provider (ADR-0058). Add an "xAI Grok" connection on the AI providers page with a key from console.x.ai (the API account is topped up with its own credits, separate from any X or SuperGrok subscription); it can then run any stage, take part in dual-model research and appear in the evaluation lab, like the other providers. It uses xAI's Responses API at `api.x.ai/v1`: structured output, function tools and the server-side web search tool; reasoning tokens are read as reported on top of the output tokens, not inside them. Prices come from the same public catalog (`xai/…` entries). Migration 0092 adds the `xai` brand. Not yet tried against the real service: run the provider acceptance test with `XAI_API_KEY` first.
+
 ## [0.60.0] — 2026-11-11
 
 ### Added
