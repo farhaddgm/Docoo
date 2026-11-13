@@ -13,7 +13,7 @@ import { ModelSelfCheck } from './model-self-check';
 import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
 
-type Kind = 'openai' | 'gemini' | 'anthropic';
+type Kind = 'openai' | 'gemini' | 'anthropic' | 'xai';
 /** ElevenLabs only speaks (ADR-0046): it is a connection for voice, never for running a stage. */
 type FormKind = Kind | 'elevenlabs';
 
@@ -39,6 +39,7 @@ const kinds: { kind: FormKind; label: string }[] = [
   { kind: 'openai', label: 'OpenAI' },
   { kind: 'gemini', label: 'Google Gemini' },
   { kind: 'anthropic', label: 'Anthropic Claude' },
+  { kind: 'xai', label: 'xAI Grok' },
   { kind: 'elevenlabs', label: 'ElevenLabs (Voice)' },
 ];
 

@@ -1,4 +1,10 @@
-import { AnthropicAdapter, GeminiAdapter, OpenAiAdapter, type AdapterOptions } from './adapters.js';
+import {
+  AnthropicAdapter,
+  GeminiAdapter,
+  OpenAiAdapter,
+  XaiAdapter,
+  type AdapterOptions,
+} from './adapters.js';
 import type { ModelProviderAdapter, ProviderKind } from './contract.js';
 import { FakeAdapter } from './fake.js';
 import { ElevenLabsSpeechAdapter, OpenAiSpeechAdapter } from './speech-adapters.js';
@@ -25,6 +31,8 @@ export function createAdapter(kind: ProviderKind, options: AdapterOptions): Mode
       return new GeminiAdapter(options);
     case 'anthropic':
       return new AnthropicAdapter(options);
+    case 'xai':
+      return new XaiAdapter(options);
     case 'fake':
       return new FakeAdapter();
   }

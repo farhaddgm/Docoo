@@ -1,10 +1,17 @@
 /**
  * The one provider contract the domain sees (docs/03-ai/04-provider-orchestration.md §2).
- * Adapters translate it to OpenAI Responses, Gemini generateContent and Anthropic Messages.
+ * Adapters translate it to OpenAI Responses, Gemini generateContent, Anthropic Messages and the
+ * xAI (Grok) Responses API.
  */
-export type ProviderKind = 'openai' | 'gemini' | 'anthropic' | 'fake';
+export type ProviderKind = 'openai' | 'gemini' | 'anthropic' | 'xai' | 'fake';
 
-export const PROVIDER_KINDS: readonly ProviderKind[] = ['openai', 'gemini', 'anthropic', 'fake'];
+export const PROVIDER_KINDS: readonly ProviderKind[] = [
+  'openai',
+  'gemini',
+  'anthropic',
+  'xai',
+  'fake',
+];
 
 export interface ModelCapabilities {
   readonly text: boolean;

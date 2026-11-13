@@ -61,6 +61,18 @@ const BASELINE: Record<Exclude<ProviderKind, 'fake'>, ModelCapabilities> = {
     streaming: true,
     reasoning: true,
   },
+  // Grok: image input is documented for some models; file input goes through xAI's own Files API,
+  // which the platform does not use, so it stays off.
+  xai: {
+    text: true,
+    structuredOutput: true,
+    tools: true,
+    imageInput: true,
+    fileInput: false,
+    audioInput: false,
+    streaming: true,
+    reasoning: true,
+  },
 };
 
 type Json = Record<string, unknown>;
@@ -165,6 +177,46 @@ export function isGeminiTextModel(name: string): boolean {
   return !/(embedding|image|tts|live|native-audio|robotics|computer-use|aqa)/u.test(id);
 }
 
+/**
+ * Responses API input items (OpenAI and xAI speak the same shape). A tool call goes back as
+ * `function_call` and its result as `function_call_output`; no item id is sent, so no reasoning
+ * item has to travel with it.
+ */
+function responsesInputItems(messages: readonly ConversationMessage[]): Json[] {
+  const items: Json[] = [];
+  for (const message of messages) {
+    if (message.role === 'tool') {
+      items.push({
+        type: 'function_call_output',
+        call_id: message.toolCallId,
+        output: message.content,
+      });
+      continue;
+    }
+    if (message.content !== '' || !message.toolCalls?.length) {
+      items.push({ role: message.role, content: message.content });
+    }
+    for (const call of message.toolCalls ?? []) {
+      items.push({
+        type: 'function_call',
+        call_id: call.id,
+        name: call.name,
+        arguments: JSON.stringify(call.arguments ?? {}),
+      });
+    }
+  }
+  return items;
+}
+
+/**
+ * Grok text models only: the account also lists image, video and voice models, and the multi-agent
+ * models, where `reasoning.effort` sets the number of agents, are a different kind of call.
+ */
+export function isXaiTextModel(id: string): boolean {
+  if (!id.startsWith('grok')) return false;
+  return !/(imagine|voice|multi-agent|tts|stt|transcribe|embed)/u.test(id);
+}
+
 abstract class HttpAdapter implements ModelProviderAdapter {
   abstract readonly kind: Exclude<ProviderKind, 'fake'>;
   protected readonly fetchImpl: FetchLike;
@@ -251,36 +303,6 @@ export class OpenAiAdapter extends HttpAdapter {
       .map((item) => this.descriptor(String(item['id']), String(item['id']), null, null));
   }
 
-  /**
-   * Responses API input items. A tool call goes back as `function_call` and its result as
-   * `function_call_output`; no item id is sent, so no reasoning item has to travel with it.
-   */
-  private inputItems(messages: readonly ConversationMessage[]): Json[] {
-    const items: Json[] = [];
-    for (const message of messages) {
-      if (message.role === 'tool') {
-        items.push({
-          type: 'function_call_output',
-          call_id: message.toolCallId,
-          output: message.content,
-        });
-        continue;
-      }
-      if (message.content !== '' || !message.toolCalls?.length) {
-        items.push({ role: message.role, content: message.content });
-      }
-      for (const call of message.toolCalls ?? []) {
-        items.push({
-          type: 'function_call',
-          call_id: call.id,
-          name: call.name,
-          arguments: JSON.stringify(call.arguments ?? {}),
-        });
-      }
-    }
-    return items;
-  }
-
   /** Queries and cited pages of a Responses answer that used the web search tool. */
   private webResult(output: unknown[]): WebSearchResult {
     const queries: string[] = [];
@@ -310,7 +332,7 @@ export class OpenAiAdapter extends HttpAdapter {
     assertWebSearchAlone(request);
     const body: Json = {
       model: request.model,
-      input: this.inputItems(request.messages),
+      input: responsesInputItems(request.messages),
       store: false,
       max_output_tokens: request.maxOutputTokens ?? DEFAULT_MAX_OUTPUT,
     };
@@ -400,6 +422,171 @@ export class OpenAiAdapter extends HttpAdapter {
         typeof response['id'] === 'string' ? response['id'] : result.headers.get('x-request-id'),
       latencyMs: result.latencyMs,
       ...(request.webSearch ? { web: this.webResult(asArray(response['output'])) } : {}),
+    };
+  }
+}
+
+/**
+ * xAI Grok through its Responses API (https://docs.x.ai/developers/rest-api-reference/inference/responses).
+ * The wire format is the OpenAI one; what differs, per xAI's documentation:
+ * - `output_tokens` counts only visible tokens; reasoning tokens are reported next to them
+ *   (`total_tokens` = input + output + reasoning), so nothing is subtracted.
+ * - A function tool's `strict` flag is always on and is not sent; `max_tool_calls` is not a request
+ *   field, so a web search is not capped per call (the stage's search rounds and the cost ceiling
+ *   still apply).
+ * - There is no idempotency header.
+ * - Citations come as `url_citation` annotations whose `title` is only the citation number.
+ */
+export class XaiAdapter extends HttpAdapter {
+  readonly kind = 'xai' as const;
+  private get base(): string {
+    return (this.options.baseUrl ?? 'https://api.x.ai/v1').replace(/\/$/u, '');
+  }
+
+  private headers(): Record<string, string> {
+    return { authorization: `Bearer ${this.options.apiKey}` };
+  }
+
+  async listModels(): Promise<ModelDescriptor[]> {
+    const result = await requestJson(this.fetchImpl, 'xai', `${this.base}/models`, {
+      method: 'GET',
+      headers: this.headers(),
+      timeoutMs: 20_000,
+    });
+    return asArray(asObject(result.body)['data'])
+      .map((item) => asObject(item))
+      .filter((item) => typeof item['id'] === 'string' && isXaiTextModel(String(item['id'])))
+      .map((item) =>
+        this.descriptor(String(item['id']), String(item['id']), num(item['context_length']), null),
+      );
+  }
+
+  /** Queries and cited pages of a Responses answer that used the web search tool. */
+  private webResult(output: unknown[]): WebSearchResult {
+    const queries: string[] = [];
+    const collector = new SourceCollector();
+    for (const raw of output) {
+      const item = asObject(raw);
+      if (item['type'] === 'web_search_call') {
+        // xAI does not document the fields of this item; read the query where OpenAI puts it.
+        const query = asObject(item['action'])['query'] ?? item['query'];
+        if (typeof query === 'string' && query !== '' && !queries.includes(query))
+          queries.push(query);
+      }
+      if (item['type'] !== 'message') continue;
+      for (const part of asArray(item['content']).map((value) => asObject(value))) {
+        const text = textOf(part['text']);
+        for (const note of asArray(part['annotations']).map((value) => asObject(value))) {
+          if (note['type'] !== 'url_citation') continue;
+          // The title is the visible number of the citation ("1"); the address is the better label.
+          const title = textOf(note['title']);
+          collector.add(
+            note['url'],
+            /^\d+$/u.test(title) ? '' : title,
+            paragraphAt(text, num(note['start_index']) ?? 0),
+          );
+        }
+      }
+    }
+    return { queries, sources: collector.sources() };
+  }
+
+  async invoke(request: NormalizedModelRequest): Promise<NormalizedModelResponse> {
+    assertToolsOrSchema(request);
+    assertWebSearchAlone(request);
+    const body: Json = {
+      model: request.model,
+      input: responsesInputItems(request.messages),
+      store: false,
+      max_output_tokens: request.maxOutputTokens ?? DEFAULT_MAX_OUTPUT,
+    };
+    if (request.webSearch) body['tools'] = [{ type: 'web_search' }];
+    if (hasTools(request)) {
+      body['tools'] = request.tools!.map((tool) => ({
+        type: 'function',
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+      }));
+      body['tool_choice'] = request.toolChoice ?? 'auto';
+      body['parallel_tool_calls'] = false;
+    }
+    if (request.instructions) body['instructions'] = request.instructions;
+    if (request.temperature !== undefined) body['temperature'] = request.temperature;
+    if (request.responseSchema) {
+      body['text'] = {
+        format: {
+          type: 'json_schema',
+          name: request.responseSchema.name,
+          schema: request.responseSchema.schema,
+          strict: true,
+        },
+      };
+    }
+    const result = await requestJson(this.fetchImpl, 'xai', `${this.base}/responses`, {
+      method: 'POST',
+      headers: this.headers(),
+      body,
+      timeoutMs: request.timeoutMs ?? this.timeoutMs,
+    });
+    const response = asObject(result.body);
+    const output = asArray(response['output']);
+    const text = output
+      .map((item) => asObject(item))
+      .filter((item) => item['type'] === 'message')
+      .flatMap((item) => asArray(item['content']).map((part) => asObject(part)))
+      .filter((part) => part['type'] === 'output_text' && typeof part['text'] === 'string')
+      .map((part) => String(part['text']))
+      .join('');
+    const toolCalls: ToolCall[] = output
+      .map((item) => asObject(item))
+      .filter((item) => item['type'] === 'function_call' && typeof item['name'] === 'string')
+      .map((item, index) => ({
+        id: typeof item['call_id'] === 'string' ? item['call_id'] : `call_${index}`,
+        name: String(item['name']),
+        arguments: parseToolArguments(item['arguments'], 'xai'),
+      }));
+    const status = typeof response['status'] === 'string' ? response['status'] : null;
+    const incomplete = asObject(response['incomplete_details'])['reason'];
+    const raw = status === 'incomplete' && typeof incomplete === 'string' ? incomplete : status;
+    const finishReason: FinishReason =
+      status === 'completed'
+        ? toolCalls.length > 0
+          ? 'tool_call'
+          : 'stop'
+        : typeof incomplete === 'string' && /max|length/u.test(incomplete)
+          ? 'length'
+          : typeof incomplete === 'string' && /content|filter|safety/u.test(incomplete)
+            ? 'content_filter'
+            : 'other';
+    const usage = asObject(response['usage']);
+    const inputTokens = num(usage['input_tokens']) ?? 0;
+    const outputTokens = num(usage['output_tokens']) ?? 0;
+    const reasoning = num(asObject(usage['output_tokens_details'])['reasoning_tokens']);
+    // xAI reports reasoning on top of the output tokens. If a response ever adds up the other way
+    // (total = input + output), reasoning is inside the output count and is split out, so cost
+    // never counts it twice.
+    const total = num(usage['total_tokens']);
+    const insideOutput =
+      reasoning !== null && reasoning > 0 && total !== null && total === inputTokens + outputTokens;
+    return {
+      provider: 'xai',
+      model: typeof response['model'] === 'string' ? response['model'] : request.model,
+      text,
+      json: request.responseSchema && finishReason === 'stop' ? parseStructured(text, 'xai') : null,
+      toolCalls: finishReason === 'tool_call' ? toolCalls : [],
+      finishReason,
+      rawFinishReason: raw,
+      usage: {
+        inputTokens,
+        outputTokens: insideOutput ? Math.max(0, outputTokens - reasoning) : outputTokens,
+        reasoningTokens: reasoning,
+        cachedInputTokens: num(asObject(usage['input_tokens_details'])['cached_tokens']),
+      },
+      providerRequestId:
+        typeof response['id'] === 'string' ? response['id'] : result.headers.get('x-request-id'),
+      latencyMs: result.latencyMs,
+      ...(request.webSearch ? { web: this.webResult(output) } : {}),
     };
   }
 }

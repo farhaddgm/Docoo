@@ -14,6 +14,7 @@ const messages = {
       openai: 'از platform.openai.com ← API keys ← Create new secret key',
       gemini: 'از aistudio.google.com ← Get API key',
       anthropic: 'از console.anthropic.com ← API Keys ← Create Key',
+      xai: 'از console.x.ai ← API Keys ← Create API Key (اعتبار حساب API جدا شارژ می‌شود)',
       elevenlabs: 'از elevenlabs.io ← Developers ← API Keys',
     },
     voiceOnly:
@@ -70,6 +71,7 @@ const messages = {
       openai: 'platform.openai.com → API keys → Create new secret key',
       gemini: 'aistudio.google.com → Get API key',
       anthropic: 'console.anthropic.com → API Keys → Create Key',
+      xai: 'console.x.ai → API Keys → Create API Key (the API account is topped up with its own credits)',
       elevenlabs: 'elevenlabs.io → Developers → API Keys',
     },
     voiceOnly:
