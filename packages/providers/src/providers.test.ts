@@ -12,6 +12,7 @@ import {
   estimateCostUsd,
   FALLBACK_PRICE,
   isGeminiTextModel,
+  isOpenAiRealtimeModel,
   isOpenAiTextModel,
   outputBudgetTokens,
   providerErrorDetail,
@@ -394,6 +395,13 @@ describe('real-provider safety (cost ceiling, output limits, model lists)', () =
     expect(outputBudgetTokens('analysis:round', 4_096)).toBe(4_096);
     expect(outputBudgetTokens('analysis:round', 128_000)).toBe(16_000);
     expect(outputBudgetTokens('analysis:round', 100)).toBe(1_024);
+  });
+
+  it('picks the live-voice models apart from the text ones', () => {
+    for (const id of ['gpt-realtime', 'gpt-4o-realtime-preview', 'gpt-4o-mini-realtime-preview'])
+      expect(isOpenAiRealtimeModel(id), id).toBe(true);
+    for (const id of ['gpt-5', 'gpt-4o-transcribe', 'gpt-4o-mini-tts', 'whisper-1', 'o3'])
+      expect(isOpenAiRealtimeModel(id), id).toBe(false);
   });
 
   it('lists only models that can answer a structured text request', () => {

@@ -257,6 +257,15 @@ export class ProvidersController {
     return { catalog: await this.providers.models(workspaceContext(request), id(raw)) };
   }
 
+  @Get('provider-connections/:connectionId/realtime-models')
+  @ApiOperation({
+    summary: 'Live-voice (realtime) models of the connection, asked from the provider',
+  })
+  @RequireWorkspacePermission('provider.read')
+  async realtimeModels(@Req() request: FastifyRequest, @Param('connectionId') raw: string) {
+    return { models: await this.providers.realtimeModels(workspaceContext(request), id(raw)) };
+  }
+
   @Get('model-prices')
   @ApiOperation({ summary: 'Dated model price snapshots (estimates)' })
   @RequireWorkspacePermission('provider.read')
