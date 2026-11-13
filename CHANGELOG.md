@@ -4,14 +4,24 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.61.1] — 2026-11-13
+
+Maintenance: one fix to the share links, the dependency updates, and the tests and documents around them. No new feature.
+
 ### Fixed
 
 - Monitor share links: the faint mark on a shared screen showed no workspace name, because the name was read without the workspace's own row rules. It is now read inside them, and sent only when the mark is set to show it (a hidden setting sends nothing).
+
+### Changed
+
+- Dependencies: the ten open Dependabot updates went in together (#364 to #373): Next 16.4.5, the OpenTelemetry group (seven packages), `pdfjs-dist` 6.5.438, `@types/node` 26.6.6, the CodeQL and `pnpm/action-setup` actions, and the Temporal, rclone and SeaweedFS image digests.
+- The four NestJS packages (`common`, `core`, `platform-fastify`, `testing`) moved together to 12.4.0 instead of `common` alone, and `@fastify/static` to 10.1.10, which `platform-fastify` 12.4.0 requires. 10.1.11 was newer than the workspace's seven-day release age, so it was left.
 
 ### Added
 
 - An end-to-end test of the share link (the owner makes it, a visitor opens it with the password, revoking ends it) and an integration test of it against a real database (stored digests, password, room left, expiry, revoking, one workspace never reaching another's links).
 - ADR-0056 records the share link, the five measures around it, the residual risks, and that the owner's request reversed the earlier "no public link" decision.
+- ADR-0026 addendum 1.2 records the owner's hybrid decision for web research: the model's own search always runs, and the independent search runs beside it when its service is reachable, falling back to the model's search alone on a connection problem. The SPK-001 protocol (document 16) now says what the endpoint check could and could not confirm.
 
 ## [0.61.0] — 2026-11-12
 
