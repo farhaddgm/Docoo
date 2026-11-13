@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "41ae433e617c2eed579ae9b79f60e41bbb4192bb"
+    "source_commit": "a2acfad4b9cf94b29f5fb8b596ffe228b456636d"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-11-13T16:12:35.743Z",
+    "synced_at": "2026-11-13T18:19:08.355Z",
     "created": 0,
-    "updated": 1,
-    "unchanged": 73,
+    "updated": 2,
+    "unchanged": 72,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -1030,16 +1030,16 @@
     "DOCOO-SEARCH-API-SPIKE": {
       "path": "docs/06-delivery/16-search-api-spike.md",
       "section": "06 Delivery & Operations",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "proposed",
       "owner": "Product & Engineering",
-      "checksum_sha256": "0c7449dcd8faeb309cc89dc1fa4c23f02f5b81bf28ef4edb8004bdb70b136b9c",
+      "checksum_sha256": "609c1eab7eceaa733c1a985e5b688a1153953ba7d16451600b3c15ef23c89707",
       "notion_page_id": "3f45a24a-6668-81a5-b68e-ea288ef90540",
       "notion_page_url": "https://app.notion.com/p/3f45a24a666881a5b68eea288ef90540",
       "index_row_page_id": "3f45a24a-6668-81c6-a792-d2e11fe7264b",
       "index_row_page_url": "https://app.notion.com/p/3f45a24a666881c6a792d2e11fe7264b",
-      "synced_commit": "1f607f6ab2978f0bab6b68756df7854128a1ff4e",
-      "synced_at": "2026-11-13T14:01:32.497Z"
+      "synced_commit": "a2acfad4b9cf94b29f5fb8b596ffe228b456636d",
+      "synced_at": "2026-11-13T18:19:08.355Z"
     },
     "DOCOO-ADR-0026": {
       "path": "docs/adr/0026-web-research-adapter.md",
@@ -1047,13 +1047,13 @@
       "version": "1.2.0",
       "status": "proposed",
       "owner": "AI Platform & Security",
-      "checksum_sha256": "97348a82e900ee45cc5e6a9cbf6747b60cf5b87f8d879a3a79792dfc60f02676",
+      "checksum_sha256": "e9e16865a96705d9f3c8d3e8f5258fa3ac328e4a84c048aa3884aeaea67a59c5",
       "notion_page_id": "3f45a24a-6668-8147-b0b4-ff232824efad",
       "notion_page_url": "https://app.notion.com/p/3f45a24a66688147b0b4ff232824efad",
       "index_row_page_id": "3f45a24a-6668-813b-b9c9-f65d37b97cd9",
       "index_row_page_url": "https://app.notion.com/p/3f45a24a6668813bb9c9f65d37b97cd9",
-      "synced_commit": "41ae433e617c2eed579ae9b79f60e41bbb4192bb",
-      "synced_at": "2026-11-13T16:12:35.743Z"
+      "synced_commit": "a2acfad4b9cf94b29f5fb8b596ffe228b456636d",
+      "synced_at": "2026-11-13T18:19:08.355Z"
     },
     "DOCOO-ADR-0027": {
       "path": "docs/adr/0027-current-access-baseline.md",
