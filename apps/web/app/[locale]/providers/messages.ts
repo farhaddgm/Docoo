@@ -15,7 +15,8 @@ const messages = {
       gemini: 'از aistudio.google.com ← Get API key',
       anthropic: 'از console.anthropic.com ← API Keys ← Create Key',
       xai: 'از console.x.ai ← API Keys ← Create API Key (اعتبار حساب API جدا شارژ می‌شود)',
-      elevenlabs: 'از elevenlabs.io ← Developers ← API Keys',
+      elevenlabs:
+        'از elevenlabs.io ← Developers ← API Keys. اگر کلید را محدود کرده‌اید، باید به endpointهای مدل‌ها، صداها، تبدیل متن به گفتار و گفتار به متن دسترسی داشته باشد؛ و اگر IP مجاز تعیین کرده‌اید، IP سرور Docoo باید در فهرست باشد.',
     },
     voiceOnly:
       'ElevenLabs فقط برای گفتگوی صوتی است؛ برای اجرای مرحله‌ها یا مدل پیش‌فرض انتخاب نمی‌شود. انتخابش در تنظیمات سامانه ← گفتگوی صوتی است.',
@@ -51,7 +52,12 @@ const messages = {
     notSet: 'تنظیم نشده',
     saved: 'ذخیره شد.',
     failed: 'انجام نشد. کلید یا اتصال اینترنت سرور را بررسی کنید.',
+    savedNotChecked:
+      'اتصال ذخیره شد، اما ارائه‌دهنده آن را نپذیرفت یا به آن نرسیدیم. در جدول بالا وضعیت و کد خطای همین اتصال را ببینید.',
+    reason: 'دلیل:',
     errors: {
+      PROVIDER_CATALOG_UNAVAILABLE: 'فهرست مدل‌ها از ارائه‌دهنده گرفته نشد.',
+      PROVIDER_DISABLED: 'این اتصال غیرفعال است.',
       PROVIDER_SECRET_REQUIRED: 'کلید API لازم است.',
       PROVIDER_INVALID_REQUEST: 'اطلاعات واردشده معتبر نیست.',
       PROVIDER_VERSION_CONFLICT: 'این اتصال تغییر کرده است. صفحه را تازه کنید و دوباره ذخیره کنید.',
@@ -72,7 +78,8 @@ const messages = {
       gemini: 'aistudio.google.com → Get API key',
       anthropic: 'console.anthropic.com → API Keys → Create Key',
       xai: 'console.x.ai → API Keys → Create API Key (the API account is topped up with its own credits)',
-      elevenlabs: 'elevenlabs.io → Developers → API Keys',
+      elevenlabs:
+        'elevenlabs.io → Developers → API Keys. A restricted key must be allowed to use the models, voices, text-to-speech and speech-to-text endpoints, and an IP allowlist must include the Docoo server’s IP.',
     },
     voiceOnly:
       'ElevenLabs is for voice conversation only; it is not used to run stages or as the default model. Choose it under System settings → Voice conversation.',
@@ -108,7 +115,12 @@ const messages = {
     notSet: 'not set',
     saved: 'Saved.',
     failed: 'That did not work. Check the key and the server’s internet access.',
+    savedNotChecked:
+      'The connection was saved, but the provider refused it or could not be reached. See the status and error code of this connection in the table above.',
+    reason: 'Reason:',
     errors: {
+      PROVIDER_CATALOG_UNAVAILABLE: 'The model list could not be fetched from the provider.',
+      PROVIDER_DISABLED: 'This connection is disabled.',
       PROVIDER_SECRET_REQUIRED: 'An API key is required.',
       PROVIDER_INVALID_REQUEST: 'The details are not valid.',
       PROVIDER_VERSION_CONFLICT: 'This connection changed. Reload the page before saving again.',

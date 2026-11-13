@@ -1,4 +1,4 @@
-import type { AdapterOptions } from './adapters.js';
+import { failureText, type AdapterOptions } from './adapters.js';
 import { ProviderError } from './contract.js';
 import { errorForStatus, providerErrorDetail, type FetchLike } from './http.js';
 import type {
@@ -165,7 +165,7 @@ abstract class SpeechHttpAdapter implements SpeechProviderAdapter {
         status: failure.kind === 'auth' ? ('invalid' as const) : ('unavailable' as const),
         checkedAt,
         latencyMs: null,
-        error: failure.message,
+        error: failureText(failure),
       };
     }
   }

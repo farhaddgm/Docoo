@@ -225,6 +225,44 @@ describe('ElevenLabs speech adapter', () => {
     ).rejects.toMatchObject({ kind: 'rate_limited' });
   });
 
+  it('keeps the reason ElevenLabs gives, so a key without permission is told apart from a wrong key', async () => {
+    // The documented error body: https://elevenlabs.io/docs/eleven-api/resources/errors
+    const refused = stub(() =>
+      json(
+        {
+          detail: {
+            type: 'authorization_error',
+            code: 'insufficient_permissions',
+            message: 'The API key is missing the permission models_read.',
+            status: 'insufficient_permissions',
+            request_id: 'abc',
+          },
+        },
+        403,
+      ),
+    );
+    const adapter = createSpeechAdapter('elevenlabs', { apiKey: 'xi-key', fetch: refused.fetch });
+    await expect(adapter.listModels()).rejects.toMatchObject({
+      kind: 'auth',
+      code: 'elevenlabs_unauthorized',
+      detail: 'insufficient_permissions: The API key is missing the permission models_read.',
+    });
+    expect(await adapter.healthCheck!()).toMatchObject({
+      status: 'invalid',
+      error:
+        'elevenlabs_unauthorized: insufficient_permissions: The API key is missing the permission models_read.',
+    });
+    const unreachable = createSpeechAdapter('elevenlabs', {
+      apiKey: 'xi-key',
+      fetch: () => Promise.reject(new TypeError('fetch failed')),
+    });
+    // No answer at all has no reason from the provider; the code alone says it.
+    expect(await unreachable.healthCheck!()).toMatchObject({
+      status: 'unavailable',
+      error: 'elevenlabs_unreachable',
+    });
+  });
+
   it('needs a key', () => {
     expect(() => createSpeechAdapter('elevenlabs', { apiKey: '' })).toThrow(ProviderError);
   });
