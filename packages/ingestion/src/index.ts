@@ -10,3 +10,4 @@ export * from './sandbox.js';
 export * from './scanner.js';
 export * from './transcription.js';
 export * from './url-fetch.js';
+export * from './web-search.js';
