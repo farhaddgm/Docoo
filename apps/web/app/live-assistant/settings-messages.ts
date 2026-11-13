@@ -135,6 +135,8 @@ const fa = {
     connection: 'اتصال مدل صوتی',
     noConnection: '— انتخاب کنید —',
     noConnections: 'هنوز اتصالی در «ارائه‌دهندگان AI» ساخته نشده است.',
+    pick: 'یکی را انتخاب کنید',
+    other: 'مورد دیگر (وارد کردن دستی)',
     modelId: 'مدل صوتی بلادرنگ',
     modelHint:
       'عبارت realtime را بنویسید تا مدل‌های صوتی زنده پیشنهاد شود، یا نام مدل را کامل بنویسید. اگر صدا را هنوز راه نمی‌اندازید، خالی بگذارید.',
@@ -341,6 +343,8 @@ const en: typeof fa = {
     connection: 'Voice model connection',
     noConnection: '— choose —',
     noConnections: 'No connection exists yet; add one under AI providers.',
+    pick: 'Choose one',
+    other: 'Other (type it in)',
     modelId: 'Realtime voice model',
     modelHint:
       'Type realtime to get the live voice models suggested, or write the full model name. Leave it empty if you are not setting up voice yet.',

@@ -28,6 +28,7 @@ import {
   type Problem,
 } from './settings-model';
 import { liveReadApi } from './live-api';
+import { CatalogSelect } from './catalog-select';
 import { VoiceLinkCheck } from './voice-link-check';
 import { fillText, liveSettingsMessages } from './settings-messages';
 import { PanelsSkeleton } from '../skeleton';
@@ -521,20 +522,15 @@ export function LiveAssistantSettings({
           >
             {(id) => (
               <>
-                <input
+                <CatalogSelect
                   id={id}
-                  type="text"
-                  list={`${id}-models`}
-                  maxLength={200}
-                  dir="ltr"
                   value={asString(draft['live_assistant.model'])}
-                  onChange={(event) => set('live_assistant.model', event.target.value)}
+                  options={(isEleven ? speech.models : models).map((value) => ({ value }))}
+                  {...(isEleven ? {} : { preferred: (value: string) => /realtime/iu.test(value) })}
+                  chooseLabel={text.model.pick}
+                  otherLabel={text.model.other}
+                  onChange={(value) => set('live_assistant.model', value)}
                 />
-                <datalist id={`${id}-models`}>
-                  {(isEleven ? speech.models : models).map((model) => (
-                    <option key={model} value={model} />
-                  ))}
-                </datalist>
               </>
             )}
           </Field>
@@ -544,22 +540,14 @@ export function LiveAssistantSettings({
           >
             {(id) => (
               <>
-                <input
+                <CatalogSelect
                   id={id}
-                  type="text"
-                  list={`${id}-voices`}
-                  maxLength={200}
-                  dir="ltr"
                   value={asString(draft['live_assistant.voice_id'])}
-                  onChange={(event) => set('live_assistant.voice_id', event.target.value)}
+                  options={speech.voices.map((voice) => ({ value: voice.id, label: voice.name }))}
+                  chooseLabel={text.model.pick}
+                  otherLabel={text.model.other}
+                  onChange={(value) => set('live_assistant.voice_id', value)}
                 />
-                <datalist id={`${id}-voices`}>
-                  {speech.voices.map((voice) => (
-                    <option key={voice.id} value={voice.id}>
-                      {voice.name}
-                    </option>
-                  ))}
-                </datalist>
               </>
             )}
           </Field>
