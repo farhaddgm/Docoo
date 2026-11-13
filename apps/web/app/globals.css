@@ -6734,3 +6734,39 @@ button.link-button {
   block-size: 2.25rem;
   border-radius: var(--radius-sm);
 }
+
+/* Voice link check card (assistant settings) */
+.voice-link-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.voice-link-head h3 {
+  margin: 0;
+}
+
+.voice-link-details > summary {
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--muted, inherit);
+}
+
+.voice-link-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+}
+
+.voice-link-facts dt {
+  color: var(--muted, inherit);
+}
+
+.voice-link-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

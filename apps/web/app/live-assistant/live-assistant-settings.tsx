@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  type LiveVoiceCheckFailure,
   accessScopeModes,
   assistantAccessLevels,
   confirmStrictnessLevels,
@@ -29,6 +28,7 @@ import {
   type Problem,
 } from './settings-model';
 import { liveReadApi } from './live-api';
+import { VoiceLinkCheck } from './voice-link-check';
 import { fillText, liveSettingsMessages } from './settings-messages';
 import { PanelsSkeleton } from '../skeleton';
 
@@ -116,7 +116,6 @@ export function LiveAssistantSettings({
   /** What the server says about the saved settings: can the assistant be written to now? */
   const [readiness, setReadiness] = useState<LiveAssistantClientConfig | null>(null);
   /** The result of the last voice-link check: null before one, a failure kind or `ok`. */
-  const [voiceLink, setVoiceLink] = useState<'running' | 'ok' | LiveVoiceCheckFailure | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -332,33 +331,7 @@ export function LiveAssistantSettings({
             )}
           </p>
           <p className="muted">{text.status.voiceLater}</p>
-          <div className="stack">
-            <button
-              type="button"
-              className="button secondary"
-              disabled={voiceLink === 'running'}
-              onClick={() => {
-                setVoiceLink('running');
-                liveReadApi
-                  .voiceCheck(workspaceId)
-                  .then((result) =>
-                    setVoiceLink(result.ok ? 'ok' : (result.failure ?? 'unexpected')),
-                  )
-                  .catch(() => setVoiceLink('network'));
-              }}
-            >
-              {voiceLink === 'running'
-                ? text.status.voiceCheck.running
-                : text.status.voiceCheck.button}
-            </button>
-            <small className="muted">{text.status.voiceCheck.note}</small>
-            {voiceLink === 'ok' && <p className="notice info">{text.status.voiceCheck.ok}</p>}
-            {voiceLink !== null && voiceLink !== 'ok' && voiceLink !== 'running' && (
-              <p className="notice warn" role="alert">
-                {text.status.voiceCheck.failed} {text.status.voiceCheck.failures[voiceLink]}
-              </p>
-            )}
-          </div>
+          <VoiceLinkCheck locale={locale} workspaceId={workspaceId} />
           {changedKeys(draft, saved).length > 0 && <p className="muted">{text.status.unsaved}</p>}
         </div>
       )}
