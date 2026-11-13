@@ -11,7 +11,7 @@ import { priceMessages } from './price-messages';
 import { SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
 
-type Kind = 'openai' | 'gemini' | 'anthropic';
+type Kind = 'openai' | 'gemini' | 'anthropic' | 'xai';
 
 interface Price {
   id: string;
@@ -220,7 +220,7 @@ export function ModelPrices({
               setTyping(false);
             }}
           >
-            {(kinds.length > 0 ? kinds : (['openai', 'gemini', 'anthropic'] as const)).map(
+            {(kinds.length > 0 ? kinds : (['openai', 'gemini', 'anthropic', 'xai'] as const)).map(
               (item) => (
                 <option key={item} value={item}>
                   {item}

@@ -90,7 +90,7 @@ function catalogUnavailable(error: unknown): HttpException {
   );
 }
 
-const CATALOG_PROVIDERS: readonly ProviderKind[] = ['openai', 'gemini', 'anthropic'];
+const CATALOG_PROVIDERS: readonly ProviderKind[] = ['openai', 'gemini', 'anthropic', 'xai'];
 const isCatalogProvider = (kind: string): kind is CatalogProvider =>
   CATALOG_PROVIDERS.includes(kind as ProviderKind);
 

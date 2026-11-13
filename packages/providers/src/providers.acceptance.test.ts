@@ -21,6 +21,7 @@ const providers: {
     key: process.env['ANTHROPIC_API_KEY'],
     model: process.env['ANTHROPIC_MODEL'],
   },
+  { kind: 'xai', key: process.env['XAI_API_KEY'], model: process.env['XAI_MODEL'] },
 ];
 
 for (const provider of providers) {

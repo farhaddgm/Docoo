@@ -93,7 +93,7 @@ export const evaluationBlindReviewInputSchema = z
 const config = z
   .object({
     role: z.enum(['analyst', 'researcher', 'ideator', 'documenter', 'evaluator']),
-    provider: z.enum(['openai', 'gemini', 'anthropic', 'deterministic']),
+    provider: z.enum(['openai', 'gemini', 'anthropic', 'xai', 'deterministic']),
     modelId: z.string().min(1).max(200),
     modelSnapshotHash: hash,
     promptHash: hash,

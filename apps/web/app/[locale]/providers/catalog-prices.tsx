@@ -12,7 +12,7 @@ import { SectionTitle } from '../../info-tip';
 type Status = 'new' | 'changed' | 'same' | 'none' | 'unusable';
 
 interface Suggestion {
-  provider: 'openai' | 'gemini' | 'anthropic';
+  provider: 'openai' | 'gemini' | 'anthropic' | 'xai';
   model: string;
   isDefault: boolean;
   status: Status;
