@@ -34,9 +34,13 @@ export interface RelayTransportDeps {
   readonly speaker?: () => Speaker;
   /** How long the server may take to say the link is ready. */
   readonly readyTimeoutMs?: number;
+  /** How long the microphone is still heard after the key is let go, so a last word is not cut. */
+  readonly talkTailMs?: number;
 }
 
 const READY_TIMEOUT_MS = 15_000;
+/** The audio comes from the microphone in blocks of about a tenth of a second. */
+const TALK_TAIL_MS = 350;
 
 /**
  * The WebSocket address of the page's own origin. A secure page gets a secure socket; a plain one
@@ -71,11 +75,18 @@ export function createRelayTransport(deps: RelayTransportDeps): LiveTransport {
   let microphone: Microphone | null = null;
   let speaker: Speaker | null = null;
   let stopped = false;
+  // Push-to-talk: audio goes out only while this is true; the key being let go ends the turn after
+  // a short tail. Without push-to-talk the microphone is always heard.
+  let pushToTalk = false;
+  let talking = true;
+  let tail: ReturnType<typeof setTimeout> | null = null;
   // The server counts the use; the page is told the totals and passes on what is new.
   const seen = { tokens: 0, cached: 0, cost: 0 };
 
   function release(): void {
     stopped = true;
+    if (tail) clearTimeout(tail);
+    tail = null;
     try {
       microphone?.stop();
     } catch {
@@ -99,6 +110,9 @@ export function createRelayTransport(deps: RelayTransportDeps): LiveTransport {
     async start(handlers: LiveTransportHandlers, session) {
       if (!session?.voiceTicket) throw new Error('The voice link needs its session.');
       stopped = false;
+      pushToTalk = session.pushToTalk === true;
+      talking = !pushToTalk;
+      tail = null;
       // A one-time ticket, asked with the page's own signed-in request.
       const ticket = await session.voiceTicket(session.sessionId);
       if (stopped) return;
@@ -202,7 +216,7 @@ export function createRelayTransport(deps: RelayTransportDeps): LiveTransport {
       microphone = mic;
       try {
         await mic.start((frame) => {
-          if (!stopped && socket) socket.send(frame);
+          if (!stopped && socket && talking) socket.send(frame);
         });
       } catch (error) {
         release();
@@ -213,6 +227,38 @@ export function createRelayTransport(deps: RelayTransportDeps): LiveTransport {
     stop() {
       release();
       return Promise.resolve();
+    },
+
+    setTalking(on) {
+      if (!pushToTalk || stopped || !socket) return;
+      if (on) {
+        // Pressed again within the tail: the turn goes on, nothing is ended or stopped twice.
+        if (tail) {
+          clearTimeout(tail);
+          tail = null;
+          return;
+        }
+        if (talking) return;
+        // Talking over the assistant: what it is saying stops, here and at the server.
+        speaker?.clear();
+        try {
+          socket.send(JSON.stringify({ type: 'stop_speaking' }));
+        } catch {
+          /* the link is going away */
+        }
+        talking = true;
+        return;
+      }
+      if (!talking || tail) return;
+      tail = setTimeout(() => {
+        tail = null;
+        talking = false;
+        try {
+          socket?.send(JSON.stringify({ type: 'end_turn' }));
+        } catch {
+          /* the link is going away */
+        }
+      }, deps.talkTailMs ?? TALK_TAIL_MS);
     },
 
     reportAction(view) {

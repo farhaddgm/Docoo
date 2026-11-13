@@ -181,7 +181,7 @@ afterEach(async () => {
 });
 
 async function start(
-  overrides: { language?: 'fa' | 'en' } = {},
+  overrides: { language?: 'fa' | 'en'; pushToTalk?: boolean } = {},
   mutate?: (rig: Fake) => void,
 ): Promise<{
   rig: Fake;
@@ -195,7 +195,12 @@ async function start(
     socket: nodeRelaySocketFactory,
     apiKey: 'xi-secret',
     baseUrl: rig.baseUrl,
-    config: { ttsModel: 'eleven_v4_turbo', voice: 'voice-1', language: overrides.language ?? 'fa' },
+    config: {
+      ttsModel: 'eleven_v4_turbo',
+      voice: 'voice-1',
+      language: overrides.language ?? 'fa',
+      ...(overrides.pushToTalk ? { pushToTalk: true } : {}),
+    },
   });
   const { events, seen } = recorder();
   engine.start(events);
@@ -422,6 +427,40 @@ describe('the ElevenLabs pipeline engine', () => {
   });
 });
 
+describe('push to talk', () => {
+  it('asks for manual commits and commits when the page ends the turn', async () => {
+    const { rig, engine, seen } = await start({ pushToTalk: true });
+    const url = new URL(rig.hearingUrls[0] ?? '', 'http://x');
+    expect(url.searchParams.get('commit_strategy')).toBe('manual');
+    engine.sendAudio(Buffer.alloc(960, 1));
+    expect(engine.endTurn()).toBe(true);
+    await until(() => rig.hearingSeen.length === 2, 'chunk and commit');
+    expect(rig.hearingSeen[1]).toEqual({
+      message_type: 'input_audio_chunk',
+      audio_base_64: '',
+      sample_rate: 24000,
+      commit: true,
+    });
+    // The committed transcript goes on to the executor like any other line.
+    json(rig.hearing[0] as ServerSocket, {
+      message_type: 'committed_transcript',
+      text: 'پروژه‌ها را بگو',
+    });
+    await until(() => seen.toolCalls.length === 1, 'tool call');
+    engine.close();
+  });
+
+  it('leaves the end of a turn to the provider when listening is always on', async () => {
+    const { rig, engine } = await start();
+    const url = new URL(rig.hearingUrls[0] ?? '', 'http://x');
+    expect(url.searchParams.get('commit_strategy')).toBe('turn_prediction');
+    expect(engine.endTurn()).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(rig.hearingSeen).toHaveLength(0);
+    engine.close();
+  });
+});
+
 describe('the pieces handed to the speaking model', () => {
   it('keeps whole sentences and splits only what is too long', () => {
     expect(speechPieces('سلام. حال شما چطور است؟ خوبم!')).toEqual([
@@ -484,9 +523,13 @@ describe('the relay core with the pipeline engine', () => {
       baseUrl: rig.baseUrl,
       config: { ttsModel: host.model, voice: host.voice, language: 'fa' },
     });
+    // The microphone is limited to about real time (hardening), so the clock of the relay moves one
+    // second for each one-second frame, as it does with a real page.
+    let clock = 0;
     const relay = startVoiceRelay({
       host,
       engine,
+      now: () => clock,
       client: {
         send: (data) => void out.push(data),
         close: () => undefined,
@@ -496,7 +539,10 @@ describe('the relay core with the pipeline engine', () => {
     });
     await until(() => out.some((m) => typeof m === 'string' && m.includes('"ready"')), 'ready');
     // Thirty one-second frames, as the browser sends them (each is below the relay's frame limit).
-    for (let second = 0; second < 30; second += 1) onData(Buffer.alloc(24_000 * 2), true);
+    for (let second = 0; second < 30; second += 1) {
+      clock += 1_000;
+      onData(Buffer.alloc(24_000 * 2), true);
+    }
     json(rig.hearing[0] as ServerSocket, {
       message_type: 'committed_transcript',
       text: 'پروژه‌ها را بگو',

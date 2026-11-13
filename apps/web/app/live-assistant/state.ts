@@ -72,6 +72,12 @@ export interface LiveState {
   /** A typed request is being answered. */
   readonly asking: boolean;
   readonly status: LiveStatus;
+  /** The owner chose push-to-talk: the microphone is heard only while the key is held. */
+  readonly pushToTalk: boolean;
+  /** The push-to-talk key is held now. */
+  readonly talking: boolean;
+  /** The assistant is waking up: its voice link is being opened again. */
+  readonly waking: boolean;
   /** Whether a way to talk to the provider is set up. Without one the feature stays switched off. */
   readonly available: boolean;
   /** Tokens used by the current (or, when off, the last) session, voice and executor together. */
@@ -96,6 +102,9 @@ export type LiveAction =
   | { readonly type: 'asking'; readonly on: boolean }
   | { readonly type: 'started'; readonly now: number }
   | { readonly type: 'usage'; readonly tokens: number }
+  | { readonly type: 'listening'; readonly pushToTalk: boolean }
+  | { readonly type: 'talking'; readonly on: boolean }
+  | { readonly type: 'waking'; readonly on: boolean }
   | { readonly type: 'sleep' }
   | { readonly type: 'wake' }
   | { readonly type: 'stop' }
@@ -112,6 +121,9 @@ export const initialLiveState = (position: PillPosition | null = null): LiveStat
   chat: [],
   asking: false,
   status: 'off',
+  pushToTalk: false,
+  talking: false,
+  waking: false,
   available: false,
   tokens: 0,
   startedAt: null,
@@ -147,6 +159,8 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
         channel: action.channel ?? 'voice',
         chat: [],
         asking: false,
+        talking: false,
+        waking: false,
         status: 'starting',
         tokens: 0,
         startedAt: null,
@@ -175,10 +189,27 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
       const tokens = Math.min(Number.MAX_SAFE_INTEGER, state.tokens + Math.floor(action.tokens));
       return tokens === state.tokens ? state : { ...state, tokens };
     }
+    case 'listening':
+      // The way of listening is chosen before a session starts and holds for all of it.
+      return state.pushToTalk === action.pushToTalk || isLiveActive(state.status)
+        ? state
+        : { ...state, pushToTalk: action.pushToTalk };
+    case 'talking':
+      // Only a running voice session that is awake can be talked to.
+      return state.talking === action.on || (action.on && state.status !== 'awake')
+        ? state
+        : { ...state, talking: action.on };
+    case 'waking':
+      return state.waking === action.on || (action.on && state.status !== 'asleep')
+        ? state
+        : { ...state, waking: action.on };
     case 'sleep':
-      return state.status === 'awake' ? { ...state, status: 'asleep' } : state;
+      // Asleep means nobody is holding the key and nothing is being opened.
+      return state.status === 'awake'
+        ? { ...state, status: 'asleep', talking: false, waking: false }
+        : state;
     case 'wake':
-      return state.status === 'asleep' ? { ...state, status: 'awake' } : state;
+      return state.status === 'asleep' ? { ...state, status: 'awake', waking: false } : state;
     case 'stop':
       if (state.status === 'error') return { ...state, status: 'off', error: null };
       return isLiveActive(state.status) ? { ...state, status: 'closing' } : state;
@@ -193,6 +224,8 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
             actions: [],
             chat: [],
             asking: false,
+            talking: false,
+            waking: false,
             hint: null,
           }
         : state;
@@ -210,6 +243,8 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
             timing: {},
             chat: [],
             asking: false,
+            talking: false,
+            waking: false,
             hint: null,
           };
     case 'warning':

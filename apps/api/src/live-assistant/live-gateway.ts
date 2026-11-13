@@ -198,6 +198,19 @@ export function startBlocker(
   return null;
 }
 
+/** The voice OpenAI speaks with when the owner chose none. */
+export const OPENAI_DEFAULT_VOICE = 'alloy';
+
+/**
+ * The voice a session speaks with: the owner's choice in the settings, else the provider's default
+ * (OpenAI); an ElevenLabs session has no default, so an empty choice stays empty and the service
+ * refuses to start it.
+ */
+export function voiceFor(brand: 'openai' | 'elevenlabs', settings: LiveSettings): string {
+  if (settings.voiceId !== '') return settings.voiceId;
+  return brand === 'openai' ? OPENAI_DEFAULT_VOICE : '';
+}
+
 /** Why typing to the assistant cannot start: the same two first, then the executor's model. */
 export function textBlocker(
   settings: LiveSettings,

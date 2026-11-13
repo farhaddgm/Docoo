@@ -6,7 +6,56 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Added
 
-- xAI Grok as a fourth model provider (ADR-0058). Add an "xAI Grok" connection on the AI providers page with a key from console.x.ai (the API account is topped up with its own credits, separate from any X or SuperGrok subscription); it can then run any stage, take part in dual-model research and appear in the evaluation lab, like the other providers. It uses xAI's Responses API at `api.x.ai/v1`: structured output, function tools and the server-side web search tool; reasoning tokens are read as reported on top of the output tokens, not inside them. Prices come from the same public catalog (`xai/…` entries). Migration 0092 adds the `xai` brand. Not yet tried against the real service: run the provider acceptance test with `XAI_API_KEY` first.
+- xAI Grok as a fourth model provider (ADR-0058). Add an "xAI Grok" connection on the AI providers page with a key from console.x.ai (the API account is topped up with its own credits, separate from any X or SuperGrok subscription); it can then run any stage, take part in dual-model research and appear in the evaluation lab, like the other providers. It uses xAI's Responses API at `api.x.ai/v1`: structured output, function tools and the server-side web search tool; reasoning tokens are read as reported on top of the output tokens, not inside them. Prices come from the same public catalog (`xai/…` entries). Migration 0093 adds the `xai` brand. Not yet tried against the real service: run the provider acceptance test with `XAI_API_KEY` first.
+
+## [0.62.0] — 2026-11-13
+
+### Added
+
+- Independent web search, first slice (ADR-0026 addendum 1.2, issue 137): the `WebSearchPort` in `@docoo/ingestion` and adapters for Exa and Tavily. A search never throws; it returns hits or a typed reason (unauthorized, quota exhausted, rate limited, timeout, unavailable, bad response, rejected, aborted, network), so the caller can carry on with the model's own search alone, as the owner decided. Not wired into the research stage yet, no setting, no key storage: nothing changes for a project. Checked against both real services (SPK-001 keys) as well as with a fake `fetch`.
+
+### Fixed
+
+- Voice assistant settings: the realtime voice model and the voice fields were a text box with the browser's own suggestion list, which only offers entries that match what is already typed, so a filled field showed no choices. They are now a list that always shows the whole catalog (realtime models first for OpenAI), with an "other" choice to type a value that is not in the catalog.
+
+### Changed
+
+- Voice assistant settings: the check of the voice link from the server is now its own card with a status badge, a "check again" button, the reason in words, and a collapsible technical section (model, response time, the kinds of the provider's first events; no content), so an "unexpected answer" can be traced without developer tools.
+
+## [0.61.1] — 2026-11-13
+
+Maintenance: one fix to the share links, the dependency updates, and the tests and documents around them. No new feature.
+
+### Fixed
+
+- Monitor share links: the faint mark on a shared screen showed no workspace name, because the name was read without the workspace's own row rules. It is now read inside them, and sent only when the mark is set to show it (a hidden setting sends nothing).
+
+### Changed
+
+- Dependencies: the ten open Dependabot updates went in together (#364 to #373): Next 16.4.5, the OpenTelemetry group (seven packages), `pdfjs-dist` 6.5.438, `@types/node` 26.6.6, the CodeQL and `pnpm/action-setup` actions, and the Temporal, rclone and SeaweedFS image digests.
+- The four NestJS packages (`common`, `core`, `platform-fastify`, `testing`) moved together to 12.4.0 instead of `common` alone, and `@fastify/static` to 10.1.10, which `platform-fastify` 12.4.0 requires. 10.1.11 was newer than the workspace's seven-day release age, so it was left.
+
+### Added
+
+- An end-to-end test of the share link (the owner makes it, a visitor opens it with the password, revoking ends it) and an integration test of it against a real database (stored digests, password, room left, expiry, revoking, one workspace never reaching another's links).
+- ADR-0056 records the share link, the five measures around it, the residual risks, and that the owner's request reversed the earlier "no public link" decision.
+- ADR-0026 addendum 1.2 records the owner's hybrid decision for web research: the model's own search always runs, and the independent search runs beside it when its service is reachable, falling back to the model's search alone on a connection problem. The SPK-001 protocol (document 16) now says what the endpoint check could and could not confirm.
+
+## [0.61.0] — 2026-11-12
+
+### Added
+
+- Push to talk and sleep for the voice assistant (ADR-0055 §4-7, ADR-0057 §12). With "push to talk" chosen in the assistant settings, the microphone is heard only while the button on the pill is held (with the mouse, a finger, or Space/Enter on the focused button); letting go ends the turn and the assistant answers. Holding it again while the assistant speaks stops it. With either way of listening, the assistant now goes to sleep after the quiet time chosen in the settings (`idle_sleep_s`, 120 s by default) or on the pill's "Sleep" button: the voice link is closed and the microphone is let go, so nothing leaves the browser and nothing is paid for, while the session stays open. A click on "Wake up" (or pressing the push-to-talk button) opens the voice link again for the same session. It never sleeps while a change waits for you, while the assistant is speaking or thinking, or while the key is held. Waking with the phrase "Hi Docoo" is not built yet. The settings page already promised this; it now holds.
+- Monitor share links (migration 0092). The owner makes a link for the viewer or the voice monitor from the monitor page, with a password, an expiry (or none) and the most screens that may watch at once. Anyone with the address and the password sees the monitor at `/{locale}/monitor/share/{token}` without an account, through the same projection and settings as the owner's own window. The address and watcher sessions are stored as digests and the password as an argon2 hash; the address is shown once, wrong passwords are rate-limited, a screen away for 45 seconds loses its place, and a link can be revoked at once. API: `GET/POST /workspaces/{w}/monitor/links`, `DELETE .../links/{id}`, and the public `/public/monitor/{token}` (`GET`, `POST unlock`, `GET view`).
+
+### Changed
+
+- Voice relay hardening: the browser link is limited. Microphone audio is accepted at up to twice real time (with a two-second burst) and anything beyond is dropped, control messages are limited to 20 a second, and a link that keeps going past the limits is closed. A browser that cannot take the assistant's audio as fast as it comes gets no unbounded buffer on the server: past 1 MiB waiting, the audio is dropped; past 4 MiB, the link is closed. A page that sends at real time is not affected.
+
+### Fixed
+
+- Voice assistant: a voice link that opens later in the same session (after sleep) now continues the session's totals. The server keeps the largest total it is told, so a link that began from zero would have hidden its cost until it passed the earlier ones, and the cost cap would have been reached too late.
+- Voice assistant: the voice chosen in the assistant settings is now used for OpenAI sessions too (it was always `alloy`, although the page says an empty field means the provider default). An empty field still means `alloy`.
 
 ## [0.60.0] — 2026-11-11
 

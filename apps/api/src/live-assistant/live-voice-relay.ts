@@ -7,6 +7,16 @@ import {
 } from '@docoo/contracts';
 
 import type { EngineUsage, VoiceEngine } from './voice-engine.js';
+import {
+  CLIENT_BUFFER_HARD_BYTES,
+  CLIENT_BUFFER_SOFT_BYTES,
+  CONTROL_BURST,
+  CONTROL_MESSAGES_PER_SECOND,
+  MIC_BURST_BYTES,
+  MIC_RATE_BYTES_PER_SECOND,
+  createStrikes,
+  createTokenBucket,
+} from './voice-flow.js';
 
 /**
  * The relay between the browser and a voice provider (ADR-0055 §4-3, ADR-0057): audio and a few
@@ -43,6 +53,8 @@ export interface ClientLink {
   close(code?: number): void;
   onMessage(listener: (data: Buffer, isBinary: boolean) => void): void;
   onClose(listener: () => void): void;
+  /** Bytes sent but not yet taken by the browser; when the link can tell, a slow page is held back. */
+  bufferedBytes?(): number;
 }
 
 export interface RelayOptions {
@@ -51,6 +63,19 @@ export interface RelayOptions {
   readonly engine: VoiceEngine;
   /** How long the provider may take to accept the session. */
   readonly readyTimeoutMs?: number;
+  /**
+   * What earlier voice links of the same session already used. The server keeps the largest total it
+   * was told, so a link that starts from zero would hide its use until it passed the earlier ones;
+   * with the baseline it reports the sum. The browser is still told only this link's own use.
+   */
+  readonly baseline?: {
+    readonly inputTokens: number;
+    readonly outputTokens: number;
+    readonly cachedInputTokens: number;
+    readonly costUsd: number;
+  };
+  /** The clock of the rate limits; tests give a scripted one. */
+  readonly now?: () => number;
 }
 
 /** What the model is told after the executor answered: short, with no raw data. */
@@ -72,6 +97,17 @@ function toolOutputOf(answer: LiveAskAnswer): string {
 export function startVoiceRelay(options: RelayOptions): { stop: (reason: string) => void } {
   const { host, client, engine } = options;
   const timers = new Set<ReturnType<typeof setTimeout>>();
+  const micBucket = createTokenBucket({
+    ratePerSecond: MIC_RATE_BYTES_PER_SECOND,
+    burst: MIC_BURST_BYTES,
+    ...(options.now ? { now: options.now } : {}),
+  });
+  const controlBucket = createTokenBucket({
+    ratePerSecond: CONTROL_MESSAGES_PER_SECOND,
+    burst: CONTROL_BURST,
+    ...(options.now ? { now: options.now } : {}),
+  });
+  const strikes = createStrikes();
   let closed = false;
   let ready = false;
   let activity: LiveActivity = 'listening';
@@ -136,7 +172,19 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     totals.characters += step.characters ?? 0;
     totals.costUsd = Math.round((totals.costUsd + cost) * 1e6) / 1e6;
     try {
-      const outcome = await host.record({ ...totals }, activity);
+      const base = options.baseline;
+      const outcome = await host.record(
+        base
+          ? {
+              ...totals,
+              inputTokens: base.inputTokens + totals.inputTokens,
+              outputTokens: base.outputTokens + totals.outputTokens,
+              cachedInputTokens: base.cachedInputTokens + totals.cachedInputTokens,
+              costUsd: Math.round((base.costUsd + totals.costUsd) * 1e6) / 1e6,
+            }
+          : { ...totals },
+        activity,
+      );
       toClient({
         type: 'usage',
         inputTokens: totals.inputTokens,
@@ -188,6 +236,14 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     },
     audio(pcm) {
       if (closed || pcm.length === 0) return;
+      // A browser that cannot take the audio as it comes gets no unbounded buffer on the server:
+      // past the soft limit the audio is dropped, past the hard one the link is closed.
+      const waiting = client.bufferedBytes?.() ?? 0;
+      if (waiting > CLIENT_BUFFER_HARD_BYTES) {
+        end('error');
+        return;
+      }
+      if (waiting > CLIENT_BUFFER_SOFT_BYTES) return;
       if (!speaking) {
         speaking = true;
         setActivity('speaking');
@@ -230,7 +286,18 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     if (closed) return;
     if (isBinary) {
       if (!ready || data.length === 0 || data.length > LIVE_VOICE_MAX_FRAME_BYTES) return;
+      // The microphone may come at a little above real time; more than that is dropped, and a
+      // link that keeps doing it is closed.
+      if (!micBucket.take(data.length)) {
+        if (strikes.dropped()) end('error');
+        return;
+      }
+      strikes.accepted();
       engine.sendAudio(data);
+      return;
+    }
+    if (!controlBucket.take(1)) {
+      if (strikes.dropped()) end('error');
       return;
     }
     let parsed: unknown;
@@ -244,6 +311,10 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     if (message.data.type === 'stop_speaking') {
       engine.cancelSpeech();
       toClient({ type: 'interrupt' });
+      return;
+    }
+    if (message.data.type === 'end_turn') {
+      if (ready && engine.endTurn()) setActivity('thinking');
       return;
     }
     const { capability, status, summary } = message.data;

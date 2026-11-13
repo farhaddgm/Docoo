@@ -37,6 +37,7 @@ import { StageChatController } from '../src/stage-chat/stage-chat.controller.js'
 import { SmartController } from '../src/smart/smart.controller.js';
 import { LiveAssistantController } from '../src/live-assistant/live-assistant.controller.js';
 import { MonitorController } from '../src/monitor/monitor.controller.js';
+import { MonitorShareAdminController } from '../src/monitor/monitor-share.controller.js';
 import { VoiceController } from '../src/voice/voice.controller.js';
 import { SourcesController } from '../src/sources/sources.controller.js';
 import { TopicsController } from '../src/topics/topics.controller.js';
@@ -348,6 +349,9 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/monitor/alias/:projectId': 'monitor.use',
   'PUT workspaces/:workspaceId/monitor/alias/:projectId': 'monitor.use',
   'POST workspaces/:workspaceId/monitor/events': 'monitor.use',
+  'GET workspaces/:workspaceId/monitor/links': 'monitor.use',
+  'POST workspaces/:workspaceId/monitor/links': 'monitor.use',
+  'DELETE workspaces/:workspaceId/monitor/links/:linkId': 'monitor.use',
 };
 
 const controllers = [
@@ -377,6 +381,7 @@ const controllers = [
   VoiceController,
   LiveAssistantController,
   MonitorController,
+  MonitorShareAdminController,
   NotificationsController,
 ];
 

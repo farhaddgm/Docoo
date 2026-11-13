@@ -133,14 +133,22 @@ export function LiveAssistantPill() {
 
   const nearCap = state.warning && !failed;
   const waitingForYou = !failed && state.actions.some(isOpen);
+  const voice = state.channel === 'voice';
+  const awake = state.status === 'awake';
+  const asleep = state.status === 'asleep';
+  const canTalk = voice && state.pushToTalk && (awake || asleep) && !state.waking;
   const statusText =
     failed && state.error
       ? text.card.errors[state.error]
-      : waitingForYou
-        ? text.pill.waiting
-        : nearCap
-          ? text.pill.nearCap
-          : text.status[state.status];
+      : state.waking
+        ? text.pill.waking
+        : state.talking
+          ? text.pill.talking
+          : waitingForYou
+            ? text.pill.waiting
+            : nearCap
+              ? text.pill.nearCap
+              : text.status[state.status];
   const style = position
     ? { left: position.x, top: position.y, bottom: 'auto', transform: 'none' }
     : undefined;
@@ -171,6 +179,47 @@ export function LiveAssistantPill() {
       <span className="live-pill-tokens" title={text.pill.tokensTitle}>
         {formatNumber(locale, state.tokens)} {text.pill.tokens}
       </span>
+      {canTalk && (
+        <button
+          type="button"
+          className="live-pill-talk"
+          aria-pressed={state.talking}
+          onPointerDown={(event) => {
+            event.currentTarget.setPointerCapture(event.pointerId);
+            liveAssistant.talk(true);
+          }}
+          onPointerUp={() => liveAssistant.talk(false)}
+          onPointerCancel={() => liveAssistant.talk(false)}
+          onKeyDown={(event) => {
+            // Held down with the keyboard too: Space or Enter, once, not on every repeat.
+            if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) {
+              event.preventDefault();
+              liveAssistant.talk(true);
+            }
+          }}
+          onKeyUp={(event) => {
+            if (event.key === ' ' || event.key === 'Enter') liveAssistant.talk(false);
+          }}
+          onBlur={() => liveAssistant.talk(false)}
+        >
+          {text.pill.talk}
+        </button>
+      )}
+      {voice && asleep && !state.waking && !state.pushToTalk && (
+        <button type="button" className="live-pill-wake" onClick={() => void liveAssistant.wake()}>
+          {text.pill.wake}
+        </button>
+      )}
+      {voice && awake && !state.talking && (
+        <button
+          type="button"
+          className="live-pill-sleep"
+          title={text.pill.sleepTitle}
+          onClick={() => void liveAssistant.sleep()}
+        >
+          {text.pill.sleep}
+        </button>
+      )}
       {closeShown && (
         <button
           type="button"

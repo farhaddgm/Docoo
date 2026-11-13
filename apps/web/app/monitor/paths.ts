@@ -15,11 +15,12 @@ export const monitorWindowPath = (locale: Locale, kind: MonitorKind): string =>
 /** A small separate window: the owner drags it to the room screen and goes full screen. */
 export const monitorWindowFeatures = 'popup=yes,width=1280,height=720';
 
-const WINDOW_PATH = /^\/(?:fa|en)\/monitor\/(?:voice|viewer)\/?$/u;
+const WINDOW_PATH = /^\/(?:fa|en)\/monitor\/(?:(?:voice|viewer)|share\/[A-Za-z0-9_-]{43})\/?$/u;
 
 /**
  * Whether a path is a monitor window. Such a window shows nothing of the back office: no menu, no
  * assistant button, no "AI is working" notice, and search engines and referrers are kept out.
+ * A share link page is one too; its address is a secret, so no referrer matters most there.
  */
 export const isMonitorWindowPath = (pathname: string | null | undefined): boolean =>
   typeof pathname === 'string' && WINDOW_PATH.test(pathname);

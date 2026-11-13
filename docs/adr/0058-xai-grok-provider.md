@@ -25,7 +25,7 @@
 
 ## ۳. تصمیم
 
-۱. `xai` یک `ProviderKind` تازه است (مقدار تازهٔ enum دیتابیس، migration 0092؛ بدون جدول یا ستون تازه).
+۱. `xai` یک `ProviderKind` تازه است (مقدار تازهٔ enum دیتابیس، migration 0093؛ بدون جدول یا ستون تازه).
 ۲. `XaiAdapter` همان قرارداد `ModelProviderAdapter` را اجرا می‌کند و از Responses API استفاده می‌کند. ساختن ورودی (`function_call`/`function_call_output`) با OpenAI مشترک است.
 ۳. تفاوت‌ها نسبت به آداپتر OpenAI (همه از جدول بالا):
 

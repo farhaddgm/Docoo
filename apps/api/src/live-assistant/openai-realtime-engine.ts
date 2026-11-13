@@ -134,7 +134,7 @@ export function createOpenAiRealtimeEngine(options: {
               input: {
                 format: { type: 'audio/pcm', rate: 24000 },
                 transcription: { model: 'gpt-4o-mini-transcribe', language: config.language },
-                turn_detection: { type: 'semantic_vad' },
+                turn_detection: config.pushToTalk ? null : { type: 'semantic_vad' },
               },
               output: { format: { type: 'audio/pcm', rate: 24000 }, voice: config.voice },
             },
@@ -166,6 +166,13 @@ export function createOpenAiRealtimeEngine(options: {
     },
     cancelSpeech() {
       send({ type: 'response.cancel' });
+    },
+    endTurn() {
+      // With automatic turn detection the provider finds the end of a turn; a page cannot force one.
+      if (!config.pushToTalk || !ready || closed) return false;
+      send({ type: 'input_audio_buffer.commit' });
+      send({ type: 'response.create' });
+      return true;
     },
     close() {
       if (closed) return;

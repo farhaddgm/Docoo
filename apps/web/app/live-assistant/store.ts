@@ -45,12 +45,16 @@ export interface LiveStoreDeps {
   readonly now: () => number;
   /** How often the open session reports its usage to the server (also its heartbeat). */
   readonly heartbeatMs?: number;
+  /** How often an awake session is checked for being idle (tests make it short). */
+  readonly idleCheckMs?: number;
   readonly timers?: {
     readonly every: (work: () => void, ms: number) => () => void;
   };
 }
 
 export const HEARTBEAT_MS = 15_000;
+/** How often an awake session is checked for having been idle long enough to go to sleep. */
+export const IDLE_CHECK_MS = 5_000;
 /** Without an answer from the server for this many reports in a row the session is closed. */
 export const MAX_MISSED_HEARTBEATS = 3;
 /** The transcript lines waiting to be sent; the oldest are dropped past this, never the newest. */
@@ -149,6 +153,13 @@ export function createLiveStore(deps: LiveStoreDeps) {
   let stopBeating: (() => void) | null = null;
   let beating = false;
   let cachedTokens = 0;
+  // How the owner chose to listen (settings) and when the session last had anything going on.
+  let idleSleepS = 0;
+  let lastActive = deps.now();
+  let stopIdleCheck: (() => void) | null = null;
+  // The push-to-talk key is held (kept apart from the state so waking can carry a press through).
+  let holding = false;
+  let waking = false;
   let reportedActivity: 'listening' | 'speaking' | 'thinking' = 'listening';
   let lastSentActivity = '';
   const every =
@@ -188,6 +199,8 @@ export function createLiveStore(deps: LiveStoreDeps) {
   function forgetServerSession(): void {
     stopBeating?.();
     stopBeating = null;
+    stopIdleCheck?.();
+    stopIdleCheck = null;
     sessionId = null;
     pending = [];
   }
@@ -199,6 +212,9 @@ export function createLiveStore(deps: LiveStoreDeps) {
     const id = sessionId;
     stopBeating?.();
     stopBeating = null;
+    stopIdleCheck?.();
+    stopIdleCheck = null;
+    holding = false;
     transport = null;
     lock = null;
     try {
@@ -254,6 +270,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
 
   /** Takes a view the server gave into the state; one that ended is told to the model too. */
   function accept(view: LiveActionView, options: { report: boolean }): void {
+    touch();
     dispatch({ type: 'action', view, at: deps.now() });
     if (options.report && !isOpen(view) && view.status !== 'refused') {
       try {
@@ -417,6 +434,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
       .filter((line) => !line.failed)
       .slice(-CONTEXT_LINES)
       .map((line) => ({ role: line.role, content: line.text }));
+    touch();
     addLine('user', text);
     dispatch({ type: 'asking', on: true });
     try {
@@ -442,6 +460,110 @@ export function createLiveStore(deps: LiveStoreDeps) {
     } finally {
       dispatch({ type: 'asking', on: false });
     }
+  }
+
+  // ---- listening: push to talk, sleep and waking up ---------------------------------------
+
+  /** Something is going on in the conversation: the idle time starts again. */
+  function touch(): void {
+    lastActive = deps.now();
+  }
+
+  /**
+   * Goes to sleep: the voice link is closed and the microphone is let go, so nothing leaves the
+   * browser and nothing is paid for, but the session stays open at the server and is woken by a
+   * click or by pressing the push-to-talk key. Never while a change waits for the person, while
+   * the assistant is speaking or thinking, or while the key is held.
+   */
+  async function sleep(): Promise<void> {
+    const current = transport;
+    if (state.status !== 'awake' || state.channel !== 'voice' || !current) return;
+    if (state.talking || state.asking || state.actions.some(isOpen)) return;
+    // Events of the link being closed are dropped from here on.
+    transport = null;
+    holding = false;
+    reportedActivity = 'listening';
+    dispatch({ type: 'sleep' });
+    try {
+      await current.stop();
+    } catch {
+      /* best effort: the browser releases the microphone with the page at the latest */
+    }
+    void beat();
+  }
+
+  /** Opens the voice link again for the same session; the push-to-talk key may be held meanwhile. */
+  async function wake(): Promise<void> {
+    if (state.status !== 'asleep' || waking || !factory || !sessionId || !backend) return;
+    const id = sessionId;
+    waking = true;
+    dispatch({ type: 'waking', on: true });
+    const created = factory();
+    transport = created;
+    try {
+      await created.start(handlersFor(created), {
+        sessionId: id,
+        pushToTalk: state.pushToTalk,
+        ...(backend.voiceTicket ? { voiceTicket: backend.voiceTicket } : {}),
+      });
+    } catch (error) {
+      waking = false;
+      // stop() was pressed while the link was opening: it already tore everything down.
+      if (transport !== created || currentStatus() !== 'asleep') return;
+      const closing = sessionErrorOf(error);
+      if (closing) {
+        closeBecause(closing);
+        return;
+      }
+      await teardown('error');
+      dispatch({ type: 'failed', error: 'start_failed' });
+      return;
+    }
+    waking = false;
+    if (transport !== created || currentStatus() !== 'asleep') {
+      // Stopped, or put to sleep again, before the link was ready.
+      if (transport === created) transport = null;
+      try {
+        await created.stop();
+      } catch {
+        /* best effort */
+      }
+      return;
+    }
+    touch();
+    dispatch({ type: 'wake' });
+    void beat();
+    // The key was pressed to wake the assistant and is still down: start listening to it.
+    if (holding && state.pushToTalk) talk(true);
+  }
+
+  /**
+   * The push-to-talk key goes down or up. On a sleeping assistant, down wakes it first. Only a
+   * session that was started in push-to-talk mode obeys it.
+   */
+  function talk(on: boolean): void {
+    if (state.channel !== 'voice' || !state.pushToTalk) return;
+    holding = on;
+    if (on && state.status === 'asleep') {
+      void wake();
+      return;
+    }
+    if (state.status !== 'awake') return;
+    touch();
+    dispatch({ type: 'talking', on });
+    try {
+      transport?.setTalking?.(on);
+    } catch {
+      /* a failing key press must not end the session */
+    }
+  }
+
+  /** Checks whether an awake session has been quiet long enough to go to sleep (settings: idle_sleep_s). */
+  function checkIdle(): void {
+    if (idleSleepS <= 0 || state.status !== 'awake' || state.channel !== 'voice') return;
+    if (state.talking || state.asking || reportedActivity !== 'listening') return;
+    if (state.actions.some(isOpen)) return;
+    if (deps.now() - lastActive >= idleSleepS * 1000) void sleep();
   }
 
   async function beat(): Promise<void> {
@@ -476,6 +598,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
       onActivity: (activity) => {
         if (transport !== owner) return;
         reportedActivity = activity;
+        touch();
         // A change of state is worth an early report; the heartbeat alone would lag by seconds.
         if (currentActivity() !== lastSentActivity) void beat();
       },
@@ -497,10 +620,14 @@ export function createLiveStore(deps: LiveStoreDeps) {
         return propose(capability, params, tainted);
       },
       onSpeech: (transcript) => {
-        if (transport === owner) void answerByVoice(transcript);
+        if (transport !== owner) return;
+        touch();
+        void answerByVoice(transcript);
       },
       onAnswer: (answer) => {
-        if (transport === owner && sessionId) ingestAnswer(answer);
+        if (transport !== owner || !sessionId) return;
+        touch();
+        ingestAnswer(answer);
       },
       onServerEnded: () => {
         // The server closed the session (a cap, the owner's switch): ask it why, now, not at the next beat.
@@ -556,6 +683,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
         sessionId
           ? {
               sessionId,
+              pushToTalk: state.pushToTalk,
               ...(backend?.voiceTicket ? { voiceTicket: backend.voiceTicket } : {}),
             }
           : undefined,
@@ -568,9 +696,11 @@ export function createLiveStore(deps: LiveStoreDeps) {
       return;
     }
     dispatch({ type: 'started', now: deps.now() });
+    touch();
     if (backend && sessionId) {
       stopBeating = every(() => void beat(), deps.heartbeatMs ?? HEARTBEAT_MS);
     }
+    if (!typed) stopIdleCheck = every(checkIdle, deps.idleCheckMs ?? IDLE_CHECK_MS);
   }
 
   function start(options: { channel?: LiveChannel } = {}): Promise<void> {
@@ -612,6 +742,20 @@ export function createLiveStore(deps: LiveStoreDeps) {
     answerByVoice,
     ask,
     refresh,
+    /** The push-to-talk key goes down (true) or up (false); on a sleeping assistant, down wakes it. */
+    talk,
+    /** Puts the assistant to sleep now (the voice link is closed, the session stays open). */
+    sleep,
+    /** Wakes a sleeping assistant (opens the voice link again for the same session). */
+    wake,
+    /**
+     * Tells the store how the owner chose to listen: push-to-talk or always, and after how many
+     * seconds of quiet the assistant sleeps (0: never). A session already running keeps what it began with.
+     */
+    setListening: (options: { pushToTalk: boolean; idleSleepS: number }): void => {
+      idleSleepS = Math.max(0, Math.floor(options.idleSleepS));
+      dispatch({ type: 'listening', pushToTalk: options.pushToTalk });
+    },
     /** Seconds left to confirm a change, on this browser's clock; 0 when its time is over. */
     secondsLeft: (view: LiveActionView): number => remainingFor(state.timing, view, deps.now()),
     move: (position: PillPosition | null): void => dispatch({ type: 'move', position }),

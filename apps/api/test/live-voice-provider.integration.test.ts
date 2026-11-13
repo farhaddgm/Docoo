@@ -9,7 +9,7 @@ import type { WorkspaceRequestContext } from '../src/common/request-context.js';
 import { WorkspaceDatabase } from '../src/common/workspace-database.js';
 import { LiveCapabilityRegistry } from '../src/live-assistant/capabilities.js';
 import { LiveAssistantService } from '../src/live-assistant/live-assistant.service.js';
-import { pipelinePrice } from '../src/live-assistant/live-store.js';
+import { pipelinePrice, voiceUsage } from '../src/live-assistant/live-store.js';
 import { adminUrl } from './support/harness.js';
 
 /**
@@ -210,5 +210,32 @@ describe.skipIf(!adminUrl)('the voice brand of the assistant (real database)', (
     } finally {
       client.release();
     }
+  });
+
+  it('reads what the voice provider used in a session apart from the executor, so a later link continues from it', async () => {
+    choose(ids.openai, 'gpt-realtime');
+    const session = await service.startSession(context(), 'voice');
+    // The voice link used 0.5 USD; the executor, counted in its own columns, 0.2 USD.
+    await admin.query(
+      `update live_sessions
+          set input_tokens = 100, output_tokens = 40, cached_input_tokens = 30, cost_usd = 0.5,
+              executor_input_tokens = 7, executor_output_tokens = 3, executor_cost_usd = 0.2
+        where id = $1`,
+      [session.id],
+    );
+    const database = new WorkspaceDatabase(pool);
+    expect(await database.run(context(), (client) => voiceUsage(client, session.id))).toEqual({
+      inputTokens: 100,
+      outputTokens: 40,
+      cachedInputTokens: 30,
+      costUsd: 0.5,
+    });
+    expect(await database.run(context(), (client) => voiceUsage(client, randomUUID()))).toEqual({
+      inputTokens: 0,
+      outputTokens: 0,
+      cachedInputTokens: 0,
+      costUsd: 0,
+    });
+    await service.endSession(context(), session.id, 'user');
   });
 });

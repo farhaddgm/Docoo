@@ -54,6 +54,11 @@ export const liveVoiceClientMessageSchema = z.discriminatedUnion('type', [
   }),
   /** The person asked the assistant to stop speaking. */
   z.object({ type: z.literal('stop_speaking') }),
+  /**
+   * The person let go of the push-to-talk key: what was said is one turn, answer it now. Only
+   * a session in push-to-talk mode obeys it; in always-listening mode the provider decides by itself.
+   */
+  z.object({ type: z.literal('end_turn') }),
 ]);
 export type LiveVoiceClientMessage = z.infer<typeof liveVoiceClientMessageSchema>;
 

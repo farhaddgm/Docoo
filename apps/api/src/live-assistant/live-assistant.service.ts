@@ -59,6 +59,7 @@ import {
   sessionBlocker,
   startBlocker,
   textBlocker,
+  voiceFor,
   type LiveSettings,
 } from './live-gateway.js';
 import {
@@ -85,6 +86,7 @@ import {
   sessionTainted,
   supersedeActiveSession,
   toActionView,
+  voiceUsage,
   type ActionRow,
 } from './live-store.js';
 
@@ -594,10 +596,15 @@ export class LiveAssistantService {
       const access = await this.runtime.voiceAccessFor(client2, gate.settings.connectionId);
       // A brand whose engine is not built yet is refused here as well, never half opened.
       if (providerBlocker(access.provider, gate.settings) !== null) return null;
-      return { settings: gate.settings, access };
+      return {
+        settings: gate.settings,
+        access,
+        // A link that opens later in the same session (after sleep) continues its totals.
+        baseline: await voiceUsage(client2, sessionId),
+      };
     });
     if (!prepared) return false;
-    const { settings, access } = prepared;
+    const { settings, access, baseline } = prepared;
     const host = this.relayHost(context, sessionId, settings, access.provider);
     this.relays.get(sessionId)?.stop('superseded');
     const engine =
@@ -610,6 +617,7 @@ export class LiveAssistantService {
               ttsModel: host.model,
               voice: host.voice,
               language: host.language === 'en' ? 'en' : 'fa',
+              pushToTalk: settings.listeningMode === 'push_to_talk',
             },
           })
         : createOpenAiRealtimeEngine({
@@ -621,9 +629,10 @@ export class LiveAssistantService {
               voice: host.voice,
               language: host.language,
               instructions: host.instructions,
+              pushToTalk: settings.listeningMode === 'push_to_talk',
             },
           });
-    const relay = startVoiceRelay({ host, client, engine });
+    const relay = startVoiceRelay({ host, client, engine, baseline });
     this.relays.set(sessionId, relay);
     client.onClose(() => {
       if (this.relays.get(sessionId) === relay) this.relays.delete(sessionId);
@@ -642,7 +651,7 @@ export class LiveAssistantService {
     const model = pipeline ? settings.model.trim() || ELEVENLABS_DEFAULT_TTS_MODEL : settings.model;
     return {
       model,
-      voice: pipeline ? settings.voiceId : 'alloy',
+      voice: voiceFor(brand, settings),
       language: settings.language === 'en' ? 'en' : 'fa',
       instructions: voiceInstructions(settings),
       ask: (text) => this.ask(context, sessionId, { text, context: [] }),

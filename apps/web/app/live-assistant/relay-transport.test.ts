@@ -80,7 +80,7 @@ const ticket = {
   expiresInMs: 30000,
 };
 
-function rig(options: { readyTimeoutMs?: number } = {}) {
+function rig(options: { readyTimeoutMs?: number; talkTailMs?: number } = {}) {
   let socket: FakeSocket | null = null;
   const mic = fakeMic();
   const spk = fakeSpeaker();
@@ -318,5 +318,106 @@ describe('the voice transport through the server', () => {
     const before = r.socket.sent.length;
     r.transport.reportAction?.(view);
     expect(r.socket.sent.length).toBe(before);
+  });
+});
+
+describe('push to talk on the voice transport', () => {
+  const sentJson = (socket: FakeSocket) =>
+    socket.sent
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => JSON.parse(item) as Record<string, unknown>);
+  const frames = (socket: FakeSocket) => socket.sent.filter((item) => item instanceof ArrayBuffer);
+
+  // Not `r.tick()`: that waits on a timer, and some of these tests have the timers faked.
+  const settle = async () => {
+    for (let i = 0; i < 10; i += 1) await Promise.resolve();
+  };
+
+  async function pushToTalk(talkTailMs = 350) {
+    const r = rig({ talkTailMs });
+    const started = r.transport.start(r.live.h, { ...r.session, pushToTalk: true });
+    await settle();
+    r.socket.say({ type: 'ready' });
+    await started;
+    return r;
+  }
+
+  it('sends no audio until the key is down, and stops sending after it is let go and the tail has passed', async () => {
+    vi.useFakeTimers();
+    try {
+      const r = await pushToTalk(350);
+      r.mic.frame(new Int16Array([1]).buffer);
+      expect(frames(r.socket)).toHaveLength(0); // nothing leaves the browser by itself
+      r.transport.setTalking?.(true);
+      r.mic.frame(new Int16Array([2]).buffer);
+      r.mic.frame(new Int16Array([3]).buffer);
+      expect(frames(r.socket)).toHaveLength(2);
+      r.transport.setTalking?.(false);
+      // The last tenth of a second of a word still gets through.
+      r.mic.frame(new Int16Array([4]).buffer);
+      expect(frames(r.socket)).toHaveLength(3);
+      expect(sentJson(r.socket).some((m) => m['type'] === 'end_turn')).toBe(false);
+      await vi.advanceTimersByTimeAsync(350);
+      expect(sentJson(r.socket).filter((m) => m['type'] === 'end_turn')).toHaveLength(1);
+      r.mic.frame(new Int16Array([5]).buffer);
+      expect(frames(r.socket)).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("puts the assistant's own speech down when the key goes down, here and at the server", async () => {
+    const r = await pushToTalk();
+    r.transport.setTalking?.(true);
+    expect(r.spk.log.cleared).toBe(1);
+    expect(sentJson(r.socket).filter((m) => m['type'] === 'stop_speaking')).toHaveLength(1);
+    r.transport.setTalking?.(true); // a repeat changes nothing
+    expect(sentJson(r.socket).filter((m) => m['type'] === 'stop_speaking')).toHaveLength(1);
+  });
+
+  it('keeps the turn going when the key is pressed again within the tail', async () => {
+    vi.useFakeTimers();
+    try {
+      const r = await pushToTalk(350);
+      r.transport.setTalking?.(true);
+      r.transport.setTalking?.(false);
+      await vi.advanceTimersByTimeAsync(200);
+      r.transport.setTalking?.(true);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(sentJson(r.socket).some((m) => m['type'] === 'end_turn')).toBe(false);
+      r.mic.frame(new Int16Array([9]).buffer);
+      expect(frames(r.socket)).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does nothing about the key when the microphone is always on', async () => {
+    const r = rig();
+    const started = r.transport.start(r.live.h, r.session);
+    await settle();
+    r.socket.say({ type: 'ready' });
+    await started;
+    r.mic.frame(new Int16Array([1]).buffer);
+    expect(frames(r.socket)).toHaveLength(1);
+    r.transport.setTalking?.(true);
+    r.transport.setTalking?.(false);
+    r.mic.frame(new Int16Array([2]).buffer);
+    expect(frames(r.socket)).toHaveLength(2);
+    expect(sentJson(r.socket)).toEqual([]);
+  });
+
+  it('forgets a pending end of turn when the link is stopped', async () => {
+    vi.useFakeTimers();
+    try {
+      const r = await pushToTalk(350);
+      r.transport.setTalking?.(true);
+      r.transport.setTalking?.(false);
+      await r.transport.stop();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(sentJson(r.socket).some((m) => m['type'] === 'end_turn')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -21,6 +21,11 @@ describe('monitor window paths', () => {
     expect(isMonitorWindowPath('/fa/monitor')).toBe(false);
     expect(isMonitorWindowPath('/fa/monitor/settings')).toBe(false);
     expect(isMonitorWindowPath('/fa/monitor/viewer/extra')).toBe(false);
+    // A share link page is a bare window too, but only with a whole token.
+    const token = 'a'.repeat(43);
+    expect(isMonitorWindowPath(`/fa/monitor/share/${token}`)).toBe(true);
+    expect(isMonitorWindowPath('/fa/monitor/share/short')).toBe(false);
+    expect(isMonitorWindowPath('/fa/monitor/share')).toBe(false);
     expect(isMonitorWindowPath('/de/monitor/viewer')).toBe(false);
     expect(isMonitorWindowPath('/fa/projects')).toBe(false);
     expect(isMonitorWindowPath(null)).toBe(false);
