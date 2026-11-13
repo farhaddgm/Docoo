@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "dd0b2586010f06faa256dabbbf6040d8f3be9529"
+    "source_commit": "1f607f6ab2978f0bab6b68756df7854128a1ff4e"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-11-13T09:43:14.671Z",
+    "synced_at": "2026-11-13T14:01:32.497Z",
     "created": 0,
-    "updated": 0,
-    "unchanged": 74,
+    "updated": 1,
+    "unchanged": 73,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -1030,16 +1030,16 @@
     "DOCOO-SEARCH-API-SPIKE": {
       "path": "docs/06-delivery/16-search-api-spike.md",
       "section": "06 Delivery & Operations",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "proposed",
       "owner": "Product & Engineering",
-      "checksum_sha256": "9251cb751fa05be4a24c133ec08b1bbf2766540030db184cc80f27b46585fe52",
+      "checksum_sha256": "0c7449dcd8faeb309cc89dc1fa4c23f02f5b81bf28ef4edb8004bdb70b136b9c",
       "notion_page_id": "3f45a24a-6668-81a5-b68e-ea288ef90540",
       "notion_page_url": "https://app.notion.com/p/3f45a24a666881a5b68eea288ef90540",
       "index_row_page_id": "3f45a24a-6668-81c6-a792-d2e11fe7264b",
       "index_row_page_url": "https://app.notion.com/p/3f45a24a666881c6a792d2e11fe7264b",
-      "synced_commit": "b5124cd76ba5d41ff66f5434c967926b8ecf05ef",
-      "synced_at": "2026-10-13T07:43:48.793Z"
+      "synced_commit": "1f607f6ab2978f0bab6b68756df7854128a1ff4e",
+      "synced_at": "2026-11-13T14:01:32.497Z"
     },
     "DOCOO-ADR-0026": {
       "path": "docs/adr/0026-web-research-adapter.md",
