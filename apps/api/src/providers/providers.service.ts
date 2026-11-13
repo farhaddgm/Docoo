@@ -12,10 +12,12 @@ import {
   catalogRejection,
   checkCostLimit,
   encryptSecret,
+  failureText,
   FALLBACK_PRICE,
   lookupCatalogPrice,
   PRICE_CATALOG_SOURCE,
   PriceCatalogError,
+  ProviderError,
   sanitizeError,
   samePrice,
   type CatalogPrice,
@@ -438,7 +440,13 @@ export class ProvidersService {
     } catch (error) {
       throw unavailable(
         'PROVIDER_CATALOG_UNAVAILABLE',
-        sanitizeError(error instanceof Error ? error.message : 'catalog failed'),
+        sanitizeError(
+          error instanceof ProviderError
+            ? failureText(error)
+            : error instanceof Error
+              ? error.message
+              : 'catalog failed',
+        ),
       );
     }
     models.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));

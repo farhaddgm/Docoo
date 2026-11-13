@@ -8,6 +8,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 - xAI Grok as a fourth model provider (ADR-0058). Add an "xAI Grok" connection on the AI providers page with a key from console.x.ai (the API account is topped up with its own credits, separate from any X or SuperGrok subscription); it can then run any stage, take part in dual-model research and appear in the evaluation lab, like the other providers. It uses xAI's Responses API at `api.x.ai/v1`: structured output, function tools and the server-side web search tool; reasoning tokens are read as reported on top of the output tokens, not inside them. Prices come from the same public catalog (`xai/…` entries). Migration 0093 adds the `xai` brand. Not yet tried against the real service: run the provider acceptance test with `XAI_API_KEY` first.
 
+### Fixed
+
+- AI providers page: a refused or unreachable provider now says why. Adding a connection checks it first and, when the provider refuses the key or cannot be reached, keeps the connection and shows the provider's own reason (for example ElevenLabs `insufficient_permissions`, a key without the models permission, or an IP not on the key's allowlist) instead of the generic "check the key" message. The reason ElevenLabs sends in `detail` was dropped before; it is now read, kept in the connection's status text and in the model-list error, and shown on the page. The ElevenLabs key hint names the permissions a restricted key needs. No migration.
+
 ## [0.62.0] — 2026-11-13
 
 ### Added

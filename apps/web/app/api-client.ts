@@ -8,6 +8,8 @@ export class ApiError extends Error {
     readonly code: string | undefined,
     /** Machine-readable reasons some problems carry, such as why a project is not ready. */
     readonly problems: readonly string[] = [],
+    /** The server's own short reason (for example why a provider refused), when it sent one. */
+    readonly detail: string | undefined = undefined,
   ) {
     super(code ?? `HTTP ${status}`);
   }
@@ -18,7 +20,11 @@ async function failure(response: Response, method: string, path: string): Promis
     smartBus.emit({ type: 'server-error', status: response.status, method, path });
   }
   try {
-    const body = (await response.json()) as { code?: unknown; problems?: unknown };
+    const body = (await response.json()) as {
+      code?: unknown;
+      problems?: unknown;
+      detail?: unknown;
+    };
     const problems = Array.isArray(body.problems)
       ? body.problems.filter((item): item is string => typeof item === 'string')
       : [];
@@ -26,6 +32,7 @@ async function failure(response: Response, method: string, path: string): Promis
       response.status,
       typeof body.code === 'string' ? body.code : undefined,
       problems,
+      typeof body.detail === 'string' ? body.detail.slice(0, 400) : undefined,
     );
   } catch {
     return new ApiError(response.status, undefined);

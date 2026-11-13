@@ -35,6 +35,16 @@ interface Model {
   capabilities: { structuredOutput: boolean };
 }
 
+/** The connection was saved, but the provider refused its key or could not be reached when it was checked. */
+class SavedButNotUsable extends Error {
+  constructor(readonly reason: string | null) {
+    super('provider_saved_not_usable');
+  }
+}
+
+/** Codes whose `detail` is the provider's own reason, worth showing next to the message. */
+const REASON_CODES = new Set(['PROVIDER_CATALOG_UNAVAILABLE']);
+
 const kinds: { kind: FormKind; label: string }[] = [
   { kind: 'openai', label: 'OpenAI' },
   { kind: 'gemini', label: 'Google Gemini' },
@@ -81,8 +91,21 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
   const [removing, setRemoving] = useState<string | null>(null);
 
   const explain = useCallback(
-    (error: unknown) =>
-      (error instanceof ApiError && error.code && text.errors[error.code]) || text.failed,
+    (error: unknown): string => {
+      if (error instanceof SavedButNotUsable) {
+        return error.reason
+          ? `${text.savedNotChecked} ${text.reason} ${error.reason}`
+          : text.savedNotChecked;
+      }
+      if (!(error instanceof ApiError)) return text.failed;
+      const known = error.code ? text.errors[error.code] : undefined;
+      const message = known ?? text.failed;
+      // The provider's own reason is shown for a refused model list, and for a code this page
+      // has no sentence for; the other problems keep their fixed sentence.
+      const showReason =
+        error.detail && (known === undefined || REASON_CODES.has(error.code ?? ''));
+      return showReason ? `${message} ${text.reason} ${error.detail}` : message;
+    },
     [text],
   );
 
@@ -161,7 +184,14 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
       ).json()) as { connection: Connection };
       setSecret('');
       setName('');
-      await apiPost(`${base}/provider-connections/${created.connection.id}/health-check`, {});
+      const checked = (await (
+        await apiPost(`${base}/provider-connections/${created.connection.id}/health-check`, {})
+      ).json()) as { connection: Connection };
+      // The key is saved either way. When the provider refused it or cannot be reached, say why
+      // now instead of failing the next step with a bare error.
+      if (!['healthy', 'degraded'].includes(checked.connection.status)) {
+        throw new SavedButNotUsable(checked.connection.lastError);
+      }
       await apiPost(`${base}/provider-connections/${created.connection.id}/models/refresh`, {});
       setChoice((value) =>
         value.connectionId ? value : { connectionId: created.connection.id, model: '' },

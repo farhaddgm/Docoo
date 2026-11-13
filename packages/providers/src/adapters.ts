@@ -225,6 +225,11 @@ export function isXaiTextModel(id: string): boolean {
   return !/(imagine|voice|multi-agent|tts|stt|transcribe|embed)/u.test(id);
 }
 
+/** The error code, followed by the provider's own (sanitised) reason when it gave one. */
+export function failureText(error: ProviderError): string {
+  return error.detail ? `${error.code}: ${error.detail}` : error.code;
+}
+
 abstract class HttpAdapter implements ModelProviderAdapter {
   abstract readonly kind: Exclude<ProviderKind, 'fake'>;
   protected readonly fetchImpl: FetchLike;
@@ -266,7 +271,7 @@ abstract class HttpAdapter implements ModelProviderAdapter {
               : 'unavailable',
         checkedAt,
         latencyMs: null,
-        error: providerError.code,
+        error: failureText(providerError),
       };
     }
   }
