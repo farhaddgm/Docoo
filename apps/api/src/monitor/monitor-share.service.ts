@@ -331,14 +331,23 @@ export class MonitorShareService {
       link.kind === 'viewer'
         ? await this.monitor.viewerView(context)
         : await this.monitor.voiceView(context);
-    const name = (
-      await this.pool.query<{ name: string }>(`select name from workspaces where id = $1`, [
-        link.workspace_id,
-      ])
-    ).rows[0]?.name;
     const s = config.settings;
     const choice = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
       allowed.includes(value as T) ? (value as T) : fallback;
+    const watermark = choice(s['monitor.watermark'], ['none', 'name', 'name_time'], 'name_time');
+    // The name goes out only when the faint mark is to show it: what a setting hides is not sent.
+    const name =
+      watermark === 'none'
+        ? ''
+        : await this.database.run(
+            context,
+            async (client) =>
+              (
+                await client.query<{ name: string }>(`select name from workspaces where id = $1`, [
+                  link.workspace_id,
+                ])
+              ).rows[0]?.name ?? '',
+          );
     return {
       kind: link.kind,
       view,
@@ -348,8 +357,8 @@ export class MonitorShareService {
         language: choice(s['monitor.language'], ['ui', 'fa', 'en'], 'ui'),
         refreshS: typeof s['monitor.refresh_s'] === 'number' ? s['monitor.refresh_s'] : 3,
         liveBadge: s['monitor.live_badge'] !== false,
-        watermark: choice(s['monitor.watermark'], ['none', 'name', 'name_time'], 'name_time'),
-        workspaceName: name ?? '',
+        watermark,
+        workspaceName: name,
       },
     };
   }

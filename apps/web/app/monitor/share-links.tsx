@@ -188,7 +188,7 @@ export function ShareLinks({
       </form>
 
       {fresh && (
-        <div className="notice ok" role="status">
+        <div className="notice ok monitor-share-created" role="status">
           <p>{text.created}</p>
           <div className="toolbar">
             <input

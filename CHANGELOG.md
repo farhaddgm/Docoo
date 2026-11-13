@@ -4,6 +4,15 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Fixed
+
+- Monitor share links: the faint mark on a shared screen showed no workspace name, because the name was read without the workspace's own row rules. It is now read inside them, and sent only when the mark is set to show it (a hidden setting sends nothing).
+
+### Added
+
+- An end-to-end test of the share link (the owner makes it, a visitor opens it with the password, revoking ends it) and an integration test of it against a real database (stored digests, password, room left, expiry, revoking, one workspace never reaching another's links).
+- ADR-0056 records the share link, the five measures around it, the residual risks, and that the owner's request reversed the earlier "no public link" decision.
+
 ## [0.61.0] — 2026-11-12
 
 ### Added

@@ -620,3 +620,15 @@
   max-width: 22rem;
   margin: 0 auto;
 }
+
+.monitor-share-admin .toolbar {
+  grid-column: 1 / -1;
+}
+.monitor-share-created .toolbar {
+  display: flex;
+  gap: 0.5rem;
+}
+.monitor-share-created input {
+  flex: 1;
+  min-width: 0;
+}
