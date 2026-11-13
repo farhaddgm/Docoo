@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- Independent web search, first slice (ADR-0026 addendum 1.2, issue 137): the `WebSearchPort` in `@docoo/ingestion` and adapters for Exa and Tavily. A search never throws; it returns hits or a typed reason (unauthorized, quota exhausted, rate limited, timeout, unavailable, bad response, rejected, aborted, network), so the caller can carry on with the model's own search alone, as the owner decided. Not wired into the research stage yet, no setting, no key storage: nothing changes for a project. Checked against both real services (SPK-001 keys) as well as with a fake `fetch`.
+
 ## [0.61.1] — 2026-11-13
 
 Maintenance: one fix to the share links, the dependency updates, and the tests and documents around them. No new feature.
@@ -18,8 +22,6 @@ Maintenance: one fix to the share links, the dependency updates, and the tests a
 - The four NestJS packages (`common`, `core`, `platform-fastify`, `testing`) moved together to 12.4.0 instead of `common` alone, and `@fastify/static` to 10.1.10, which `platform-fastify` 12.4.0 requires. 10.1.11 was newer than the workspace's seven-day release age, so it was left.
 
 ### Added
-
-- Independent web search, first slice (ADR-0026 addendum 1.2, issue 137): the `WebSearchPort` in `@docoo/ingestion` and adapters for Exa and Tavily. A search never throws; it returns hits or a typed reason (unauthorized, quota exhausted, rate limited, timeout, unavailable, bad response, rejected, aborted, network), so the caller can carry on with the model's own search alone, as the owner decided. Not wired into the research stage yet, no setting, no key storage: nothing changes for a project. Checked against both real services (SPK-001 keys) as well as with a fake `fetch`.
 
 - An end-to-end test of the share link (the owner makes it, a visitor opens it with the password, revoking ends it) and an integration test of it against a real database (stored digests, password, room left, expiry, revoking, one workspace never reaching another's links).
 - ADR-0056 records the share link, the five measures around it, the residual risks, and that the owner's request reversed the earlier "no public link" decision.
