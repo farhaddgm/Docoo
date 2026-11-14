@@ -29,12 +29,14 @@ describe('live assistant API paths', () => {
     const signal = new AbortController().signal;
     await liveReadApi.config('w1', signal);
     await liveReadApi.cost('w1', signal);
+    await liveReadApi.costReport('w1', 30, signal);
     await liveReadApi.sessions('w1', signal);
     await liveReadApi.session('w1', 's1', signal);
     await liveReadApi.deleteTranscript('w1', 's1');
     expect(calls).toEqual([
       { method: 'GET', path: '/workspaces/w1/live-assistant/config' },
       { method: 'GET', path: '/workspaces/w1/live-assistant/cost' },
+      { method: 'GET', path: '/workspaces/w1/live-assistant/cost/report?days=30' },
       { method: 'GET', path: '/workspaces/w1/live-assistant/sessions' },
       { method: 'GET', path: '/workspaces/w1/live-assistant/sessions/s1' },
       { method: 'DELETE', path: '/workspaces/w1/live-assistant/sessions/s1/messages' },

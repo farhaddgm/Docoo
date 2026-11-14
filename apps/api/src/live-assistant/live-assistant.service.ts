@@ -14,6 +14,7 @@ import {
   type LiveActionStatus,
   type LiveActionView,
   type LiveAssistantClientConfig,
+  type LiveCostReport,
   type LiveCostSummary,
   type LiveVoiceCheck,
   type LiveCancelReason,
@@ -68,6 +69,7 @@ import {
   appendMessages,
   cancelOpenActions,
   costPeriods,
+  costReport,
   dailyCostUsd,
   endSession,
   insertAction,
@@ -503,6 +505,17 @@ export class LiveAssistantService {
       const settings = await this.settings(client, context);
       return {
         ...(await costPeriods(client, context.workspaceId)),
+        dailyCapUsd: settings.caps.dailyCostCapUsd,
+      };
+    });
+  }
+
+  async costReport(context: WorkspaceRequestContext, days: number): Promise<LiveCostReport> {
+    return this.database.run(context, async (client) => {
+      const settings = await this.settings(client, context);
+      return {
+        days,
+        ...(await costReport(client, context.workspaceId, days)),
         dailyCapUsd: settings.caps.dailyCostCapUsd,
       };
     });
