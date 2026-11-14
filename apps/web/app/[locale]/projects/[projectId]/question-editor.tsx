@@ -243,50 +243,50 @@ export function QuestionEditor({
           }}
         />
         <div className="answer-actions">
-        {dictationWorkspaceId && (
-          <DictateButton
-            locale={locale}
-            workspaceId={dictationWorkspaceId}
-            disabled={disabled}
-            onText={(heard) =>
-              patch((current) => ({
-                ...current,
-                text: appendTranscript(current.text, heard).slice(0, 8000),
-                mode: current.mode ?? 'answered',
-              }))
-            }
-          />
-        )}
-        {onSuggest && !noteOnly && (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={disabled || suggestState === 'busy'}
-            onClick={suggest}
-          >
-            {suggestState === 'busy' ? text.suggesting : text.suggest}
-          </button>
-        )}
-        {!noteOnly && (
-          <div className="file-pick">
-            <input
-              ref={picker}
-              id={`${id}-file`}
-              aria-label={text.attach}
-              type="file"
-              accept={ACCEPTED_EXTENSIONS}
-              disabled={disabled || draft.uploading}
-              aria-describedby={`${id}-file-help`}
-              onChange={(event) => pick(event.target.files)}
+          {dictationWorkspaceId && (
+            <DictateButton
+              locale={locale}
+              workspaceId={dictationWorkspaceId}
+              disabled={disabled}
+              onText={(heard) =>
+                patch((current) => ({
+                  ...current,
+                  text: appendTranscript(current.text, heard).slice(0, 8000),
+                  mode: current.mode ?? 'answered',
+                }))
+              }
             />
-            <InfoTip id={`${id}-file-help`} text={text.attachHelp} />
-            {draft.uploading && (
-              <small className="muted" role="status">
-                {text.uploading}
-              </small>
-            )}
-          </div>
-        )}
+          )}
+          {onSuggest && !noteOnly && (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={disabled || suggestState === 'busy'}
+              onClick={suggest}
+            >
+              {suggestState === 'busy' ? text.suggesting : text.suggest}
+            </button>
+          )}
+          {!noteOnly && (
+            <div className="file-pick">
+              <input
+                ref={picker}
+                id={`${id}-file`}
+                aria-label={text.attach}
+                type="file"
+                accept={ACCEPTED_EXTENSIONS}
+                disabled={disabled || draft.uploading}
+                aria-describedby={`${id}-file-help`}
+                onChange={(event) => pick(event.target.files)}
+              />
+              <InfoTip id={`${id}-file-help`} text={text.attachHelp} />
+              {draft.uploading && (
+                <small className="muted" role="status">
+                  {text.uploading}
+                </small>
+              )}
+            </div>
+          )}
         </div>
         {suggestState === 'done' && <small className="muted">{text.suggestNote}</small>}
         {suggestState === 'failed' && (
