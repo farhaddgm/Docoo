@@ -5,6 +5,8 @@ import type { AddressInfo } from 'node:net';
 import { liveAssistantSettingDefaults } from '@docoo/contracts';
 import { Client, Pool } from 'pg';
 import { WebSocket, WebSocketServer } from 'ws';
+
+type ProviderSocket = WebSocket;
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { WorkspaceRequestContext } from '../src/common/request-context.js';
@@ -45,7 +47,7 @@ describe.skipIf(!adminUrl)('the voice path from microphone to ledger (real datab
   const answers: string[] = [];
   let values: Record<string, unknown> = {};
   let costScale = 1;
-  let onFirstAudio: ((socket: import('ws').WebSocket) => void) | null = null;
+  let onFirstAudio: ((socket: ProviderSocket) => void) | null = null;
   const intruder = randomUUID();
 
   const context = (): WorkspaceRequestContext => ({
