@@ -27,11 +27,6 @@ const USER_SAID = 'پروژه آلفا چه وضعی دارد؟';
 const ASSISTANT_SAID = 'در مرحلهٔ بازبینی است.';
 const PCM_FRAME = Buffer.alloc(1920, 3);
 
-interface ProviderLink {
-  readonly instructions: string;
-  readonly audioFrames: number;
-}
-
 describe.skipIf(!adminUrl)('the voice path from microphone to ledger (real database)', () => {
   const roleName = `docoo_vf_${randomBytes(6).toString('hex')}`;
   const rolePassword = randomBytes(18).toString('hex');
@@ -203,7 +198,9 @@ describe.skipIf(!adminUrl)('the voice path from microphone to ledger (real datab
     const audio: Buffer[] = [];
     socket.on('message', (data, isBinary) => {
       if (isBinary) audio.push(Buffer.from(data as Buffer));
-      else received.push(JSON.parse(Buffer.from(data as Buffer).toString('utf8')));
+      else {
+        received.push(JSON.parse(Buffer.from(data as Buffer).toString('utf8')) as { type: string });
+      }
     });
     await waitFor(() => received.some((message) => message.type === 'ready'));
     return { socket, received, audio };
