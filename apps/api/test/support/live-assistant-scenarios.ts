@@ -874,9 +874,10 @@ export function liveAssistantScenarios(ctxOf: () => ScenarioCtx): void {
       onBehalfOf: ctx().context.actorId,
       purpose: 'live_assistant:executor',
     });
+    // An earlier question by the person and this one are a single turn: providers refuse (or
+    // mishandle) two turns in a row by one side.
     expect(model().requests[0]?.messages.map((m) => (m as { content: string }).content)).toEqual([
-      'earlier',
-      'hi',
+      'earlier\n\nhi',
     ]);
     const detail = await ctx().service.getSession(ctx().context, session.id);
     expect(detail.session).toMatchObject({ inputTokens: 100, outputTokens: 20 });
