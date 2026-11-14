@@ -6,6 +6,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Added
 
+- Choosing a voice for the live assistant (ADR-0057 §18): ElevenLabs voices are listed with the languages they speak, the ones that speak the conversation language first, and a "Hear this voice" button plays a short sample made with the assistant's own connection and speaking model (it uses a little of your ElevenLabs credit). The sample call now accepts a connection of its own, so it no longer risks being made with the voice settings' provider.
 - A "Voice assistant" tab on the Cost & usage page (ADR-0057 §14), next to the models and the audio services. It shows what your own conversations with the assistant cost over the last 7, 30 or 90 days: per provider, kind (speech to speech, pipeline, typed) and model, with conversations, minutes, voice and executor cost apart, average per conversation, tokens and cached tokens, and a day-by-day table. Minutes include time asleep, so this is not a cost per minute of audio.
 
 ## [0.63.0] — 2026-11-14

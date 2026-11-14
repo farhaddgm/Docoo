@@ -154,6 +154,15 @@ const fa = {
       voiceHint:
         'صدا را از فهرست پیشنهادی انتخاب کنید یا شناسهٔ صدا را بنویسید. خالی بماند، صدای پیش‌فرض.',
     },
+    sample: {
+      hear: 'پیش‌شنیدن صدا',
+      hearing: 'در حال ساخت نمونه…',
+      failed: 'ساخت نمونه انجام نشد. اتصال و مدل گفتن را بررسی کنید.',
+      needVoice: 'اول یک صدا انتخاب کنید.',
+      sentence: 'سلام، من داکو هستم. این نمونه‌ای از صدای من است.',
+      cost: 'هر نمونه مقدار کمی از اعتبار ElevenLabs را مصرف می‌کند.',
+      languageNote: 'صداهایی که زبان گفتگو را پشتیبانی می‌کنند اول فهرست‌اند.',
+    },
     unknownConnection: 'اتصال ذخیره‌شده دیگر در دسترس نیست — دوباره انتخاب کنید',
     language: 'زبان گفتگو',
     languages: { fa: 'فارسی', en: 'انگلیسی', auto: 'خودکار' },
@@ -365,6 +374,15 @@ const en: typeof fa = {
         'The suggested model is eleven_v4_turbo; the documentation lists Persian only for the Eleven v3 and v4 families.',
       voiceHint:
         'Pick a voice from the list or type its id. Left empty, the default voice is used.',
+    },
+    sample: {
+      hear: 'Hear this voice',
+      hearing: 'Making a sample…',
+      failed: 'The sample could not be made. Check the connection and the speaking model.',
+      needVoice: 'Choose a voice first.',
+      sentence: 'Hello, I am Docoo. This is a sample of my voice.',
+      cost: 'Each sample uses a little of your ElevenLabs credit.',
+      languageNote: 'Voices that support the conversation language are listed first.',
     },
     unknownConnection: 'The saved connection is no longer available — choose again',
     language: 'Conversation language',
