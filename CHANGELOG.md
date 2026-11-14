@@ -4,6 +4,8 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.64.0] — 2026-11-14
+
 ### Fixed
 
 - Typing to the assistant ("write instead of speak") could answer with an error or with nothing. Found and fixed (ADR-0057 §19): the text model was limited to 1500 output tokens, which a reasoning model spends entirely on thinking before it writes a word; it now gets the platform's limit for the purpose, held under the model's own, and if it still runs out the answer says so plainly. The last turns of the chat are also sent in a shape every provider accepts (they begin with the person and never repeat a side), and a long earlier answer no longer makes the next request fail (a turn may be 2000 characters).
@@ -20,6 +22,7 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Changed
 
+- Small layout fixes: the mic, AI suggestion and attach-file controls of a question sit on one row (the visible "Answer" label is gone, kept for screen readers), the floating contents list clears the top bar, and the project-name field of the monitor and the share-link fields have more space. Not yet looked at in a browser.
 - The real-provider acceptance run (the "Provider acceptance" workflow) now covers xAI Grok too, in both the provider checks and the stage-output checks: add the repository secret `XAI_API_KEY` (and, if you want a particular model, the variable `XAI_MODEL`) and run it once before relying on Grok; without the secret that part is skipped, as for the others. Grok has no voice link of its own (it is a text provider), so the voice link check does not apply to it; its connection is checked like any other on the AI providers page.
 
 ## [0.63.0] — 2026-11-14
