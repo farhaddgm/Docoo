@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "57682bf08af727d3051dd0e9171988e2083c4631"
+    "source_commit": "169945f1ff03ad36373967b685e97c9a439cf38b"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-11-14T12:07:41.324Z",
+    "synced_at": "2026-11-14T12:37:12.906Z",
     "created": 0,
-    "updated": 0,
-    "unchanged": 74,
+    "updated": 2,
+    "unchanged": 72,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -599,13 +599,13 @@
       "version": "1.4.0",
       "status": "active",
       "owner": "Product & Engineering",
-      "checksum_sha256": "07315550ec9c6889d6fc931eaf36069ef0c798e65e7eee903b389305a8fae9de",
+      "checksum_sha256": "705b9ef7518ab29192cccc6343f79ae3b53382e0b101333b43e9e4ad4ae466e5",
       "notion_page_id": "3e55a24a-6668-81db-95db-d54a7c122e52",
       "notion_page_url": "https://app.notion.com/p/3e55a24a666881db95dbd54a7c122e52",
       "index_row_page_id": "3e55a24a-6668-8117-ae69-fb1bdc2e5df3",
       "index_row_page_url": "https://app.notion.com/p/3e55a24a66688117ae69fb1bdc2e5df3",
-      "synced_commit": "48171e97b32685a2d61ebe41ba0a9f748722e215",
-      "synced_at": "2026-10-06T04:12:06.257Z"
+      "synced_commit": "169945f1ff03ad36373967b685e97c9a439cf38b",
+      "synced_at": "2026-11-14T12:37:12.906Z"
     },
     "DOCOO-READINESS-CHECKLIST": {
       "path": "docs/06-delivery/08-readiness-checklist.md",
@@ -851,13 +851,13 @@
       "version": "1.1.0",
       "status": "active",
       "owner": "Platform & Operations",
-      "checksum_sha256": "81230599e1f1dd87b99c6f5b7e0d4fa1ef3d8cfbfd25a3f5f3dd1b5eb426e036",
+      "checksum_sha256": "f8ad30ef4f1ea97bff7782570ea9dc06a6c33cb2e023a91716d6403f8dcb0b8a",
       "notion_page_id": "3f05a24a-6668-812a-8795-c25915cf95c8",
       "notion_page_url": "https://app.notion.com/p/3f05a24a6668812a8795c25915cf95c8",
       "index_row_page_id": "3f05a24a-6668-81a3-84e5-f7dfd94859bc",
       "index_row_page_url": "https://app.notion.com/p/3f05a24a666881a384e5f7dfd94859bc",
-      "synced_commit": "48171e97b32685a2d61ebe41ba0a9f748722e215",
-      "synced_at": "2026-10-06T04:12:06.257Z"
+      "synced_commit": "169945f1ff03ad36373967b685e97c9a439cf38b",
+      "synced_at": "2026-11-14T12:37:12.906Z"
     },
     "DOCOO-ADR-0017": {
       "path": "docs/adr/0017-research-with-knowledge-and-role-evaluation.md",
