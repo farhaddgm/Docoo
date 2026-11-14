@@ -5,6 +5,7 @@ import type { LiveBackend } from './live-api';
 import { initialLiveState, reduceLive, type LiveAction, type LiveState } from './state';
 import { createLiveStore, IDLE_CHECK_MS, type LiveStoreDeps } from './store';
 import type { LiveTransport, LiveTransportHandlers, LiveTransportSession } from './transport';
+import type { WakeDetector } from './wake-detector';
 
 const apply = (state: LiveState, ...actions: LiveAction[]) => actions.reduce(reduceLive, state);
 
@@ -76,6 +77,26 @@ const sessionView = (over: Partial<LiveSessionView> = {}): LiveSessionView => ({
   ...over,
 });
 
+class FakeDetector implements WakeDetector {
+  started = 0;
+  stopped = 0;
+  onWake: (() => void) | null = null;
+  constructor(
+    readonly phrase: string,
+    private readonly fails: boolean,
+  ) {}
+  start(onWake: () => void): Promise<void> {
+    if (this.fails) return Promise.reject(new Error('not allowed'));
+    this.started += 1;
+    this.onWake = onWake;
+    return Promise.resolve();
+  }
+  stop(): void {
+    this.stopped += 1;
+    this.onWake = null;
+  }
+}
+
 interface Link {
   readonly session: LiveTransportSession | undefined;
   handlers: LiveTransportHandlers;
@@ -90,6 +111,9 @@ describe('sleeping and waking the assistant', () => {
   let usage: { activity?: string | undefined }[];
   let failStart: boolean;
   let ticketError: Error | null;
+  let detectors: FakeDetector[];
+  let detectorFails: boolean;
+  let detectorAvailable: boolean;
 
   const backend = (): LiveBackend => ({
     startSession: () => Promise.resolve(sessionView()),
@@ -149,15 +173,30 @@ describe('sleeping and waking the assistant', () => {
     now: () => now,
     heartbeatMs: 3_600_000,
     idleCheckMs: IDLE_CHECK_MS,
+    wakeDetector: (phrase) => {
+      if (!detectorAvailable) return null;
+      const made = new FakeDetector(phrase, detectorFails);
+      detectors.push(made);
+      return made;
+    },
   });
 
-  async function started(options: { pushToTalk?: boolean; idleSleepS?: number } = {}) {
+  async function started(
+    options: {
+      pushToTalk?: boolean;
+      idleSleepS?: number;
+      wakeEnabled?: boolean;
+      wakePhrase?: string;
+    } = {},
+  ) {
     const store = createLiveStore(deps());
     store.setBackend(backend());
     store.setTransportFactory(transportFactory);
     store.setListening({
       pushToTalk: options.pushToTalk ?? false,
       idleSleepS: options.idleSleepS ?? 60,
+      ...(options.wakeEnabled === undefined ? {} : { wakeEnabled: options.wakeEnabled }),
+      ...(options.wakePhrase === undefined ? {} : { wakePhrase: options.wakePhrase }),
     });
     await store.start();
     return store;
@@ -177,6 +216,9 @@ describe('sleeping and waking the assistant', () => {
     usage = [];
     failStart = false;
     ticketError = null;
+    detectors = [];
+    detectorFails = false;
+    detectorAvailable = true;
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -328,5 +370,92 @@ describe('sleeping and waking the assistant', () => {
     expect(endCalls).toHaveLength(1);
     await pass(600);
     expect(links).toHaveLength(1);
+  });
+  it('listens for the wake phrase on the device only while asleep, and a call wakes it', async () => {
+    const store = await started({ idleSleepS: 60, wakeEnabled: true, wakePhrase: 'Hi Docoo' });
+    // Awake: the voice link has the microphone, nothing else listens.
+    expect(detectors).toHaveLength(0);
+    await pass(70);
+    expect(store.getSnapshot()).toMatchObject({ status: 'asleep', wakeWord: true });
+    expect(detectors).toHaveLength(1);
+    expect(detectors[0]).toMatchObject({ phrase: 'Hi Docoo', started: 1 });
+    // Heard: the listener lets go of the microphone first, then the voice link opens again.
+    detectors[0]!.onWake?.();
+    await pass(1);
+    expect(detectors[0]?.stopped).toBeGreaterThan(0);
+    expect(store.getSnapshot()).toMatchObject({ status: 'awake', wakeWord: false });
+    expect(links).toHaveLength(2);
+    await store.stop();
+  });
+
+  it('does not listen when the owner did not switch it on, or the browser cannot do it on the device', async () => {
+    const off = await started({ idleSleepS: 60, wakeEnabled: false, wakePhrase: 'Hi Docoo' });
+    await pass(70);
+    expect(detectors).toHaveLength(0);
+    expect(off.getSnapshot().wakeWord).toBe(false);
+    await off.stop();
+
+    detectorAvailable = false;
+    const unsupported = await started({
+      idleSleepS: 60,
+      wakeEnabled: true,
+      wakePhrase: 'Hi Docoo',
+    });
+    await pass(70);
+    expect(unsupported.getSnapshot()).toMatchObject({ status: 'asleep', wakeWord: false });
+    // A click still wakes it.
+    await unsupported.wake();
+    expect(unsupported.getSnapshot().status).toBe('awake');
+    await unsupported.stop();
+
+    detectorAvailable = true;
+    const blank = await started({ idleSleepS: 60, wakeEnabled: true, wakePhrase: '  ' });
+    await pass(70);
+    expect(detectors).toHaveLength(0);
+    await blank.stop();
+  });
+
+  it('stays asleep, and says nothing is listening, when the microphone is refused', async () => {
+    detectorFails = true;
+    const store = await started({ idleSleepS: 60, wakeEnabled: true, wakePhrase: 'Hi Docoo' });
+    await pass(70);
+    expect(store.getSnapshot()).toMatchObject({ status: 'asleep', wakeWord: false });
+    await store.wake();
+    expect(store.getSnapshot().status).toBe('awake');
+    await store.stop();
+  });
+
+  it('stops listening for the phrase when the session ends, or a click wakes it first', async () => {
+    const ended = await started({ idleSleepS: 60, wakeEnabled: true, wakePhrase: 'Hi Docoo' });
+    await pass(70);
+    await ended.stop();
+    expect(detectors[0]?.stopped).toBeGreaterThan(0);
+    expect(ended.getSnapshot().wakeWord).toBe(false);
+
+    detectors = [];
+    const clicked = await started({ idleSleepS: 60, wakeEnabled: true, wakePhrase: 'Hi Docoo' });
+    await pass(70);
+    await clicked.wake();
+    expect(detectors[0]?.stopped).toBeGreaterThan(0);
+    expect(clicked.getSnapshot()).toMatchObject({ status: 'awake', wakeWord: false });
+    await clicked.stop();
+  });
+
+  it('listens again each time it falls asleep, and ignores a call that comes after it woke', async () => {
+    const store = await started({ idleSleepS: 60, wakeEnabled: true, wakePhrase: 'Hi Docoo' });
+    await pass(70);
+    const stale = detectors[0]!.onWake;
+    detectors[0]!.onWake?.();
+    await pass(1);
+    expect(store.getSnapshot().status).toBe('awake');
+    // A late call from the stopped listener does nothing.
+    stale?.();
+    await pass(1);
+    expect(links).toHaveLength(2);
+    await pass(70);
+    expect(store.getSnapshot().status).toBe('asleep');
+    expect(detectors).toHaveLength(2);
+    expect(store.getSnapshot().wakeWord).toBe(true);
+    await store.stop();
   });
 });

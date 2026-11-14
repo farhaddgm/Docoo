@@ -168,7 +168,7 @@ const fa = {
     idleHint: 'پس از این مدت اتصال ابری قطع می‌شود و هزینه صفر می‌شود.',
     wake: 'با عبارت بیدارسازی بیدار شود',
     wakeHint:
-      'فقط وقتی «گفتگوی زنده» روشن است کار می‌کند. هنوز پیاده نشده است؛ تنظیم از الان ذخیره می‌شود.',
+      'فقط وقتی «گفتگوی زنده» روشن است و دستیار خوابیده کار می‌کند. تشخیص روی همین دستگاه انجام می‌شود و صدا جایی فرستاده نمی‌شود. فقط در مرورگرهایی کار می‌کند که تشخیص گفتار را روی دستگاه انجام می‌دهند (کروم بسته به نسخه)؛ در بقیه با کلیک بیدار کنید. دقت هنوز با صدای واقعی سنجیده نشده است.',
     wakePhrase: 'عبارت بیدارسازی',
   },
   limits: {
@@ -380,7 +380,7 @@ const en: typeof fa = {
     idleHint: 'After this the cloud connection is closed and the cost drops to zero.',
     wake: 'Wake on the wake phrase',
     wakeHint:
-      'Works only while the live conversation is on. Not built yet; the setting is saved from now on.',
+      'Works only while the live conversation is on and the assistant is asleep. Recognition runs on this device and no audio is sent anywhere. It only works in browsers that recognise speech on the device (Chrome, depending on its version); elsewhere wake it with a click. Its accuracy has not been measured with real voices yet.',
     wakePhrase: 'Wake phrase',
   },
   limits: {

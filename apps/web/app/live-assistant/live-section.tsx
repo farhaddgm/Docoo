@@ -51,6 +51,8 @@ export function LiveSection({
         liveAssistant.setListening({
           pushToTalk: loaded.listeningMode === 'push_to_talk',
           idleSleepS: loaded.caps.idleSleepS,
+          wakeEnabled: loaded.wakeEnabled,
+          wakePhrase: loaded.wakePhrase,
         });
         setConfig(loaded);
       })

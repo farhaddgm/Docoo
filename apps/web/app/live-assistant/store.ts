@@ -28,6 +28,12 @@ import {
   type PillPosition,
 } from './state';
 import { screenOfResult } from './screen';
+import {
+  browserWakeEnv,
+  createCheckedWakeDetector,
+  createWakeGuard,
+  type WakeDetector,
+} from './wake-detector';
 import type { LiveTransport, LiveTransportFactory, LiveTransportHandlers } from './transport';
 
 /**
@@ -47,6 +53,11 @@ export interface LiveStoreDeps {
   readonly heartbeatMs?: number;
   /** How often an awake session is checked for being idle (tests make it short). */
   readonly idleCheckMs?: number;
+  /**
+   * Makes the on-device listener for the wake phrase, or null when this browser cannot promise to
+   * keep the audio on the device. Asked for only while the assistant sleeps.
+   */
+  readonly wakeDetector?: (phrase: string) => WakeDetector | null;
   readonly timers?: {
     readonly every: (work: () => void, ms: number) => () => void;
   };
@@ -214,6 +225,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
     stopBeating = null;
     stopIdleCheck?.();
     stopIdleCheck = null;
+    stopWakeWord();
     holding = false;
     transport = null;
     lock = null;
@@ -475,6 +487,45 @@ export function createLiveStore(deps: LiveStoreDeps) {
    * click or by pressing the push-to-talk key. Never while a change waits for the person, while
    * the assistant is speaking or thinking, or while the key is held.
    */
+  let wakeEnabled = false;
+  let wakePhrase = '';
+  let detector: WakeDetector | null = null;
+
+  /** Stops listening for the phrase: the microphone is let go and the state says so. */
+  function stopWakeWord(): void {
+    const current = detector;
+    detector = null;
+    try {
+      current?.stop();
+    } catch {
+      /* best effort */
+    }
+    if (state.wakeWord) dispatch({ type: 'wakeWord', on: false });
+  }
+
+  /** Starts listening for the phrase, only while asleep, only when the owner switched it on. */
+  async function startWakeWord(): Promise<void> {
+    if (!wakeEnabled || wakePhrase.trim() === '' || detector || state.status !== 'asleep') return;
+    const made = deps.wakeDetector?.(wakePhrase) ?? null;
+    if (!made) return;
+    detector = made;
+    try {
+      await made.start(() => {
+        // One call wakes it once; the detector is stopped before the voice link opens.
+        if (detector === made && state.status === 'asleep' && !waking) void wake();
+      });
+    } catch {
+      // Not allowed or not working: it stays asleep and a click still wakes it.
+      if (detector === made) detector = null;
+      return;
+    }
+    if (detector !== made || state.status !== 'asleep') {
+      made.stop();
+      return;
+    }
+    dispatch({ type: 'wakeWord', on: true });
+  }
+
   async function sleep(): Promise<void> {
     const current = transport;
     if (state.status !== 'awake' || state.channel !== 'voice' || !current) return;
@@ -489,6 +540,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
     } catch {
       /* best effort: the browser releases the microphone with the page at the latest */
     }
+    void startWakeWord();
     void beat();
   }
 
@@ -497,6 +549,8 @@ export function createLiveStore(deps: LiveStoreDeps) {
     if (state.status !== 'asleep' || waking || !factory || !sessionId || !backend) return;
     const id = sessionId;
     waking = true;
+    // The device's listener lets go of the microphone before the voice link takes it.
+    stopWakeWord();
     dispatch({ type: 'waking', on: true });
     const created = factory();
     transport = created;
@@ -752,8 +806,15 @@ export function createLiveStore(deps: LiveStoreDeps) {
      * Tells the store how the owner chose to listen: push-to-talk or always, and after how many
      * seconds of quiet the assistant sleeps (0: never). A session already running keeps what it began with.
      */
-    setListening: (options: { pushToTalk: boolean; idleSleepS: number }): void => {
+    setListening: (options: {
+      pushToTalk: boolean;
+      idleSleepS: number;
+      wakeEnabled?: boolean;
+      wakePhrase?: string;
+    }): void => {
       idleSleepS = Math.max(0, Math.floor(options.idleSleepS));
+      wakeEnabled = options.wakeEnabled ?? false;
+      wakePhrase = options.wakePhrase ?? '';
       dispatch({ type: 'listening', pushToTalk: options.pushToTalk });
     },
     /** Seconds left to confirm a change, on this browser's clock; 0 when its time is over. */
@@ -791,10 +852,14 @@ function browserDeps(): LiveStoreDeps {
   } catch {
     storage = null;
   }
+  const wakeEnv = browserWakeEnv();
+  const guard = createWakeGuard();
   return {
     storage,
     acquireLock: () => acquireSingleTabLock((navigator as unknown as { locks?: LocksApi }).locks),
     now: () => Date.now(),
+    wakeDetector: (phrase) =>
+      wakeEnv.recognition ? createCheckedWakeDetector(wakeEnv, phrase, guard) : null,
   };
 }
 

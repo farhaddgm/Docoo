@@ -142,13 +142,15 @@ export function LiveAssistantPill() {
       ? text.card.errors[state.error]
       : state.waking
         ? text.pill.waking
-        : state.talking
-          ? text.pill.talking
-          : waitingForYou
-            ? text.pill.waiting
-            : nearCap
-              ? text.pill.nearCap
-              : text.status[state.status];
+        : state.wakeWord
+          ? text.pill.wakeWord
+          : state.talking
+            ? text.pill.talking
+            : waitingForYou
+              ? text.pill.waiting
+              : nearCap
+                ? text.pill.nearCap
+                : text.status[state.status];
   const style = position
     ? { left: position.x, top: position.y, bottom: 'auto', transform: 'none' }
     : undefined;
