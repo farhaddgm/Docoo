@@ -29,6 +29,7 @@ import {
 } from './settings-model';
 import { liveReadApi } from './live-api';
 import { CatalogSelect } from './catalog-select';
+import { ExecutorCheck } from './executor-check';
 import { VoiceLinkCheck } from './voice-link-check';
 import { VoiceSample } from './voice-sample';
 import { voiceLabel, voiceSpeaks } from './voice-list';
@@ -338,6 +339,7 @@ export function LiveAssistantSettings({
           </p>
           <p className="muted">{text.status.voiceLater}</p>
           <VoiceLinkCheck locale={locale} workspaceId={workspaceId} />
+          <ExecutorCheck locale={locale} workspaceId={workspaceId} />
           {changedKeys(draft, saved).length > 0 && <p className="muted">{text.status.unsaved}</p>}
         </div>
       )}
