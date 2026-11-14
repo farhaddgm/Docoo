@@ -8,6 +8,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 - A "Voice assistant" tab on the Cost & usage page (ADR-0057 §14), next to the models and the audio services. It shows what your own conversations with the assistant cost over the last 7, 30 or 90 days: per provider, kind (speech to speech, pipeline, typed) and model, with conversations, minutes, voice and executor cost apart, average per conversation, tokens and cached tokens, and a day-by-day table. Minutes include time asleep, so this is not a cost per minute of audio.
 
+### Changed
+
+- The real-provider acceptance run (the "Provider acceptance" workflow) now covers xAI Grok too, in both the provider checks and the stage-output checks: add the repository secret `XAI_API_KEY` (and, if you want a particular model, the variable `XAI_MODEL`) and run it once before relying on Grok; without the secret that part is skipped, as for the others. Grok has no voice link of its own (it is a text provider), so the voice link check does not apply to it; its connection is checked like any other on the AI providers page.
+
 ## [0.63.0] — 2026-11-14
 
 ### Added
