@@ -29,6 +29,8 @@ export interface LiveMessages {
     readonly sleepTitle: string;
     readonly wake: string;
     readonly waking: string;
+    /** Asleep and listening on the device for the wake phrase. */
+    readonly wakeWord: string;
   };
   readonly confirm: {
     readonly title: string;
@@ -158,6 +160,7 @@ const fa: LiveMessages = {
     sleepTitle: 'اتصال و میکروفون بسته می‌شود؛ هر وقت خواستید بیدارش کنید',
     wake: 'بیدار کردن',
     waking: 'در حال بیدار شدن…',
+    wakeWord: 'در خواب؛ عبارت بیدارسازی را بگویید',
   },
   confirm: {
     title: 'تغییر پیشنهادی {name}',
@@ -351,6 +354,7 @@ const en: LiveMessages = {
     sleepTitle: 'The link and the microphone close; wake it whenever you want',
     wake: 'Wake up',
     waking: 'Waking up…',
+    wakeWord: 'Asleep; say the wake phrase',
   },
   confirm: {
     title: 'Change proposed by {name}',

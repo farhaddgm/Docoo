@@ -78,6 +78,8 @@ export interface LiveState {
   readonly talking: boolean;
   /** The assistant is waking up: its voice link is being opened again. */
   readonly waking: boolean;
+  /** Asleep and listening on the device for the wake phrase (nothing leaves the browser). */
+  readonly wakeWord: boolean;
   /** Whether a way to talk to the provider is set up. Without one the feature stays switched off. */
   readonly available: boolean;
   /** Tokens used by the current (or, when off, the last) session, voice and executor together. */
@@ -105,6 +107,7 @@ export type LiveAction =
   | { readonly type: 'listening'; readonly pushToTalk: boolean }
   | { readonly type: 'talking'; readonly on: boolean }
   | { readonly type: 'waking'; readonly on: boolean }
+  | { readonly type: 'wakeWord'; readonly on: boolean }
   | { readonly type: 'sleep' }
   | { readonly type: 'wake' }
   | { readonly type: 'stop' }
@@ -124,6 +127,7 @@ export const initialLiveState = (position: PillPosition | null = null): LiveStat
   pushToTalk: false,
   talking: false,
   waking: false,
+  wakeWord: false,
   available: false,
   tokens: 0,
   startedAt: null,
@@ -161,6 +165,7 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
         asking: false,
         talking: false,
         waking: false,
+        wakeWord: false,
         status: 'starting',
         tokens: 0,
         startedAt: null,
@@ -203,13 +208,19 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
       return state.waking === action.on || (action.on && state.status !== 'asleep')
         ? state
         : { ...state, waking: action.on };
+    case 'wakeWord':
+      return state.wakeWord === action.on || (action.on && state.status !== 'asleep')
+        ? state
+        : { ...state, wakeWord: action.on };
     case 'sleep':
       // Asleep means nobody is holding the key and nothing is being opened.
       return state.status === 'awake'
-        ? { ...state, status: 'asleep', talking: false, waking: false }
+        ? { ...state, status: 'asleep', talking: false, waking: false, wakeWord: false }
         : state;
     case 'wake':
-      return state.status === 'asleep' ? { ...state, status: 'awake', waking: false } : state;
+      return state.status === 'asleep'
+        ? { ...state, status: 'awake', waking: false, wakeWord: false }
+        : state;
     case 'stop':
       if (state.status === 'error') return { ...state, status: 'off', error: null };
       return isLiveActive(state.status) ? { ...state, status: 'closing' } : state;
@@ -226,6 +237,7 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
             asking: false,
             talking: false,
             waking: false,
+            wakeWord: false,
             hint: null,
           }
         : state;
@@ -245,6 +257,7 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
             asking: false,
             talking: false,
             waking: false,
+            wakeWord: false,
             hint: null,
           };
     case 'warning':
