@@ -19,12 +19,19 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  // On a shared CI runner one test now and then stalls for reasons that are not the application's
+  // (a run once timed out at 30 s on a test that takes 3 s, in the trace recording fixture before
+  // the page did anything). One retry rides that out; the report says "flaky" for a test that
+  // needed it, and a test that fails twice still fails the job.
+  retries: process.env['CI'] ? 1 : 0,
   forbidOnly: Boolean(process.env['CI']),
   reporter: process.env['CI'] ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: webUrl,
-    trace: 'retain-on-failure',
+    // Recording every test costs a good share of a CI runner's CPU and is what stalled in the run
+    // above; on CI the trace is taken only for the retry of a failing test, which is when it is
+    // wanted. On a developer's machine every failure keeps its trace.
+    trace: process.env['CI'] ? 'on-first-retry' : 'retain-on-failure',
     // The stylesheet honours this and drops its transitions; axe reads colours mid-fade otherwise.
     reducedMotion: 'reduce',
   },

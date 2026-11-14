@@ -335,6 +335,7 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/live-assistant/cost': 'live_assistant.use',
   'GET workspaces/:workspaceId/live-assistant/cost/report': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/voice-check': 'live_assistant.use',
+  'POST workspaces/:workspaceId/live-assistant/executor-check': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/voice-ticket':
     'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/ask': 'live_assistant.use',

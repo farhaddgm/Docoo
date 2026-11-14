@@ -504,6 +504,63 @@ describe('one request of the executor', () => {
     expect(out.usage.modelCalls).toBe(0);
   });
 
+  it('hands the model earlier turns it accepts: starting with the person, no two in a row by one side', async () => {
+    const { normaliseContext } = await import('../src/live-assistant/live-executor.js');
+    expect(
+      normaliseContext([
+        { role: 'assistant', content: 'An answer cut off from its question' },
+        { role: 'user', content: 'first' },
+        { role: 'user', content: 'second (the first one failed)' },
+        { role: 'assistant', content: 'reply' },
+        { role: 'assistant', content: '   ' },
+      ]),
+    ).toEqual([
+      { role: 'user', content: 'first\n\nsecond (the first one failed)' },
+      { role: 'assistant', content: 'reply' },
+    ]);
+    expect(normaliseContext([])).toEqual([]);
+    // In a run: the request after an earlier unanswered question is one turn with it.
+    const h = harness({ responses: [reply({ text: 'Fine.' })] });
+    await h.run({
+      context: [
+        { role: 'assistant', content: 'dangling' },
+        { role: 'user', content: 'earlier question' },
+      ],
+    });
+    const roles = h.requests[0]?.messages.map((message) => message.role);
+    expect(roles).toEqual(['user']);
+    expect(JSON.stringify(h.requests[0]?.messages)).toContain('earlier question');
+  });
+
+  it('sets no output limit of its own, so a reasoning model is not cut off by a small one', async () => {
+    const h = harness({ responses: [reply({ text: 'Fine.' })] });
+    await h.run();
+    expect(h.requests[0]).not.toHaveProperty('maxOutputTokens');
+  });
+
+  it('says so when the model ran out of output before it wrote or asked for anything', async () => {
+    const h = harness({ responses: [reply({ text: '', finishReason: 'length' })] });
+    const out = await h.run();
+    expect(out).toMatchObject({ stop: 'error', errorCode: 'output_limit', answer: '' });
+    // A cut-off answer that has words is still an answer.
+    const partial = harness({ responses: [reply({ text: 'Half of', finishReason: 'length' })] });
+    expect(await partial.run()).toMatchObject({ stop: 'answered', answer: 'Half of' });
+  });
+
+  it('passes on the provider’s own short reason, cut to 300 characters', async () => {
+    const failing = Object.assign(new Error('invalid_request'), {
+      code: 'openai_invalid_request',
+      detail: `Unsupported parameter: 'parallel_tool_calls' ${'x'.repeat(400)}`,
+    });
+    const out = await harness({ responses: [failing] }).run();
+    expect(out).toMatchObject({ stop: 'error', errorCode: 'openai_invalid_request' });
+    expect(out.errorDetail?.startsWith("Unsupported parameter: 'parallel_tool_calls'")).toBe(true);
+    expect(out.errorDetail?.length).toBe(300);
+    // An error with no reason gives none.
+    const bare = await harness({ responses: [Object.assign(new Error('x'), { code: 'c' })] }).run();
+    expect(bare.errorDetail).toBeNull();
+  });
+
   it('keeps the usage it had when a fatal error ends the request, and hands the error to the caller', async () => {
     const closed = Object.assign(new Error('cap'), { code: 'LIVE_CAP_REACHED' });
     const h = harness({
