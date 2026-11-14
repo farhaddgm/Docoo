@@ -151,6 +151,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/provider-connections/:connectionId/models/refresh':
     'provider.configure',
   'GET workspaces/:workspaceId/provider-connections/:connectionId/models': 'provider.read',
+  'GET workspaces/:workspaceId/provider-connections/:connectionId/realtime-models': 'provider.read',
   'GET workspaces/:workspaceId/model-prices': 'provider.read',
   'POST workspaces/:workspaceId/model-prices': 'provider.configure',
   'POST workspaces/:workspaceId/model-prices/catalog-lookup': 'provider.configure',

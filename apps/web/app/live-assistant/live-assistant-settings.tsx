@@ -163,10 +163,9 @@ export function LiveAssistantSettings({
       return;
     }
     let active = true;
-    apiGet<{ catalog: { models: { id: string }[] } | null }>(
-      `${base}/provider-connections/${connectionId}/models`,
-    )
-      .then((result) => active && setModels((result.catalog?.models ?? []).map((m) => m.id)))
+    // The text catalog leaves the realtime models out on purpose; the voice field has its own list.
+    apiGet<{ models: string[] }>(`${base}/provider-connections/${connectionId}/realtime-models`)
+      .then((result) => active && setModels(result.models))
       .catch(() => active && setModels([]));
     return () => {
       active = false;
@@ -514,6 +513,10 @@ export function LiveAssistantSettings({
           {voiceConnections.length === 0 && (
             <small className="muted">{text.model.noConnections}</small>
           )}
+          {voiceConnections.length > 0 &&
+            !voiceConnections.some((item) => item.provider === 'elevenlabs') && (
+              <small className="muted">{text.model.noElevenLabs}</small>
+            )}
           {isEleven && <p className="notice info">{text.model.elevenlabs.note}</p>}
           <Field
             label={isEleven ? text.model.elevenlabs.modelId : text.model.modelId}
@@ -522,11 +525,13 @@ export function LiveAssistantSettings({
           >
             {(id) => (
               <>
+                {connectionId && !isEleven && models.length === 0 && (
+                  <small className="muted">{text.model.noRealtimeModels}</small>
+                )}
                 <CatalogSelect
                   id={id}
                   value={asString(draft['live_assistant.model'])}
                   options={(isEleven ? speech.models : models).map((value) => ({ value }))}
-                  {...(isEleven ? {} : { preferred: (value: string) => /realtime/iu.test(value) })}
                   chooseLabel={text.model.pick}
                   otherLabel={text.model.other}
                   onChange={(value) => set('live_assistant.model', value)}

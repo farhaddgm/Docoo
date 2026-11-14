@@ -12,6 +12,7 @@ import {
   estimateCostUsd,
   FALLBACK_PRICE,
   isGeminiTextModel,
+  isOpenAiRealtimeModel,
   isOpenAiTextModel,
   isXaiTextModel,
   outputBudgetTokens,
@@ -287,7 +288,12 @@ describe('provider adapters share one contract (AI-002)', () => {
       expect((limited as ProviderError).detail).toContain('[REDACTED]');
       expect((limited as ProviderError).detail).not.toContain('sk-live');
       failWith = 401;
-      expect((await adapter.healthCheck()).status).toBe('invalid');
+      const refused = await adapter.healthCheck();
+      expect(refused.status).toBe('invalid');
+      // The provider's reason travels with the code, with anything key-like removed.
+      expect(refused.error).toContain(`${kind}_unauthorized: `);
+      expect(refused.error).toContain('[REDACTED]');
+      expect(refused.error).not.toContain('sk-live');
       failWith = 503;
       await expect(adapter.invoke(request)).rejects.toMatchObject({
         kind: 'transient',
@@ -444,6 +450,13 @@ describe('real-provider safety (cost ceiling, output limits, model lists)', () =
     expect(outputBudgetTokens('analysis:round', 100)).toBe(1_024);
   });
 
+  it('picks the live-voice models apart from the text ones', () => {
+    for (const id of ['gpt-realtime', 'gpt-4o-realtime-preview', 'gpt-4o-mini-realtime-preview'])
+      expect(isOpenAiRealtimeModel(id), id).toBe(true);
+    for (const id of ['gpt-5', 'gpt-4o-transcribe', 'gpt-4o-mini-tts', 'whisper-1', 'o3'])
+      expect(isOpenAiRealtimeModel(id), id).toBe(false);
+  });
+
   it('lists only models that can answer a structured text request', () => {
     for (const id of ['gpt-5', 'gpt-4o-mini', 'o3', 'o4-mini', 'chatgpt-4o-latest', 'gpt-5-codex'])
       expect(isOpenAiTextModel(id), id).toBe(true);
@@ -501,6 +514,32 @@ describe('provider error detail', () => {
     expect(providerErrorDetail(JSON.stringify({ error: 'plain text reason' }))).toBe(
       'plain text reason',
     );
+    // ElevenLabs: `detail` is an object with a code and a message, a text, or a validation list.
+    expect(
+      providerErrorDetail(
+        JSON.stringify({
+          detail: {
+            type: 'authentication_error',
+            code: 'invalid_api_key',
+            message: 'Invalid key.',
+          },
+        }),
+      ),
+    ).toBe('invalid_api_key: Invalid key.');
+    expect(providerErrorDetail(JSON.stringify({ detail: { message: 'No code here.' } }))).toBe(
+      'No code here.',
+    );
+    expect(providerErrorDetail(JSON.stringify({ detail: 'Not authenticated' }))).toBe(
+      'Not authenticated',
+    );
+    expect(
+      providerErrorDetail(
+        JSON.stringify({
+          detail: [{ loc: ['query', 'a'], msg: 'field required' }, { msg: 'bad' }],
+        }),
+      ),
+    ).toBe('field required; bad');
+    expect(providerErrorDetail(JSON.stringify({ detail: 5 }))).toBeNull();
     expect(providerErrorDetail('<html>502</html>')).toBeNull();
     expect(providerErrorDetail(JSON.stringify({ unrelated: 1 }))).toBeNull();
     const long = providerErrorDetail(JSON.stringify({ error: { message: 'x '.repeat(500) } }));

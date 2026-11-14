@@ -172,7 +172,11 @@ describe.skipIf(!adminUrl)('provider connections (AI-001, AI-003, AI-004)', () =
       { cookie },
     );
     const body = checked.json<{ connection: Connection }>().connection;
-    expect(body).toMatchObject({ status: 'invalid', lastError: 'openai_unauthorized' });
+    // The code comes first, then the provider's own reason; the key it carelessly echoed is redacted.
+    expect(body).toMatchObject({
+      status: 'invalid',
+      lastError: 'openai_unauthorized: Incorrect API key provided: Bearer [REDACTED]',
+    });
     expect(checked.body).not.toContain('sk-wrong-key');
   });
 

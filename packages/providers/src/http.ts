@@ -19,10 +19,31 @@ function retryAfter(headers: Headers): number | null {
   return Number.isNaN(date) ? null : Math.max(0, Math.ceil((date - Date.now()) / 1000));
 }
 
+/** ElevenLabs puts the reason in `detail`: an object with `code` and `message`, a text, or a validation list. */
+function detailReason(detail: unknown): string | undefined {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const reasons = detail.flatMap((item) => {
+      const msg = (item as Record<string, unknown> | null)?.['msg'];
+      return typeof msg === 'string' ? [msg] : [];
+    });
+    return reasons.length > 0 ? reasons.join('; ') : undefined;
+  }
+  if (detail !== null && typeof detail === 'object') {
+    const record = detail as Record<string, unknown>;
+    const message = record['message'];
+    if (typeof message !== 'string') return undefined;
+    const code = record['code'] ?? record['status'];
+    return typeof code === 'string' && code !== '' ? `${code}: ${message}` : message;
+  }
+  return undefined;
+}
+
 /**
  * The reason a provider gives for an error (OpenAI and Gemini `error.message`, Anthropic
- * `error.message`), stripped of anything that looks like a key and cut short. Without it a bad
- * request, an exhausted quota or an unsupported parameter all look like the same bare status.
+ * `error.message`, ElevenLabs `detail`), stripped of anything that looks like a key and cut short.
+ * Without it a bad request, an exhausted quota or a key without permission all look like the same
+ * bare status.
  */
 export function providerErrorDetail(raw: string): string | null {
   let message: unknown;
@@ -34,7 +55,7 @@ export function providerErrorDetail(raw: string): string | null {
         ? error
         : error !== null && typeof error === 'object'
           ? (error as Record<string, unknown>)['message']
-          : body['message'];
+          : (body['message'] ?? detailReason(body['detail']));
   } catch {
     return null;
   }

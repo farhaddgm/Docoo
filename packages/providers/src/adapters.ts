@@ -170,6 +170,14 @@ export function isOpenAiTextModel(id: string): boolean {
   );
 }
 
+/**
+ * OpenAI models that speak over the realtime socket (the live voice assistant). They are kept out
+ * of the text catalog on purpose; this is the separate list the voice setting offers.
+ */
+export function isOpenAiRealtimeModel(id: string): boolean {
+  return /^gpt-.*realtime/u.test(id) && !/(transcribe|whisper|tts)/u.test(id);
+}
+
 /** Gemini text models that take a system instruction and a JSON schema (not Gemma, speech or image ones). */
 export function isGeminiTextModel(name: string): boolean {
   const id = name.replace(/^models\//u, '');
@@ -217,6 +225,11 @@ export function isXaiTextModel(id: string): boolean {
   return !/(imagine|voice|multi-agent|tts|stt|transcribe|embed)/u.test(id);
 }
 
+/** The error code, followed by the provider's own (sanitised) reason when it gave one. */
+export function failureText(error: ProviderError): string {
+  return error.detail ? `${error.code}: ${error.detail}` : error.code;
+}
+
 abstract class HttpAdapter implements ModelProviderAdapter {
   abstract readonly kind: Exclude<ProviderKind, 'fake'>;
   protected readonly fetchImpl: FetchLike;
@@ -258,7 +271,7 @@ abstract class HttpAdapter implements ModelProviderAdapter {
               : 'unavailable',
         checkedAt,
         latencyMs: null,
-        error: providerError.code,
+        error: failureText(providerError),
       };
     }
   }
@@ -301,6 +314,19 @@ export class OpenAiAdapter extends HttpAdapter {
       .map((item) => asObject(item))
       .filter((item) => typeof item['id'] === 'string' && isOpenAiTextModel(String(item['id'])))
       .map((item) => this.descriptor(String(item['id']), String(item['id']), null, null));
+  }
+
+  /** The models of this account that can carry the live voice; nothing is sent but the listing call. */
+  async listRealtimeModels(): Promise<string[]> {
+    const result = await requestJson(this.fetchImpl, 'openai', `${this.base}/models`, {
+      method: 'GET',
+      headers: this.headers(),
+      timeoutMs: 20_000,
+    });
+    return asArray(asObject(result.body)['data'])
+      .map((item) => asObject(item)['id'])
+      .filter((id): id is string => typeof id === 'string' && isOpenAiRealtimeModel(id))
+      .sort();
   }
 
   /** Queries and cited pages of a Responses answer that used the web search tool. */

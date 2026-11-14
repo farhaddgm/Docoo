@@ -12,10 +12,12 @@ import {
   catalogRejection,
   checkCostLimit,
   encryptSecret,
+  failureText,
   FALLBACK_PRICE,
   lookupCatalogPrice,
   PRICE_CATALOG_SOURCE,
   PriceCatalogError,
+  ProviderError,
   sanitizeError,
   samePrice,
   type CatalogPrice,
@@ -438,7 +440,13 @@ export class ProvidersService {
     } catch (error) {
       throw unavailable(
         'PROVIDER_CATALOG_UNAVAILABLE',
-        sanitizeError(error instanceof Error ? error.message : 'catalog failed'),
+        sanitizeError(
+          error instanceof ProviderError
+            ? failureText(error)
+            : error instanceof Error
+              ? error.message
+              : 'catalog failed',
+        ),
       );
     }
     models.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -459,6 +467,29 @@ export class ProvidersService {
       });
       return { snapshotId: snapshot.id, createdAt: snapshot.created_at, hash, models };
     });
+  }
+
+  /**
+   * The live-voice models of a connection, asked from the provider now (not a stored snapshot).
+   * Only an OpenAI connection has them; ElevenLabs chooses its speaking model from its voice
+   * catalog, and other brands have no live voice, so they answer with an empty list.
+   */
+  async realtimeModels(context: WorkspaceRequestContext, id: string): Promise<string[]> {
+    const loaded = await this.database.run(context, async (client) => {
+      const connection = await this.load(client, id);
+      if (connection.provider !== 'openai') return null;
+      return this.runtime.adapterFor(client, id);
+    });
+    const adapter: unknown = loaded?.adapter;
+    if (!adapter || typeof adapter !== 'object' || !('listRealtimeModels' in adapter)) return [];
+    try {
+      return await (adapter as { listRealtimeModels(): Promise<string[]> }).listRealtimeModels();
+    } catch (error) {
+      throw unavailable(
+        'PROVIDER_CATALOG_UNAVAILABLE',
+        sanitizeError(error instanceof Error ? error.message : 'catalog failed'),
+      );
+    }
   }
 
   async models(context: WorkspaceRequestContext, id: string) {

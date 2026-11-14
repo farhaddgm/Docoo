@@ -135,6 +135,10 @@ const fa = {
     connection: 'اتصال مدل صوتی',
     noConnection: '— انتخاب کنید —',
     noConnections: 'هنوز اتصالی در «ارائه‌دهندگان AI» ساخته نشده است.',
+    noElevenLabs:
+      'اتصال ElevenLabs در این فهرست نیست، چون هنوز ساخته نشده (یا غیرفعال است). در «ارائه‌دهندگان AI» نوع «ElevenLabs (Voice)» را اضافه کنید تا اینجا بیاید.',
+    noRealtimeModels:
+      'مدل realtime پیدا نشد. حساب این اتصال به مدل realtime دسترسی ندارد یا فهرست از ارائه‌دهنده خوانده نشد؛ می‌توانید نام مدل را با «مورد دیگر» وارد کنید.',
     pick: 'یکی را انتخاب کنید',
     other: 'مورد دیگر (وارد کردن دستی)',
     modelId: 'مدل صوتی بلادرنگ',
@@ -343,6 +347,10 @@ const en: typeof fa = {
     connection: 'Voice model connection',
     noConnection: '— choose —',
     noConnections: 'No connection exists yet; add one under AI providers.',
+    noElevenLabs:
+      'There is no ElevenLabs connection in this list because none exists yet (or it is disabled). Add one of type "ElevenLabs (Voice)" under AI providers and it will appear here.',
+    noRealtimeModels:
+      'No realtime model was found. This connection\'s account has no access to one, or the list could not be read from the provider; you can type a model name with "Other".',
     pick: 'Choose one',
     other: 'Other (type it in)',
     modelId: 'Realtime voice model',
