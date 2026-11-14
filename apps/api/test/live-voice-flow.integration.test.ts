@@ -43,6 +43,10 @@ describe.skipIf(!adminUrl)('the voice path from microphone to ledger (real datab
   const providerLinks: { instructions: string; audioFrames: number }[] = [];
   const providerAuth: string[] = [];
   const answers: string[] = [];
+  let values: Record<string, unknown> = {};
+  let costScale = 1;
+  let onFirstAudio: ((socket: import('ws').WebSocket) => void) | null = null;
+  const intruder = randomUUID();
 
   const context = (): WorkspaceRequestContext => ({
     workspaceId: ids.workspace,
@@ -74,6 +78,14 @@ describe.skipIf(!adminUrl)('the voice path from microphone to ledger (real datab
       ids.owner,
     ]);
     await admin.query(
+      `insert into users (id, email, password_hash, display_name) values ($1, $2, 'x', 'Intruder')`,
+      [intruder, `${intruder}@vf-${suffix}.example.test`],
+    );
+    await admin.query(`insert into memberships (workspace_id, user_id) values ($1, $2)`, [
+      ids.workspace,
+      intruder,
+    ]);
+    await admin.query(
       `insert into provider_connections (id, workspace_id, provider, name) values ($1, $2, 'openai'::provider_kind, $3)`,
       [ids.openai, ids.workspace, `openai-${suffix}`],
     );
@@ -100,6 +112,10 @@ describe.skipIf(!adminUrl)('the voice path from microphone to ledger (real datab
           link.audioFrames += 1;
           if (answered) return;
           answered = true;
+          if (onFirstAudio) {
+            onFirstAudio(socket);
+            return;
+          }
           const said = answers.shift() ?? 'ok';
           socket.send(
             JSON.stringify({
@@ -125,7 +141,7 @@ describe.skipIf(!adminUrl)('the voice path from microphone to ledger (real datab
     await new Promise<void>((resolve) => providerHttp.listen(0, '127.0.0.1', resolve));
     providerPort = (providerHttp.address() as AddressInfo).port;
 
-    const values = {
+    values = {
       ...liveAssistantSettingDefaults,
       'live_assistant.enabled': true,
       'live_assistant.disclosure_accepted': true,
@@ -146,7 +162,7 @@ describe.skipIf(!adminUrl)('the voice path from microphone to ledger (real datab
         _client: unknown,
         _model: string,
         usage: { inputTokens: number; outputTokens: number },
-      ) => Promise.resolve(usage.inputTokens * 0.0001 + usage.outputTokens * 0.0002),
+      ) => Promise.resolve((usage.inputTokens * 0.0001 + usage.outputTokens * 0.0002) * costScale),
     };
     service = new LiveAssistantService(
       new WorkspaceDatabase(pool),
@@ -315,5 +331,182 @@ describe.skipIf(!adminUrl)('the voice path from microphone to ledger (real datab
     // The same ticket again: spent.
     expect(await closeCode(new WebSocket(url, { origin: ORIGIN }))).toBe(4401);
     await service.endSession(context(), session.id, 'user');
+  });
+  // ---- red team: what an attacker, a broken page or a misbehaving provider can try -------------
+
+  const openAt = (sessionId: string, ticket: string, options: { origin?: string | null } = {}) => {
+    const origin = options.origin === undefined ? ORIGIN : options.origin;
+    return new WebSocket(
+      `ws://127.0.0.1:${gatewayPort}/v1/workspaces/${ids.workspace}/live-assistant/sessions/${sessionId}/voice?ticket=${ticket}`,
+      origin === null ? {} : { origin },
+    );
+  };
+  const closeCode = (socket: WebSocket) =>
+    new Promise<number>((resolve) => {
+      socket.on('close', (code) => resolve(code));
+      socket.on('error', () => resolve(-1));
+      socket.on('unexpected-response', (_request, response) => resolve(response.statusCode ?? 0));
+    });
+  const textOf = (received: { type: string }[]) => JSON.stringify(received);
+
+  it('does not let another person in the same workspace get a ticket for someone else’s session', async () => {
+    const session = await service.startSession(context(), 'voice');
+    const other = { ...context(), actorId: intruder };
+    await expect(service.issueVoiceTicket(other, session.id)).rejects.toMatchObject({
+      response: { code: 'LIVE_SESSION_NOT_FOUND' },
+    });
+    await service.endSession(context(), session.id, 'user');
+  });
+
+  it('does not take a ticket on another workspace’s address, or for another session', async () => {
+    const mine = await service.startSession(context(), 'voice');
+    const ticket = await service.issueVoiceTicket(context(), mine.id);
+    const wrongWorkspace = new WebSocket(
+      `ws://127.0.0.1:${gatewayPort}/v1/workspaces/${randomUUID()}/live-assistant/sessions/${mine.id}/voice?ticket=${ticket.ticket}`,
+      { origin: ORIGIN },
+    );
+    expect(await closeCode(wrongWorkspace)).toBe(4401);
+    // The refused try spent the ticket (it is one use, whoever tries), so there is no second go.
+    expect(await closeCode(openAt(mine.id, ticket.ticket))).toBe(4401);
+    const another = await service.issueVoiceTicket(context(), mine.id);
+    expect(await closeCode(openAt(randomUUID(), another.ticket))).toBe(4401);
+    await service.endSession(context(), mine.id, 'user');
+  });
+
+  it('refuses a link without the page’s origin, with a made-up ticket, and for an ended session', async () => {
+    const session = await service.startSession(context(), 'voice');
+    const ticket = await service.issueVoiceTicket(context(), session.id);
+    expect(await closeCode(openAt(session.id, ticket.ticket, { origin: null }))).toBe(403);
+    expect(await closeCode(openAt(session.id, 'x'.repeat(43)))).toBe(4401);
+    await service.endSession(context(), session.id, 'user');
+    // The unspent ticket of an ended session opens nothing.
+    expect(await closeCode(openAt(session.id, ticket.ticket))).toBe(4401);
+    await expect(service.issueVoiceTicket(context(), session.id)).rejects.toBeDefined();
+  });
+
+  it('checks the settings again when the link opens: switching the assistant off in between stops it', async () => {
+    const session = await service.startSession(context(), 'voice');
+    const ticket = await service.issueVoiceTicket(context(), session.id);
+    const before = providerLinks.length;
+    values = { ...values, 'live_assistant.enabled': false };
+    try {
+      expect(await closeCode(openAt(session.id, ticket.ticket))).toBe(4401);
+    } finally {
+      values = { ...values, 'live_assistant.enabled': true };
+    }
+    // No link to the provider was opened for it.
+    expect(providerLinks.length).toBe(before);
+    await service.endSession(context(), session.id, 'user').catch(() => undefined);
+  });
+
+  it('closes the older link when a newer one opens for the same session', async () => {
+    const session = await service.startSession(context(), 'voice');
+    const first = await link(session.id);
+    const firstClosed = closeCode(first.socket);
+    const second = await link(session.id);
+    expect(await firstClosed).toBeDefined();
+    await waitFor(() => first.socket.readyState === WebSocket.CLOSED);
+    expect(second.socket.readyState).toBe(WebSocket.OPEN);
+    second.socket.close();
+    await service.endSession(context(), session.id, 'user');
+  });
+
+  it('holds back a flood of microphone frames, and an oversized frame closes the link', async () => {
+    const session = await service.startSession(context(), 'voice');
+    const flood = await link(session.id);
+    const index = providerLinks.length - 1;
+    // 300 frames of 40 ms at once is 12 s of audio in no time: the bucket lets a second or so through.
+    for (let i = 0; i < 300; i += 1) flood.socket.send(PCM_FRAME, { binary: true });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(providerLinks[index]?.audioFrames ?? 0).toBeLessThan(80);
+    flood.socket.close();
+
+    const big = await link(session.id);
+    const closed = closeCode(big.socket);
+    big.socket.send(Buffer.alloc(3 * 1024 * 1024, 1), { binary: true });
+    // The library refuses the frame and closes with 1009; the server must not crash on it (an
+    // unhandled socket error would fail this whole run).
+    expect(await closed).toBe(1009);
+    await service.endSession(context(), session.id, 'user');
+  });
+
+  it('shrugs off nonsense from the page: bad JSON, unknown messages, empty frames', async () => {
+    const session = await service.startSession(context(), 'voice');
+    const noisy = await link(session.id);
+    const index = providerLinks.length - 1;
+    noisy.socket.send('this is not json');
+    noisy.socket.send(JSON.stringify({ type: 'format_disk' }));
+    noisy.socket.send(JSON.stringify({ type: 'action_result', callId: 5 }));
+    noisy.socket.send(Buffer.alloc(0), { binary: true });
+    noisy.socket.send(PCM_FRAME, { binary: true });
+    await waitFor(() => (providerLinks[index]?.audioFrames ?? 0) === 1);
+    expect(noisy.socket.readyState).toBe(WebSocket.OPEN);
+    noisy.socket.close();
+    await service.endSession(context(), session.id, 'user');
+  });
+
+  it('ignores a tool the provider invents, and ends the link when the provider fails', async () => {
+    const session = await service.startSession(context(), 'voice');
+    const invented = await link(session.id);
+    onFirstAudio = (socket) => {
+      // Garbage first (not JSON, an empty object, a bare number): none of it may stop the link.
+      socket.send('{broken');
+      socket.send('{}');
+      socket.send('42');
+      socket.send(
+        JSON.stringify({
+          type: 'response.function_call_arguments.done',
+          call_id: 'c1',
+          name: 'delete_everything',
+          arguments: '{}',
+        }),
+      );
+      socket.send(JSON.stringify({ type: 'response.done', response: { usage: {} } }));
+    };
+    try {
+      invented.socket.send(PCM_FRAME, { binary: true });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(invented.received.some((m) => m.type === 'answer')).toBe(false);
+      const proposals = await admin.query(`select 1 from live_actions where session_id = $1`, [
+        session.id,
+      ]);
+      expect(proposals.rowCount).toBe(0);
+      invented.socket.close();
+
+      const failing = await link(session.id);
+      onFirstAudio = (socket) => socket.send(JSON.stringify({ type: 'error', error: {} }));
+      failing.socket.send(PCM_FRAME, { binary: true });
+      await waitFor(() => failing.received.some((m) => m.type === 'closed'));
+      expect(failing.received.find((m) => m.type === 'closed')?.['reason']).toBe('provider');
+      // Nothing the provider said carries the key back to the page.
+      expect(textOf(failing.received)).not.toContain('sk-flow-test');
+    } finally {
+      onFirstAudio = null;
+    }
+    await service.endSession(context(), session.id, 'user').catch(() => undefined);
+  });
+
+  it('ends the session at the cost cap, and a link cannot be opened for it afterwards', async () => {
+    values = { ...values, 'live_assistant.session_cost_cap_usd': 0.5 };
+    costScale = 100; // one answer now costs two dollars: well over the half-dollar cap
+    try {
+      answers.push('cap');
+      const session = await service.startSession(context(), 'voice');
+      const capped = await link(session.id);
+      capped.socket.send(PCM_FRAME, { binary: true });
+      await waitFor(() => capped.received.some((m) => m.type === 'closed'), 8000);
+      await waitFor(async () => (await row(session.id)).status === 'ended');
+      const reason = (
+        await admin.query<{ end_reason: string }>(
+          `select end_reason from live_sessions where id = $1`,
+          [session.id],
+        )
+      ).rows[0]?.end_reason;
+      expect(reason).toBe('cap_cost');
+      await expect(service.issueVoiceTicket(context(), session.id)).rejects.toBeDefined();
+    } finally {
+      costScale = 1;
+      values = { ...values, 'live_assistant.session_cost_cap_usd': 5 };
+    }
   });
 });
