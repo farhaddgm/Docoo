@@ -149,7 +149,7 @@ describe('listening for the wake phrase on the device', () => {
     expect(await wakeSupport(env(null))).toBe('unsupported');
     // A browser that has recognition but no on-device switch is not used (it would use the cloud).
     class Cloud {
-      static available = FakeRecognition.available;
+      static available = () => FakeRecognition.available();
     }
     const cloudOnly = Cloud as unknown as RecognitionConstructor;
     expect(await wakeSupport(env(cloudOnly))).toBe('unsupported');
