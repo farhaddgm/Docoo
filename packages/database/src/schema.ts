@@ -871,7 +871,9 @@ export const providerConnections = pgTable(
     ...timestamps,
   },
   (table) => [
-    uniqueIndex('provider_connections_name_uq').on(table.workspaceId, sql`lower(${table.name})`),
+    uniqueIndex('provider_connections_name_uq')
+      .on(table.workspaceId, sql`lower(${table.name})`)
+      .where(sql`${table.disabledAt} is null`),
     uniqueIndex('provider_connections_scope_id_uq').on(table.workspaceId, table.id),
     check(
       'provider_connections_concurrency_range',
