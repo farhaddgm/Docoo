@@ -77,6 +77,10 @@ export function attachVoiceGateway(options: {
       ticket,
     };
     sockets.handleUpgrade(request, socket, head, (client) => {
+      // A frame over the limit or a broken one makes the socket emit "error"; with no listener that
+      // is an uncaught exception, which would take the whole server down. The socket is closed by
+      // the library itself (1009 for a frame that is too big); nothing more is needed here.
+      client.on('error', () => undefined);
       const link = wrap(client);
       options
         .accept(upgrade, link)
