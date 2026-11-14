@@ -367,6 +367,39 @@ export const liveCostSummarySchema = z.object({
 });
 export type LiveCostSummary = z.infer<typeof liveCostSummarySchema>;
 
+/** The breakdown behind the cost tab: what the person's own conversations cost over some days. */
+export const LIVE_COST_REPORT_DAYS = [7, 30, 90] as const;
+
+export const liveCostReportSchema = z.object({
+  days: z.number().int(),
+  /** One row per provider, kind of session and model; "text" sessions have no voice provider. */
+  groups: z.array(
+    z.object({
+      provider: z.string(),
+      mode: z.enum(['realtime', 'pipeline', 'text']),
+      model: z.string(),
+      sessions: z.number().int(),
+      /** Wall-clock minutes from start to end, sleeping time included (a sleeping link costs nothing). */
+      minutes: z.number(),
+      voiceCostUsd: z.number(),
+      typedCostUsd: z.number(),
+      tokens: z.number(),
+      cachedInputTokens: z.number(),
+    }),
+  ),
+  /** One row per day (UTC) with any session, oldest first. */
+  byDay: z.array(
+    z.object({
+      day: z.string(),
+      sessions: z.number().int(),
+      voiceCostUsd: z.number(),
+      typedCostUsd: z.number(),
+    }),
+  ),
+  dailyCapUsd: z.number(),
+});
+export type LiveCostReport = z.infer<typeof liveCostReportSchema>;
+
 // ---------------------------------------------------------------------------------------------
 // Asking the executor (typing to the assistant)
 // ---------------------------------------------------------------------------------------------

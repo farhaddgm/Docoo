@@ -1,4 +1,5 @@
 import type {
+  LiveCostReport,
   LiveActionView,
   LiveAskAnswer,
   LiveAssistantClientConfig,
@@ -103,6 +104,8 @@ export const liveReadApi = {
     apiGet<LiveAssistantClientConfig>(`${base(workspaceId)}/config`, signal),
   cost: (workspaceId: string, signal?: AbortSignal) =>
     apiGet<LiveCostSummary>(`${base(workspaceId)}/cost`, signal),
+  costReport: (workspaceId: string, days: number, signal?: AbortSignal) =>
+    apiGet<LiveCostReport>(`${base(workspaceId)}/cost/report?days=${days}`, signal),
   /** Opens the voice link from the server once and reports why not, if it fails. Costs nothing. */
   voiceCheck: (workspaceId: string) =>
     apiSend<LiveVoiceCheck>('POST', `${base(workspaceId)}/voice-check`, {}),

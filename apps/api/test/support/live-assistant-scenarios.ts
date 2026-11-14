@@ -1190,6 +1190,80 @@ export function liveAssistantScenarios(ctxOf: () => ScenarioCtx): void {
     expect(other.month.sessions).toBe(0);
   });
 
+  it('breaks the cost down by provider, kind and day over 7, 30 or 90 days, for the caller only', async () => {
+    await ctx().configure(EXECUTOR);
+    const caps = JSON.stringify({
+      idleSleepS: 120,
+      sessionMaxMinutes: 30,
+      sessionCostCapUsd: 5,
+      dailyCostCapUsd: 20,
+      taskCostCapUsd: 1,
+      maxActionsPerTask: 8,
+      confirmTimeoutS: 300,
+    });
+    const insert = (
+      mode: string,
+      provider: string,
+      model: string,
+      age: string,
+      voice: number,
+      typed: number,
+    ) =>
+      rows(
+        `insert into live_sessions (workspace_id, user_id, mode, model, provider, caps, access_rules,
+                                    status, ended_at, end_reason, started_at, cost_usd, executor_cost_usd,
+                                    input_tokens, executor_input_tokens)
+         values ($1, $2, $3, $4, $5, $6::jsonb, '[]'::jsonb, 'ended', now() - $7::interval + interval '10 minutes',
+                 'user', now() - $7::interval, $8, $9, 100, 20)`,
+        [
+          ctx().context.workspaceId,
+          ctx().context.actorId,
+          mode,
+          model,
+          provider,
+          caps,
+          age,
+          voice,
+          typed,
+        ],
+      );
+    await insert('realtime', 'openai', 'gpt-realtime', '2 days', 0.4, 0.1);
+    await insert('realtime', 'openai', 'gpt-realtime', '3 days', 0.2, 0);
+    await insert('pipeline', 'elevenlabs', 'eleven_v4_turbo', '3 days', 0.3, 0.05);
+    await insert('realtime', 'openai', 'gpt-realtime', '40 days', 9, 0);
+    const month = await ctx().service.costReport(ctx().context, 30);
+    expect(month.days).toBe(30);
+    const openai = month.groups.find((group) => group.provider === 'openai');
+    expect(openai).toMatchObject({ mode: 'realtime', model: 'gpt-realtime', sessions: 2 });
+    expect(openai?.voiceCostUsd).toBeCloseTo(0.6);
+    expect(openai?.typedCostUsd).toBeCloseTo(0.1);
+    expect(openai?.minutes).toBeCloseTo(20, 0);
+    expect(openai?.tokens).toBe(240);
+    const eleven = month.groups.find((group) => group.provider === 'elevenlabs');
+    expect(eleven).toMatchObject({ mode: 'pipeline', sessions: 1 });
+    expect(eleven?.voiceCostUsd).toBeCloseTo(0.3);
+    // Most expensive first (earlier scenarios leave sessions of their own in the same workspace).
+    const totals = month.groups.map((group) => group.voiceCostUsd + group.typedCostUsd);
+    expect(totals).toEqual([...totals].sort((x, y) => y - x));
+    expect(month.byDay.reduce((sum, day) => sum + day.sessions, 0)).toBe(
+      month.groups.reduce((sum, group) => sum + group.sessions, 0),
+    );
+    expect(month.byDay.map((day) => day.day)).toEqual(
+      [...month.byDay.map((day) => day.day)].sort(),
+    );
+    const week = await ctx().service.costReport(ctx().context, 7);
+    expect(week.groups.find((group) => group.provider === 'openai')?.sessions).toBe(2);
+    const quarter = await ctx().service.costReport(ctx().context, 90);
+    expect(quarter.groups.find((group) => group.provider === 'openai')?.sessions).toBe(3);
+    expect(quarter.groups.find((group) => group.provider === 'openai')?.voiceCostUsd).toBeCloseTo(
+      9.6,
+    );
+    // Another workspace sees none of it.
+    const other = await ctx().service.costReport(ctx().otherContext, 90);
+    expect(other.groups).toEqual([]);
+    expect(other.byDay).toEqual([]);
+  });
+
   it('shows a page and a form draft on the owner’s screen without anything to confirm, and records it', async () => {
     model().reset();
     await ctx().configure(EXECUTOR);
