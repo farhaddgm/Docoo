@@ -11,6 +11,9 @@ import { fill } from '../agents/agent-messages';
 import { reportMessagesFor } from '../../report-messages';
 import { VoiceUsagePanel } from '../../voice/voice-usage';
 import { SignedIn } from '../signed-in';
+import { PageTabPanel, PageTabs, useTabParam } from '../../page-tabs';
+import { VoiceAssistantCost } from './voice-assistant-cost';
+import { voiceCostMessagesFor } from './voice-cost-messages';
 import { SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
 import { TilesSkeleton } from '../../skeleton';
@@ -40,13 +43,44 @@ export function CostReport({ locale }: { locale: Locale }) {
     <SignedIn locale={locale} title={text.title} subtitle={text.subtitle}>
       {(identity) =>
         identity.workspaces[0] ? (
-          <>
-            <Report locale={locale} workspaceId={identity.workspaces[0].id} />
-            <VoiceUsagePanel locale={locale} workspaceId={identity.workspaces[0].id} />
-          </>
+          <CostTabs locale={locale} workspaceId={identity.workspaces[0].id} />
         ) : null
       }
     </SignedIn>
+  );
+}
+
+type CostTab = 'models' | 'audio' | 'assistant';
+const COST_TABS = ['models', 'audio', 'assistant'] as const;
+
+/** The cost page in three parts: the models, the audio services and the voice assistant. */
+function CostTabs({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
+  const text = voiceCostMessagesFor(locale);
+  const [tab, choose] = useTabParam<CostTab>(COST_TABS);
+  const labels: Record<CostTab, string> = {
+    models: text.tabModels,
+    audio: text.tabAudio,
+    assistant: text.tab,
+  };
+  return (
+    <div className="stack">
+      <PageTabs
+        label={text.tabs}
+        idPrefix="costs"
+        tabs={COST_TABS.map((key) => ({ key, label: labels[key] }))}
+        active={tab}
+        onChange={choose}
+      />
+      <PageTabPanel idPrefix="costs" tabKey="models" active={tab}>
+        <Report locale={locale} workspaceId={workspaceId} />
+      </PageTabPanel>
+      <PageTabPanel idPrefix="costs" tabKey="audio" active={tab}>
+        <VoiceUsagePanel locale={locale} workspaceId={workspaceId} />
+      </PageTabPanel>
+      <PageTabPanel idPrefix="costs" tabKey="assistant" active={tab}>
+        <VoiceAssistantCost locale={locale} workspaceId={workspaceId} />
+      </PageTabPanel>
+    </div>
   );
 }
 

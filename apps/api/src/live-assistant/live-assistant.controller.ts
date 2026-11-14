@@ -5,6 +5,7 @@ import {
   askLiveAssistantSchema,
   confirmLiveActionSchema,
   endLiveSessionSchema,
+  LIVE_COST_REPORT_DAYS,
   proposeLiveActionSchema,
   reportLiveUsageSchema,
   startLiveSessionSchema,
@@ -83,6 +84,16 @@ export class LiveAssistantController {
   @RequireWorkspacePermission('live_assistant.use')
   cost(@Req() request: FastifyRequest) {
     return this.assistant.costSummary(workspaceContext(request));
+  }
+
+  @Get('cost/report')
+  @ApiOperation({ summary: 'What the own conversations cost by provider, model and day' })
+  @RequireWorkspacePermission('live_assistant.use')
+  costReport(@Req() request: FastifyRequest) {
+    const raw = Number((request.query as { days?: string } | undefined)?.days ?? 30);
+    const days = (LIVE_COST_REPORT_DAYS as readonly number[]).includes(raw) ? raw : null;
+    if (days === null) throw badRequest('LIVE_COST_DAYS_INVALID', 'Choose 7, 30 or 90 days.');
+    return this.assistant.costReport(workspaceContext(request), days);
   }
 
   @Get('sessions')

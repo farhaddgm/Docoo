@@ -4,6 +4,7 @@ import type {
   LiveActionView,
   LiveAssistantCaps,
   LiveCancelReason,
+  LiveCostReport,
   LiveCostSummary,
   LiveMessageView,
   LiveRefusalReason,
@@ -245,6 +246,69 @@ export async function costPeriods(
     sessions: row[`${key}_sessions`] ?? 0,
   });
   return { day: period('day'), week: period('week'), month: period('month') };
+}
+
+/** What the caller's sessions of the last `days` days cost, by provider/kind/model and by day (UTC). */
+export async function costReport(
+  client: PoolClient,
+  workspaceId: string,
+  days: number,
+): Promise<Pick<LiveCostReport, 'groups' | 'byDay'>> {
+  const groups = (
+    await client.query<{
+      provider: string;
+      mode: 'realtime' | 'pipeline' | 'text';
+      model: string;
+      sessions: number;
+      minutes: number;
+      voice_cost: number;
+      typed_cost: number;
+      tokens: number;
+      cached: number;
+    }>(
+      `select provider, mode, model, count(*)::int as sessions,
+              coalesce(sum(extract(epoch from (coalesce(ended_at, now()) - started_at)) / 60.0), 0)::float8 as minutes,
+              coalesce(sum(cost_usd), 0)::float8 as voice_cost,
+              coalesce(sum(executor_cost_usd), 0)::float8 as typed_cost,
+              coalesce(sum(input_tokens + output_tokens + executor_input_tokens + executor_output_tokens), 0)::float8 as tokens,
+              coalesce(sum(cached_input_tokens + executor_cached_input_tokens), 0)::float8 as cached
+         from live_sessions
+        where workspace_id = $1 and started_at >= now() - make_interval(days => $2::int)
+        group by provider, mode, model
+        order by sum(cost_usd + executor_cost_usd) desc, provider, model`,
+      [workspaceId, days],
+    )
+  ).rows;
+  const byDay = (
+    await client.query<{ day: string; sessions: number; voice_cost: number; typed_cost: number }>(
+      `select to_char(started_at at time zone 'UTC', 'YYYY-MM-DD') as day, count(*)::int as sessions,
+              coalesce(sum(cost_usd), 0)::float8 as voice_cost,
+              coalesce(sum(executor_cost_usd), 0)::float8 as typed_cost
+         from live_sessions
+        where workspace_id = $1 and started_at >= now() - make_interval(days => $2::int)
+        group by 1 order by 1`,
+      [workspaceId, days],
+    )
+  ).rows;
+  return {
+    groups: groups.map((row) => ({
+      provider: row.provider,
+      mode: row.mode,
+      model: row.model,
+      sessions: row.sessions,
+      minutes: row.minutes,
+      voiceCostUsd: row.voice_cost,
+      typedCostUsd: row.typed_cost,
+      tokens: row.tokens,
+      cachedInputTokens: row.cached,
+    })),
+    byDay: byDay.map((row) => ({
+      day: row.day,
+      sessions: row.sessions,
+      voiceCostUsd: row.voice_cost,
+      typedCostUsd: row.typed_cost,
+    })),
+  };
 }
 
 /** Totals only grow: a smaller number than the stored one changes nothing. */
