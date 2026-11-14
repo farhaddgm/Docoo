@@ -6,10 +6,13 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Fixed
 
+- Typing to the assistant ("write instead of speak") could answer with an error or with nothing. Found and fixed (ADR-0057 §19): the text model was limited to 1500 output tokens, which a reasoning model spends entirely on thinking before it writes a word; it now gets the platform's limit for the purpose, held under the model's own, and if it still runs out the answer says so plainly. The last turns of the chat are also sent in a shape every provider accepts (they begin with the person and never repeat a side), and a long earlier answer no longer makes the next request fail (a turn may be 2000 characters).
+- When the text model fails, the conversation now shows the kind of failure and the provider's own short reason in brackets, instead of only "the connection did not work".
 - A frame that is too big (or corrupt) sent over the voice link by a signed-in page no longer takes the whole server down: the server-side socket had no error listener, so the error escaped as an uncaught exception. The library already closed the link; it now does so quietly.
 
 ### Added
 
+- A "Text model and the assistant's work" check in the assistant settings: one small real request to the text model with the tools a conversation gives it, with the kind of failure in words and the provider's own reason beneath. It costs a few tokens. This is what to press, and to read back, when typing to the assistant fails; it has not been tried against a real provider yet.
 - A "Voice assistant" tab on the Cost & usage page (ADR-0057 §14), next to the models and the audio services. It shows what your own conversations with the assistant cost over the last 7, 30 or 90 days: per provider, kind (speech to speech, pipeline, typed) and model, with conversations, minutes, voice and executor cost apart, average per conversation, tokens and cached tokens, and a day-by-day table. Minutes include time asleep, so this is not a cost per minute of audio.
 
 ## [0.63.0] — 2026-11-14

@@ -29,7 +29,9 @@ import type { LiveSettings } from './live-gateway.js';
 
 /** Model calls in one request, the last of which may not use tools. */
 export const MAX_ROUNDS = 6;
-export const MAX_OUTPUT_TOKENS = 1500;
+// No output limit is set here: the platform applies the one for this purpose and holds it under what
+// the model can produce. A small fixed limit (this was 1500) is eaten whole by the "thinking" of
+// a reasoning model, which then answers with nothing at all.
 export const MODEL_TIMEOUT_MS = 60_000;
 /** Characters of one tool result handed back to the model, and of the arguments it may send. */
 export const MAX_RESULT_CHARS = 12_000;
@@ -72,6 +74,8 @@ export interface ExecutorOutput {
   readonly stop: LiveAskStop;
   /** Why a provider call failed, as a kind (never a message), when `stop` is `error`. */
   readonly errorCode: string | null;
+  /** The provider's own reason (sanitised, short), when it gave one; for the owner to read. */
+  readonly errorDetail: string | null;
   /** An error that ended the whole request (the session closed): the caller reports it, after counting the usage. */
   readonly fatal: Error | null;
   readonly usage: {
@@ -207,6 +211,46 @@ export function cleanArguments(raw: unknown): Record<string, unknown> | null {
 // The loop
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * The earlier turns as a provider accepts them: it must start with the person speaking (Anthropic
+ * refuses a conversation that begins with the assistant), and two turns in a row by the same side
+ * are one turn (several providers refuse or mishandle them). A typed chat cut to its last ten lines
+ * easily begins with an answer, and a failed request leaves two questions in a row.
+ */
+export function normaliseContext(
+  turns: readonly { role: 'user' | 'assistant'; content: string }[],
+): { role: 'user' | 'assistant'; content: string }[] {
+  const out: { role: 'user' | 'assistant'; content: string }[] = [];
+  for (const turn of turns) {
+    const content = turn.content.trim();
+    if (content === '') continue;
+    const last = out.at(-1);
+    if (!last && turn.role === 'assistant') continue;
+    if (last && last.role === turn.role) last.content = `${last.content}\n\n${content}`;
+    else out.push({ role: turn.role, content });
+  }
+  return out;
+}
+
+/** The turns before this request, then the request: always ending in the person's own words. */
+function contextOf(
+  turns: readonly { role: 'user' | 'assistant'; content: string }[],
+  text: string,
+): ChatMessage[] {
+  const before = normaliseContext(turns);
+  // The last earlier turn by the person and this request are one turn.
+  const last = before.at(-1);
+  const messages: ChatMessage[] = before.map((turn) => ({
+    role: turn.role,
+    content: turn.content,
+  }));
+  if (last?.role === 'user') {
+    messages[messages.length - 1] = { role: 'user', content: `${last.content}\n\n${text}` };
+    return messages;
+  }
+  return [...messages, { role: 'user', content: text }];
+}
+
 export async function runExecutor(
   deps: ExecutorDeps,
   input: ExecutorInput,
@@ -219,10 +263,7 @@ export async function runExecutor(
     currentProjectId: input.currentProjectId,
     hasTools: tools.specs.length > 0,
   });
-  const messages: ConversationMessage[] = [
-    ...input.context.map((turn): ChatMessage => ({ role: turn.role, content: turn.content })),
-    { role: 'user', content: input.text },
-  ];
+  const messages: ConversationMessage[] = [...contextOf(input.context, input.text)];
   const proposed = new Map<string, LiveActionView>();
   const screen: LiveScreenInstruction[] = [];
   const steps: LiveAskStep[] = [];
@@ -236,6 +277,7 @@ export async function runExecutor(
   let answer = '';
   let stop: LiveAskStop = 'round_limit';
   let errorCode: string | null = null;
+  let errorDetail: string | null = null;
   let toolChoice: 'auto' | 'none' = 'auto';
   let hitLimit = false;
   let fatal: Error | null = null;
@@ -256,6 +298,7 @@ export async function runExecutor(
     toolCalls,
     stop,
     errorCode,
+    errorDetail,
     fatal,
     usage: usage(),
   });
@@ -333,7 +376,6 @@ export async function runExecutor(
         instructions,
         messages,
         ...(tools.specs.length > 0 ? { tools: tools.specs, toolChoice } : {}),
-        maxOutputTokens: MAX_OUTPUT_TOKENS,
         timeoutMs: MODEL_TIMEOUT_MS,
       });
     } catch (error) {
@@ -345,6 +387,8 @@ export async function runExecutor(
       errorCode = (error as { code?: unknown } | null)?.code
         ? String((error as { code: unknown }).code).slice(0, 60)
         : 'provider_error';
+      const detail = (error as { detail?: unknown } | null)?.detail;
+      errorDetail = typeof detail === 'string' && detail !== '' ? detail.slice(0, 300) : null;
       return result();
     }
     modelCalls += 1;
@@ -355,6 +399,16 @@ export async function runExecutor(
     else costUsd += out.costUsd;
 
     const calls = out.response.toolCalls;
+    // Cut off by the output limit before any word or call: say so, instead of "no answer came back".
+    if (
+      calls.length === 0 &&
+      out.response.finishReason === 'length' &&
+      out.response.text.trim() === ''
+    ) {
+      stop = 'error';
+      errorCode = 'output_limit';
+      return result();
+    }
     if (calls.length === 0 || out.response.finishReason !== 'tool_call') {
       answer = out.response.text.trim();
       // Answered, but after being told no to some tool calls: the caller says so.

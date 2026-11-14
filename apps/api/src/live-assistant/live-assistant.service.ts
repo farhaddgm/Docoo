@@ -16,6 +16,7 @@ import {
   type LiveAssistantClientConfig,
   type LiveCostReport,
   type LiveCostSummary,
+  type LiveExecutorCheck,
   type LiveVoiceCheck,
   type LiveCancelReason,
   type LiveMessageView,
@@ -41,7 +42,7 @@ import { ConfigService } from '../config/config.service.js';
 import { PROVIDER_RUNTIME } from '../providers/providers.service.js';
 import { LIVE_CAPABILITIES, LiveCapabilityRegistry } from './capabilities.js';
 import { askAnswerText } from './live-ask-text.js';
-import { runExecutor } from './live-executor.js';
+import { offeredTools, runExecutor } from './live-executor.js';
 import { VoiceTickets, type VoiceTicketEntry } from './live-voice-tickets.js';
 import { checkElevenLabsLink } from './elevenlabs-link.js';
 import { createElevenLabsPipelineEngine } from './elevenlabs-pipeline-engine.js';
@@ -297,6 +298,96 @@ export class LiveAssistantService {
       events: [...result.events],
       latencyMs: result.latencyMs,
     };
+  }
+
+  /**
+   * One small real call to the text model that answers typed requests and does the assistant's
+   * work, with the same tools a conversation gives it, to tell the owner whether that part can
+   * work and, when it cannot, why (the kind, the platform's code and the provider's own short
+   * reason). It costs a few tokens and is recorded like any model call.
+   */
+  async checkExecutor(context: WorkspaceRequestContext): Promise<LiveExecutorCheck> {
+    const settings = await this.database.run(context, (client) => this.settings(client, context));
+    const model = settings.executorModel.trim();
+    const none = (failure: LiveExecutorCheck['failure']): LiveExecutorCheck => ({
+      ok: false,
+      failure,
+      detail: null,
+      code: null,
+      model,
+      toolCount: 0,
+      latencyMs: null,
+    });
+    if (settings.executorConnectionId === '' || model === '') return none('not_configured');
+    const tools = offeredTools(this.registry, settings);
+    const started = performance.now();
+    try {
+      const done = await this.runtime.invoke(
+        {
+          workspaceId: context.workspaceId,
+          onBehalfOf: context.actorId,
+          correlationId: context.correlationId,
+          projectId: null,
+          stageRunId: null,
+          attemptId: null,
+          purpose: 'live_assistant:executor_check',
+          retryNo: 0,
+        },
+        settings.executorConnectionId,
+        {
+          model,
+          instructions: 'You are a connection test. Answer with the single word: ok.',
+          messages: [{ role: 'user', content: 'ping' }],
+          ...(tools.specs.length > 0 ? { tools: tools.specs, toolChoice: 'auto' as const } : {}),
+          timeoutMs: 45_000,
+        },
+      );
+      const latencyMs = Math.round(performance.now() - started);
+      const finish = done.response.finishReason;
+      const answered = done.response.text.trim() !== '' || done.response.toolCalls.length > 0;
+      const failure = answered
+        ? null
+        : finish === 'length'
+          ? ('output_limit' as const)
+          : ('empty_answer' as const);
+      return {
+        ok: failure === null,
+        failure,
+        detail: null,
+        code: failure,
+        model,
+        toolCount: tools.specs.length,
+        latencyMs,
+      };
+    } catch (error) {
+      const latencyMs = Math.round(performance.now() - started);
+      const kind = (error as { kind?: unknown } | null)?.kind;
+      const failure: LiveExecutorCheck['failure'] =
+        kind === 'auth'
+          ? 'auth'
+          : kind === 'rate_limited'
+            ? 'rate_limited'
+            : kind === 'timeout'
+              ? 'timeout'
+              : kind === 'invalid_request'
+                ? 'invalid_request'
+                : kind === 'transient'
+                  ? 'transient'
+                  : (error as { message?: unknown } | null)?.message === 'ai_connection_unavailable'
+                    ? 'connection_unavailable'
+                    : 'unexpected';
+      const detail = (error as { detail?: unknown } | null)?.detail;
+      const code = (error as { code?: unknown } | null)?.code;
+      return {
+        ok: false,
+        failure,
+        detail: typeof detail === 'string' && detail !== '' ? detail.slice(0, 300) : null,
+        code: typeof code === 'string' ? code.slice(0, 100) : null,
+        model,
+        toolCount: tools.specs.length,
+        latencyMs,
+      };
+    }
   }
 
   // ---- sessions --------------------------------------------------------------------------
@@ -964,6 +1055,7 @@ export class LiveAssistantService {
         locale: localeOf(settings.language),
         answer: outcome.answer,
         stop: outcome.stop,
+        errorCode: outcome.errorCode,
         waiting: outcome.actions.length,
       });
       // The caps look at the new total before anything is returned; over one, the session ends.
@@ -1024,6 +1116,7 @@ export class LiveAssistantService {
         toolCalls: outcome.toolCalls,
         stop: outcome.stop,
         errorCode: outcome.errorCode,
+        errorDetail: outcome.errorDetail,
         usage: {
           inputTokens: outcome.usage.inputTokens,
           outputTokens: outcome.usage.outputTokens,

@@ -11,10 +11,17 @@ export function askAnswerText(input: {
   readonly locale: LiveLocale;
   readonly answer: string;
   readonly stop: LiveAskStop;
+  /** Why the model call failed, as a kind, when `stop` is `error`. */
+  readonly errorCode?: string | null | undefined;
   readonly waiting: number;
 }): string {
   const fa = input.locale === 'fa';
   const answer = input.answer.trim();
+  if (input.stop === 'error' && input.errorCode === 'output_limit') {
+    return fa
+      ? 'مدل پیش از نوشتن پاسخ به سقف خروجی خود رسید (مدل‌های استدلالی بخش بزرگی از آن را صرف فکرکردن می‌کنند). مدل دیگری برای مجری انتخاب کنید یا درخواست را ساده‌تر بنویسید.'
+      : 'The model reached its output limit before it wrote an answer (reasoning models spend much of it thinking). Choose another model for the executor or ask in simpler words.';
+  }
   if (input.stop === 'error') {
     return fa
       ? 'اتصال به مدل کار نکرد. اتصال و مدل اجرا را در تنظیمات دستیار بررسی کنید.'
