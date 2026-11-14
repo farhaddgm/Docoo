@@ -31,6 +31,8 @@ import { liveReadApi } from './live-api';
 import { CatalogSelect } from './catalog-select';
 import { ExecutorCheck } from './executor-check';
 import { VoiceLinkCheck } from './voice-link-check';
+import { VoiceSample } from './voice-sample';
+import { voiceLabel, voiceSpeaks } from './voice-list';
 import { fillText, liveSettingsMessages } from './settings-messages';
 import { PanelsSkeleton } from '../skeleton';
 
@@ -110,7 +112,7 @@ export function LiveAssistantSettings({
   /** For an ElevenLabs connection: the speaking models and the voices of its catalog. */
   const [speech, setSpeech] = useState<{
     models: string[];
-    voices: { id: string; name: string }[];
+    voices: { id: string; name: string; languages: string[] }[];
   }>({ models: [], voices: [] });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -183,13 +185,17 @@ export function LiveAssistantSettings({
     let active = true;
     apiGet<{
       models: { id: string; kind: string }[];
-      voices: { id: string; name: string }[];
+      voices: { id: string; name: string; languages?: string[] }[];
     }>(`${base}/voice/catalog?provider=elevenlabs`)
       .then((result) => {
         if (!active) return;
         setSpeech({
           models: result.models.filter((m) => m.kind === 'tts').map((m) => m.id),
-          voices: result.voices.map((v) => ({ id: v.id, name: v.name })),
+          voices: result.voices.map((v) => ({
+            id: v.id,
+            name: v.name,
+            languages: v.languages ?? [],
+          })),
         });
       })
       .catch(() => active && setSpeech({ models: [], voices: [] }));
@@ -550,11 +556,33 @@ export function LiveAssistantSettings({
                 <CatalogSelect
                   id={id}
                   value={asString(draft['live_assistant.voice_id'])}
-                  options={speech.voices.map((voice) => ({ value: voice.id, label: voice.name }))}
+                  options={speech.voices.map((voice) => ({
+                    value: voice.id,
+                    label: voiceLabel(voice),
+                  }))}
+                  // Voices that speak the conversation language come first.
+                  preferred={(value) =>
+                    voiceSpeaks(
+                      speech.voices.find((voice) => voice.id === value),
+                      asString(draft['live_assistant.language']),
+                    )
+                  }
                   chooseLabel={text.model.pick}
                   otherLabel={text.model.other}
                   onChange={(value) => set('live_assistant.voice_id', value)}
                 />
+                {isEleven && (
+                  <>
+                    <VoiceSample
+                      workspaceId={workspaceId}
+                      connectionId={connectionId}
+                      voiceId={asString(draft['live_assistant.voice_id'])}
+                      model={asString(draft['live_assistant.model'])}
+                      text={text.model.sample}
+                    />
+                    <small className="muted">{text.model.sample.languageNote}</small>
+                  </>
+                )}
               </>
             )}
           </Field>

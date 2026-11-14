@@ -369,6 +369,38 @@ describe.skipIf(!adminUrl)('voice conversation (ADR-0046)', () => {
     ).toBe(400);
   });
 
+  it('plays a sample with a connection other than the voice settings’ own, and only one of this workspace', async () => {
+    const other = await h.request('POST', api('/provider-connections'), {
+      cookie: cookieA,
+      payload: { provider: 'fake', name: 'Another speech connection' },
+    });
+    const otherId = other.json<{ connection: { id: string } }>().connection.id;
+    const sample = await h.request('POST', voice('/preview'), {
+      cookie: cookieA,
+      payload: { text: 'Hello', voiceId: 'fake-voice', model: 'fake-tts', connectionId: otherId },
+    });
+    expect(sample.statusCode, sample.body).toBe(201);
+    expect(sample.rawPayload.subarray(0, 4).toString()).toBe('RIFF');
+    // A connection that is not there (or belongs to another workspace) is not configured.
+    const missing = await h.request('POST', voice('/preview'), {
+      cookie: cookieA,
+      payload: {
+        text: 'Hello',
+        voiceId: 'fake-voice',
+        model: 'fake-tts',
+        connectionId: '12121212-1212-4212-8212-121212121212',
+      },
+    });
+    expect(missing.statusCode).toBe(409);
+    expect(missing.json<{ code: string }>().code).toBe('VOICE_NOT_CONFIGURED');
+    // Not a connection id at all: refused before anything is called.
+    const bad = await h.request('POST', voice('/preview'), {
+      cookie: cookieA,
+      payload: { text: 'Hello', voiceId: 'fake-voice', connectionId: 'nope' },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+
   it('stops a burst of paid calls from one account with 429 and a time to wait, and never calls the provider for them', async () => {
     let refused: Awaited<ReturnType<Harness['request']>> | null = null;
     for (let call = 0; call < 40 && !refused; call += 1) {
