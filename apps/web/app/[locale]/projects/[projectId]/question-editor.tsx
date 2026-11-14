@@ -222,9 +222,9 @@ export function QuestionEditor({
             </label>
           ))}
         </div>
-        <label htmlFor={`${id}-text`}>{noteOnly ? text.noteLabel : text.answerLabel}</label>
         <textarea
           id={`${id}-text`}
+          aria-label={noteOnly ? text.noteLabel : text.answerLabel}
           rows={3}
           dir={textDir(locale)}
           maxLength={8000}
@@ -242,6 +242,7 @@ export function QuestionEditor({
             }));
           }}
         />
+        <div className="answer-actions">
         {dictationWorkspaceId && (
           <DictateButton
             locale={locale}
@@ -257,22 +258,14 @@ export function QuestionEditor({
           />
         )}
         {onSuggest && !noteOnly && (
-          <div className="toolbar">
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={disabled || suggestState === 'busy'}
-              onClick={suggest}
-            >
-              {suggestState === 'busy' ? text.suggesting : text.suggest}
-            </button>
-            {suggestState === 'done' && <small className="muted">{text.suggestNote}</small>}
-            {suggestState === 'failed' && (
-              <small className="field-error" role="alert">
-                {text.suggestFailed}
-              </small>
-            )}
-          </div>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={disabled || suggestState === 'busy'}
+            onClick={suggest}
+          >
+            {suggestState === 'busy' ? text.suggesting : text.suggest}
+          </button>
         )}
         {!noteOnly && (
           <div className="file-pick">
@@ -293,6 +286,13 @@ export function QuestionEditor({
               </small>
             )}
           </div>
+        )}
+        </div>
+        {suggestState === 'done' && <small className="muted">{text.suggestNote}</small>}
+        {suggestState === 'failed' && (
+          <small className="field-error" role="alert">
+            {text.suggestFailed}
+          </small>
         )}
         {draft.files.length > 0 && (
           <ul className="plain-list" aria-label={text.files}>
