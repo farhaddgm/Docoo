@@ -4,6 +4,8 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.63.0] — 2026-11-14
+
 ### Added
 
 - The voice assistant remembers the conversation across a sleep (ADR-0057 §13). The server keeps the last 16 finished lines of a live session in memory only (whatever the transcript setting, dropped when the session ends); waking hands the newest to the new OpenAI session as a recap, and every request to the executor, with OpenAI or ElevenLabs, now carries the last 10 lines, so "that project" and "yes" are understood. A server restart empties the memory.
