@@ -222,9 +222,9 @@ export function QuestionEditor({
             </label>
           ))}
         </div>
-        <label htmlFor={`${id}-text`}>{noteOnly ? text.noteLabel : text.answerLabel}</label>
         <textarea
           id={`${id}-text`}
+          aria-label={noteOnly ? text.noteLabel : text.answerLabel}
           rows={3}
           dir={textDir(locale)}
           maxLength={8000}
@@ -242,22 +242,22 @@ export function QuestionEditor({
             }));
           }}
         />
-        {dictationWorkspaceId && (
-          <DictateButton
-            locale={locale}
-            workspaceId={dictationWorkspaceId}
-            disabled={disabled}
-            onText={(heard) =>
-              patch((current) => ({
-                ...current,
-                text: appendTranscript(current.text, heard).slice(0, 8000),
-                mode: current.mode ?? 'answered',
-              }))
-            }
-          />
-        )}
-        {onSuggest && !noteOnly && (
-          <div className="toolbar">
+        <div className="answer-actions">
+          {dictationWorkspaceId && (
+            <DictateButton
+              locale={locale}
+              workspaceId={dictationWorkspaceId}
+              disabled={disabled}
+              onText={(heard) =>
+                patch((current) => ({
+                  ...current,
+                  text: appendTranscript(current.text, heard).slice(0, 8000),
+                  mode: current.mode ?? 'answered',
+                }))
+              }
+            />
+          )}
+          {onSuggest && !noteOnly && (
             <button
               type="button"
               className="secondary-button"
@@ -266,33 +266,33 @@ export function QuestionEditor({
             >
               {suggestState === 'busy' ? text.suggesting : text.suggest}
             </button>
-            {suggestState === 'done' && <small className="muted">{text.suggestNote}</small>}
-            {suggestState === 'failed' && (
-              <small className="field-error" role="alert">
-                {text.suggestFailed}
-              </small>
-            )}
-          </div>
-        )}
-        {!noteOnly && (
-          <div className="file-pick">
-            <input
-              ref={picker}
-              id={`${id}-file`}
-              aria-label={text.attach}
-              type="file"
-              accept={ACCEPTED_EXTENSIONS}
-              disabled={disabled || draft.uploading}
-              aria-describedby={`${id}-file-help`}
-              onChange={(event) => pick(event.target.files)}
-            />
-            <InfoTip id={`${id}-file-help`} text={text.attachHelp} />
-            {draft.uploading && (
-              <small className="muted" role="status">
-                {text.uploading}
-              </small>
-            )}
-          </div>
+          )}
+          {!noteOnly && (
+            <div className="file-pick">
+              <input
+                ref={picker}
+                id={`${id}-file`}
+                aria-label={text.attach}
+                type="file"
+                accept={ACCEPTED_EXTENSIONS}
+                disabled={disabled || draft.uploading}
+                aria-describedby={`${id}-file-help`}
+                onChange={(event) => pick(event.target.files)}
+              />
+              <InfoTip id={`${id}-file-help`} text={text.attachHelp} />
+              {draft.uploading && (
+                <small className="muted" role="status">
+                  {text.uploading}
+                </small>
+              )}
+            </div>
+          )}
+        </div>
+        {suggestState === 'done' && <small className="muted">{text.suggestNote}</small>}
+        {suggestState === 'failed' && (
+          <small className="field-error" role="alert">
+            {text.suggestFailed}
+          </small>
         )}
         {draft.files.length > 0 && (
           <ul className="plain-list" aria-label={text.files}>
