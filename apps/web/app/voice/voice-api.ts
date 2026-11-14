@@ -113,7 +113,14 @@ export const voiceApi = {
 
   async preview(
     workspaceId: string,
-    input: { text: string; voiceId?: string; model?: string; speed?: number },
+    input: {
+      text: string;
+      voiceId?: string;
+      model?: string;
+      speed?: number;
+      /** Another connection than the voice settings' own (the live assistant's). */
+      connectionId?: string;
+    },
   ): Promise<Blob> {
     return (await apiPost(`${base(workspaceId)}/preview`, input)).blob();
   },
