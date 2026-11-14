@@ -184,6 +184,7 @@ export class VoiceService {
   private async resolve(
     context: WorkspaceRequestContext,
     need: SpeechKind | 'catalog',
+    connectionOverride?: string,
   ): Promise<Resolved> {
     return this.database.run(context, async (client) => {
       const settings = await this.settings(client, context);
@@ -192,7 +193,7 @@ export class VoiceService {
           'VOICE_DISABLED',
           'Voice conversation is switched off in the system settings.',
         );
-      const connectionId = await this.connectionFor(client, settings);
+      const connectionId = connectionOverride ?? (await this.connectionFor(client, settings));
       const missingModel =
         need === 'stt'
           ? !settings.sttModel
@@ -246,10 +247,12 @@ export class VoiceService {
       voiceId?: string | undefined;
       model?: string | undefined;
       speed?: number | undefined;
+      /** A connection other than the voice settings' own, e.g. the live assistant's ElevenLabs. */
+      connectionId?: string | undefined;
     },
   ) {
     this.throttle(context);
-    const resolved = await this.resolve(context, 'catalog');
+    const resolved = await this.resolve(context, 'catalog', input.connectionId);
     const model = input.model ?? resolved.settings.ttsModel;
     const voiceId = input.voiceId ?? resolved.settings.voiceId;
     if (!model || !voiceId)

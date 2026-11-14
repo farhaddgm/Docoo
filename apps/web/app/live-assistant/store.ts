@@ -72,6 +72,22 @@ export const MAX_MISSED_HEARTBEATS = 3;
 const MAX_PENDING_LINES = 200;
 const LINES_PER_REQUEST = 20;
 
+/**
+ * The answer as the conversation shows it. When the model could not answer, the kind of failure and
+ * the provider's own short reason are added in brackets: "the connection did not work" alone leaves
+ * the owner nothing to act on.
+ */
+export function withFailureReason(answer: {
+  readonly answer: string;
+  readonly stop: string;
+  readonly errorCode: string | null;
+  readonly errorDetail?: string | null | undefined;
+}): string {
+  if (answer.stop !== 'error' || !answer.errorCode) return answer.answer;
+  const detail = answer.errorDetail ? `: ${answer.errorDetail}` : '';
+  return `${answer.answer}\n(${answer.errorCode}${detail})`;
+}
+
 /** A typed session has no provider connection in the browser: the server's executor does the work. */
 const textTransport: LiveTransport = {
   start: () => Promise.resolve(),
@@ -445,7 +461,9 @@ export function createLiveStore(deps: LiveStoreDeps) {
     const context = state.chat
       .filter((line) => !line.failed)
       .slice(-CONTEXT_LINES)
-      .map((line) => ({ role: line.role, content: line.text }));
+      .filter((line) => line.text.trim() !== '')
+      // The server takes at most 2000 characters a turn; a long answer must not refuse the next request.
+      .map((line) => ({ role: line.role, content: line.text.slice(0, 2000) }));
     touch();
     addLine('user', text);
     dispatch({ type: 'asking', on: true });
@@ -457,7 +475,7 @@ export function createLiveStore(deps: LiveStoreDeps) {
       });
       if (sessionId !== id) return false;
       ingestAnswer(answer);
-      addLine('assistant', answer.answer, false, answer.steps);
+      addLine('assistant', withFailureReason(answer), answer.stop === 'error', answer.steps);
       return true;
     } catch (error) {
       if (sessionId !== id) return false;

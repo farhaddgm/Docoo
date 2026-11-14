@@ -30,6 +30,7 @@ describe('live assistant API paths', () => {
     await liveReadApi.config('w1', signal);
     await liveReadApi.cost('w1', signal);
     await liveReadApi.costReport('w1', 30, signal);
+    await liveReadApi.executorCheck('w1');
     await liveReadApi.sessions('w1', signal);
     await liveReadApi.session('w1', 's1', signal);
     await liveReadApi.deleteTranscript('w1', 's1');
@@ -37,6 +38,7 @@ describe('live assistant API paths', () => {
       { method: 'GET', path: '/workspaces/w1/live-assistant/config' },
       { method: 'GET', path: '/workspaces/w1/live-assistant/cost' },
       { method: 'GET', path: '/workspaces/w1/live-assistant/cost/report?days=30' },
+      { method: 'POST', path: '/workspaces/w1/live-assistant/executor-check' },
       { method: 'GET', path: '/workspaces/w1/live-assistant/sessions' },
       { method: 'GET', path: '/workspaces/w1/live-assistant/sessions/s1' },
       { method: 'DELETE', path: '/workspaces/w1/live-assistant/sessions/s1/messages' },

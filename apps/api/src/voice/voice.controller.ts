@@ -49,6 +49,8 @@ const previewBody = z
     voiceId: z.string().trim().min(1).max(200).optional(),
     model: z.string().trim().min(1).max(200).optional(),
     speed: z.number().min(0.7).max(1.25).optional(),
+    // Hear a voice of another connection than the one the voice settings use (the live assistant's).
+    connectionId: uuid.optional(),
   })
   .strict();
 const catalogQuery = z.object({ provider: z.enum(voiceBrands).optional() }).strict();

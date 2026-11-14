@@ -79,6 +79,17 @@ export class LiveAssistantController {
     return this.assistant.startSession(workspaceContext(request), input.channel);
   }
 
+  @Post('executor-check')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Make one small call to the text model of the assistant, to see whether it can work',
+  })
+  @UsesAi()
+  @RequireWorkspacePermission('live_assistant.use')
+  executorCheck(@Req() request: FastifyRequest) {
+    return this.assistant.checkExecutor(workspaceContext(request));
+  }
+
   @Get('cost')
   @ApiOperation({ summary: 'What the assistant cost over the last day, week and month' })
   @RequireWorkspacePermission('live_assistant.use')

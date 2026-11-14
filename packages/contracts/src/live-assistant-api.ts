@@ -437,6 +437,8 @@ export const liveAskAnswerSchema = z.object({
   stop: z.enum(liveAskStops),
   /** When a model call failed: its kind (never a message), so the screen can say what to check. */
   errorCode: z.string().nullable(),
+  /** The provider's own reason (sanitised, at most 300 characters), for the owner to read. */
+  errorDetail: z.string().max(300).nullable().optional(),
   usage: z.object({
     inputTokens: z.number(),
     outputTokens: z.number(),
@@ -445,6 +447,40 @@ export const liveAskAnswerSchema = z.object({
   }),
 });
 export type LiveAskAnswer = z.infer<typeof liveAskAnswerSchema>;
+
+/**
+ * The check of the text model that answers typed requests and does the assistant's work (the
+ * executor): one small real call with the same tools it is given in a conversation. `failure` is
+ * a kind; `detail` is the provider's own short reason (sanitised), so "it did not work" can be
+ * traced without server logs.
+ */
+export const liveExecutorCheckFailures = [
+  'not_configured',
+  'connection_unavailable',
+  'auth',
+  'rate_limited',
+  'timeout',
+  'invalid_request',
+  'transient',
+  'empty_answer',
+  'output_limit',
+  'unexpected',
+] as const;
+export type LiveExecutorCheckFailure = (typeof liveExecutorCheckFailures)[number];
+
+export const liveExecutorCheckSchema = z.object({
+  ok: z.boolean(),
+  failure: z.enum(liveExecutorCheckFailures).nullable(),
+  /** The provider's reason, when it gave one (at most 300 characters). */
+  detail: z.string().max(300).nullable(),
+  /** The code the platform recorded for the failure, e.g. `openai_invalid_request`. */
+  code: z.string().max(100).nullable(),
+  model: z.string(),
+  /** How many tools the model was offered, as in a conversation. */
+  toolCount: z.number().int(),
+  latencyMs: z.number().int().nullable(),
+});
+export type LiveExecutorCheck = z.infer<typeof liveExecutorCheckSchema>;
 
 /**
  * Why a check of the voice link failed, as a kind and never the provider's message: the screen says
