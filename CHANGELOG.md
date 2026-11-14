@@ -4,6 +4,12 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.64.1] — 2026-11-14
+
+### Fixed
+
+- Adding a connection on the AI providers page failed with "A connection with this name already exists" when a connection of that name had been removed earlier: a removed connection is only disabled and hidden, but its name stayed taken. A name now has to be unique only among connections still in use (migration 0094).
+
 ## [0.64.0] — 2026-11-14
 
 ### Fixed
