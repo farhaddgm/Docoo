@@ -874,9 +874,10 @@ export function liveAssistantScenarios(ctxOf: () => ScenarioCtx): void {
       onBehalfOf: ctx().context.actorId,
       purpose: 'live_assistant:executor',
     });
+    // An earlier question by the person and this one are a single turn: providers refuse (or
+    // mishandle) two turns in a row by one side.
     expect(model().requests[0]?.messages.map((m) => (m as { content: string }).content)).toEqual([
-      'earlier',
-      'hi',
+      'earlier\n\nhi',
     ]);
     const detail = await ctx().service.getSession(ctx().context, session.id);
     expect(detail.session).toMatchObject({ inputTokens: 100, outputTokens: 20 });
@@ -1128,6 +1129,47 @@ export function liveAssistantScenarios(ctxOf: () => ScenarioCtx): void {
       'active',
     );
     await ctx().service.endSession(ctx().context, session.id, 'user');
+  });
+
+  it('checks the text model with one small call that has the same tools, and reports a failure with its reason', async () => {
+    model().reset();
+    await ctx().configure(EXECUTOR);
+    model().script(say('ok'));
+    const good = await ctx().service.checkExecutor(ctx().context);
+    expect(good).toMatchObject({ ok: true, failure: null, detail: null });
+    expect(good.toolCount).toBeGreaterThan(0);
+    expect(good.latencyMs).not.toBeNull();
+    // The call was made with the tools of a conversation, and is recorded as a check.
+    expect(model().requests.at(-1)?.tools?.length).toBe(good.toolCount);
+
+    model().script(
+      Object.assign(new Error('provider_invalid_request'), {
+        kind: 'invalid_request',
+        code: 'openai_invalid_request',
+        detail: "Unsupported parameter: 'parallel_tool_calls'",
+        retryable: false,
+      }),
+    );
+    const bad = await ctx().service.checkExecutor(ctx().context);
+    expect(bad).toMatchObject({
+      ok: false,
+      failure: 'invalid_request',
+      code: 'openai_invalid_request',
+      detail: "Unsupported parameter: 'parallel_tool_calls'",
+    });
+    expect(JSON.stringify(bad)).not.toContain('sk-');
+
+    model().script(Object.assign(new Error('x'), { kind: 'auth', code: 'openai_unauthorized' }));
+    expect(await ctx().service.checkExecutor(ctx().context)).toMatchObject({
+      ok: false,
+      failure: 'auth',
+    });
+    // An empty answer is a failure too.
+    model().script(say(''));
+    expect(await ctx().service.checkExecutor(ctx().context)).toMatchObject({
+      ok: false,
+      failure: 'empty_answer',
+    });
   });
 
   it('shows another workspace nothing, and refuses a request in an ended session', async () => {

@@ -53,3 +53,25 @@ describe('the age groups of the conversation list', () => {
     expect(groupSessions([], now)).toEqual([]);
   });
 });
+
+describe('a failed answer in the typed conversation', () => {
+  it('shows the kind of failure and the provider’s own reason, and leaves a good answer alone', async () => {
+    const { withFailureReason } = await import('./store');
+    expect(
+      withFailureReason({
+        answer: 'The connection to the model did not work.',
+        stop: 'error',
+        errorCode: 'openai_invalid_request',
+        errorDetail: "Unsupported parameter: 'parallel_tool_calls'",
+      }),
+    ).toBe(
+      "The connection to the model did not work.\n(openai_invalid_request: Unsupported parameter: 'parallel_tool_calls')",
+    );
+    expect(
+      withFailureReason({ answer: 'Sorry.', stop: 'error', errorCode: 'provider_error' }),
+    ).toBe('Sorry.\n(provider_error)');
+    expect(withFailureReason({ answer: 'Fine.', stop: 'answered', errorCode: null })).toBe('Fine.');
+    // No code, nothing to add.
+    expect(withFailureReason({ answer: 'x', stop: 'error', errorCode: null })).toBe('x');
+  });
+});

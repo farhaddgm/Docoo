@@ -4,10 +4,17 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Fixed
+
+- Typing to the assistant ("write instead of speak") could answer with an error or with nothing. Found and fixed (ADR-0057 §19): the text model was limited to 1500 output tokens, which a reasoning model spends entirely on thinking before it writes a word; it now gets the platform's limit for the purpose, held under the model's own, and if it still runs out the answer says so plainly. The last turns of the chat are also sent in a shape every provider accepts (they begin with the person and never repeat a side), and a long earlier answer no longer makes the next request fail (a turn may be 2000 characters).
+- When the text model fails, the conversation now shows the kind of failure and the provider's own short reason in brackets, instead of only "the connection did not work".
+- A frame that is too big (or corrupt) sent over the voice link by a signed-in page no longer takes the whole server down: the server-side socket had no error listener, so the error escaped as an uncaught exception. The library already closed the link; it now does so quietly.
+
 ### Added
 
 - Wake the sleeping voice assistant by saying the wake phrase ("Hi Docoo" by default; ADR-0057 §15). It uses the browser's own speech recognition **on the device** and never falls back to the cloud: if the browser cannot promise that, it is not started and a click or the push-to-talk key still wakes the assistant. It listens only while the assistant is asleep and "Wake on the wake phrase" is on, lets go of the microphone before the voice link opens, and pauses itself in a noisy room (more than 3 wakes a minute). Chrome only for now. Not tried with real voices yet: accuracy for Persian speakers saying the English phrase, and false wakes per hour, still have to be measured.
 - The voice assistant can see and decide what waits in a project's workflow (ADR-0057 §17): "what is waiting in project X" reads the stages whose output awaits approval and the questions agents asked; it can then approve or reject a stage's output (a rejection needs feedback, as on the page) and answer an agent's question or decline to. Each is confirmed like any change (a consequential one: it restarts model work, so the owner hears the stage, the project and their exact words first), is valid only for the output version waiting right now, and runs through the same service and audit trail as the screens. Not tried with a real model yet.
+- A "Text model and the assistant's work" check in the assistant settings: one small real request to the text model with the tools a conversation gives it, with the kind of failure in words and the provider's own reason beneath. It costs a few tokens. This is what to press, and to read back, when typing to the assistant fails; it has not been tried against a real provider yet.
 - A "Voice assistant" tab on the Cost & usage page (ADR-0057 §14), next to the models and the audio services. It shows what your own conversations with the assistant cost over the last 7, 30 or 90 days: per provider, kind (speech to speech, pipeline, typed) and model, with conversations, minutes, voice and executor cost apart, average per conversation, tokens and cached tokens, and a day-by-day table. Minutes include time asleep, so this is not a cost per minute of audio.
 
 ## [0.63.0] — 2026-11-14
