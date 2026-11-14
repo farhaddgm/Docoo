@@ -333,6 +333,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/messages': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/end': 'live_assistant.use',
   'GET workspaces/:workspaceId/live-assistant/cost': 'live_assistant.use',
+  'GET workspaces/:workspaceId/live-assistant/cost/report': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/voice-check': 'live_assistant.use',
   'POST workspaces/:workspaceId/live-assistant/sessions/:sessionId/voice-ticket':
     'live_assistant.use',
