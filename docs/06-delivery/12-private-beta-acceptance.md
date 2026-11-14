@@ -45,7 +45,7 @@ notion_sync: true
 
    هر خط `ACTION` همان گام را می‌گوید (حفاظت شاخه، روشن‌کردن CodeQL، ثبت secret). اگر خط «اجرای Actions» می‌گوید jobها در ثانیهٔ اول بدون گام شکست می‌خورند، مشکل سقف هزینه یا اعتبار GitHub است نه کد؛ تا حل نشود هیچ گیت CI چیزی را اثبات نمی‌کند.
 
-2. **کلیدهای پذیرش.** در Settings → Secrets and variables → Actions این secretها را بسازید: `OPENAI_API_KEY`، `GEMINI_API_KEY`، `ANTHROPIC_API_KEY` و `TRANSCRIPTION_API_KEY`. هر مورد که ندارید فقط همان بخش را رد می‌کند. اگر نام مدل خاصی می‌خواهید، متغیر `<PROVIDER>_MODEL` را بگذارید؛ وگرنه اولین مدل زندهٔ فهرست provider که خروجی ساختاریافته می‌دهد انتخاب می‌شود (نام مدل در کد ثابت نیست). سپس Actions → **Provider acceptance** → Run workflow. خلاصهٔ اجرا فهرست «تنظیم‌شده، آزموده شد» و «تنظیم نشده، رد شد» است؛ همان را در #53 بچسبانید.
+2. **کلیدهای پذیرش.** در Settings → Secrets and variables → Actions این secretها را بسازید: `OPENAI_API_KEY`، `GEMINI_API_KEY`، `ANTHROPIC_API_KEY`، `XAI_API_KEY` (Grok، از console.x.ai؛ حساب باید اعتبار داشته باشد) و `TRANSCRIPTION_API_KEY`. هر مورد که ندارید فقط همان بخش را رد می‌کند. اگر نام مدل خاصی می‌خواهید، متغیر `<PROVIDER>_MODEL` را بگذارید؛ وگرنه اولین مدل زندهٔ فهرست provider که خروجی ساختاریافته می‌دهد انتخاب می‌شود (نام مدل در کد ثابت نیست). سپس Actions → **Provider acceptance** → Run workflow. خلاصهٔ اجرا فهرست «تنظیم‌شده، آزموده شد» و «تنظیم نشده، رد شد» است؛ همان را در #53 بچسبانید.
 
 3. **سرور.** پس از نصب ([راهنمای نصب](11-production-install.md)) و ورود کلید AI در صفحهٔ «ارائه‌دهندگان AI» (و زدن «بررسی سلامت»):
 

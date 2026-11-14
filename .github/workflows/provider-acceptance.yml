@@ -32,6 +32,8 @@ jobs:
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      XAI_MODEL: ${{ vars.XAI_MODEL }}
       TRANSCRIPTION_API_KEY: ${{ secrets.TRANSCRIPTION_API_KEY }}
       TRANSCRIPTION_BASE_URL: ${{ vars.TRANSCRIPTION_BASE_URL || 'https://api.openai.com/v1' }}
       TRANSCRIPTION_MODEL: ${{ vars.TRANSCRIPTION_MODEL || 'whisper-1' }}
@@ -50,7 +52,7 @@ jobs:
         run: |
           {
             echo '### Provider acceptance'
-            for name in OPENAI_API_KEY GEMINI_API_KEY ANTHROPIC_API_KEY TRANSCRIPTION_API_KEY; do
+            for name in OPENAI_API_KEY GEMINI_API_KEY ANTHROPIC_API_KEY XAI_API_KEY TRANSCRIPTION_API_KEY; do
               if [ -n "${!name}" ]; then echo "- $name: configured, tested"; else echo "- $name: missing, skipped"; fi
             done
           } >> "$GITHUB_STEP_SUMMARY"

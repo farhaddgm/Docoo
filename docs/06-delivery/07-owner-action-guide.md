@@ -121,7 +121,7 @@ GitHub منبع حقیقت است و Notion نمایش/پیگیری است. بع
 2. در منوی سمت چپ: **Secrets and variables** ← **Actions**.
 3. **New repository secret** را بزنید. در **Name** دقیقاً `OPENAI_API_KEY` و در **Secret** کلید را بچسبانید. **Add secret**.
 4. یک بار دیگر **New repository secret**: نام `TRANSCRIPTION_API_KEY`، و همان کلید OpenAI را بچسبانید. **Add secret**.
-5. (اختیاری) به همین روش `GEMINI_API_KEY` و `ANTHROPIC_API_KEY`.
+5. (اختیاری) به همین روش `GEMINI_API_KEY`، `ANTHROPIC_API_KEY` و `XAI_API_KEY` (Grok؛ کلید را از console.x.ai بگیرید و حساب API باید اعتبار داشته باشد).
 
 ### بخش پ — آزمون پذیرش را اجرا کنید (۵ دقیقه کار، ۵ تا ۱۰ دقیقه انتظار)
 
