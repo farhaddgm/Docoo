@@ -62,3 +62,58 @@ jobs:
         run: pnpm --filter @docoo/orchestration test:acceptance
       - name: Speech-to-text on the acceptance corpus (ING-005)
         run: pnpm --filter @docoo/ingestion test:acceptance
+
+  # ADR-0061: does the provider's embedding rank the Persian corpus better than the local one? It runs
+  # only with OPENAI_API_KEY, sends the synthetic corpus of qa/retrieval-eval (no real data) to the
+  # embeddings endpoint, and fails if the semantic ranking is worse. The numbers are in the log.
+  retrieval-semantic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.1-pg18@sha256:508c5290cda481d4f5f846446a26e9c1b804766828a394a5861de1b348a18b4c
+        env:
+          POSTGRES_DB: docoo_ci
+          POSTGRES_USER: docoo_admin
+          POSTGRES_PASSWORD: docoo-ci-admin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U docoo_admin -d docoo_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      RETRIEVAL_EVAL_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      RETRIEVAL_EVAL_EMBEDDING_MODEL: ${{ vars.RETRIEVAL_EVAL_EMBEDDING_MODEL || 'text-embedding-3-small' }}
+    steps:
+      - name: Is the key configured
+        run: |
+          if [ -z "$RETRIEVAL_EVAL_OPENAI_API_KEY" ]; then
+            echo '### Semantic retrieval evaluation: OPENAI_API_KEY missing, skipped' >> "$GITHUB_STEP_SUMMARY"
+            echo 'SKIP=1' >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: env.SKIP != '1'
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        if: env.SKIP != '1'
+        with:
+          version: 12.6.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: env.SKIP != '1'
+        with:
+          node-version: 24.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: env.SKIP != '1'
+      - run: pnpm --filter "@docoo/api..." build
+        if: env.SKIP != '1'
+      - run: pnpm db:migrate
+        if: env.SKIP != '1'
+        env:
+          DATABASE_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci
+      - name: Rank the corpus with the local embedding and with the provider's
+        if: env.SKIP != '1'
+        run: pnpm --filter @docoo/api exec vitest run test/retrieval-eval.integration.test.ts
+        env:
+          DATABASE_TEST_ADMIN_URL: postgresql://docoo_admin:docoo-ci-admin@localhost:5432/docoo_ci

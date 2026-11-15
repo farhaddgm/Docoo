@@ -17,6 +17,8 @@ export * from './research-conflicts.js';
 export * from './research-gaps.js';
 export * from './research-gap-run.js';
 export * from './stage-progress.js';
+export * from './independent-search.js';
+export * from './semantic-embeddings.js';
 export * from './page-reading.js';
 export * from './research-dual.js';
 export * from './research-dual-judge.js';

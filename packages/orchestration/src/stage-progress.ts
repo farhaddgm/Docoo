@@ -12,7 +12,8 @@ export interface ProgressScope {
   readonly attemptId: string;
 }
 
-export type ProgressKind = 'start' | 'round' | 'gaps' | 'judge' | 'reading' | 'writing';
+export type ProgressKind =
+  'start' | 'round' | 'gaps' | 'judge' | 'reading' | 'writing' | 'independent';
 
 /** A row stays small; long text is cut and a payload that is still too big is dropped. */
 const TEXT_MAX = 160;

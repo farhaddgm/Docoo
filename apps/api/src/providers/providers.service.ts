@@ -2,10 +2,12 @@ import { createHash } from 'node:crypto';
 
 import { HttpException, Inject, Injectable } from '@nestjs/common';
 import {
+  isSearchBrand,
   ProviderRuntime,
   runSelfCheckStep,
   secretContext,
   SELF_CHECK_STEPS,
+  type SearchBrand,
   type SelfCheckStep,
 } from '@docoo/orchestration';
 import {
@@ -46,8 +48,16 @@ import { PRICE_CATALOG, type PriceCatalogSource } from './price-catalog.source.j
 export const SECRET_MASTER_KEY = Symbol('SECRET_MASTER_KEY');
 export const PROVIDER_RUNTIME = Symbol('PROVIDER_RUNTIME');
 
-/** A connection's brand: a model provider, or ElevenLabs, which only speaks (ADR-0046). */
-export type ConnectionBrand = ProviderKind | 'elevenlabs';
+/**
+ * A connection's brand: a model provider, ElevenLabs, which only speaks (ADR-0046), or an
+ * independent web search service, which only searches (ADR-0060).
+ */
+export type ConnectionBrand = ProviderKind | 'elevenlabs' | SearchBrand;
+
+/** What one query costs when the owner has not entered a price (the services' public prices, SPK-001). */
+const DEFAULT_QUERY_COST_USD: Readonly<Record<SearchBrand, number>> = { exa: 0.007, tavily: 0.008 };
+
+const SEARCH_BRANDS_SQL = `('exa', 'tavily')`;
 
 interface ConnectionRow extends QueryResultRow {
   id: string;
@@ -61,6 +71,7 @@ interface ConnectionRow extends QueryResultRow {
   current_secret_version: number;
   store_content: boolean;
   max_concurrent_invocations: number;
+  cost_per_query_usd: number | null;
   version: number;
   disabled_at: string | null;
   created_at: string;
@@ -69,7 +80,7 @@ interface ConnectionRow extends QueryResultRow {
 }
 
 const connectionColumns = `c.id, c.provider, c.name, c.base_url, c.status, ${isoColumn('c.last_checked_at', 'last_checked_at')},
-  c.last_latency_ms, c.last_error, c.current_secret_version, c.store_content, c.max_concurrent_invocations, c.version,
+  c.last_latency_ms, c.last_error, c.current_secret_version, c.store_content, c.max_concurrent_invocations, c.cost_per_query_usd, c.version,
   ${isoColumn('c.disabled_at', 'disabled_at')}, ${isoColumn('c.created_at', 'created_at')}, ${isoColumn('c.updated_at', 'updated_at')},
   (select fingerprint from provider_secrets s where s.connection_id = c.id and s.secret_version = c.current_secret_version) as fingerprint`;
 
@@ -136,10 +147,23 @@ export class ProvidersService {
     @Inject(PRICE_CATALOG) private readonly priceCatalog: PriceCatalogSource,
   ) {}
 
+  /** The connections that answer prompts or speak; the search services are listed apart (ADR-0060). */
   async list(context: WorkspaceRequestContext) {
     return this.database.run(context, async (client) => {
       const result = await client.query<ConnectionRow>(
-        `select ${connectionColumns} from provider_connections c order by c.created_at, c.id`,
+        `select ${connectionColumns} from provider_connections c
+          where c.provider not in ${SEARCH_BRANDS_SQL} order by c.created_at, c.id`,
+      );
+      return result.rows.map((row) => this.toConnection(row));
+    });
+  }
+
+  /** The independent web search services (Exa, Tavily) connected in the workspace (ADR-0060). */
+  async listSearch(context: WorkspaceRequestContext) {
+    return this.database.run(context, async (client) => {
+      const result = await client.query<ConnectionRow>(
+        `select ${connectionColumns} from provider_connections c
+          where c.provider in ${SEARCH_BRANDS_SQL} order by c.created_at, c.id`,
       );
       return result.rows.map((row) => this.toConnection(row));
     });
@@ -160,6 +184,7 @@ export class ProvidersService {
       secret?: string | undefined;
       storeContent: boolean;
       maxConcurrentInvocations?: number | undefined;
+      costPerQueryUsd?: number | undefined;
     },
   ) {
     if (input.provider !== 'fake' && !input.secret) {
@@ -172,12 +197,16 @@ export class ProvidersService {
       );
     }
     const master = input.secret ? this.requireMasterKey() : null;
+    // A price per query belongs to a search service only; the others have none.
+    const queryCost = isSearchBrand(input.provider)
+      ? (input.costPerQueryUsd ?? DEFAULT_QUERY_COST_USD[input.provider])
+      : null;
     return this.database.run(context, async (client) => {
       let row: ConnectionRow;
       try {
         const inserted = await client.query<{ id: string }>(
-          `insert into provider_connections (workspace_id, provider, name, base_url, status, store_content, created_by, max_concurrent_invocations)
-           values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,
+          `insert into provider_connections (workspace_id, provider, name, base_url, status, store_content, created_by, max_concurrent_invocations, cost_per_query_usd)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning id`,
           [
             context.workspaceId,
             input.provider,
@@ -187,6 +216,7 @@ export class ProvidersService {
             input.storeContent,
             context.actorId,
             input.maxConcurrentInvocations ?? 4,
+            queryCost,
           ],
         );
         row = await this.load(client, inserted.rows[0]!.id);
@@ -210,6 +240,7 @@ export class ProvidersService {
           secretSet: Boolean(input.secret),
           storeContent: input.storeContent,
           maxConcurrentInvocations: input.maxConcurrentInvocations ?? 4,
+          ...(queryCost !== null ? { costPerQueryUsd: queryCost } : {}),
         },
       });
       return this.toConnection(await this.load(client, row.id));
@@ -225,10 +256,17 @@ export class ProvidersService {
       baseUrl?: string | null | undefined;
       storeContent?: boolean | undefined;
       maxConcurrentInvocations?: number | undefined;
+      costPerQueryUsd?: number | undefined;
     },
   ) {
     return this.database.run(context, async (client) => {
       const current = await this.load(client, id, true);
+      if (input.costPerQueryUsd !== undefined && !isSearchBrand(current.provider)) {
+        throw badRequest(
+          'PROVIDER_INVALID_REQUEST',
+          'Only a search service has a price per query.',
+        );
+      }
       if (current.version !== expectedVersion) {
         throw preconditionFailed(
           'PROVIDER_VERSION_CONFLICT',
@@ -237,7 +275,8 @@ export class ProvidersService {
       }
       await client.query<Record<string, unknown>>(
         `update provider_connections set name = coalesce($2, name), base_url = case when $3 then $4 else base_url end,
-                store_content = coalesce($5, store_content), max_concurrent_invocations = coalesce($6, max_concurrent_invocations), version = version + 1
+                store_content = coalesce($5, store_content), max_concurrent_invocations = coalesce($6, max_concurrent_invocations),
+                cost_per_query_usd = coalesce($7, cost_per_query_usd), version = version + 1
           where id = $1`,
         [
           id,
@@ -246,6 +285,7 @@ export class ProvidersService {
           input.baseUrl ?? null,
           input.storeContent ?? null,
           input.maxConcurrentInvocations ?? null,
+          input.costPerQueryUsd ?? null,
         ],
       );
       await writeAudit(client, context, {
@@ -258,6 +298,7 @@ export class ProvidersService {
           baseUrl: current.base_url,
           storeContent: current.store_content,
           maxConcurrentInvocations: current.max_concurrent_invocations,
+          costPerQueryUsd: current.cost_per_query_usd,
         },
         after: {
           name: input.name ?? current.name,
@@ -265,6 +306,7 @@ export class ProvidersService {
           storeContent: input.storeContent ?? current.store_content,
           maxConcurrentInvocations:
             input.maxConcurrentInvocations ?? current.max_concurrent_invocations,
+          costPerQueryUsd: input.costPerQueryUsd ?? current.cost_per_query_usd,
         },
       });
       return this.toConnection(await this.load(client, id));
@@ -341,6 +383,12 @@ export class ProvidersService {
       const connection = await this.load(client, id);
       if (connection.disabled_at)
         throw conflict('PROVIDER_DISABLED', 'The connection is disabled.');
+      if (isSearchBrand(connection.provider)) {
+        throw badRequest(
+          'PROVIDER_NOT_MODEL',
+          'A search service has no models; check it with the health check.',
+        );
+      }
     });
     const result = await runSelfCheckStep(this.runtime, {
       workspaceId: context.workspaceId,
@@ -375,35 +423,83 @@ export class ProvidersService {
   }
 
   async healthCheck(context: WorkspaceRequestContext, id: string) {
-    const adapter = await this.database.run(context, async (client) => {
+    const resolved = await this.database.run(context, async (client) => {
       const connection = await this.load(client, id);
       if (connection.disabled_at)
         throw conflict('PROVIDER_DISABLED', 'The connection is disabled.');
       await client.query(`update provider_connections set status = 'checking' where id = $1`, [id]);
+      // A search service is proven by one real, tiny query (it costs one query of its price).
+      if (isSearchBrand(connection.provider)) {
+        return this.runtime.searchPortFor(client, id).then(
+          (found) => ({ kind: 'search' as const, port: found.port }),
+          (error: unknown) => ({
+            kind: 'error' as const,
+            error: error instanceof Error ? error : new Error('adapter_failed'),
+          }),
+        );
+      }
       // ElevenLabs only speaks; its health is proven by its own speech adapter (ADR-0046).
       const resolve =
         connection.provider === 'elevenlabs'
           ? this.runtime.speechAdapterFor(client, id)
           : this.runtime.adapterFor(client, id);
-      return resolve.catch((error: unknown) =>
-        error instanceof Error ? error : new Error('adapter_failed'),
+      return resolve.then(
+        (found) => ({ kind: 'model' as const, adapter: found.adapter }),
+        (error: unknown) => ({
+          kind: 'error' as const,
+          error: error instanceof Error ? error : new Error('adapter_failed'),
+        }),
       );
     });
-    const health =
-      adapter instanceof Error
+    const unhealthy = (
+      error: string,
+      status: 'invalid' | 'degraded' | 'unavailable' = 'invalid',
+    ) => ({
+      status,
+      checkedAt: new Date().toISOString(),
+      latencyMs: null as number | null,
+      error,
+    });
+    let health: {
+      status: 'healthy' | 'invalid' | 'degraded' | 'unavailable';
+      checkedAt: string;
+      latencyMs: number | null;
+      error: string | null;
+    };
+    if (resolved.kind === 'error') {
+      health = unhealthy(sanitizeError(resolved.error.message));
+    } else if (resolved.kind === 'search') {
+      const outcome = await resolved.port.search({
+        query: 'Docoo connection check',
+        maxResults: 1,
+      });
+      health = outcome.ok
         ? {
-            status: 'invalid' as const,
+            status: 'healthy',
             checkedAt: new Date().toISOString(),
-            latencyMs: null,
-            error: sanitizeError(adapter.message),
+            latencyMs: outcome.latencyMs,
+            error: null,
           }
-        : await (adapter.adapter.healthCheck?.() ??
-            Promise.resolve({
-              status: 'healthy' as const,
-              checkedAt: new Date().toISOString(),
-              latencyMs: null,
-              error: null,
-            }));
+        : {
+            ...unhealthy(
+              `search_${outcome.code}`,
+              outcome.code === 'unauthorized' || outcome.code === 'rejected'
+                ? 'invalid'
+                : outcome.code === 'quota_exhausted' || outcome.code === 'rate_limited'
+                  ? 'degraded'
+                  : 'unavailable',
+            ),
+            latencyMs: outcome.latencyMs,
+          };
+    } else {
+      health = await (resolved.adapter.healthCheck?.() ??
+        Promise.resolve({
+          status: 'healthy' as const,
+          checkedAt: new Date().toISOString(),
+          latencyMs: null,
+          error: null,
+        }));
+    }
     return this.database.run(context, async (client) => {
       await client.query<Record<string, unknown>>(
         `update provider_connections set status = $2, last_checked_at = $3, last_latency_ms = $4, last_error = $5 where id = $1`,
@@ -430,6 +526,12 @@ export class ProvidersService {
   async refreshModels(context: WorkspaceRequestContext, id: string) {
     const adapter = await this.database.run(context, async (client) => {
       const connection = await this.load(client, id);
+      if (isSearchBrand(connection.provider)) {
+        throw badRequest(
+          'PROVIDER_NOT_MODEL',
+          'A search service has no models; it answers queries, not prompts.',
+        );
+      }
       return connection.provider === 'elevenlabs'
         ? this.runtime.speechAdapterFor(client, id)
         : this.runtime.adapterFor(client, id);
@@ -903,6 +1005,25 @@ export class ProvidersService {
           params,
         )
       ).rows;
+      // The independent search services bill per query, not per token (ADR-0060): their queries are
+      // a separate line, and they count toward the cost limit like the models' tokens do.
+      const searchServices = (
+        await client.query<{ service: string; queries: number; costUsd: number }>(
+          `select c.result->>'source' as service,
+                  coalesce(sum((c.result->>'queries')::int), 0)::int as queries,
+                  coalesce(sum((c.result->>'costUsd')::real), 0)::real as "costUsd"
+             from agent_tool_calls c
+            where c.project_id = $1 and c.tool = 'web_search' and c.result ? 'costUsd'
+              and ($2::timestamptz is null or c.created_at >= $2) and ($3::timestamptz is null or c.created_at < $3)
+            group by 1 order by 1`,
+          params,
+        )
+      ).rows.map((row) => ({
+        service: row.service,
+        queries: row.queries,
+        costUsd: Math.round(row.costUsd * 1_000_000) / 1_000_000,
+      }));
+      const searchCostUsd = searchServices.reduce((sum, row) => sum + row.costUsd, 0);
       const limit = Number(project.rows[0]?.resolved?.['ai.max_cost_usd_per_run'] ?? 20);
       return {
         projectId,
@@ -920,7 +1041,8 @@ export class ProvidersService {
           avgLatencyMs: totals.avg_latency_ms,
         },
         byStage,
-        costLimit: checkCostLimit(totals.cost_usd, limit),
+        searchServices,
+        costLimit: checkCostLimit(totals.cost_usd + searchCostUsd, limit),
         estimate: true,
       };
     });
@@ -1001,6 +1123,7 @@ export class ProvidersService {
             },
       storeContent: row.store_content,
       maxConcurrentInvocations: row.max_concurrent_invocations,
+      costPerQueryUsd: row.cost_per_query_usd,
       fallback: false,
       version: row.version,
       disabledAt: row.disabled_at,

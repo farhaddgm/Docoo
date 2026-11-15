@@ -42,6 +42,7 @@ import {
 } from '@docoo/providers';
 import type { Pool, PoolClient } from 'pg';
 
+import { semanticQueryFromEnv } from './semantic-embeddings.js';
 import { loadAgentVersion, resolveAgentProfile } from './agents.js';
 import { businessForRole, loadWritingBusiness } from './business.js';
 import { confirmedDeliverables } from './deliverables.js';
@@ -701,6 +702,7 @@ export function createWritingActivities(
                   role: 'documenter',
                   limit: settings.knowledgeLimit,
                   excludeConfidentiality: exclude,
+                  semantic: await semanticQueryFromEnv(query),
                 });
                 await recordToolCall(client, scope, {
                   tool: 'knowledge_retrieve',

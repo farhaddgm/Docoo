@@ -3,6 +3,11 @@ export async function createOpenAiEmbeddings(input: {
   apiKey: string;
   model: string;
   texts: readonly string[];
+  /**
+   * The vector length to ask for (the text-embedding-3 models can shorten theirs). When given, an
+   * answer of any other length is refused, so a stored vector always has the length the column needs.
+   */
+  dimensions?: number;
   fetcher?: typeof fetch;
   timeoutMs?: number;
 }) {
@@ -23,7 +28,12 @@ export async function createOpenAiEmbeddings(input: {
       redirect: 'error',
       signal: controller.signal,
       headers: { authorization: `Bearer ${input.apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model: input.model, input: input.texts, encoding_format: 'float' }),
+      body: JSON.stringify({
+        model: input.model,
+        input: input.texts,
+        encoding_format: 'float',
+        ...(input.dimensions !== undefined ? { dimensions: input.dimensions } : {}),
+      }),
     });
     if (!response.ok || !response.body) throw new Error();
     const reader = (response.body as ReadableStream<Uint8Array>).getReader();
@@ -76,6 +86,8 @@ export async function createOpenAiEmbeddings(input: {
         throw new Error();
       dimensions ??= embedding.length;
       if (dimensions !== embedding.length) throw new Error();
+      if (input.dimensions !== undefined && embedding.length !== input.dimensions)
+        throw new Error();
       vectors.set(index, embedding as number[]);
     }
     return input.texts.map((_, index) => vectors.get(index)!);

@@ -68,7 +68,11 @@ export function pagesToRead(sources: readonly WebPassage[], max: number): WebPas
     return true;
   });
   const rank = (source: WebPassage): number =>
-    (source.foundBy?.length ?? 0) > 1 ? 0 : source.sourceClass === 'official' ? 1 : 2;
+    (source.foundBy?.length ?? 0) > 1 || (source.via?.length ?? 0) > 1
+      ? 0
+      : source.sourceClass === 'official'
+        ? 1
+        : 2;
   return unique
     .map((source, order) => ({ source, order }))
     .sort((a, b) => rank(a.source) - rank(b.source) || a.order - b.order)

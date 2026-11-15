@@ -54,8 +54,10 @@ export class WalkerProgressService {
       }>(
         `select
            (select count(*)::int from provider_connections
-             where disabled_at is null and status in ('healthy', 'degraded')) as healthy,
-           (select count(*)::int from provider_connections where disabled_at is null) as total,
+             where disabled_at is null and provider not in ('exa', 'tavily')
+               and status in ('healthy', 'degraded')) as healthy,
+           (select count(*)::int from provider_connections
+             where disabled_at is null and provider not in ('exa', 'tavily')) as total,
            (select count(*)::int from topics where archived_at is null and deleted_at is null) as topics,
            (select count(*)::int from source_assets a
               join source_versions v on v.id = a.current_version_id
