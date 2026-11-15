@@ -24,8 +24,14 @@ function makeIban(body: string): string {
   return `IR${check}${body}`;
 }
 
-const request = (content: string, extra: Partial<NormalizedModelRequest> = {}) =>
-  ({ model: 'm', messages: [{ role: 'user', content }], ...extra });
+const request = (
+  content: string,
+  extra: Partial<NormalizedModelRequest> = {},
+): NormalizedModelRequest => ({
+  model: 'm',
+  messages: [{ role: 'user', content }],
+  ...extra,
+});
 
 const response = (over: Partial<NormalizedModelResponse>): NormalizedModelResponse => ({
   provider: 'fake',
