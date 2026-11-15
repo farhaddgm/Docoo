@@ -255,7 +255,7 @@ export class LiveAssistantService {
         if (access.provider === 'openai' && model === '') {
           return { failure: 'not_configured' as const, model };
         }
-        return { access, model };
+        return { access, model, zeroRetention: settings.zeroRetention };
       } catch (error) {
         const kind =
           error instanceof Error && error.message === 'ai_connection_no_realtime'
@@ -285,6 +285,7 @@ export class LiveAssistantService {
             baseUrl: access.baseUrl,
             sttModel: ELEVENLABS_STT_MODEL,
             ttsModel: shownModel,
+            zeroRetention: outcome.zeroRetention,
           })
         : await checkRealtimeLink({
             apiKey: access.apiKey,
@@ -723,6 +724,7 @@ export class LiveAssistantService {
             socket: this.voiceSocketFactory,
             apiKey: access.apiKey,
             baseUrl: access.baseUrl,
+            zeroRetention: settings.zeroRetention,
             config: {
               ttsModel: host.model,
               voice: host.voice,

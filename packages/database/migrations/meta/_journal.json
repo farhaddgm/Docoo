@@ -694,6 +694,13 @@
       "when": 1793809781919,
       "tag": "0098_knowledge_chunk_context",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1793809782919,
+      "tag": "0099_live_assistant_zero_retention",
+      "breakpoints": true
     }
   ]
 }

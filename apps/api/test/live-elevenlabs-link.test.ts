@@ -139,6 +139,31 @@ describe('the ElevenLabs link check (ADR-0057)', () => {
     });
   });
 
+  it('names the plan when the dialogue socket is refused only with zero retention asked', async () => {
+    const refuseZero = scripted({
+      stt: started,
+      dialogue: (socket, url) => {
+        if (url.includes('enable_logging=false')) socket.onerror?.({});
+        else socket.onopen?.({});
+      },
+    });
+    const result = await checkElevenLabsLink({ ...input, settleMs: 5, socket: refuseZero.factory });
+    expect(result).toMatchObject({ ok: false, failure: 'retention' });
+
+    const off = await checkElevenLabsLink({
+      ...input,
+      settleMs: 5,
+      zeroRetention: false,
+      socket: scripted({ stt: started, dialogue: opens }).factory,
+    });
+    expect(off.ok).toBe(true);
+
+    const down = scripted({ stt: started, dialogue: (socket) => socket.onerror?.({}) });
+    expect(
+      await checkElevenLabsLink({ ...input, settleMs: 5, socket: down.factory }),
+    ).toMatchObject({ ok: false, failure: 'network' });
+  });
+
   it('survives a socket that cannot even be created', async () => {
     const result = await checkElevenLabsLink({
       ...input,

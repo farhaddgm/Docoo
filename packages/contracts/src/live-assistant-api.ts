@@ -499,6 +499,8 @@ export const liveVoiceCheckFailures = [
   'quota',
   /** The provider's terms were not accepted in its dashboard. */
   'terms',
+  /** ElevenLabs refuses zero retention (`enable_logging=false`) for this plan. */
+  'retention',
   'unexpected',
 ] as const;
 export type LiveVoiceCheckFailure = (typeof liveVoiceCheckFailures)[number];
