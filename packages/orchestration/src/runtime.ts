@@ -1,11 +1,15 @@
 import {
+  applyPrivacy,
   createAdapter,
   createSpeechAdapter,
   decryptSecret,
   FakeAdapter,
   estimateCostUsd,
   FALLBACK_PRICE,
+  DEFAULT_PRIVACY_POLICY,
+  EMPTY_PRIVACY_REPORT,
   outputBudgetTokens,
+  parsePrivacyPolicy,
   ProviderError,
   sanitizeError,
   type MasterKey,
@@ -13,6 +17,8 @@ import {
   type NormalizedModelRequest,
   type NormalizedModelResponse,
   type PriceSnapshot,
+  type PrivacyPolicy,
+  type PrivacyReport,
   type ProviderKind,
   type SpeechProviderAdapter,
   type SpeechProviderKind,
@@ -154,7 +160,7 @@ export class ProviderRuntime {
   }
 
   /**
-   * The address and key for a live voice link (ADR-0055, ADR-0057): the brand of the connection
+   * The address and key for a live voice link (ADR-0055, ADR-0059): the brand of the connection
    * (OpenAI, or ElevenLabs for the pipeline). The key is decrypted in memory for the caller, which
    * must not log or store it. Any other brand cannot carry the live voice.
    */
@@ -314,6 +320,7 @@ export class ProviderRuntime {
       },
     );
     if (scope.actorId) await this.assertActorAccess(scope);
+    let privacy: PrivacyReport = EMPTY_PRIVACY_REPORT;
     try {
       // Every call carries an output limit that fits what it is for and what the model can give.
       const sent =
@@ -328,7 +335,14 @@ export class ProviderRuntime {
                 ),
               ),
             };
-      const response = await adapter.invoke(sent);
+      // Private values never leave as written (ADR-0059): the policy of the project decides, and the
+      // answer is put back before anything else sees it.
+      const policy = await inWorkspace(this.pool, { workspaceId: scope.workspaceId }, (client) =>
+        this.privacyPolicy(client, scope),
+      );
+      const guarded = applyPrivacy(sent, policy);
+      privacy = guarded.report;
+      const response = guarded.restore(await adapter.invoke(guarded.request));
       const price = await inWorkspace(this.pool, { workspaceId: scope.workspaceId }, (client) =>
         this.price(client, connection.provider, response.model, request.model),
       );
@@ -342,6 +356,7 @@ export class ProviderRuntime {
           costUsd,
           priceId: price?.id ?? null,
           errorCode: null,
+          privacy,
         });
         return { response, invocationId, costUsd };
       });
@@ -365,6 +380,20 @@ export class ProviderRuntime {
       );
       throw providerError;
     }
+  }
+
+  /** The privacy policy of the project a call belongs to; a call with no project gets the default. */
+  private async privacyPolicy(client: PoolClient, scope: InvocationScope): Promise<PrivacyPolicy> {
+    if (!scope.projectId) return DEFAULT_PRIVACY_POLICY;
+    const row = (
+      await client.query<{ privacy_mode: string; privacy_blocked_words: string[] }>(
+        `select privacy_mode, privacy_blocked_words from projects where workspace_id = $1 and id = $2`,
+        [scope.workspaceId, scope.projectId],
+      )
+    ).rows[0];
+    return row
+      ? parsePrivacyPolicy(row.privacy_mode, row.privacy_blocked_words)
+      : DEFAULT_PRIVACY_POLICY;
   }
 
   private async assertActorAccess(scope: InvocationScope): Promise<void> {
@@ -451,6 +480,8 @@ export class ProviderRuntime {
       priceId: string | null;
       errorCode: string | null;
       errorDetail?: string | null;
+      /** What the privacy layer replaced in the request; counts only, never a value. */
+      privacy?: PrivacyReport;
     },
   ): Promise<string> {
     const response = result.response;
@@ -459,8 +490,8 @@ export class ProviderRuntime {
                                       purpose, status, input_tokens, output_tokens, reasoning_tokens, cached_input_tokens,
                                       latency_ms, finish_reason, raw_finish_reason, cost_usd, price_id, provider_request_id,
                                       error_code, retry_no, agent_definition_version_id, prompt_sha256, writing_id, error_detail,
-                                      business_snapshot_id, actor_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+                                      business_snapshot_id, actor_id, privacy_masked_count, privacy_masked_kinds)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
        returning id`,
       [
         scope.workspaceId,
@@ -490,6 +521,8 @@ export class ProviderRuntime {
         result.errorDetail ?? null,
         scope.businessSnapshotId ?? null,
         scope.actorId ?? scope.onBehalfOf ?? null,
+        result.privacy?.total ?? 0,
+        result.privacy && result.privacy.total > 0 ? JSON.stringify(result.privacy.byKind) : null,
       ],
     );
     return inserted.rows[0]!.id;
