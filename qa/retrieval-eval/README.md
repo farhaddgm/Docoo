@@ -31,7 +31,7 @@ DATABASE_TEST_ADMIN_URL=postgresql://docoo_admin:...@localhost:5432/docoo_ci \
   pnpm --filter @docoo/api exec vitest run test/retrieval-eval.integration.test.ts
 ```
 
-- `RETRIEVAL_EVAL_REPORT=/path/report.json` writes what every question returned, to see what failed.
+- `RETRIEVAL_EVAL_REPORT=/path/report.json` writes what every question returned, with the score, the similarity and the ranks of each result, to see what failed.
 - `RETRIEVAL_EVAL_WRITE_BASELINE=1` raises the baseline. Do it only when the numbers are better
   and you mean it: the diff of `baseline.json` is what the reviewer reads.
 

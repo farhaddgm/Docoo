@@ -3,18 +3,18 @@
   "k": 5,
   "overall": {
     "queries": 74,
-    "hitAtK": 0.8649,
-    "recallAtK": 0.8581,
-    "mrr": 0.7546,
-    "ndcgAtK": 0.7777
+    "hitAtK": 0.8784,
+    "recallAtK": 0.8716,
+    "mrr": 0.7625,
+    "ndcgAtK": 0.7836
   },
   "byCategory": {
     "confusable": {
       "queries": 4,
       "hitAtK": 1,
       "recallAtK": 1,
-      "mrr": 0.875,
-      "ndcgAtK": 0.9077
+      "mrr": 1,
+      "ndcgAtK": 1
     },
     "cross-lingual": {
       "queries": 6,
@@ -55,22 +55,22 @@
       "queries": 10,
       "hitAtK": 0.6,
       "recallAtK": 0.6,
-      "mrr": 0.4583,
-      "ndcgAtK": 0.4931
+      "mrr": 0.501,
+      "ndcgAtK": 0.4887
     },
     "section-context": {
       "queries": 12,
       "hitAtK": 1,
       "recallAtK": 1,
-      "mrr": 0.7944,
-      "ndcgAtK": 0.8457
+      "mrr": 0.7778,
+      "ndcgAtK": 0.8353
     },
     "synonym": {
       "queries": 10,
-      "hitAtK": 0.8,
-      "recallAtK": 0.8,
-      "mrr": 0.6393,
-      "ndcgAtK": 0.6693
+      "hitAtK": 0.9,
+      "recallAtK": 0.9,
+      "mrr": 0.625,
+      "ndcgAtK": 0.6931
     },
     "typo": {
       "queries": 4,

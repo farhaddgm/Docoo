@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { embed, EMBEDDING_MODEL, normalizeForSearch, vectorLiteral } from '@docoo/knowledge';
+import { embed, EMBEDDING_MODEL, queryTerms, vectorLiteral } from '@docoo/knowledge';
 import type { PoolClient } from 'pg';
 import { SEMANTIC_MIN_SIMILARITY, type SemanticQuery } from './semantic-embeddings.js';
 import { sharedProjectKnowledgeSql } from './shared-knowledge.js';
@@ -204,9 +204,8 @@ export async function retrieveKnowledge(
     [...(input.excludeConfidentiality ?? [])],
     Math.max(0, Math.min(1, input.minAuditScore ?? 0)) * 100,
   ];
-  const words = [...new Set(normalizeForSearch(input.query).match(/[\p{L}\p{M}\p{N}]+/gu) ?? [])]
-    .filter((word) => word.length > 1)
-    .slice(0, 32);
+  // The words the question looks for, without the stopwords that would join it to any document.
+  const words = queryTerms(input.query);
   const lexical = words.length ? words.map((word) => `'${word}'`).join(' | ') : null;
   const vector = vectorLiteral(embed(input.query));
   // Chunks with the same word-match score are ordered by how close their text is to the question,

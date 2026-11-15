@@ -15,8 +15,10 @@ import {
   embed,
   EMBEDDING_DIMENSIONS,
   extractClaimCandidates,
+  isStopword,
   lexicalQuery,
   normalizeForSearch,
+  queryTerms,
   overrideReasonProblem,
   RUBRIC_WEIGHTS,
   sentenceRanges,
@@ -422,5 +424,47 @@ describe('chunkSections headings', () => {
     const started = Date.now();
     chunkSections(`${line}\nbody.`, 'T');
     expect(Date.now() - started).toBeLessThan(500);
+  });
+});
+
+describe('queryTerms', () => {
+  it('leaves out the particles and the pieces a zero-width non-joiner splits off', () => {
+    // "مشتری‌های" splits into "مشتری" and "های"; "می‌شود" into "می" and "شود".
+    expect(queryTerms('چرا مشتری‌های شرکت می‌روند و برای چه برمی‌گردند')).toEqual([
+      'مشتری',
+      'شرکت',
+      'روند',
+      'برمی',
+      'گردند',
+    ]);
+    expect(queryTerms('how to repair the bicycle tire')).toEqual(['repair', 'bicycle', 'tire']);
+  });
+
+  it('keeps a word that is also a content word', () => {
+    // "پس" is "then" and also "back" in "پس دادن"; "روی" is "on" and "face".
+    expect(queryTerms('پس دادن جنس')).toEqual(['پس', 'دادن', 'جنس']);
+    expect(isStopword('پس')).toBe(false);
+    expect(isStopword('روی')).toBe(false);
+  });
+
+  it('keeps numbers, acronyms and names', () => {
+    expect(queryTerms('ISO 27001 و SLA برای ۱۴۰۳')).toEqual(['iso', '27001', 'sla', '1403']);
+  });
+
+  it('keeps its own words when every word is a stopword, so the question still looks for something', () => {
+    expect(queryTerms('به از برای')).toEqual(['به', 'از', 'برای']);
+  });
+
+  it('removes repeats and caps the number of words', () => {
+    expect(queryTerms('مشتری مشتری مشتری')).toEqual(['مشتری']);
+    const many = Array.from({ length: 50 }, (_, i) => `واژه${i}`).join(' ');
+    expect(queryTerms(many, 32)).toHaveLength(32);
+  });
+
+  it('recognises a stopword however it is written', () => {
+    expect(isStopword('برای')).toBe(true);
+    expect(isStopword('های')).toBe(true);
+    expect(isStopword('the')).toBe(true);
+    expect(isStopword('قیمت')).toBe(false);
   });
 });

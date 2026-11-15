@@ -42,6 +42,22 @@ interface Corpus {
 
 const corpus = JSON.parse(readFileSync(corpusPath, 'utf8')) as Corpus;
 
+interface ResultRow {
+  knowledgeId: string;
+  score: number;
+  similarity: number | null;
+  lexicalRank: number | null;
+  vectorRank: number | null;
+}
+/** The scores behind each question's results, in question order, for the report. */
+const detail: {
+  doc: string;
+  score: number;
+  similarity: number | null;
+  lexicalRank: number | null;
+  vectorRank: number | null;
+}[][] = [];
+
 /** Puts the corpus through create and audit, optionally embeds it, runs every question, scores. */
 async function evaluate(
   h: Harness,
@@ -93,14 +109,24 @@ async function evaluate(
     expect(status.embedded).toBe(status.eligible);
   }
   const runs: EvalRun[] = [];
+  detail.length = 0;
   for (const query of corpus.queries) {
     const response = await h.request('POST', api('/knowledge/retrieve'), {
       cookie,
       payload: { query: query.query, limit: 10 },
     });
     expect(response.statusCode, response.body).toBe(200);
-    const results = response.json<{ results: { knowledgeId: string }[] }>().results;
+    const results = response.json<{ results: ResultRow[] }>().results;
     runs.push({ query, returned: results.map((item) => docOf.get(item.knowledgeId) ?? '?') });
+    detail.push(
+      results.map((item) => ({
+        doc: docOf.get(item.knowledgeId) ?? '?',
+        score: item.score,
+        similarity: item.similarity,
+        lexicalRank: item.lexicalRank,
+        vectorRank: item.vectorRank,
+      })),
+    );
   }
   return { summary: summarize(runs, K), runs };
 }
@@ -118,6 +144,7 @@ function writeReport(runs: readonly EvalRun[], variable: string): void {
         query: run.query.query,
         relevant: run.query.relevant,
         returned: [...new Set(run.returned)],
+        results: detail[runs.indexOf(run)],
       })),
       null,
       2,
