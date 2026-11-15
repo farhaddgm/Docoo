@@ -398,3 +398,29 @@ describe('chunkSections', () => {
     expect(chunkSearchInput({ text: 'متن' })).toBe('متن');
   });
 });
+
+describe('chunkSections headings', () => {
+  it.each([
+    ['## Costs', 'Costs'],
+    ['#\tTabbed', 'Tabbed'],
+    ['  ### Indented ###', 'Indented'],
+    ['###### Six', 'Six'],
+  ])('reads %j as a heading', (line, heading) => {
+    expect(chunkSections(`${line}\nbody text.`, '')[0]?.context).toBe(heading);
+  });
+
+  it.each(['#nospace', '####### seven', '    ## four spaces', '##', '## ', 'text # not heading'])(
+    'does not read %j as a heading',
+    (line) => {
+      const chunks = chunkSections(`${line}\nbody text.`, 'T');
+      expect(chunks.every((chunk) => chunk.context === 'T')).toBe(true);
+    },
+  );
+
+  it('reads a very long line with many tabs in a single pass', () => {
+    const line = `#${'\t'.repeat(200_000)}x${'\t'.repeat(200_000)}`;
+    const started = Date.now();
+    chunkSections(`${line}\nbody.`, 'T');
+    expect(Date.now() - started).toBeLessThan(500);
+  });
+});

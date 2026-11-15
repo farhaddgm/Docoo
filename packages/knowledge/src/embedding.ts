@@ -99,7 +99,27 @@ export interface SectionChunk extends Chunk {
   readonly context: string;
 }
 
-const HEADING = /^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t#]*$/u;
+const MAX_HEADING_CHARS = 300;
+
+/**
+ * The text of a markdown heading line (`## Costs`, optionally closed with `##`), or null when the
+ * line is not one. Read with plain string steps: a line of any length costs a single pass.
+ */
+function headingText(line: string): string | null {
+  const text = line.length > 2000 ? line.slice(0, 2000) : line;
+  let index = 0;
+  while (index < 3 && (text[index] === ' ' || text[index] === '\t')) index += 1;
+  let hashes = 0;
+  while (text[index + hashes] === '#') hashes += 1;
+  if (hashes < 1 || hashes > 6) return null;
+  const after = index + hashes;
+  if (text[after] !== ' ' && text[after] !== '\t') return null;
+  let end = text.length;
+  while (end > after && (text[end - 1] === ' ' || text[end - 1] === '\t' || text[end - 1] === '#'))
+    end -= 1;
+  const heading = text.slice(after, end).trim();
+  return heading === '' ? null : heading.slice(0, MAX_HEADING_CHARS);
+}
 const CONTEXT_MAX = 300;
 
 /**
@@ -111,8 +131,8 @@ const CONTEXT_MAX = 300;
 export function chunkSections(content: string, title: string, target = 800): SectionChunk[] {
   const sections: { heading: string; body: string[] }[] = [{ heading: '', body: [] }];
   for (const line of content.split(/\r?\n/u)) {
-    const heading = HEADING.exec(line);
-    if (heading) sections.push({ heading: heading[1]!.trim(), body: [] });
+    const heading = headingText(line);
+    if (heading !== null) sections.push({ heading, body: [] });
     else sections[sections.length - 1]!.body.push(line);
   }
   const chunks: SectionChunk[] = [];
