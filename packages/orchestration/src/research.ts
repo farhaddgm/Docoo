@@ -10,6 +10,7 @@ import { normalizeForSearch } from '@docoo/knowledge';
 import type { RetrievedPassage } from './knowledge-retrieval.js';
 import type { SourceCitation } from './source-citation.js';
 import type { DualInfo } from './research-dual.js';
+import type { IndependentInfo } from './independent-search.js';
 import type { PageReadingInfo } from './page-reading.js';
 import type { StoredGap } from './research-gaps.js';
 
@@ -256,6 +257,8 @@ export interface WebPassage {
   readonly sourceClass?: WebSourceClass;
   /** In dual-model research: which model(s) found the page; absent for a single model. */
   readonly foundBy?: readonly ('primary' | 'second')[];
+  /** Which searches returned the page: `native` (the model's own) and `independent:<service>` (ADR-0059). */
+  readonly via?: readonly string[];
   /** The page itself was read in full and its relevant part added to `text` (ADR-0054). */
   readonly read?: boolean;
 }
@@ -279,6 +282,8 @@ export interface WebRun {
   readonly gaps?: readonly StoredGap[] | undefined;
   /** How the full reading of the key pages went (ADR-0054); absent when it was off. */
   readonly pageReading?: PageReadingInfo | undefined;
+  /** How the independent search services went (ADR-0059); absent when none was asked. */
+  readonly independent?: IndependentInfo | undefined;
 }
 
 export const NO_WEB: WebRun = { status: 'off', code: null, queries: [], sources: [] };
@@ -291,6 +296,7 @@ export interface WebPromptItem {
   readonly sourceClass: WebSourceClass;
   readonly text: string;
   readonly foundBy?: readonly ('primary' | 'second')[];
+  readonly via?: readonly string[];
 }
 
 export const webPromptItems = (web: WebRun | undefined): WebPromptItem[] =>
@@ -301,6 +307,7 @@ export const webPromptItems = (web: WebRun | undefined): WebPromptItem[] =>
     sourceClass: source.sourceClass ?? 'public',
     text: source.text,
     ...(source.foundBy ? { foundBy: source.foundBy } : {}),
+    ...(source.via ? { via: source.via } : {}),
   }));
 
 /** The web side of a stored research output: what was asked and which pages were cited. */
@@ -314,6 +321,7 @@ export interface ResearchWebInfo {
   readonly dualSkipped?: string | undefined;
   readonly gaps?: readonly StoredGap[] | undefined;
   readonly pageReading?: PageReadingInfo | undefined;
+  readonly independent?: IndependentInfo | undefined;
   readonly sources: readonly {
     readonly ref: string;
     readonly url: string;
@@ -321,6 +329,7 @@ export interface ResearchWebInfo {
     readonly cited: boolean;
     readonly sourceClass?: WebSourceClass;
     readonly foundBy?: readonly ('primary' | 'second')[];
+    readonly via?: readonly string[];
     readonly read?: boolean;
   }[];
 }
@@ -692,6 +701,7 @@ export function verifyResearch(input: {
         ...(web.dualSkipped ? { dualSkipped: web.dualSkipped } : {}),
         ...(web.gaps ? { gaps: web.gaps } : {}),
         ...(web.pageReading ? { pageReading: web.pageReading } : {}),
+        ...(web.independent ? { independent: web.independent } : {}),
         sources: web.sources.map((source) => ({
           ref: source.ref,
           url: source.url,
@@ -699,6 +709,7 @@ export function verifyResearch(input: {
           cited: citedWeb.has(source.ref),
           sourceClass: source.sourceClass ?? ('public' as const),
           ...(source.foundBy ? { foundBy: source.foundBy } : {}),
+          ...(source.via ? { via: source.via } : {}),
           ...(source.read ? { read: true } : {}),
         })),
       },

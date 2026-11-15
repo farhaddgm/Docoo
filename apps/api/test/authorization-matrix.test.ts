@@ -138,6 +138,7 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/knowledge-conflicts': 'knowledge.read',
   'POST workspaces/:workspaceId/knowledge-conflicts/:conflictId/resolve': 'knowledge.audit',
   'GET workspaces/:workspaceId/retrieval-snapshots/:snapshotId': 'knowledge.read',
+  'GET workspaces/:workspaceId/search-connections': 'provider.read',
   'GET workspaces/:workspaceId/provider-connections': 'provider.read',
   'POST workspaces/:workspaceId/provider-connections': 'provider.configure',
   'GET workspaces/:workspaceId/provider-connections/:connectionId': 'provider.read',

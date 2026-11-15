@@ -30,6 +30,8 @@ const connectionBrandSchema = z.enum([
   'xai',
   'fake',
   'elevenlabs',
+  'exa',
+  'tavily',
 ]);
 const nameSchema = z.string().trim().min(1).max(100);
 const baseUrlSchema = z.url({ protocol: /^https?$/u }).max(500);
@@ -44,6 +46,8 @@ const createSchema = z
     secret: secretSchema.optional(),
     storeContent: z.boolean().default(false),
     maxConcurrentInvocations: z.number().int().min(1).max(100).default(4),
+    /** Search services only: what one query costs, in US dollars. */
+    costPerQueryUsd: z.number().min(0).max(1).optional(),
   })
   .strict();
 const updateSchema = z
@@ -52,6 +56,7 @@ const updateSchema = z
     baseUrl: baseUrlSchema.nullable().optional(),
     storeContent: z.boolean().optional(),
     maxConcurrentInvocations: z.number().int().min(1).max(100).optional(),
+    costPerQueryUsd: z.number().min(0).max(1).optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0);
@@ -131,6 +136,15 @@ export class ProvidersController {
   @RequireWorkspacePermission('provider.read')
   async list(@Req() request: FastifyRequest) {
     return { items: await this.providers.list(workspaceContext(request)) };
+  }
+
+  @Get('search-connections')
+  @ApiOperation({
+    summary: 'List the independent web search services (Exa, Tavily); secrets are never returned',
+  })
+  @RequireWorkspacePermission('provider.read')
+  async listSearch(@Req() request: FastifyRequest) {
+    return { items: await this.providers.listSearch(workspaceContext(request)) };
   }
 
   @Post('provider-connections')

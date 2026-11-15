@@ -38,6 +38,7 @@ import {
   type Stage,
   type StageContext,
 } from './stages.js';
+import { mergeIndependent, runIndependentStep, type IndependentRun } from './independent-search.js';
 import { readPages, searchTerms } from './page-reading.js';
 import { recordToolCall, toolDecision, type ToolCallScope } from './tool-calls.js';
 import {
@@ -546,16 +547,29 @@ export function createOrchestrationActivities(
           agentDefinitionVersionId: prepared.agentDefinitionVersionId,
           businessSnapshotId: prepared.businessSnapshotId,
         });
-        const affordable = () =>
+        // What the run has cost so far: the models' tokens and the independent search services'
+        // queries (ADR-0059). `extra` is the estimate of a call about to be made.
+        const affordable = (extra = 0) =>
           run(ref.workspaceId, async (client) => {
-            const total = (
+            const models = (
               await client.query<{ total: number | null }>(
                 `select sum(i.cost_usd)::real as total from model_invocations i
                  join stage_runs s on s.id = i.stage_run_id where s.run_id = $1`,
                 [ref.runId],
               )
             ).rows[0]?.total;
-            return checkCostLimit(total ?? 0, prepared.config.costLimitUsd).status !== 'exceeded';
+            const searches = (
+              await client.query<{ total: number | null }>(
+                `select sum((c.result->>'costUsd')::real)::real as total from agent_tool_calls c
+                 join stage_runs s on s.id = c.stage_run_id
+                 where s.run_id = $1 and c.tool = 'web_search' and c.result ? 'costUsd'`,
+                [ref.runId],
+              )
+            ).rows[0]?.total;
+            return (
+              checkCostLimit((models ?? 0) + (searches ?? 0) + extra, prepared.config.costLimitUsd)
+                .status !== 'exceeded'
+            );
           });
         // What the stage is doing is reported step by step (ADR-0049); a missed row never fails it.
         const progress = (kind: ProgressKind, data: Record<string, unknown> = {}) =>
@@ -579,6 +593,43 @@ export function createOrchestrationActivities(
         let dualJudge: ModelRef | null = null;
         if (research) {
           let web: WebRun = NO_WEB;
+          // ADR-0059: the independent search services (Exa, Tavily) run beside the model's own
+          // search, on the confirmed questions, after the privacy check. They are an extra: a
+          // service that fails is reported and the stage carries on with the model's search.
+          const independentStep = (): Promise<IndependentRun | null> =>
+            runIndependentStep({
+              enabled:
+                prepared.config.researchWebEnabled && prepared.config.researchIndependentEnabled,
+              denied: toolDecision(prepared.toolScope, 'web_search') === 'denied',
+              policy: prepared.config.researchIndependent,
+              questions: prepared.researchPlan?.questions ?? [],
+              problem: prepared.promptInput.problem,
+              projectTitle: prepared.promptInput.projectTitle,
+              loadPorts: () => run(ref.workspaceId, (client) => runtime.searchPortsFor(client)),
+              affordable,
+              progress: (data) => progress('independent', data),
+              record: (entry) =>
+                run(ref.workspaceId, (client) =>
+                  recordToolCall(client, prepared.toolScope, {
+                    tool: 'web_search',
+                    decision: 'allowed',
+                    // Only the service and the number of queries; the queries are never logged.
+                    input: { source: entry.source, queries: entry.queries },
+                    result: {
+                      source: entry.source,
+                      queries: entry.queries,
+                      failedQueries: entry.failedQueries,
+                      hits: entry.hits,
+                      pages: entry.pages,
+                      blocked: entry.blocked,
+                      costUsd: entry.costUsd,
+                    },
+                    latencyMs: entry.latencyMs,
+                    errorCode: entry.errorCode,
+                  }),
+                ).then(() => undefined),
+            });
+          const independentTask = independentStep();
           if (prepared.config.researchWebEnabled) {
             if (toolDecision(prepared.toolScope, 'web_search') === 'denied') {
               web = deniedWebRun;
@@ -841,6 +892,14 @@ export function createOrchestrationActivities(
                 dualJudge = dual.judge;
               }
             }
+          }
+          const independent = await independentTask;
+          if (independent) {
+            web = mergeIndependent(web, independent, {
+              limit: prepared.config.researchWebSourceLimit,
+              refOffset: prepared.webOffset,
+              officialDomains: prepared.config.researchOfficialDomains,
+            });
           }
           // ADR-0054: read the few pages the research leans on most, in full, under the owner's URL
           // policy. It never fails the stage; a page that cannot be read stays as the search left it.

@@ -18,6 +18,7 @@ import {
   type SpeechProviderKind,
   type Usage,
 } from '@docoo/providers';
+import { ExaWebSearch, TavilyWebSearch, type WebSearchPort } from '@docoo/ingestion';
 import type { Pool, PoolClient } from 'pg';
 import { correlatedSpan, logCorrelation } from '@docoo/observability';
 
@@ -50,10 +51,40 @@ export interface InvocationScope {
   readonly businessSnapshotId?: string | null;
 }
 
+/** The independent web search services (ADR-0059). They are brands of a connection, but never answer a prompt. */
+export const SEARCH_BRANDS = ['exa', 'tavily'] as const;
+export type SearchBrand = (typeof SEARCH_BRANDS)[number];
+export const isSearchBrand = (value: string): value is SearchBrand =>
+  SEARCH_BRANDS.some((brand) => brand === value);
+
+/** Builds a search port from a stored connection; tests replace this to script a service. */
+export type SearchPortFactory = (
+  brand: SearchBrand,
+  options: { apiKey: string; baseUrl?: string | undefined },
+) => WebSearchPort;
+
+export const defaultSearchPorts: SearchPortFactory = (brand, options) =>
+  brand === 'exa'
+    ? new ExaWebSearch(
+        options.apiKey,
+        options.baseUrl !== undefined ? { baseUrl: options.baseUrl } : {},
+      )
+    : new TavilyWebSearch(
+        options.apiKey,
+        options.baseUrl !== undefined ? { baseUrl: options.baseUrl } : {},
+      );
+
+/** A connected search service, ready to be asked, and what one query of it costs. */
+export interface ConnectedSearchPort {
+  readonly connectionId: string;
+  readonly port: WebSearchPort;
+  readonly costPerQueryUsd: number;
+}
+
 interface ConnectionRow {
   id: string;
-  /** A model brand, or `elevenlabs`, which only speaks (ADR-0046). */
-  provider: ProviderKind | 'elevenlabs';
+  /** A model brand, `elevenlabs`, which only speaks (ADR-0046), or a search service (ADR-0059). */
+  provider: ProviderKind | 'elevenlabs' | SearchBrand;
   base_url: string | null;
   status: string;
   disabled_at: string | null;
@@ -111,6 +142,7 @@ export class ProviderRuntime {
     private readonly adapters: AdapterFactory = defaultAdapters,
     private readonly capacity: ProviderCapacityOptions = {},
     private readonly speechAdapters: SpeechAdapterFactory = defaultSpeechAdapters,
+    private readonly searchPorts: SearchPortFactory = defaultSearchPorts,
   ) {}
 
   private async loadConnection(client: PoolClient, connectionId: string): Promise<ConnectionRow> {
@@ -204,12 +236,72 @@ export class ProviderRuntime {
     // A speech-only brand never answers a prompt; it is chosen for voice, not for stage runs.
     if (loaded.provider === 'elevenlabs')
       throw new ProviderError('permanent', 'ai_connection_speech_only');
+    // A search service answers a query, never a prompt.
+    if (isSearchBrand(loaded.provider))
+      throw new ProviderError('permanent', 'ai_connection_search_only');
     const kind = loaded.provider;
     const connection = { ...loaded, provider: kind };
     if (kind === 'fake') return { adapter: this.adapters('fake', { apiKey: 'fake' }), connection };
     const apiKey = await this.decryptKey(client, connection);
     return {
       adapter: this.adapters(kind, { apiKey, baseUrl: connection.base_url ?? undefined }),
+      connection,
+    };
+  }
+
+  /**
+   * The search services connected and enabled in the workspace, ready to be asked (ADR-0059). A
+   * connection whose key cannot be read is left out and named in `unavailable` with a short code,
+   * so one broken key never stops the others or the stage.
+   */
+  async searchPortsFor(client: PoolClient): Promise<{
+    ports: ConnectedSearchPort[];
+    unavailable: { connectionId: string; brand: SearchBrand; code: string }[];
+  }> {
+    const rows = (
+      await client.query<ConnectionRow & { cost_per_query_usd: number | null }>(
+        `select id, provider, base_url, status, disabled_at, current_secret_version, cost_per_query_usd
+           from provider_connections
+          where provider in ('exa', 'tavily') and disabled_at is null and current_secret_version > 0
+          order by created_at, id`,
+      )
+    ).rows;
+    const ports: ConnectedSearchPort[] = [];
+    const unavailable: { connectionId: string; brand: SearchBrand; code: string }[] = [];
+    for (const row of rows) {
+      if (!isSearchBrand(row.provider)) continue;
+      try {
+        const apiKey = await this.decryptKey(client, row);
+        ports.push({
+          connectionId: row.id,
+          port: this.searchPorts(row.provider, { apiKey, baseUrl: row.base_url ?? undefined }),
+          costPerQueryUsd: row.cost_per_query_usd ?? 0,
+        });
+      } catch (error) {
+        unavailable.push({
+          connectionId: row.id,
+          brand: row.provider,
+          code: error instanceof ProviderError ? error.code : 'ai_secret_unreadable',
+        });
+      }
+    }
+    return { ports, unavailable };
+  }
+
+  /** The search port of one connection, for its health check. */
+  async searchPortFor(
+    client: PoolClient,
+    connectionId: string,
+  ): Promise<{ port: WebSearchPort; connection: ConnectionRow }> {
+    const connection = await this.loadConnection(client, connectionId);
+    if (!isSearchBrand(connection.provider))
+      throw new ProviderError('permanent', 'ai_connection_not_search');
+    const apiKey = await this.decryptKey(client, connection);
+    return {
+      port: this.searchPorts(connection.provider, {
+        apiKey,
+        baseUrl: connection.base_url ?? undefined,
+      }),
       connection,
     };
   }
