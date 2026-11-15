@@ -185,6 +185,10 @@ const fa = {
         'مدل پیشنهادی eleven_v4_turbo است؛ فارسی فقط برای خانوادهٔ Eleven v3 و v4 در مستندات آمده است.',
       voiceHint:
         'صدا را از فهرست پیشنهادی انتخاب کنید یا شناسهٔ صدا را بنویسید. خالی بماند، صدای پیش‌فرض.',
+      catalogFailed:
+        'فهرست مدل‌ها و صداهای ElevenLabs دریافت نشد، پس مدل را باید تایپ کنید. کلید را بررسی کنید: باید اجازهٔ خواندن مدل‌ها و صداها را داشته باشد.',
+      noModels:
+        'ElevenLabs فهرست مدلی برای گفتن نداد، پس مدل را باید تایپ کنید. اجازهٔ خواندن مدل‌ها را برای کلید بررسی کنید.',
     },
     sample: {
       hear: 'پیش‌شنیدن صدا',
@@ -438,6 +442,10 @@ const en: typeof fa = {
         'The suggested model is eleven_v4_turbo; the documentation lists Persian only for the Eleven v3 and v4 families.',
       voiceHint:
         'Pick a voice from the list or type its id. Left empty, the default voice is used.',
+      catalogFailed:
+        'The ElevenLabs models and voices could not be loaded, so the model has to be typed. Check the key: it must be allowed to read models and voices.',
+      noModels:
+        'ElevenLabs returned no speaking models, so the model has to be typed. Check that the key may read models.',
     },
     sample: {
       hear: 'Hear this voice',
