@@ -198,18 +198,20 @@ export async function retrieveKnowledge(
     .filter((word) => word.length > 1)
     .slice(0, 32);
   const lexical = words.length ? words.map((word) => `'${word}'`).join(' | ') : null;
+  const vector = vectorLiteral(embed(input.query));
+  // Chunks with the same word-match score are ordered by how close their text is to the question,
+  // so the ranks that feed the fusion do not depend on random ids.
   const lexicalRows = lexical
     ? (
         await client.query<{ chunk_id: string; rank: number }>(
           `select chunk_id, ts_rank_cd(tsv, to_tsquery('simple', $7)) as rank
              from (${eligible}) e
             where tsv @@ to_tsquery('simple', $7)
-            order by rank desc, chunk_id limit 50`,
-          [...params, lexical],
+            order by rank desc, embedding <=> $8::vector, chunk_id limit 50`,
+          [...params, lexical, vector],
         )
       ).rows
     : [];
-  const vector = vectorLiteral(embed(input.query));
   const vectorRows = (
     await client.query<{ chunk_id: string; similarity: number }>(
       `select chunk_id, 1 - (embedding <=> $7::vector) as similarity
@@ -251,8 +253,17 @@ export async function retrieveKnowledge(
       similarity: Math.round(Number(row.similarity) * 10_000) / 10_000,
     });
   });
+  // Two chunks often tie on the fused score (rank 3 of one list against rank 3 of the other). A tie
+  // goes to the chunk whose text is closer to the question, then to the better word match, and only
+  // then to the id, so the order never depends on which random id a chunk happened to get.
   const ranked = [...fused.entries()]
-    .sort(([idA, a], [idB, b]) => b.score - a.score || (idA < idB ? -1 : 1))
+    .sort(
+      ([idA, a], [idB, b]) =>
+        b.score - a.score ||
+        (b.similarity ?? -1) - (a.similarity ?? -1) ||
+        (a.lexicalRank ?? Number.POSITIVE_INFINITY) - (b.lexicalRank ?? Number.POSITIVE_INFINITY) ||
+        (idA < idB ? -1 : 1),
+    )
     .slice(0, input.limit);
   const chunkIds = ranked.map(([id]) => id);
   const details = chunkIds.length

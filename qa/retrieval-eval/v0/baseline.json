@@ -1,0 +1,81 @@
+{
+  "corpus": "v0",
+  "k": 5,
+  "overall": {
+    "queries": 62,
+    "hitAtK": 0.8548,
+    "recallAtK": 0.8468,
+    "mrr": 0.7476,
+    "ndcgAtK": 0.7636
+  },
+  "byCategory": {
+    "confusable": {
+      "queries": 4,
+      "hitAtK": 1,
+      "recallAtK": 1,
+      "mrr": 0.875,
+      "ndcgAtK": 0.9077
+    },
+    "cross-lingual": {
+      "queries": 6,
+      "hitAtK": 0.1667,
+      "recallAtK": 0.1667,
+      "mrr": 0.1667,
+      "ndcgAtK": 0.1667
+    },
+    "exact": {
+      "queries": 10,
+      "hitAtK": 1,
+      "recallAtK": 1,
+      "mrr": 1,
+      "ndcgAtK": 1
+    },
+    "morphology": {
+      "queries": 6,
+      "hitAtK": 1,
+      "recallAtK": 1,
+      "mrr": 0.8889,
+      "ndcgAtK": 0.9167
+    },
+    "natural-question": {
+      "queries": 6,
+      "hitAtK": 1,
+      "recallAtK": 0.9167,
+      "mrr": 0.7222,
+      "ndcgAtK": 0.7292
+    },
+    "orthography": {
+      "queries": 6,
+      "hitAtK": 1,
+      "recallAtK": 1,
+      "mrr": 1,
+      "ndcgAtK": 1
+    },
+    "paraphrase": {
+      "queries": 10,
+      "hitAtK": 0.7,
+      "recallAtK": 0.7,
+      "mrr": 0.5815,
+      "ndcgAtK": 0.5818
+    },
+    "synonym": {
+      "queries": 10,
+      "hitAtK": 0.9,
+      "recallAtK": 0.9,
+      "mrr": 0.6867,
+      "ndcgAtK": 0.7387
+    },
+    "typo": {
+      "queries": 4,
+      "hitAtK": 1,
+      "recallAtK": 1,
+      "mrr": 0.875,
+      "ndcgAtK": 0.9077
+    }
+  },
+  "noAnswer": {
+    "queries": 4,
+    "withResults": 2,
+    "averageReturned": 0.5
+  }
+}
