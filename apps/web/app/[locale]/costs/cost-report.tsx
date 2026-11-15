@@ -12,6 +12,7 @@ import { reportMessagesFor } from '../../report-messages';
 import { VoiceUsagePanel } from '../../voice/voice-usage';
 import { SignedIn } from '../signed-in';
 import { PageTabPanel, PageTabs, useTabParam } from '../../page-tabs';
+import { UsageChart } from './usage-chart';
 import { VoiceAssistantCost } from './voice-assistant-cost';
 import { voiceCostMessagesFor } from './voice-cost-messages';
 import { SectionTitle } from '../../info-tip';
@@ -143,6 +144,7 @@ function Report({ locale, workspaceId }: { locale: Locale; workspaceId: string }
 
   return (
     <div className="stack">
+      <UsageChart locale={locale} workspaceId={workspaceId} />
       <form className="card filter-form" onSubmit={submit} aria-labelledby="period-title">
         <h2 id="period-title">{content.audit.filters}</h2>
         <div className="filter-grid filters-row">
