@@ -35,7 +35,7 @@ function asciiDigits(value: string): string {
   return out;
 }
 
-const EMAIL = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/u;
+const EMAIL = /[\p{L}\p{N}._%+-]{1,64}@[\p{L}\p{N}-]{1,63}(?:\.[\p{L}\p{N}-]{1,63}){1,8}/u;
 /** Internal hosts and private or loopback addresses. */
 const INTERNAL_HOST =
   /(?:^|[\s/@(])(?:localhost|[\w-]+\.(?:internal|local|lan|corp|intranet|home|private)|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3}|0\.0\.0\.0)(?=$|[\s:/)\],.])/iu;
@@ -67,7 +67,12 @@ function luhn(digits: string): boolean {
  * capped; a query that does not is refused with the first reason found, and nothing of it is kept.
  */
 export function checkSearchQuery(raw: string): SearchQueryCheck {
-  const query = raw.replace(/\s+/gu, ' ').trim();
+  // What is checked is exactly what would be sent, and the patterns below never see more than that.
+  const query = raw
+    .slice(0, SEARCH_QUERY_LIMITS.max * 4)
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .slice(0, SEARCH_QUERY_LIMITS.max);
   if (query.length < SEARCH_QUERY_LIMITS.min) return { ok: false, reason: 'too_short' };
   const ascii = asciiDigits(query);
 
@@ -91,5 +96,5 @@ export function checkSearchQuery(raw: string): SearchQueryCheck {
   // An unbroken run of ten or more digits: a mobile or an identity number.
   if (/\d{10,}/u.test(ascii)) return { ok: false, reason: 'phone_or_id_number' };
 
-  return { ok: true, query: query.slice(0, SEARCH_QUERY_LIMITS.max) };
+  return { ok: true, query };
 }
