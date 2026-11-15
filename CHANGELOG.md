@@ -4,6 +4,16 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+## [0.65.0] — 2026-11-15
+
+### Added
+
+- A token usage line chart at the top of the Cost & usage page (models tab): tokens per day for the last 7, 30 or 90 days, filtered by project, stage and source (project stages, voice assistant, Brain, smart chat, other), with an optional split into one line per source. Hover or the arrow keys show a day's values and a "Data table" button shows the same numbers as a table. It is read through the new `GET /workspaces/:id/reports/usage-series`. Not yet looked at in a browser.
+
+### Fixed
+
+- In the voice assistant settings, the ElevenLabs "Speaking model" field fell back to a plain text box without saying why when the model list could not be loaded, and one failing list (models or voices, for example a key without that permission) hid the other as well. The two lists now load independently, and the field explains why it is a text box and which key permission to check.
+
 ## [0.64.1] — 2026-11-14
 
 ### Fixed
