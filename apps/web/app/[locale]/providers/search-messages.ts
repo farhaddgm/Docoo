@@ -10,8 +10,8 @@ const messages = {
     none: 'هنوز سرویس جست‌وجویی وصل نشده است.',
     add: 'افزودن سرویس جست‌وجو',
     service: 'سرویس',
-    name: 'نام دلخواه',
-    apiKey: 'کلید API',
+    name: 'عنوان سرویس',
+    apiKey: 'کلید سرویس',
     keyHelp: {
       exa: 'از dashboard.exa.ai ← API Keys',
       tavily: 'از app.tavily.com ← API Keys',
@@ -19,8 +19,8 @@ const messages = {
     cost: 'هزینهٔ هر پرسش (دلار)',
     costHelp:
       'این سرویس‌ها به‌ازای هر درخواست حساب می‌کنند. مقدار پیش‌فرض قیمت عمومی سرویس است؛ اگر پلن شما فرق دارد، اصلاحش کنید. این عدد در سقف هزینهٔ هر اجرا و گزارش هزینه حساب می‌شود.',
-    save: 'ذخیره و بررسی اتصال',
-    saving: 'در حال ذخیره و بررسی…',
+    save: 'افزودن سرویس و بررسی',
+    saving: 'در حال افزودن و بررسی…',
     check: 'بررسی سلامت',
     checkNote: 'بررسی سلامت یک پرسش واقعی می‌فرستد و هزینهٔ یک پرسش را دارد.',
     rotate: 'تعویض کلید',
@@ -61,8 +61,8 @@ const messages = {
     none: 'No search service is connected yet.',
     add: 'Add a search service',
     service: 'Service',
-    name: 'Name',
-    apiKey: 'API key',
+    name: 'Service label',
+    apiKey: 'Service key',
     keyHelp: {
       exa: 'From dashboard.exa.ai → API Keys',
       tavily: 'From app.tavily.com → API Keys',
@@ -70,8 +70,8 @@ const messages = {
     cost: 'Cost per query (USD)',
     costHelp:
       'These services bill per request. The default is the service’s public price; correct it if your plan differs. The number counts toward the cost limit of each run and the cost report.',
-    save: 'Save and check connection',
-    saving: 'Saving and checking…',
+    save: 'Add service and check',
+    saving: 'Adding and checking…',
     check: 'Check health',
     checkNote: 'The health check sends one real query and costs one query.',
     rotate: 'Replace key',
