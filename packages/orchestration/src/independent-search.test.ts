@@ -544,3 +544,79 @@ describe('runIndependentStep', () => {
     expect(recorded[1]).toMatchObject({ source: 'independent:tavily', errorCode: null });
   });
 });
+
+describe('runIndependentStep with the project privacy policy (ADR-0059)', () => {
+  const ports = () => {
+    const port = fakePort('exa', {});
+    return {
+      port,
+      load: () =>
+        Promise.resolve({
+          ports: [{ connectionId: 'c1', costPerQueryUsd: 0.007, port }],
+          unavailable: [],
+        }),
+    };
+  };
+  const deps = (over: Partial<IndependentStepDeps>): IndependentStepDeps => ({
+    enabled: true,
+    denied: false,
+    policy: { maxQueries: 5, resultsPerQuery: 8 },
+    questions: [
+      { question: 'What does Acme Holding charge per seat?', channel: 'web' },
+      { question: 'How large is the logistics software market?', channel: 'web' },
+    ],
+    problem: 'p',
+    projectTitle: 't',
+    loadPorts: () => Promise.resolve({ ports: [], unavailable: [] }),
+    affordable: () => Promise.resolve(true),
+    record: () => Promise.resolve(),
+    progress: () => Promise.resolve(),
+    ...over,
+  });
+
+  it('does not send a query that holds a word the project lists as never to leave', async () => {
+    const { port, load } = ports();
+    const done = await runIndependentStep(
+      deps({
+        loadPorts: load,
+        privacy: () => Promise.resolve({ mode: 'mask', blockedWords: ['acme holding'] }),
+      }),
+    );
+    expect(port.asked).toEqual(['How large is the logistics software market?']);
+    expect(done?.blocked).toEqual([{ reason: 'project_policy', count: 1 }]);
+    expect(JSON.stringify(done)).not.toContain('Acme');
+  });
+
+  it('holds a project in block mode to its words as well', async () => {
+    const { port, load } = ports();
+    await runIndependentStep(
+      deps({
+        loadPorts: load,
+        privacy: () => Promise.resolve({ mode: 'block', blockedWords: ['Acme'] }),
+      }),
+    );
+    expect(port.asked).toEqual(['How large is the logistics software market?']);
+  });
+
+  it('does not hold a project that switched the layer off, or one with no words, to anything', async () => {
+    for (const policy of [
+      { mode: 'off' as const, blockedWords: ['Acme'] },
+      { mode: 'mask' as const, blockedWords: [] },
+    ]) {
+      const { port, load } = ports();
+      await runIndependentStep(deps({ loadPorts: load, privacy: () => Promise.resolve(policy) }));
+      expect(port.asked).toHaveLength(2);
+    }
+  });
+
+  it('still applies the text check when there is no policy at all', async () => {
+    const { port, load } = ports();
+    await runIndependentStep(
+      deps({
+        loadPorts: load,
+        questions: [{ question: 'ask ali.rezaei@acme-corp.com for a quote', channel: 'web' }],
+      }),
+    );
+    expect(port.asked).toEqual([]);
+  });
+});

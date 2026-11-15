@@ -605,6 +605,11 @@ export function createOrchestrationActivities(
               questions: prepared.researchPlan?.questions ?? [],
               problem: prepared.promptInput.problem,
               projectTitle: prepared.promptInput.projectTitle,
+              // The project's privacy policy (ADR-0059) applies to a search query as to a model call.
+              privacy: () =>
+                run(ref.workspaceId, (client) =>
+                  runtime.projectPrivacyPolicy(client, ref.workspaceId, ref.projectId),
+                ),
               loadPorts: () => run(ref.workspaceId, (client) => runtime.searchPortsFor(client)),
               affordable,
               progress: (data) => progress('independent', data),

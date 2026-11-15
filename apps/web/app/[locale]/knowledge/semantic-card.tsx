@@ -15,6 +15,7 @@ interface Status {
   eligible: number;
   embedded: number;
   keptLocal: number;
+  heldBack: number;
 }
 
 const messages = {
@@ -31,6 +32,7 @@ const messages = {
     on: 'روشن است. مدل: {model}',
     progress: '{embedded} از {eligible} بخش از اسناد داخلی بردار معنایی دارد.',
     local: '{n} بخش از اسناد غیرداخلی فقط محلی می‌ماند و فرستاده نمی‌شود.',
+    held: '{n} بخش از اسناد داخلی ایمیل، شماره تلفن، کد ملی، کارت یا شبا دارد و فقط محلی می‌ماند؛ با واژه همچنان پیدا می‌شود.',
     error: 'انجام نشد. دوباره تلاش کنید.',
     run: 'ساخت بردار برای اسناد تازه',
     running: 'در حال ساخت…',
@@ -50,6 +52,7 @@ const messages = {
     on: 'On. Model: {model}',
     progress: '{embedded} of {eligible} chunks of internal documents have a semantic vector.',
     local: '{n} chunk(s) of non-internal documents stay local and are never sent.',
+    held: '{n} chunk(s) of internal documents hold an e-mail, phone, national id, card or IBAN number and stay local; they are still found by their words.',
     error: 'It did not work. Try again.',
     run: 'Embed new documents',
     running: 'Embedding…',
@@ -118,11 +121,14 @@ export function SemanticCard({ locale, workspaceId }: { locale: Locale; workspac
               {fill(text.local, { n: formatNumber(locale, status.keptLocal) })}
             </p>
           )}
+          {status.heldBack > 0 && (
+            <p className="muted">{fill(text.held, { n: formatNumber(locale, status.heldBack) })}</p>
+          )}
           <div className="toolbar">
             <button
               className="secondary-button"
               type="button"
-              disabled={busy || status.embedded >= status.eligible}
+              disabled={busy || status.embedded + status.heldBack >= status.eligible}
               onClick={run}
             >
               {busy ? text.running : text.run}

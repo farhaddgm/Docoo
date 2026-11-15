@@ -83,9 +83,10 @@ export class SemanticSearchService {
   async run(context: WorkspaceRequestContext, limit: number) {
     const search = this.search;
     if (!search) return { enabled: false as const, reason: this.reason() };
-    const pending = await this.database.run(context, (client) =>
+    const scan = await this.database.run(context, (client) =>
       selectChunksToEmbed(client, search.model, limit),
     );
+    const pending = scan.chunks;
     const result = await embedPendingChunks({
       search,
       pending,
@@ -104,9 +105,16 @@ export class SemanticSearchService {
           asked: pending.length,
           embedded: result.embedded,
           failedBatches: result.failedBatches,
+          heldBack: scan.heldBack,
         },
       }),
     );
-    return { enabled: true as const, reason: null, asked: pending.length, ...result };
+    return {
+      enabled: true as const,
+      reason: null,
+      asked: pending.length,
+      heldBack: scan.heldBack,
+      ...result,
+    };
   }
 }

@@ -1,5 +1,5 @@
 import { checkSearchQuery } from '@docoo/domain';
-import { createOpenAiEmbeddings } from '@docoo/providers';
+import { createOpenAiEmbeddings, findPrivateValues } from '@docoo/providers';
 import { chunkSearchInput, vectorLiteral } from '@docoo/knowledge';
 import type { PoolClient } from 'pg';
 
@@ -13,7 +13,9 @@ import type { PoolClient } from 'pg';
  * 1. nothing leaves unless `KNOWLEDGE_EMBEDDING_ENABLED` is true and a key and model are set;
  * 2. only chunks of `internal` knowledge are ever sent (`KNOWLEDGE_EMBEDDING_ALLOW_INTERNAL`
  *    must be true as well; confidential and restricted knowledge is never embedded);
- * 3. a question is sent only after the privacy check of web search queries.
+ * 3. a question is sent only after the privacy check of web search queries, and a chunk that
+ *    holds an e-mail, a phone, a national id, a card or an IBAN number is not sent either (the
+ *    detectors of the privacy layer, ADR-0059); it stays findable by its words.
  *
  * Every failure leaves retrieval on the local embedding and the words; none is thrown.
  */
@@ -126,27 +128,59 @@ export interface PendingChunk {
   readonly text: string;
 }
 
+/** Whether a text holds a value the privacy layer would mask: such a chunk is never embedded. */
+export const holdsPrivateValue = (text: string): boolean => findPrivateValues(text, []).length > 0;
+
+const SCAN_PAGE = 200;
+const SCAN_MAX = 5_000;
+
+export interface PendingScan {
+  readonly chunks: PendingChunk[];
+  /** Chunks passed over because they hold personal data; they stay local. */
+  readonly heldBack: number;
+}
+
 /**
- * Chunks still without a vector of `model`, oldest first. Only the current approved version of
- * `internal` knowledge counts: this is where the second lock is enforced, in the query itself.
+ * Chunks still without a vector of `model`, oldest first, up to `limit`. Only the current approved
+ * version of `internal` knowledge counts: this is where the second lock is enforced, in the query
+ * itself. A chunk that holds personal data is passed over and counted, never returned; the scan reads
+ * on past such chunks (at most `SCAN_MAX` rows) so they never use up the room of those that may go.
  */
 export async function selectChunksToEmbed(
   client: PoolClient,
   model: string,
   limit: number,
-): Promise<PendingChunk[]> {
-  const result = await client.query<{ id: string; text: string; context: string | null }>(
-    `select ch.id, ch.text, ch.context
-       from knowledge_chunks ch
-       join knowledge_versions v on v.id = ch.knowledge_version_id
-       join knowledge_items i on i.id = v.item_id and i.current_version_id = v.id
-      where i.deleted_at is null and i.confidentiality = 'internal' and v.status = 'approved'
-        and not exists (select 1 from knowledge_chunk_embeddings e where e.chunk_id = ch.id and e.model = $1)
-      order by ch.created_at, ch.id
-      limit $2`,
-    [model, limit],
-  );
-  return result.rows.map((row) => ({ id: row.id, text: chunkSearchInput(row) }));
+): Promise<PendingScan> {
+  const chunks: PendingChunk[] = [];
+  let heldBack = 0;
+  let scanned = 0;
+  let cursor: { at: string; id: string } | null = null;
+  while (chunks.length < limit && scanned < SCAN_MAX) {
+    const page: { rows: { id: string; text: string; context: string | null; at: string }[] } =
+      await client.query(
+        `select ch.id, ch.text, ch.context, ch.created_at::text as at
+           from knowledge_chunks ch
+           join knowledge_versions v on v.id = ch.knowledge_version_id
+           join knowledge_items i on i.id = v.item_id and i.current_version_id = v.id
+          where i.deleted_at is null and i.confidentiality = 'internal' and v.status = 'approved'
+            and not exists (select 1 from knowledge_chunk_embeddings e where e.chunk_id = ch.id and e.model = $1)
+            and ($3::timestamptz is null or (ch.created_at, ch.id) > ($3::timestamptz, $4::uuid))
+          order by ch.created_at, ch.id
+          limit $2`,
+        [model, SCAN_PAGE, cursor?.at ?? null, cursor?.id ?? null],
+      );
+    if (page.rows.length === 0) break;
+    for (const row of page.rows) {
+      scanned += 1;
+      cursor = { at: row.at, id: row.id };
+      if (chunks.length >= limit) break;
+      const input = chunkSearchInput(row);
+      if (holdsPrivateValue(input)) heldBack += 1;
+      else chunks.push({ id: row.id, text: input });
+    }
+    if (page.rows.length < SCAN_PAGE) break;
+  }
+  return { chunks, heldBack };
 }
 
 export async function storeChunkEmbeddings(
@@ -171,6 +205,8 @@ export interface SemanticStatus {
   readonly embedded: number;
   /** Chunks that stay local because their knowledge is not `internal`. */
   readonly keptLocal: number;
+  /** Internal chunks that stay local because they hold personal data (counted over the first 5000). */
+  readonly heldBack: number;
 }
 
 export async function semanticStatus(client: PoolClient, model: string): Promise<SemanticStatus> {
@@ -187,7 +223,16 @@ export async function semanticStatus(client: PoolClient, model: string): Promise
       [model],
     )
   ).rows[0]!;
-  return { model, eligible: row.eligible, embedded: row.embedded, keptLocal: row.kept_local };
+  // The chunks that would not be sent: read over the ones still waiting, bounded.
+  const scan = await selectChunksToEmbed(client, model, SCAN_MAX);
+  const waiting = row.eligible - row.embedded;
+  return {
+    model,
+    eligible: row.eligible,
+    embedded: row.embedded,
+    keptLocal: row.kept_local,
+    heldBack: Math.min(scan.heldBack, Math.max(0, waiting)),
+  };
 }
 
 const BATCH_TEXTS = 32;

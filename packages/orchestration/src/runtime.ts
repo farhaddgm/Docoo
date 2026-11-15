@@ -475,12 +475,24 @@ export class ProviderRuntime {
   }
 
   /** The privacy policy of the project a call belongs to; a call with no project gets the default. */
-  private async privacyPolicy(client: PoolClient, scope: InvocationScope): Promise<PrivacyPolicy> {
-    if (!scope.projectId) return DEFAULT_PRIVACY_POLICY;
+  private privacyPolicy(client: PoolClient, scope: InvocationScope): Promise<PrivacyPolicy> {
+    return this.projectPrivacyPolicy(client, scope.workspaceId, scope.projectId);
+  }
+
+  /**
+   * The privacy policy of a project, for what leaves the system outside a model call (a web search
+   * query); no project, or one that does not exist, gets the default.
+   */
+  async projectPrivacyPolicy(
+    client: PoolClient,
+    workspaceId: string,
+    projectId: string | null,
+  ): Promise<PrivacyPolicy> {
+    if (!projectId) return DEFAULT_PRIVACY_POLICY;
     const row = (
       await client.query<{ privacy_mode: string; privacy_blocked_words: string[] }>(
         `select privacy_mode, privacy_blocked_words from projects where workspace_id = $1 and id = $2`,
-        [scope.workspaceId, scope.projectId],
+        [workspaceId, projectId],
       )
     ).rows[0];
     return row

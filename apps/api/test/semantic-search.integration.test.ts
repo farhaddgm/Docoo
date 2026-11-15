@@ -48,6 +48,7 @@ interface Status {
   eligible: number;
   embedded: number;
   keptLocal: number;
+  heldBack: number;
 }
 interface Retrieval {
   embeddingModel: string;
@@ -272,5 +273,49 @@ describe.skipIf(!adminUrl)('semantic search with a scripted provider (ADR-0061)'
       [h.ids.workspaceA],
     );
     expect(rows.rows).toEqual([{ model: 'fake-semantic-1', count: 3 }]);
+  });
+
+  it('a chunk with a phone number or an e-mail is never sent, and does not use up the room of the others', async () => {
+    // Created first, so a scan that counted it against the limit would stop before the clean one.
+    await create(
+      'phone',
+      'Contacts',
+      'برای هماهنگی تحویل با مسئول انبار به شمارهٔ 09123456789 زنگ بزنید.',
+      'internal',
+    );
+    await create('mail', 'Mailbox', 'گزارش‌ها را به ali.rezaei@acme-corp.com بفرستید.', 'internal');
+    await create('clean', 'Warehouse', 'ساعت کار انبار از هشت صبح تا پنج عصر است.', 'internal');
+    sent.length = 0;
+    const status = (
+      await h.request('GET', api('/knowledge/semantic-index'), { cookie })
+    ).json<Status>();
+    expect(status.heldBack).toBe(2);
+
+    const run = await h.request('POST', api('/knowledge/semantic-index/run'), {
+      cookie,
+      payload: { limit: 1 },
+    });
+    expect(run.statusCode, run.body).toBe(200);
+    expect(run.json<{ embedded: number; heldBack: number }>()).toMatchObject({
+      embedded: 1,
+      heldBack: 2,
+    });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain('انبار');
+    expect(sent.join(' ')).not.toContain('09123456789');
+    expect(sent.join(' ')).not.toContain('acme-corp');
+
+    // Nothing is left that may be sent; the two held back stay findable by their words.
+    const after = (
+      await h.request('GET', api('/knowledge/semantic-index'), { cookie })
+    ).json<Status>();
+    expect(after.eligible - after.embedded).toBe(after.heldBack);
+    const found = await retrieve('هماهنگی تحویل مسئول انبار');
+    expect(found.results.some((item) => item.knowledgeId === ids['phone'])).toBe(true);
+    const audit = await h.admin.query<{ after: Record<string, unknown> }>(
+      `select after from audit_events where action = 'knowledge.semantic_index' order by occurred_at desc limit 1`,
+    );
+    expect(audit.rows[0]?.after).toMatchObject({ heldBack: 2 });
+    expect(JSON.stringify(audit.rows)).not.toContain('09123456789');
   });
 });

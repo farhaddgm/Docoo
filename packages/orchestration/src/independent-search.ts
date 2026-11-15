@@ -5,6 +5,7 @@ import {
   type SearchQueryBlock,
 } from '@docoo/domain';
 import type { WebSearchFailure, WebSearchHit, WebSearchPort } from '@docoo/ingestion';
+import { findPrivateValues, type PrivacyPolicy } from '@docoo/providers';
 
 import { MERGED_TEXT_MAX_CHARS, normalizePageUrl } from './research-dual.js';
 import type { WebPassage, WebRun } from './research.js';
@@ -42,10 +43,13 @@ export const INDEPENDENT_LIMITS = {
 export const NATIVE_VIA = 'native';
 export const independentVia = (providerId: string): string => `independent:${providerId}`;
 
+/** Why a candidate query was not sent: the privacy check of the text, or the project's own policy. */
+export type QueryBlock = SearchQueryBlock | 'project_policy';
+
 export interface BuiltQueries {
   readonly queries: readonly string[];
   /** Candidates the privacy check refused, by reason; their text is never kept. */
-  readonly blocked: readonly { readonly reason: SearchQueryBlock; readonly count: number }[];
+  readonly blocked: readonly { readonly reason: QueryBlock; readonly count: number }[];
 }
 
 const queryKey = (query: string): string => query.toLowerCase().replace(/\s+/gu, ' ').trim();
@@ -61,6 +65,11 @@ export function buildIndependentQueries(input: {
   readonly problem: string;
   readonly projectTitle: string;
   readonly max: number;
+  /**
+   * The project's own policy (ADR-0059 privacy layer): a query it refuses is not sent, whatever the
+   * text check says. A word the owner listed as never to leave is the usual reason.
+   */
+  readonly refuse?: ((query: string) => boolean) | undefined;
 }): BuiltQueries {
   const planned = input.questions
     .filter((question) => question.channel !== 'knowledge')
@@ -68,12 +77,16 @@ export function buildIndependentQueries(input: {
   const candidates = planned.length > 0 ? planned : [input.problem, input.projectTitle];
   const seen = new Set<string>();
   const queries: string[] = [];
-  const blocked = new Map<SearchQueryBlock, number>();
+  const blocked = new Map<QueryBlock, number>();
   for (const candidate of candidates) {
     if (queries.length >= input.max) break;
     const checked = checkSearchQuery(candidate);
     if (!checked.ok) {
       blocked.set(checked.reason, (blocked.get(checked.reason) ?? 0) + 1);
+      continue;
+    }
+    if (input.refuse?.(checked.query)) {
+      blocked.set('project_policy', (blocked.get('project_policy') ?? 0) + 1);
       continue;
     }
     const key = queryKey(checked.query);
@@ -379,6 +392,8 @@ export interface IndependentStepDeps {
   readonly questions: readonly Pick<PromptResearchQuestion, 'question' | 'channel'>[];
   readonly problem: string;
   readonly projectTitle: string;
+  /** The project's privacy policy (ADR-0059); absent leaves only the text check of the query. */
+  readonly privacy?: (() => Promise<PrivacyPolicy>) | undefined;
   readonly loadPorts: () => Promise<{
     ports: readonly ConnectedSearchPort[];
     unavailable: readonly { connectionId: string; brand: string; code: string }[];
@@ -417,11 +432,19 @@ export async function runIndependentStep(
   const now = deps.now ?? Date.now;
   try {
     const { ports, unavailable } = await deps.loadPorts();
+    // A project that switched its privacy layer off is not held to its blocked words here; every
+    // other project is: a word it lists as never to leave stops the query that holds it.
+    const policy = deps.privacy ? await deps.privacy() : null;
+    const refuse =
+      policy && policy.mode !== 'off' && policy.blockedWords.length > 0
+        ? (query: string) => findPrivateValues(query, policy.blockedWords).length > 0
+        : undefined;
     const built = buildIndependentQueries({
       questions: deps.questions,
       problem: deps.problem,
       projectTitle: deps.projectTitle,
       max: deps.policy.maxQueries,
+      refuse,
     });
     // A connection whose key cannot be read is reported as a service that did not answer.
     const unreadable: IndependentProviderInfo[] = unavailable.map((item) => ({

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   embedPendingChunks,
   embedQuery,
+  holdsPrivateValue,
   embeddingBatches,
   openAiSemanticSearch,
   SEMANTIC_DIMENSIONS,
@@ -221,5 +222,28 @@ describe('semanticQueryFromEnv', () => {
     } finally {
       process.env = saved;
     }
+  });
+});
+
+describe('holdsPrivateValue', () => {
+  it.each([
+    'برای تماس با مدیر: 09123456789',
+    'ایمیل ali.rezaei@acme-corp.com را بنویسید',
+    'کد ملی ۰۰۱۲۳۴۵۶۷۹',
+    'card 4539 1488 0343 6467',
+    'شبا IR062960000000100324200001',
+  ])('sees a private value in: %s', (text) => {
+    // Each sample is valid for its detector: a mobile number, an e-mail, a national id with its check
+    // digit (0012345679), a Luhn card number and an IBAN with its mod-97 check.
+    expect(holdsPrivateValue(text)).toBe(true);
+  });
+
+  it.each([
+    'نرخ ریزش مشتریان کسب‌وکارهای کوچک در سال ۱۴۰۳ به هفت درصد رسید',
+    'order 1234567890 shipped on 2024-05-01',
+    'قیمت ۱۲۰۰۰۰۰ تومان برای ده کاربر',
+    '',
+  ])('sees none in: %s', (text) => {
+    expect(holdsPrivateValue(text)).toBe(false);
   });
 });
