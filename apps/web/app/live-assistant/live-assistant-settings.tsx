@@ -791,6 +791,20 @@ export function LiveAssistantSettings({
             {text.privacy.audio}
           </label>
           <small className="muted">{text.privacy.audioHint}</small>
+          <label className="voice-check">
+            <input
+              type="checkbox"
+              checked={bool('live_assistant.zero_retention')}
+              onChange={(event) => set('live_assistant.zero_retention', event.target.checked)}
+            />{' '}
+            {text.privacy.zeroRetention}
+          </label>
+          <small className="muted">{text.privacy.zeroRetentionHint}</small>
+          {!bool('live_assistant.zero_retention') && (
+            <p role="alert" className="muted">
+              {text.privacy.zeroRetentionWarning}
+            </p>
+          )}
         </section>
       </div>
 
