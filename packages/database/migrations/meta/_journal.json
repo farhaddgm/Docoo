@@ -680,6 +680,13 @@
       "when": 1793809779919,
       "tag": "0096_knowledge_chunk_embeddings",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1793809780919,
+      "tag": "0097_knowledge_chunk_context",
+      "breakpoints": true
     }
   ]
 }

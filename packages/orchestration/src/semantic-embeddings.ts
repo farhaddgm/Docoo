@@ -1,6 +1,6 @@
 import { checkSearchQuery } from '@docoo/domain';
 import { createOpenAiEmbeddings } from '@docoo/providers';
-import { vectorLiteral } from '@docoo/knowledge';
+import { chunkSearchInput, vectorLiteral } from '@docoo/knowledge';
 import type { PoolClient } from 'pg';
 
 /**
@@ -122,6 +122,7 @@ export async function embedQuery(
 
 export interface PendingChunk {
   readonly id: string;
+  /** What is embedded: the context (title and heading) and the text, as the chunk is searched. */
   readonly text: string;
 }
 
@@ -134,8 +135,8 @@ export async function selectChunksToEmbed(
   model: string,
   limit: number,
 ): Promise<PendingChunk[]> {
-  const result = await client.query<PendingChunk>(
-    `select ch.id, ch.text
+  const result = await client.query<{ id: string; text: string; context: string | null }>(
+    `select ch.id, ch.text, ch.context
        from knowledge_chunks ch
        join knowledge_versions v on v.id = ch.knowledge_version_id
        join knowledge_items i on i.id = v.item_id and i.current_version_id = v.id
@@ -145,7 +146,7 @@ export async function selectChunksToEmbed(
       limit $2`,
     [model, limit],
   );
-  return result.rows;
+  return result.rows.map((row) => ({ id: row.id, text: chunkSearchInput(row) }));
 }
 
 export async function storeChunkEmbeddings(

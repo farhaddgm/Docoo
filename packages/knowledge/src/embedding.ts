@@ -94,6 +94,44 @@ export function chunkText(content: string, target = 800): Chunk[] {
   return chunks;
 }
 
+export interface SectionChunk extends Chunk {
+  /** The title of the document and the heading of the section the chunk is in; searched with it. */
+  readonly context: string;
+}
+
+const HEADING = /^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t#]*$/u;
+const CONTEXT_MAX = 300;
+
+/**
+ * Chunks a document by its sections. A markdown heading (`## Costs`) starts a section; the heading
+ * is not part of the chunk text (a quote is checked against the text) but of its `context`, which
+ * also names the document. A document without headings is one section. Within a section the
+ * sentences are grouped as `chunkText` does, and the ordinals run on across sections.
+ */
+export function chunkSections(content: string, title: string, target = 800): SectionChunk[] {
+  const sections: { heading: string; body: string[] }[] = [{ heading: '', body: [] }];
+  for (const line of content.split(/\r?\n/u)) {
+    const heading = HEADING.exec(line);
+    if (heading) sections.push({ heading: heading[1]!.trim(), body: [] });
+    else sections[sections.length - 1]!.body.push(line);
+  }
+  const chunks: SectionChunk[] = [];
+  for (const section of sections) {
+    const context = [title.trim(), section.heading]
+      .filter((part) => part !== '')
+      .join(' — ')
+      .slice(0, CONTEXT_MAX);
+    for (const chunk of chunkText(section.body.join('\n'), target)) {
+      chunks.push({ ordinal: chunks.length + 1, text: chunk.text, context });
+    }
+  }
+  return chunks;
+}
+
+/** What a chunk is searched and embedded as: its context, then its text. */
+export const chunkSearchInput = (chunk: { text: string; context?: string | null }): string =>
+  chunk.context ? `${chunk.context}\n${chunk.text}` : chunk.text;
+
 /** Search form stored next to chunks so Persian letter variants match. */
 export function searchText(text: string): string {
   return normalizeForSearch(text);

@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   assessCitation,
-  chunkText,
+  chunkSearchInput,
+  chunkSections,
   detectConflicts,
   effectiveDecision,
   embed,
@@ -1303,18 +1304,28 @@ export class KnowledgeService {
       [version.id],
     );
     if (existing.rowCount) return;
-    for (const chunk of chunkText(version.content)) {
+    const title =
+      (
+        await client.query<{ title: string }>('select title from knowledge_items where id = $1', [
+          version.item_id,
+        ])
+      ).rows[0]?.title ?? '';
+    // The title of the document and the heading of the section join what is searched (ADR-0061); the
+    // chunk text, which a quote is checked against, stays exactly as written.
+    for (const chunk of chunkSections(version.content, title)) {
+      const searched = chunkSearchInput(chunk);
       await client.query(
-        `insert into knowledge_chunks (workspace_id, knowledge_version_id, ordinal, text, search_text, embedding_model, embedding)
-         values ($1, $2, $3, $4, $5, $6, $7::vector)`,
+        `insert into knowledge_chunks (workspace_id, knowledge_version_id, ordinal, text, context, search_text, embedding_model, embedding)
+         values ($1, $2, $3, $4, $5, $6, $7, $8::vector)`,
         [
           context.workspaceId,
           version.id,
           chunk.ordinal,
           chunk.text,
-          searchText(chunk.text),
+          chunk.context,
+          searchText(searched),
           EMBEDDING_MODEL,
-          vectorLiteral(embed(chunk.text)),
+          vectorLiteral(embed(searched)),
         ],
       );
     }
