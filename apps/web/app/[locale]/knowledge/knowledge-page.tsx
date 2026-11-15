@@ -11,6 +11,7 @@ import { knowledgeMessages } from './knowledge-messages';
 import { ManualKnowledgePanel } from './manual-panel';
 import { QueuePanel } from './queue-panel';
 import { RetrievalPanel } from './retrieval-panel';
+import { SemanticCard } from './semantic-card';
 import { SourcesPanel } from './sources-panel';
 
 const tabs = ['queue', 'sources', 'manual', 'conflicts', 'retrieval'] as const;
@@ -107,7 +108,12 @@ function Sections({ locale, workspaceId }: { locale: Locale; workspaceId: string
         />
       )}
       {tab === 'conflicts' && <ConflictsPanel locale={locale} workspaceId={workspaceId} />}
-      {tab === 'retrieval' && <RetrievalPanel locale={locale} workspaceId={workspaceId} />}
+      {tab === 'retrieval' && (
+        <>
+          <SemanticCard locale={locale} workspaceId={workspaceId} />
+          <RetrievalPanel locale={locale} workspaceId={workspaceId} />
+        </>
+      )}
     </div>
   );
 }

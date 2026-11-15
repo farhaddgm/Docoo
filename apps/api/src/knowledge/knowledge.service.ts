@@ -22,6 +22,7 @@ import {
 import type { PoolClient, QueryResultRow } from 'pg';
 
 import { writeAudit } from '../common/audit.js';
+import { SemanticSearchService } from './semantic-search.service.js';
 import { visibleStatusSql } from '../common/knowledge-status.js';
 import {
   containsPattern,
@@ -182,6 +183,7 @@ export class KnowledgeService {
     private readonly sources: SourcesService,
     @Inject(KNOWLEDGE_AUDITOR) private readonly auditor: KnowledgeAuditor,
     private readonly config: ConfigService,
+    private readonly semantic: SemanticSearchService,
   ) {}
 
   // ---------------------------------------------------------------- items and versions (KNO-001)
@@ -1096,6 +1098,9 @@ export class KnowledgeService {
    * The query itself is shared with the research stage of the workflow (`retrieveKnowledge`).
    */
   async retrieve(context: WorkspaceRequestContext, input: RetrieveInput) {
+    // The question as a provider's embedding, asked for before the transaction opens so no
+    // connection is held while the provider answers. Null when semantic search is off (ADR-0060).
+    const semantic = await this.semantic.queryVector(input.query);
     return this.database.run(context, async (client) => {
       // The audit-score floor is the effective `knowledge.min_audit_score` of the scope asked for.
       const effective = input.projectId
@@ -1114,6 +1119,7 @@ export class KnowledgeService {
           role: input.role,
           limit: input.limit,
           minAuditScore: Number.isFinite(floor) ? floor : undefined,
+          semantic,
         });
       } catch (error) {
         if (error instanceof RetrievalScopeError)

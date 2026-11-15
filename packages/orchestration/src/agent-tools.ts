@@ -8,6 +8,7 @@ import type {
 } from '@docoo/providers';
 import type { PoolClient } from 'pg';
 
+import { semanticQueryFromEnv } from './semantic-embeddings.js';
 import { audit } from './db.js';
 import { retrieveKnowledge } from './knowledge-retrieval.js';
 import { listMaterials, readMaterial } from './project-materials.js';
@@ -118,6 +119,7 @@ const knowledgeRetrieve: ToolImplementation<{ query: string }> = {
       limit,
       excludeConfidentiality: exclude,
       minAuditScore: config.knowledgeMinAuditScore,
+      semantic: await semanticQueryFromEnv(query),
     });
     const before = state.passages.length;
     const returned = addPassages(state.passages, retrieval, {

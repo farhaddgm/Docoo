@@ -6,7 +6,13 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ### Added
 
+- Semantic search over knowledge (ADR-0060), off by default. With `KNOWLEDGE_EMBEDDING_ENABLED`, `KNOWLEDGE_EMBEDDING_ALLOW_INTERNAL`, a key and a model set in the server environment, the text of **internal** documents is turned into provider embeddings and retrieval gets a third ranking by meaning, so a paraphrase or a Persian question can find an English document. Confidential and restricted documents are never sent, and a question that carries an e-mail, a number or a key is not sent either; any failure leaves retrieval as it was. A new card in the Knowledge → Retrieval tab shows whether it is on and how many chunks have vectors, with a button to embed new documents. The evaluation (`qa/retrieval-eval`) can now also run with a real key (job `retrieval-semantic` in the provider acceptance workflow) and fails if the semantic ranking is worse. Migration 0096. Not yet measured with a real key, and the similarity threshold is a first guess.
+- A Persian retrieval evaluation (`qa/retrieval-eval/v0`): 24 synthetic documents and 66 questions in ten categories, scored as hit, recall, MRR and nDCG against a committed baseline.
 - Independent web search through Exa and Tavily, beside the model's own search (ADR-0059). Connect one or both on the AI providers page ("Web search services"), then turn on `research.independent_enabled` in the Research settings (off by default). The research stage then also asks every connected, enabled service, merges the pages by address, and says in the output which search found each page and how each service went; a service that fails or runs out of credit is reported and the stage carries on with the rest. Only the confirmed research questions are sent, after a deterministic privacy check that refuses a query with an e-mail, a phone or card number, an internal address or a key. Each service has a price per query; the queries are held against the run's cost limit before they are sent and appear as their own line in a project's usage. Pages found this way are untrusted `W` pages like the model's own; they reach the knowledge base only through "Save to knowledge" and the Brain audit. Migration 0095. Not yet tried with real Exa or Tavily keys in a full research run, and the services' query-retention terms still have to be read from their official documents (ADR-0059 §5).
+
+### Fixed
+
+- Retrieval results with the same score were ordered by a random id, so the same corpus could rank differently from run to run. A tie now goes to the chunk closer to the question, then to the better word match.
 
 ## [0.64.1] — 2026-11-14
 

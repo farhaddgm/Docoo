@@ -74,3 +74,43 @@ it('redacts network errors and bounds output size', async () => {
     }),
   ).rejects.toThrow(/^EMBEDDING_PROVIDER_UNAVAILABLE$/);
 });
+
+const sentBody = (fetcher: { mock: { calls: unknown[][] } }): Record<string, unknown> => {
+  const body = (fetcher.mock.calls[0]?.[1] as RequestInit | undefined)?.body;
+  return typeof body === 'string' ? (JSON.parse(body) as Record<string, unknown>) : {};
+};
+
+it('asks for the vector length it needs and refuses an answer of another length', async () => {
+  const body = (length: number) =>
+    JSON.stringify({ data: [{ index: 0, embedding: Array.from({ length }, () => 0.5) }] });
+  const good = vi.fn<typeof fetch>().mockResolvedValue(new Response(body(4)));
+  await createOpenAiEmbeddings({
+    apiKey: 'k',
+    model: 'text-embedding-3-small',
+    texts: ['a'],
+    dimensions: 4,
+    fetcher: good,
+  });
+  const sent = sentBody(good);
+  expect(sent['dimensions']).toBe(4);
+
+  const wrong = vi.fn<typeof fetch>().mockResolvedValue(new Response(body(3)));
+  await expect(
+    createOpenAiEmbeddings({
+      apiKey: 'k',
+      model: 'm',
+      texts: ['a'],
+      dimensions: 4,
+      fetcher: wrong,
+    }),
+  ).rejects.toThrow('EMBEDDING_PROVIDER_UNAVAILABLE');
+});
+
+it('sends no dimensions field unless one is asked for', async () => {
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(new Response(JSON.stringify({ data: [{ index: 0, embedding: [1, 0] }] })));
+  await createOpenAiEmbeddings({ apiKey: 'k', model: 'm', texts: ['a'], fetcher });
+  const sent = sentBody(fetcher);
+  expect('dimensions' in sent).toBe(false);
+});

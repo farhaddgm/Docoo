@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { embed, EMBEDDING_MODEL, normalizeForSearch, vectorLiteral } from '@docoo/knowledge';
 import type { PoolClient } from 'pg';
+import { SEMANTIC_MIN_SIMILARITY, type SemanticQuery } from './semantic-embeddings.js';
 import { sharedProjectKnowledgeSql } from './shared-knowledge.js';
 import { declaredSourceCitation, type SourceCitation } from './source-citation.js';
 
@@ -25,6 +26,12 @@ export interface RetrievalRequest {
    * human decision and is not held to it. `undefined` or 0 leaves every approved version in.
    */
   readonly minAuditScore?: number | undefined;
+  /**
+   * The question as a provider's embedding (ADR-0060), when the caller could get one. It adds a
+   * third ranking, over the chunks that have a vector of the same model, to the two of the words
+   * and the local embedding. Absent or null leaves retrieval exactly as it was.
+   */
+  readonly semantic?: SemanticQuery | null | undefined;
 }
 
 export interface ConflictWarning {
@@ -53,6 +60,9 @@ export interface RetrievedPassage {
   readonly lexicalRank: number | null;
   readonly vectorRank: number | null;
   readonly similarity: number | null;
+  /** Present only when a semantic ranking took part (ADR-0060). */
+  readonly semanticRank?: number | null;
+  readonly semanticSimilarity?: number | null;
   readonly reviewId: string | null;
   readonly auditScore: number | null;
   readonly effectiveDecision: 'approved' | 'approved_by_override';
@@ -220,6 +230,17 @@ export async function retrieveKnowledge(
       [...params, vector],
     )
   ).rows;
+  const semanticRows = input.semantic
+    ? (
+        await client.query<{ chunk_id: string; similarity: number }>(
+          `select e.chunk_id, 1 - (s.embedding <=> $7::vector) as similarity
+             from (${eligible}) e
+             join knowledge_chunk_embeddings s on s.chunk_id = e.chunk_id and s.model = $8
+            order by s.embedding <=> $7::vector, e.chunk_id limit 50`,
+          [...params, vectorLiteral(input.semantic.vector), input.semantic.model],
+        )
+      ).rows
+    : [];
   const fused = new Map<
     string,
     {
@@ -227,6 +248,8 @@ export async function retrieveKnowledge(
       lexicalRank: number | null;
       vectorRank: number | null;
       similarity: number | null;
+      semanticRank: number | null;
+      semanticSimilarity: number | null;
     }
   >();
   lexicalRows.forEach((row, index) => {
@@ -235,6 +258,8 @@ export async function retrieveKnowledge(
       lexicalRank: index + 1,
       vectorRank: null,
       similarity: null,
+      semanticRank: null,
+      semanticSimilarity: null,
     });
   });
   vectorRows.forEach((row, index) => {
@@ -243,6 +268,8 @@ export async function retrieveKnowledge(
       lexicalRank: null,
       vectorRank: null,
       similarity: null,
+      semanticRank: null,
+      semanticSimilarity: null,
     };
     // Vector-only matches need some real similarity; otherwise every chunk would match.
     if (entry.lexicalRank === null && Number(row.similarity) < 0.2) return;
@@ -253,6 +280,26 @@ export async function retrieveKnowledge(
       similarity: Math.round(Number(row.similarity) * 10_000) / 10_000,
     });
   });
+  // The semantic ranking counts a chunk only when it is really close in meaning, so the nearest of
+  // a few unrelated chunks is not pulled in; its own similarity then breaks ties first.
+  semanticRows.forEach((row, index) => {
+    const similarity = Number(row.similarity);
+    if (similarity < SEMANTIC_MIN_SIMILARITY) return;
+    const entry = fused.get(row.chunk_id) ?? {
+      score: 0,
+      lexicalRank: null,
+      vectorRank: null,
+      similarity: null,
+      semanticRank: null,
+      semanticSimilarity: null,
+    };
+    fused.set(row.chunk_id, {
+      ...entry,
+      score: entry.score + 1 / (RRF_K + index + 1),
+      semanticRank: index + 1,
+      semanticSimilarity: Math.round(similarity * 10_000) / 10_000,
+    });
+  });
   // Two chunks often tie on the fused score (rank 3 of one list against rank 3 of the other). A tie
   // goes to the chunk whose text is closer to the question, then to the better word match, and only
   // then to the id, so the order never depends on which random id a chunk happened to get.
@@ -260,6 +307,7 @@ export async function retrieveKnowledge(
     .sort(
       ([idA, a], [idB, b]) =>
         b.score - a.score ||
+        (b.semanticSimilarity ?? -1) - (a.semanticSimilarity ?? -1) ||
         (b.similarity ?? -1) - (a.similarity ?? -1) ||
         (a.lexicalRank ?? Number.POSITIVE_INFINITY) - (b.lexicalRank ?? Number.POSITIVE_INFINITY) ||
         (idA < idB ? -1 : 1),
@@ -337,6 +385,9 @@ export async function retrieveKnowledge(
       lexicalRank: rank.lexicalRank,
       vectorRank: rank.vectorRank,
       similarity: rank.similarity,
+      ...(input.semantic
+        ? { semanticRank: rank.semanticRank, semanticSimilarity: rank.semanticSimilarity }
+        : {}),
       reviewId: reviewByVersion.get(row.version_id)?.id ?? null,
       auditScore: reviewByVersion.get(row.version_id)?.overall ?? null,
       effectiveDecision: override ? 'approved_by_override' : 'approved',
@@ -350,9 +401,9 @@ export async function retrieveKnowledge(
     limit: input.limit,
     ...(input.minAuditScore ? { minAuditScore: input.minAuditScore } : {}),
   };
-  const hash = sha256(
-    canonicalJson({ query: input.query, filters, results, model: EMBEDDING_MODEL }),
-  );
+  // The model of the semantic ranking is part of what the snapshot pins; without one it is unchanged.
+  const modelName = input.semantic ? `${EMBEDDING_MODEL}+${input.semantic.model}` : EMBEDDING_MODEL;
+  const hash = sha256(canonicalJson({ query: input.query, filters, results, model: modelName }));
   const snapshot = (
     await client.query<{ id: string; created_at: string }>(
       `insert into retrieval_snapshots (workspace_id, project_id, topic_id, role, query, filters, results, embedding_model, hash, created_by)
@@ -366,7 +417,7 @@ export async function retrieveKnowledge(
         input.query,
         JSON.stringify(filters),
         JSON.stringify(results),
-        EMBEDDING_MODEL,
+        modelName,
         hash,
         input.actorId,
       ],
@@ -375,7 +426,7 @@ export async function retrieveKnowledge(
   return {
     snapshotId: snapshot.id,
     hash,
-    embeddingModel: EMBEDDING_MODEL,
+    embeddingModel: modelName,
     createdAt: snapshot.created_at,
     results,
   };

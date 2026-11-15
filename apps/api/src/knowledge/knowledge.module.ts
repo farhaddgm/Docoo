@@ -7,6 +7,7 @@ import { KnowledgeController } from './knowledge.controller.js';
 import { ResearchMemoryController } from './research-memory.controller.js';
 import { ResearchMemoryService } from './research-memory.service.js';
 import { KNOWLEDGE_AUDITOR, KnowledgeService } from './knowledge.service.js';
+import { SemanticSearchService, semanticSearchProvider } from './semantic-search.service.js';
 
 @Module({
   imports: [ConfigModule, SourcesModule],
@@ -14,8 +15,10 @@ import { KNOWLEDGE_AUDITOR, KnowledgeService } from './knowledge.service.js';
   providers: [
     KnowledgeService,
     ResearchMemoryService,
+    SemanticSearchService,
+    semanticSearchProvider,
     { provide: KNOWLEDGE_AUDITOR, useValue: new RuleBasedAuditor() },
   ],
-  exports: [KnowledgeService],
+  exports: [KnowledgeService, SemanticSearchService],
 })
 export class KnowledgeModule {}

@@ -673,6 +673,13 @@
       "when": 1793809778919,
       "tag": "0095_independent_web_search",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1793809779919,
+      "tag": "0096_knowledge_chunk_embeddings",
+      "breakpoints": true
     }
   ]
 }
