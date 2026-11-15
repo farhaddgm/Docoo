@@ -5,6 +5,8 @@ import { ConfigModule } from '../config/config.module.js';
 import { WorkflowModule } from '../workflow/workflow.module.js';
 import { DecisionIntelligenceController } from './decision-intelligence.controller.js';
 import { DecisionIntelligenceService } from './decision-intelligence.service.js';
+import { ProjectPrivacyController } from './project-privacy.controller.js';
+import { ProjectPrivacyService } from './project-privacy.service.js';
 import { ProjectReportService } from './project-report.service.js';
 import { ProjectsController } from './projects.controller.js';
 import { ProjectsService } from './projects.service.js';
@@ -14,9 +16,15 @@ import { EvaluationStartDispatcher } from './evaluation-start-dispatcher.js';
 
 @Module({
   imports: [ConfigModule, BusinessModule, WorkflowModule],
-  controllers: [ProjectsController, DecisionIntelligenceController, EvaluationLabController],
+  controllers: [
+    ProjectsController,
+    DecisionIntelligenceController,
+    EvaluationLabController,
+    ProjectPrivacyController,
+  ],
   providers: [
     ProjectsService,
+    ProjectPrivacyService,
     ProjectReportService,
     DecisionIntelligenceService,
     EvaluationLabService,
