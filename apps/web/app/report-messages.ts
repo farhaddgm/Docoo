@@ -163,7 +163,7 @@ const reportMessages = {
         total: 'جمع بازه',
         none: 'در این بازه و با این فیلترها مصرفی ثبت نشده است.',
         failed: 'نمودار بارگذاری نشد.',
-        table: 'نمایش جدول',
+        table: 'جدول داده‌ها',
         day: 'روز',
         aria: 'نمودار خطی مصرف token در هر روز؛ با کلیدهای جهت‌نما روزها را مرور کنید.',
         sources: {
@@ -337,7 +337,7 @@ const reportMessages = {
         total: 'Total in period',
         none: 'No use was recorded in this period with these filters.',
         failed: 'The chart could not be loaded.',
-        table: 'Show table',
+        table: 'Data table',
         day: 'Day',
         aria: 'Line chart of tokens used each day; use the arrow keys to move between days.',
         sources: {
