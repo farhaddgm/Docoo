@@ -114,6 +114,8 @@ export function LiveAssistantSettings({
     models: string[];
     voices: { id: string; name: string; languages: string[] }[];
   }>({ models: [], voices: [] });
+  /** True when the ElevenLabs catalog could not be loaded at all (the fields fall back to typing). */
+  const [speechFailed, setSpeechFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [failure, setFailure] = useState('');
@@ -178,6 +180,7 @@ export function LiveAssistantSettings({
   const chosenBrand = connections.find((item) => item.id === connectionId)?.provider ?? '';
   const isEleven = chosenBrand === 'elevenlabs';
   useEffect(() => {
+    setSpeechFailed(false);
     if (!isEleven) {
       setSpeech({ models: [], voices: [] });
       return;
@@ -198,7 +201,11 @@ export function LiveAssistantSettings({
           })),
         });
       })
-      .catch(() => active && setSpeech({ models: [], voices: [] }));
+      .catch(() => {
+        if (!active) return;
+        setSpeech({ models: [], voices: [] });
+        setSpeechFailed(true);
+      });
     return () => {
       active = false;
     };
@@ -535,6 +542,13 @@ export function LiveAssistantSettings({
               <>
                 {connectionId && !isEleven && models.length === 0 && (
                   <small className="muted">{text.model.noRealtimeModels}</small>
+                )}
+                {isEleven && (speechFailed || speech.models.length === 0) && (
+                  <small className="muted" role="status">
+                    {speechFailed
+                      ? text.model.elevenlabs.catalogFailed
+                      : text.model.elevenlabs.noModels}
+                  </small>
                 )}
                 <CatalogSelect
                   id={id}
