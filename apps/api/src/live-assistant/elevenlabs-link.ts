@@ -87,6 +87,15 @@ export function dialogueHttpUrl(baseUrl: string | null, options: DialogueUrlOpti
   return `${base}/v1/text-to-dialogue/stream?${query.toString()}`;
 }
 
+/** The address that answers whether a key is accepted at all (it sends nothing and costs nothing). */
+export function userHttpUrl(baseUrl: string | null): string {
+  const base = (baseUrl ?? 'https://api.elevenlabs.io')
+    .trim()
+    .replace(/\/+$/u, '')
+    .replace(/\/v1$/u, '');
+  return `${base}/v1/user`;
+}
+
 export interface ElevenLabsCheckInput {
   readonly apiKey: string;
   readonly baseUrl: string | null;

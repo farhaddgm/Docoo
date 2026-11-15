@@ -6,7 +6,7 @@
  * starts switched off.
  */
 
-import type { LiveActionView, LiveAskStep } from '@docoo/contracts';
+import type { LiveActionView, LiveAskStep, LiveVoiceCheckFailure } from '@docoo/contracts';
 
 export type LiveStatus = 'off' | 'starting' | 'awake' | 'asleep' | 'closing' | 'error';
 
@@ -86,6 +86,8 @@ export interface LiveState {
   readonly tokens: number;
   readonly startedAt: number | null;
   readonly error: LiveError | null;
+  /** When the connection was lost: what the server could tell about why (a kind, never provider text). */
+  readonly errorDetail: LiveVoiceCheckFailure | null;
   /** The server says a cost or time cap is close (80% or more); the session is still running. */
   readonly warning: boolean;
   /** The server-side session this tab runs, while it runs. */
@@ -112,7 +114,11 @@ export type LiveAction =
   | { readonly type: 'wake' }
   | { readonly type: 'stop' }
   | { readonly type: 'stopped' }
-  | { readonly type: 'failed'; readonly error: LiveError }
+  | {
+      readonly type: 'failed';
+      readonly error: LiveError;
+      readonly detail?: LiveVoiceCheckFailure | undefined;
+    }
   | { readonly type: 'warning'; readonly on: boolean }
   | { readonly type: 'session'; readonly id: string | null }
   | { readonly type: 'action'; readonly view: LiveActionView; readonly at: number }
@@ -132,6 +138,7 @@ export const initialLiveState = (position: PillPosition | null = null): LiveStat
   tokens: 0,
   startedAt: null,
   error: null,
+  errorDetail: null,
   warning: false,
   sessionId: null,
   actions: [],
@@ -170,6 +177,7 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
         tokens: 0,
         startedAt: null,
         error: null,
+        errorDetail: null,
         warning: false,
         sessionId: null,
         actions: [],
@@ -222,7 +230,8 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
         ? { ...state, status: 'awake', waking: false, wakeWord: false }
         : state;
     case 'stop':
-      if (state.status === 'error') return { ...state, status: 'off', error: null };
+      if (state.status === 'error')
+        return { ...state, status: 'off', error: null, errorDetail: null };
       return isLiveActive(state.status) ? { ...state, status: 'closing' } : state;
     case 'stopped':
       return state.status === 'closing' || isLiveActive(state.status)
@@ -248,6 +257,7 @@ export function reduceLive(state: LiveState, action: LiveAction): LiveState {
             ...state,
             status: 'error',
             error: action.error,
+            errorDetail: action.detail ?? null,
             startedAt: null,
             warning: false,
             sessionId: null,

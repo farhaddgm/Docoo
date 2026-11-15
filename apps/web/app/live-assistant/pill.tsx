@@ -14,7 +14,7 @@ import { formatNumber } from '../i18n';
 import { useLocale } from '../locale-context';
 import { clampPosition, isDrag } from './drag';
 import { isOpen } from './confirmation-model';
-import { liveMessagesFor } from './messages';
+import { liveErrorText, liveMessagesFor } from './messages';
 import { liveAssistant } from './store';
 
 const CLOSE_VISIBLE_MS = 4000;
@@ -139,7 +139,7 @@ export function LiveAssistantPill() {
   const canTalk = voice && state.pushToTalk && (awake || asleep) && !state.waking;
   const statusText =
     failed && state.error
-      ? text.card.errors[state.error]
+      ? liveErrorText(text, state)
       : state.waking
         ? text.pill.waking
         : state.wakeWord

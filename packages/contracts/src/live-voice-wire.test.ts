@@ -20,6 +20,23 @@ describe('the voice link messages', () => {
     }
   });
 
+  it('carries the kind of a failure on the closed message, and only a known one', () => {
+    expect(
+      liveVoiceServerMessageSchema.safeParse({
+        type: 'closed',
+        reason: 'provider',
+        failure: 'quota',
+      }).success,
+    ).toBe(true);
+    expect(
+      liveVoiceServerMessageSchema.safeParse({
+        type: 'closed',
+        reason: 'provider',
+        failure: 'the provider said: insufficient_quota',
+      }).success,
+    ).toBe(false);
+  });
+
   it('refuses an unknown kind, an unknown activity and an over-long line', () => {
     expect(liveVoiceServerMessageSchema.safeParse({ type: 'run', cmd: 'x' }).success).toBe(false);
     expect(

@@ -1,4 +1,9 @@
-import type { LiveActionView, LiveAskAnswer, LiveVoiceTicket } from '@docoo/contracts';
+import type {
+  LiveActionView,
+  LiveAskAnswer,
+  LiveVoiceCheckFailure,
+  LiveVoiceTicket,
+} from '@docoo/contracts';
 
 /**
  * How the browser talks to the voice provider. The store knows only this interface, so the real
@@ -41,8 +46,11 @@ export interface LiveTransportHandlers {
   onServerEnded?: () => void;
   onSleep: () => void;
   onWake: () => void;
-  /** The connection dropped by itself; the session is over. */
-  onLost: () => void;
+  /**
+   * The connection dropped by itself; the session is over. `failure` is the kind of failure the
+   * server could tell (the provider refused the key, its credit ran out, and so on), when it did.
+   */
+  onLost: (failure?: LiveVoiceCheckFailure) => void;
 }
 
 export interface LiveTransportSession {

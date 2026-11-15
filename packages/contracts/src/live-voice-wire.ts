@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import { liveAskAnswerSchema, liveActivities } from './live-assistant-api.js';
+import {
+  liveAskAnswerSchema,
+  liveActivities,
+  liveVoiceCheckFailures,
+} from './live-assistant-api.js';
 
 /**
  * What the browser and the Docoo server say to each other over the voice link (ADR-0055 §4-3,
@@ -35,10 +39,14 @@ export const liveVoiceServerMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('interrupt') }),
   /** The result of a request the assistant sent to Docoo (changes wait on the confirmation card). */
   z.object({ type: z.literal('answer'), answer: liveAskAnswerSchema }),
-  /** Why the link ended. */
+  /**
+   * Why the link ended. When the provider failed, `failure` says what kind of failure it was (a
+   * kind, never the provider's own text), so the page can tell the person what to do.
+   */
   z.object({
     type: z.literal('closed'),
     reason: z.enum(['ended', 'cap', 'provider', 'idle', 'superseded', 'error']),
+    failure: z.enum(liveVoiceCheckFailures).optional(),
   }),
 ]);
 export type LiveVoiceServerMessage = z.infer<typeof liveVoiceServerMessageSchema>;

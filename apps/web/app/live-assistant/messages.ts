@@ -1,8 +1,12 @@
-import type { LiveActionStatus, LiveSessionEndReason } from '@docoo/contracts';
+import type {
+  LiveActionStatus,
+  LiveSessionEndReason,
+  LiveVoiceCheckFailure,
+} from '@docoo/contracts';
 
 import type { Locale } from '../i18n';
 import type { StepKey } from './confirmation-model';
-import type { ConfirmHintReason, LiveError, LiveStatus } from './state';
+import type { ConfirmHintReason, LiveError, LiveState, LiveStatus } from './state';
 
 /**
  * The assistant's name is a setting (ADR-0055 §4-8); until the settings page exists these are its
@@ -69,6 +73,7 @@ export interface LiveMessages {
     readonly nearCap: string;
     readonly used: string;
     readonly errors: Record<LiveError, string>;
+    readonly failures: Record<LiveVoiceCheckFailure, string>;
     /** Typing to the assistant instead of speaking. */
     readonly typing: {
       readonly start: string;
@@ -214,6 +219,32 @@ const fa: LiveMessages = {
       cap_reached:
         'به سقف هزینه یا زمان رسید و گفتگوی زنده بسته شد. سقف‌ها در صفحهٔ تنظیمات دستیار قابل‌تغییرند.',
       switched_off: 'دستیار صوتی در تنظیمات خاموش است یا آمادهٔ شروع نیست.',
+    },
+    /** Why the voice link was lost, when the server could tell; said after the plain message. */
+    failures: {
+      not_configured: 'اتصال و مدل صدا در تنظیمات دستیار کامل انتخاب نشده است.',
+      connection_unavailable: 'اتصال صدا در دسترس نیست؛ در صفحهٔ ارائه‌دهندگان آن را بررسی کنید.',
+      not_openai:
+        'اتصال انتخاب‌شده صدای زنده ندارد؛ در تنظیمات دستیار اتصال OpenAI یا ElevenLabs را انتخاب کنید.',
+      auth: 'کلید اتصال صدا پذیرفته نشد؛ کلید را در صفحهٔ ارائه‌دهندگان بررسی یا عوض کنید.',
+      region: 'ارائه‌دهندهٔ صدا کشورِ محل سرور را نمی‌پذیرد.',
+      model:
+        'مدل صدا برای این کلید یافت نشد یا اجازهٔ آن را ندارد؛ در تنظیمات دستیار مدل دیگری انتخاب کنید.',
+      network: 'سرور نتوانست به ارائه‌دهندهٔ صدا برسد؛ شبکهٔ سرور را بررسی کنید.',
+      timeout: 'ارائه‌دهندهٔ صدا در مهلت جواب نداد؛ کمی بعد دوباره تلاش کنید.',
+      quota:
+        'اعتبار یا سقف مصرف حساب ارائه‌دهندهٔ صدا تمام شده است (یا سقف تعداد درخواست پر شده). اعتبار حساب OpenAI یا ElevenLabs را بررسی و شارژ کنید، یا کمی بعد دوباره تلاش کنید.',
+      terms: 'شرایط استفادهٔ ارائه‌دهنده در داشبورد خودش هنوز پذیرفته نشده است.',
+      retention:
+        'طرح ElevenLabs شما حالت «بدون نگه‌داری داده» (zero retention) را نمی‌پذیرد. در تنظیمات دستیار، بخش «گفتگوها و حریم خصوصی»، آن را آگاهانه خاموش کنید یا طرح را ارتقا دهید.',
+      voice:
+        'صدای انتخاب‌شده (voice) در حساب ElevenLabs شما پیدا نشد یا اجازهٔ استفاده از آن را ندارید؛ در تنظیمات دستیار صدای دیگری انتخاب کنید.',
+      refused:
+        'ارائه‌دهندهٔ صدا اتصال را همان ابتدا رد کرد و دلیل روشنی نداد. در تنظیمات دستیار «بررسی اتصال صدا از سرور» را بزنید تا دلیل دقیق نشان داده شود.',
+      session_limit: 'ارائه‌دهنده به سقف مدت یک گفتگو رسید و آن را بست؛ دوباره شروع کنید.',
+      dropped:
+        'ارتباط با ارائه‌دهندهٔ صدا در میانهٔ گفتگو قطع شد؛ دوباره شروع کنید. اگر تکرار شد، شبکهٔ سرور و وضعیت سرویس ارائه‌دهنده را بررسی کنید.',
+      unexpected: 'ارائه‌دهندهٔ صدا خطای غیرمنتظره‌ای داد؛ دوباره تلاش کنید.',
     },
     notReady: {
       disabled: 'دستیار صوتی در تنظیمات خاموش است.',
@@ -410,6 +441,35 @@ const en: LiveMessages = {
         'A cost or time cap was reached and the live conversation was closed. The caps can be changed on the assistant settings page.',
       switched_off: 'The voice assistant is switched off in settings or not ready to start.',
     },
+    /** Why the voice link was lost, when the server could tell; said after the plain message. */
+    failures: {
+      not_configured:
+        'The voice connection and model are not fully chosen in the assistant settings.',
+      connection_unavailable:
+        'The voice connection is unavailable; check it on the providers page.',
+      not_openai:
+        'The chosen connection has no live voice; choose an OpenAI or ElevenLabs connection in the assistant settings.',
+      auth: 'The key of the voice connection was not accepted; check or replace it on the providers page.',
+      region: 'The voice provider does not accept the country the server runs in.',
+      model:
+        'The voice model was not found for this key, or it has no access; choose another model in the assistant settings.',
+      network: 'The server could not reach the voice provider; check the server network.',
+      timeout: 'The voice provider did not answer in time; try again in a moment.',
+      quota:
+        'The credit or usage limit of the voice provider account is used up (or its request rate limit is reached). Check and top up the OpenAI or ElevenLabs account, or try again in a moment.',
+      terms: 'The terms of the provider are not accepted in its own dashboard yet.',
+      retention:
+        'Your ElevenLabs plan does not accept zero retention. In the assistant settings, section "Conversations and privacy", switch it off knowingly, or upgrade the plan.',
+      voice:
+        'The chosen voice was not found in your ElevenLabs account, or you may not use it; choose another voice in the assistant settings.',
+      refused:
+        'The voice provider refused the link at the door and gave no clear reason. Press "Check the voice link from the server" in the assistant settings to see the exact reason.',
+      session_limit:
+        'The provider reached the length limit of one conversation and closed it; start again.',
+      dropped:
+        'The link to the voice provider was lost in the middle of the conversation; start again. If it repeats, check the server network and the provider status.',
+      unexpected: 'The voice provider gave an unexpected error; try again.',
+    },
     notReady: {
       disabled: 'The voice assistant is switched off in settings.',
       disclosure: 'The privacy notice has not been accepted in the assistant settings yet.',
@@ -534,3 +594,17 @@ export const liveMessagesFor = (locale: Locale): LiveMessages => (locale === 'fa
 
 export const fill = (template: string, values: Record<string, string>): string =>
   template.replace(/\{(\w+)\}/gu, (_, key: string) => values[key] ?? '');
+
+/**
+ * The words for the error of the page: the plain message, and, when the connection was lost and the
+ * server could tell why, the reason and what to do about it.
+ */
+export function liveErrorText(
+  messages: LiveMessages,
+  state: Pick<LiveState, 'error' | 'errorDetail'>,
+): string {
+  if (!state.error) return '';
+  const plain = messages.card.errors[state.error];
+  if (state.error !== 'connection_lost' || !state.errorDetail) return plain;
+  return `${plain} ${messages.card.failures[state.errorDetail]}`;
+}
