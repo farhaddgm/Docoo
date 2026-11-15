@@ -56,3 +56,4 @@ export function createSpeechAdapter(
       return new FakeSpeechAdapter();
   }
 }
+export * from './privacy.js';

@@ -1,4 +1,4 @@
-# ADR-0060 — جست‌وجوی معنایی در دانش با embedding ارائه‌دهنده
+# ADR-0061 — جست‌وجوی معنایی در دانش با embedding ارائه‌دهنده
 
 وضعیت: **پیاده‌شده، پیش‌فرض خاموش؛ با کلید واقعی سنجیده نشده**. سند [حاکمیت دانش](../03-ai/03-knowledge-and-brain.md) (KNO-007) و [ADR-0017](0017-research-with-knowledge-and-role-evaluation.md) را کامل می‌کند.
 
@@ -20,7 +20,7 @@
 
 | بخش                   | کجا                                                                                                                            |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| جدول بردارها          | مهاجرت `0096`: `knowledge_chunk_embeddings` (`vector(1536)`، یک ردیف برای هر قطعه و مدل، RLS، فقط SELECT/INSERT)               |
+| جدول بردارها          | مهاجرت `0097`: `knowledge_chunk_embeddings` (`vector(1536)`، یک ردیف برای هر قطعه و مدل، RLS، فقط SELECT/INSERT)               |
 | ماژول اصلی            | `packages/orchestration/src/semantic-embeddings.ts`                                                                            |
 | رتبهٔ سوم در بازیابی  | `knowledge-retrieval.ts`: فقط قطعه‌هایی که بردار همان مدل را دارند؛ شباهت کمتر از `SEMANTIC_MIN_SIMILARITY` شمرده نمی‌شود      |
 | ایندکس و وضعیت        | `GET knowledge/semantic-index`، `POST knowledge/semantic-index/run` (`knowledge.update`)، کارت «جست‌وجوی معنایی» در تب بازیابی |
@@ -56,4 +56,4 @@
 
 ## ۷. بازگشت
 
-`KNOWLEDGE_EMBEDDING_ENABLED=false` (پیش‌فرض) رفتار را دقیقاً به قبل برمی‌گرداند؛ ردیف‌های بردار بی‌اثر می‌مانند. مهاجرت `0096` فقط افزودنی است.
+`KNOWLEDGE_EMBEDDING_ENABLED=false` (پیش‌فرض) رفتار را دقیقاً به قبل برمی‌گرداند؛ ردیف‌های بردار بی‌اثر می‌مانند. مهاجرت `0097` فقط افزودنی است.

@@ -27,7 +27,7 @@ export interface RetrievalRequest {
    */
   readonly minAuditScore?: number | undefined;
   /**
-   * The question as a provider's embedding (ADR-0060), when the caller could get one. It adds a
+   * The question as a provider's embedding (ADR-0061), when the caller could get one. It adds a
    * third ranking, over the chunks that have a vector of the same model, to the two of the words
    * and the local embedding. Absent or null leaves retrieval exactly as it was.
    */
@@ -60,7 +60,7 @@ export interface RetrievedPassage {
   readonly lexicalRank: number | null;
   readonly vectorRank: number | null;
   readonly similarity: number | null;
-  /** Present only when a semantic ranking took part (ADR-0060). */
+  /** Present only when a semantic ranking took part (ADR-0061). */
   readonly semanticRank?: number | null;
   readonly semanticSimilarity?: number | null;
   readonly reviewId: string | null;

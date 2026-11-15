@@ -671,21 +671,28 @@
       "idx": 95,
       "version": "7",
       "when": 1793809778919,
-      "tag": "0095_independent_web_search",
+      "tag": "0095_privacy_layer",
       "breakpoints": true
     },
     {
       "idx": 96,
       "version": "7",
       "when": 1793809779919,
-      "tag": "0096_knowledge_chunk_embeddings",
+      "tag": "0096_independent_web_search",
       "breakpoints": true
     },
     {
       "idx": 97,
       "version": "7",
       "when": 1793809780919,
-      "tag": "0097_knowledge_chunk_context",
+      "tag": "0097_knowledge_chunk_embeddings",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1793809781919,
+      "tag": "0098_knowledge_chunk_context",
       "breakpoints": true
     }
   ]

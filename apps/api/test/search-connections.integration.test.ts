@@ -27,7 +27,7 @@ interface Connection {
   secret: { version: number; fingerprint: string; configured: boolean } | null;
 }
 
-describe.skipIf(!adminUrl)('independent web search connections (ADR-0059)', () => {
+describe.skipIf(!adminUrl)('independent web search connections (ADR-0060)', () => {
   beforeAll(async () => {
     // A stand-in for both services: Exa reads the key from x-api-key, Tavily from a bearer token.
     server = createServer((request, response) => {

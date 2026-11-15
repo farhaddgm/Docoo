@@ -34,7 +34,7 @@ class SavedButNotUsable extends Error {
 }
 
 /**
- * ADR-0059: the independent web search services. Their keys are stored like a model provider's
+ * ADR-0060: the independent web search services. Their keys are stored like a model provider's
  * (encrypted, write-only), but they are listed here, apart from the models.
  */
 export function SearchServices({ locale, base }: { locale: Locale; base: string }) {

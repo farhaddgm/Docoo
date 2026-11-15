@@ -11,7 +11,7 @@ import type { WebPassage, WebRun } from './research.js';
 import type { ConnectedSearchPort } from './runtime.js';
 
 /**
- * The independent web search of the research stage (ADR-0059, ADR-0026 addendum 1.2). It runs
+ * The independent web search of the research stage (ADR-0060, ADR-0026 addendum 1.2). It runs
  * beside the model's own search, through one or both of the connected search services (Exa,
  * Tavily). Everything here is pure or takes its ports as arguments, so it is tested without a
  * network.
@@ -406,7 +406,7 @@ export const queryCostUsd = (perQuery: number, queries: number): number =>
   Math.round(perQuery * queries * 1e6) / 1e6;
 
 /**
- * The independent search of one research attempt (ADR-0059). It returns null when it did not run
+ * The independent search of one research attempt (ADR-0060). It returns null when it did not run
  * (off, refused to the role, over the cost limit, or an unexpected failure) and a run, possibly
  * with no pages, when it did. It never throws: the stage must go on with the model's search.
  */

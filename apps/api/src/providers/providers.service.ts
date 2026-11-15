@@ -50,7 +50,7 @@ export const PROVIDER_RUNTIME = Symbol('PROVIDER_RUNTIME');
 
 /**
  * A connection's brand: a model provider, ElevenLabs, which only speaks (ADR-0046), or an
- * independent web search service, which only searches (ADR-0059).
+ * independent web search service, which only searches (ADR-0060).
  */
 export type ConnectionBrand = ProviderKind | 'elevenlabs' | SearchBrand;
 
@@ -147,7 +147,7 @@ export class ProvidersService {
     @Inject(PRICE_CATALOG) private readonly priceCatalog: PriceCatalogSource,
   ) {}
 
-  /** The connections that answer prompts or speak; the search services are listed apart (ADR-0059). */
+  /** The connections that answer prompts or speak; the search services are listed apart (ADR-0060). */
   async list(context: WorkspaceRequestContext) {
     return this.database.run(context, async (client) => {
       const result = await client.query<ConnectionRow>(
@@ -158,7 +158,7 @@ export class ProvidersService {
     });
   }
 
-  /** The independent web search services (Exa, Tavily) connected in the workspace (ADR-0059). */
+  /** The independent web search services (Exa, Tavily) connected in the workspace (ADR-0060). */
   async listSearch(context: WorkspaceRequestContext) {
     return this.database.run(context, async (client) => {
       const result = await client.query<ConnectionRow>(
@@ -1005,7 +1005,7 @@ export class ProvidersService {
           params,
         )
       ).rows;
-      // The independent search services bill per query, not per token (ADR-0059): their queries are
+      // The independent search services bill per query, not per token (ADR-0060): their queries are
       // a separate line, and they count toward the cost limit like the models' tokens do.
       const searchServices = (
         await client.query<{ service: string; queries: number; costUsd: number }>(

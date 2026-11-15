@@ -1,4 +1,4 @@
--- ADR-0060: semantic (provider) embeddings of knowledge chunks, beside the local hash embedding.
+-- ADR-0061: semantic (provider) embeddings of knowledge chunks, beside the local hash embedding.
 -- Chunks are append-only, so the vectors live in a table of their own, one row per chunk and model:
 -- a new model adds rows and never rewrites the old ones. Only chunks of `internal` knowledge are ever
 -- embedded (the rule is in the indexing code and in KNOWLEDGE_EMBEDDING_ALLOW_INTERNAL); this table

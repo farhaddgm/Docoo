@@ -122,14 +122,14 @@ function gapOf(
   return records(web?.['gaps']).find((entry) => entry['id'] === id);
 }
 
-/** Which searches returned a page; shown only when the independent search services took part (ADR-0059). */
+/** Which searches returned a page; shown only when the independent search services took part (ADR-0060). */
 function viaLabel(text: Text, value: unknown): string {
   const labels = strings(value);
   if (labels.length === 0) return '';
   return ` · ${labels.map((label) => text.viaLabels[label] ?? label).join(' + ')}`;
 }
 
-/** How the independent search services went: who answered, who did not, what was held back (ADR-0059). */
+/** How the independent search services went: who answered, who did not, what was held back (ADR-0060). */
 function IndependentBlock({
   text,
   web,

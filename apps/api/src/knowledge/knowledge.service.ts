@@ -1100,7 +1100,7 @@ export class KnowledgeService {
    */
   async retrieve(context: WorkspaceRequestContext, input: RetrieveInput) {
     // The question as a provider's embedding, asked for before the transaction opens so no
-    // connection is held while the provider answers. Null when semantic search is off (ADR-0060).
+    // connection is held while the provider answers. Null when semantic search is off (ADR-0061).
     const semantic = await this.semantic.queryVector(input.query);
     return this.database.run(context, async (client) => {
       // The audit-score floor is the effective `knowledge.min_audit_score` of the scope asked for.
@@ -1310,7 +1310,7 @@ export class KnowledgeService {
           version.item_id,
         ])
       ).rows[0]?.title ?? '';
-    // The title of the document and the heading of the section join what is searched (ADR-0061); the
+    // The title of the document and the heading of the section join what is searched (ADR-0062); the
     // chunk text, which a quote is checked against, stays exactly as written.
     for (const chunk of chunkSections(version.content, title)) {
       const searched = chunkSearchInput(chunk);

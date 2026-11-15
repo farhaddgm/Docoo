@@ -5,7 +5,7 @@ import { SEMANTIC_SEARCH } from '../src/knowledge/semantic-search.service.js';
 import { adminUrl, createHarness, type Harness } from './support/harness.js';
 
 /**
- * Semantic search over knowledge (ADR-0060). The provider is replaced by a fake that gives texts of
+ * Semantic search over knowledge (ADR-0061). The provider is replaced by a fake that gives texts of
  * one meaning the same direction (a Persian "ترک" and an English "leaving" both mean churn), so the
  * test shows where the vectors come from and where they must not: what leaves, what is ranked, and
  * what happens when the provider fails. No network is used.
@@ -65,7 +65,7 @@ const bodies = {
   pricing: 'تعرفه اشتراک سالانه بر اساس تعداد کاربران تعیین می‌شود و ده درصد تخفیف سالانه دارد.',
 };
 
-describe.skipIf(!adminUrl)('semantic search is off unless every lock is open (ADR-0060)', () => {
+describe.skipIf(!adminUrl)('semantic search is off unless every lock is open (ADR-0061)', () => {
   let h: Harness;
   let cookie: string;
   const api = (suffix: string) => `/v1/workspaces/${h.ids.workspaceA}${suffix}`;
@@ -100,7 +100,7 @@ describe.skipIf(!adminUrl)('semantic search is off unless every lock is open (AD
   });
 });
 
-describe.skipIf(!adminUrl)('semantic search with a scripted provider (ADR-0060)', () => {
+describe.skipIf(!adminUrl)('semantic search with a scripted provider (ADR-0061)', () => {
   let h: Harness;
   let cookie: string;
   const ids: Record<string, string> = {};

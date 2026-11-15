@@ -548,7 +548,7 @@ export function createOrchestrationActivities(
           businessSnapshotId: prepared.businessSnapshotId,
         });
         // What the run has cost so far: the models' tokens and the independent search services'
-        // queries (ADR-0059). `extra` is the estimate of a call about to be made.
+        // queries (ADR-0060). `extra` is the estimate of a call about to be made.
         const affordable = (extra = 0) =>
           run(ref.workspaceId, async (client) => {
             const models = (
@@ -593,7 +593,7 @@ export function createOrchestrationActivities(
         let dualJudge: ModelRef | null = null;
         if (research) {
           let web: WebRun = NO_WEB;
-          // ADR-0059: the independent search services (Exa, Tavily) run beside the model's own
+          // ADR-0060: the independent search services (Exa, Tavily) run beside the model's own
           // search, on the confirmed questions, after the privacy check. They are an extra: a
           // service that fails is reported and the stage carries on with the model's search.
           const independentStep = (): Promise<IndependentRun | null> =>

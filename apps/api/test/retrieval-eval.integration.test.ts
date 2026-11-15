@@ -24,7 +24,7 @@ import { adminUrl, createHarness, type Harness } from './support/harness.js';
  *   the file is the review).
  * - The second part runs only with `RETRIEVAL_EVAL_OPENAI_API_KEY` (and optionally
  *   `RETRIEVAL_EVAL_EMBEDDING_MODEL`, default text-embedding-3-small). It repeats the run with the
- *   provider's embeddings (ADR-0060) and must not rank worse than the first part: the semantic
+ *   provider's embeddings (ADR-0061) and must not rank worse than the first part: the semantic
  *   search stays only if the numbers are better.
  */
 
@@ -189,7 +189,7 @@ describe.skipIf(!adminUrl)('retrieval evaluation on the Persian corpus (QA-004)'
 const providerKey = process.env['RETRIEVAL_EVAL_OPENAI_API_KEY'];
 
 describe.skipIf(!adminUrl || !providerKey)(
-  'retrieval evaluation with the provider embeddings (ADR-0060)',
+  'retrieval evaluation with the provider embeddings (ADR-0061)',
   () => {
     const model = process.env['RETRIEVAL_EVAL_EMBEDDING_MODEL'] || 'text-embedding-3-small';
     let h: Harness;

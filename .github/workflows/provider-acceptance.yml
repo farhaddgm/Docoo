@@ -63,7 +63,7 @@ jobs:
       - name: Speech-to-text on the acceptance corpus (ING-005)
         run: pnpm --filter @docoo/ingestion test:acceptance
 
-  # ADR-0060: does the provider's embedding rank the Persian corpus better than the local one? It runs
+  # ADR-0061: does the provider's embedding rank the Persian corpus better than the local one? It runs
   # only with OPENAI_API_KEY, sends the synthetic corpus of qa/retrieval-eval (no real data) to the
   # embeddings endpoint, and fails if the semantic ranking is worse. The numbers are in the log.
   retrieval-semantic:

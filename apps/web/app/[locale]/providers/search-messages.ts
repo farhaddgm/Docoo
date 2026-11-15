@@ -1,6 +1,6 @@
 import type { Locale } from '../../i18n';
 
-/** The "web search services" section of the providers page (ADR-0059). */
+/** The "web search services" section of the providers page (ADR-0060). */
 const messages = {
   fa: {
     title: 'سرویس‌های جست‌وجوی وب',

@@ -29,7 +29,7 @@ export const semanticSearchProvider = {
 export type SemanticReason = 'not_enabled' | 'internal_not_allowed' | 'not_configured';
 
 /**
- * Semantic search over knowledge (ADR-0060). It only ever works when the owner opened every lock in
+ * Semantic search over knowledge (ADR-0061). It only ever works when the owner opened every lock in
  * the environment (`KNOWLEDGE_EMBEDDING_*`); otherwise each method answers "off" and retrieval is
  * what it was. Nothing here throws into a request: a provider failure is a missing ranking.
  */

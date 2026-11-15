@@ -1,4 +1,4 @@
-# ADR-0059 — جست‌وجوی وب مستقل (Exa و Tavily) در کنار جست‌وجوی خود مدل
+# ADR-0060 — جست‌وجوی وب مستقل (Exa و Tavily) در کنار جست‌وجوی خود مدل
 
 وضعیت: **پیاده‌شده؛ با کلید واقعی آزموده نشده**. [ADR-0026](0026-web-research-adapter.md) (الحاقیهٔ ۱.۲، تصمیم مالک ۲۰۲۶-۱۱-۱۳)، [ADR-0053](0053-research-memory.md) و [ADR-0054](0054-research-page-reading.md) را کامل می‌کند.
 
@@ -33,7 +33,7 @@
 | ساخت query، اجرا روی چند سرویس، ادغام، گام | `packages/orchestration/src/independent-search.ts`                                                                                |
 | ساخت پورت از اتصال ذخیره‌شده               | `ProviderRuntime.searchPortsFor` / `searchPortFor` (`runtime.ts`)                                                                 |
 | سیم‌کشی به مرحلهٔ تحقیق، سقف هزینه         | `packages/orchestration/src/activities.ts`                                                                                        |
-| مهاجرت `0095`                              | برندهای `exa`/`tavily`، ستون `cost_per_query_usd`، سه تنظیم `research.independent_*`                                              |
+| مهاجرت `0096`                              | برندهای `exa`/`tavily`، ستون `cost_per_query_usd`، سه تنظیم `research.independent_*`                                              |
 | API                                        | `GET search-connections`، هزینهٔ هر پرسش در create/update، بررسی سلامت با یک پرسش واقعی، `searchServices` در usage                |
 | رابط                                       | بخش «سرویس‌های جست‌وجوی وب» در صفحهٔ ارائه‌دهندگان؛ برچسب `via` و خلاصهٔ جست‌وجوی مستقل زیر خروجی تحقیق؛ سه تنظیم در گروه «تحقیق» |
 
@@ -53,4 +53,4 @@
 
 ## ۶. بازگشت
 
-`research.independent_enabled=false` (پیش‌فرض) رفتار را دقیقاً به قبل برمی‌گرداند. اتصال‌ها را می‌شود در صفحه حذف کرد. مهاجرت `0095` فقط افزودنی است.
+`research.independent_enabled=false` (پیش‌فرض) رفتار را دقیقاً به قبل برمی‌گرداند. اتصال‌ها را می‌شود در صفحه حذف کرد. مهاجرت `0096` فقط افزودنی است.

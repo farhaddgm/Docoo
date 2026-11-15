@@ -58,7 +58,7 @@ const messages = {
   },
 };
 
-/** ADR-0060: whether semantic search is on, how much knowledge it covers, and a button to catch up. */
+/** ADR-0061: whether semantic search is on, how much knowledge it covers, and a button to catch up. */
 export function SemanticCard({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
   const text = messages[locale];
   const base = `/workspaces/${workspaceId}/knowledge/semantic-index`;

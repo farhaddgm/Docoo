@@ -52,7 +52,7 @@ export interface Settings {
   researchWebTargetSources: number;
   /** Pages kept for the research prompt (`research.web_source_limit`). */
   researchWebSourceLimit: number;
-  /** Also search through the connected independent services (`research.independent_enabled`, ADR-0059). */
+  /** Also search through the connected independent services (`research.independent_enabled`, ADR-0060). */
   researchIndependentEnabled: boolean;
   /** Queries and results per query for each independent service (`research.independent_*`). */
   researchIndependent: IndependentPolicy;

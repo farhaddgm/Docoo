@@ -257,7 +257,7 @@ export interface WebPassage {
   readonly sourceClass?: WebSourceClass;
   /** In dual-model research: which model(s) found the page; absent for a single model. */
   readonly foundBy?: readonly ('primary' | 'second')[];
-  /** Which searches returned the page: `native` (the model's own) and `independent:<service>` (ADR-0059). */
+  /** Which searches returned the page: `native` (the model's own) and `independent:<service>` (ADR-0060). */
   readonly via?: readonly string[];
   /** The page itself was read in full and its relevant part added to `text` (ADR-0054). */
   readonly read?: boolean;
@@ -282,7 +282,7 @@ export interface WebRun {
   readonly gaps?: readonly StoredGap[] | undefined;
   /** How the full reading of the key pages went (ADR-0054); absent when it was off. */
   readonly pageReading?: PageReadingInfo | undefined;
-  /** How the independent search services went (ADR-0059); absent when none was asked. */
+  /** How the independent search services went (ADR-0060); absent when none was asked. */
   readonly independent?: IndependentInfo | undefined;
 }
 

@@ -1,4 +1,4 @@
--- ADR-0059: the research stage can also search the web through an independent search service
+-- ADR-0060: the research stage can also search the web through an independent search service
 -- (Exa, Tavily), next to the model's own search. The two services are only new brands of a
 -- connection: secrets (encrypted, write-only, versioned), health, audit and disabling already
 -- work for any `provider_kind`. A search connection carries what one query costs, entered by the

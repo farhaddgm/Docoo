@@ -247,6 +247,12 @@ export const projects = pgTable(
     analysisContinuationSessionId: uuid('analysis_continuation_session_id'),
     /** 'standard' or 'exploration' (ADR-0045); set at creation and never changes. */
     kind: text('kind').notNull().default('standard'),
+    /** What happens to private values before a model call: 'off', 'mask' or 'block' (ADR-0059). */
+    privacyMode: text('privacy_mode').notNull().default('mask'),
+    privacyBlockedWords: text('privacy_blocked_words')
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     purgeAfter: timestamp('purge_after', { withTimezone: true }),
@@ -867,7 +873,7 @@ export const providerConnections = pgTable(
     currentSecretVersion: integer('current_secret_version').notNull().default(0),
     storeContent: boolean('store_content').notNull().default(false),
     maxConcurrentInvocations: integer('max_concurrent_invocations').notNull().default(4),
-    /** What one query costs, for a search service (Exa, Tavily); null for every other brand (ADR-0059). */
+    /** What one query costs, for a search service (Exa, Tavily); null for every other brand (ADR-0060). */
     costPerQueryUsd: real('cost_per_query_usd'),
     version: integer('version').notNull().default(1),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
@@ -1614,6 +1620,9 @@ export const modelInvocations = pgTable(
     businessSnapshotId: uuid('business_snapshot_id'),
     /** Whose account the call counts for (ADR-0042); null: the starter of the workflow run. */
     actorId: uuid('actor_id'),
+    /** How many private values the privacy layer replaced in the request, and of which kinds. */
+    privacyMaskedCount: integer('privacy_masked_count').notNull().default(0),
+    privacyMaskedKinds: jsonb('privacy_masked_kinds'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

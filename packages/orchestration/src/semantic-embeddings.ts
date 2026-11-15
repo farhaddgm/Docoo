@@ -4,7 +4,7 @@ import { chunkSearchInput, vectorLiteral } from '@docoo/knowledge';
 import type { PoolClient } from 'pg';
 
 /**
- * Semantic (provider) embeddings of knowledge (ADR-0060). The local hash embedding only compares
+ * Semantic (provider) embeddings of knowledge (ADR-0061). The local hash embedding only compares
  * the shapes of letters and words; a provider's embedding model compares meaning, so "keeping
  * customers from leaving" finds a document about churn, and a Persian question finds an English
  * document. It is optional, off by default and held by the same locks the owner already set for

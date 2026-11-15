@@ -1,5 +1,5 @@
 /**
- * The last check of a web search query before it leaves the system (ADR-0059, ADR-0026 §6).
+ * The last check of a web search query before it leaves the system (ADR-0060, ADR-0026 §6).
  *
  * A query is derived from the confirmed research questions or the problem statement, both written
  * by people, so it can carry things that must never reach an outside search service: an e-mail
