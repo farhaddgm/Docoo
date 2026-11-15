@@ -241,6 +241,73 @@ describe.skipIf(!adminUrl)('dashboard, usage and Brain reports (REP-001, REP-002
     ).toBe(400);
   });
 
+  it('REP-004: tokens per day can be filtered by project, stage and source and split by source', async () => {
+    const totals = await h.admin.query<{ tokens: number }>(
+      `select sum(input_tokens + output_tokens)::int as tokens from model_invocations where workspace_id = $1`,
+      [h.ids.workspaceA],
+    );
+    type Series = {
+      days: string[];
+      series: { key: string; points: number[] }[];
+      totalTokens: number;
+      options: { stages: string[]; projects: { id: string; title: string }[] };
+    };
+    const read = async (search: string) => {
+      const response = await h.request('GET', api(`/reports/usage-series${search}`), { cookie });
+      expect(response.statusCode, response.body).toBe(200);
+      return response.json<{ series: Series }>().series;
+    };
+    const sum = (series: Series) =>
+      series.series.flatMap((line) => line.points).reduce((a, b) => a + b, 0);
+
+    const whole = await read('');
+    expect(whole.totalTokens).toBe(totals.rows[0]!.tokens);
+    expect(sum(whole)).toBe(whole.totalTokens);
+    expect(whole.series.map((line) => line.key)).toEqual(['all']);
+    // Every day of the period is there, one after another, and every line has one point per day.
+    expect(whole.days).toHaveLength(31);
+    for (const line of whole.series) expect(line.points).toHaveLength(whole.days.length);
+    expect(whole.options.stages).toEqual(['evaluation', 'solutions']);
+    expect(whole.options.projects).toEqual([{ id: projectId, title: 'Churn programme' }]);
+
+    const split = await read('?splitBy=source');
+    expect(split.series.map((line) => line.key)).toEqual([
+      'stage',
+      'assistant',
+      'brain',
+      'smart',
+      'other',
+    ]);
+    expect(sum(split)).toBe(whole.totalTokens);
+
+    const oneStage = await read('?stage=evaluation');
+    expect(oneStage.totalTokens).toBeGreaterThan(0);
+    expect(oneStage.totalTokens).toBeLessThan(whole.totalTokens);
+    // The menus keep listing every stage while one is picked.
+    expect(oneStage.options.stages).toEqual(whole.options.stages);
+
+    expect((await read(`?projectId=${projectId}`)).totalTokens).toBe(whole.totalTokens);
+    expect((await read('?source=assistant')).totalTokens).toBe(0);
+    expect((await read('?from=2020-01-01T00:00:00Z&to=2020-01-10T00:00:00Z')).days).toHaveLength(
+      10,
+    );
+
+    for (const bad of ['?source=voice', '?splitBy=stage', '?projectId=nope']) {
+      expect(
+        (await h.request('GET', api(`/reports/usage-series${bad}`), { cookie })).statusCode,
+      ).toBe(400);
+    }
+    expect(
+      (
+        await h.request(
+          'GET',
+          api('/reports/usage-series?projectId=00000000-0000-4000-8000-000000000000'),
+          { cookie },
+        )
+      ).statusCode,
+    ).toBe(404);
+  });
+
   it('REP-002: Brain reports deviations from the charter with evidence and changes nothing', async () => {
     const before = await stateFingerprint();
     const auditBefore = await h.admin.query<{ count: number }>(

@@ -286,6 +286,7 @@ const expectedMatrix: Record<string, string> = {
   'PATCH workspaces/:workspaceId/evaluation-findings/:findingId': 'workflow.override',
   'GET workspaces/:workspaceId/dashboard': 'workspace.read',
   'GET workspaces/:workspaceId/reports/usage': 'provider.read',
+  'GET workspaces/:workspaceId/reports/usage-series': 'provider.read',
   'POST workspaces/:workspaceId/brain-reports': 'knowledge.audit',
   'GET workspaces/:workspaceId/brain-reports': 'knowledge.read',
   'GET workspaces/:workspaceId/brain-reports/:reportId': 'knowledge.read',
