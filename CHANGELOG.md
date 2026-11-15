@@ -4,6 +4,10 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- Independent web search through Exa and Tavily, beside the model's own search (ADR-0059). Connect one or both on the AI providers page ("Web search services"), then turn on `research.independent_enabled` in the Research settings (off by default). The research stage then also asks every connected, enabled service, merges the pages by address, and says in the output which search found each page and how each service went; a service that fails or runs out of credit is reported and the stage carries on with the rest. Only the confirmed research questions are sent, after a deterministic privacy check that refuses a query with an e-mail, a phone or card number, an internal address or a key. Each service has a price per query; the queries are held against the run's cost limit before they are sent and appear as their own line in a project's usage. Pages found this way are untrusted `W` pages like the model's own; they reach the knowledge base only through "Save to knowledge" and the Brain audit. Migration 0095. Not yet tried with real Exa or Tavily keys in a full research run, and the services' query-retention terms still have to be read from their official documents (ADR-0059 §5).
+
 ## [0.64.1] — 2026-11-14
 
 ### Fixed

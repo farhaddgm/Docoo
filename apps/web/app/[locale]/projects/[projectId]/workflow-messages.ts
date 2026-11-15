@@ -258,6 +258,22 @@ const messages = {
       pageReadingDenied:
         'خواندن کامل صفحه‌ها انجام نشد: «سیاست دریافت نشانی» آن را ممنوع کرده است. یافته‌ها بر پایهٔ خلاصهٔ جست‌وجو هستند.',
       pageRead: 'کامل خوانده شد',
+      independentHeading: 'جست‌وجوی مستقل',
+      independentOutcome: {
+        both: 'نتیجه از جست‌وجوی خود مدل و سرویس‌های مستقل آمده است.',
+        independent: 'جست‌وجوی خود مدل نتیجه‌ای نداد؛ نتیجه فقط از سرویس‌های مستقل آمده است.',
+        native: 'سرویس‌های مستقل چیز تازه‌ای نیاوردند؛ نتیجه فقط از جست‌وجوی خود مدل است.',
+        none: 'هیچ‌یک از جست‌وجوها نتیجه‌ای نداد.',
+      } as Record<string, string>,
+      independentService: '{service}: {queries} پرسش، {hits} نتیجه',
+      independentServiceFailed: '{service}: پاسخ نداد ({code})؛ ادامه با بقیه',
+      independentBlocked:
+        '{n} پرسش به‌دلیل حریم خصوصی (ایمیل، شماره، نشانی داخلی یا کلید) فرستاده نشد.',
+      viaLabels: {
+        native: 'جست‌وجوی مدل',
+        'independent:exa': 'Exa',
+        'independent:tavily': 'Tavily',
+      } as Record<string, string>,
       dualHeading: 'تحقیق دومدلی',
       dualSides: { primary: 'مدل اصلی', second: 'مدل دوم', both: 'هر دو مدل' } as Record<
         string,
@@ -633,6 +649,24 @@ const messages = {
       pageReadingDenied:
         'Pages were not read in full: the URL policy forbids it. Findings rest on the search notes.',
       pageRead: 'read in full',
+      independentHeading: 'Independent search',
+      independentOutcome: {
+        both: 'Results came from the model’s own search and the independent services.',
+        independent:
+          'The model’s own search found nothing; the results came from the independent services only.',
+        native:
+          'The independent services added nothing new; the results are the model’s own search only.',
+        none: 'None of the searches found anything.',
+      } as Record<string, string>,
+      independentService: '{service}: {queries} queries, {hits} results',
+      independentServiceFailed: '{service}: did not answer ({code}); carried on with the rest',
+      independentBlocked:
+        '{n} query(ies) were not sent for privacy (e-mail, number, internal address or key).',
+      viaLabels: {
+        native: 'model search',
+        'independent:exa': 'Exa',
+        'independent:tavily': 'Tavily',
+      } as Record<string, string>,
       dualHeading: 'Dual-model research',
       dualSides: {
         primary: 'Primary model',

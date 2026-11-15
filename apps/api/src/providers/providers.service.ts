@@ -1005,6 +1005,25 @@ export class ProvidersService {
           params,
         )
       ).rows;
+      // The independent search services bill per query, not per token (ADR-0059): their queries are
+      // a separate line, and they count toward the cost limit like the models' tokens do.
+      const searchServices = (
+        await client.query<{ service: string; queries: number; costUsd: number }>(
+          `select c.result->>'source' as service,
+                  coalesce(sum((c.result->>'queries')::int), 0)::int as queries,
+                  coalesce(sum((c.result->>'costUsd')::real), 0)::real as "costUsd"
+             from agent_tool_calls c
+            where c.project_id = $1 and c.tool = 'web_search' and c.result ? 'costUsd'
+              and ($2::timestamptz is null or c.created_at >= $2) and ($3::timestamptz is null or c.created_at < $3)
+            group by 1 order by 1`,
+          params,
+        )
+      ).rows.map((row) => ({
+        service: row.service,
+        queries: row.queries,
+        costUsd: Math.round(row.costUsd * 1_000_000) / 1_000_000,
+      }));
+      const searchCostUsd = searchServices.reduce((sum, row) => sum + row.costUsd, 0);
       const limit = Number(project.rows[0]?.resolved?.['ai.max_cost_usd_per_run'] ?? 20);
       return {
         projectId,
@@ -1022,7 +1041,8 @@ export class ProvidersService {
           avgLatencyMs: totals.avg_latency_ms,
         },
         byStage,
-        costLimit: checkCostLimit(totals.cost_usd, limit),
+        searchServices,
+        costLimit: checkCostLimit(totals.cost_usd + searchCostUsd, limit),
         estimate: true,
       };
     });
