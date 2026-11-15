@@ -46,6 +46,8 @@ const fa = {
         timeout: 'ارائه‌دهنده در مهلت جواب نداد.',
         quota: 'سقف مصرف یا نرخ درخواست ارائه‌دهنده پر شده است.',
         terms: 'شرایط استفادهٔ ارائه‌دهنده در داشبورد خودش هنوز پذیرفته نشده است.',
+        retention:
+          'طرح ElevenLabs شما حالت «بدون نگه‌داری داده» را نمی‌پذیرد. یا طرح را ارتقا دهید، یا در بخش «گفتگوها و حریم خصوصی» آن را آگاهانه خاموش کنید.',
         unexpected: 'پاسخ غیرمنتظره‌ای آمد.',
       },
     },
@@ -252,6 +254,11 @@ const fa = {
     retention: 'متن گفتگوها چند روز بماند',
     audio: 'صدای گفتگوها ذخیره شود',
     audioHint: 'پیش‌فرض خاموش است؛ متن گفتگو همیشه کافی است.',
+    zeroRetention: 'ElevenLabs: بدون نگه‌داری داده (zero retention)',
+    zeroRetentionHint:
+      'روشن (پیش‌فرض): از ElevenLabs می‌خواهیم صدا و متن را نزد خود ثبت نکند. بعضی طرح‌ها (معمولاً Enterprise) این حالت را نمی‌پذیرند و بررسی اتصال شکست می‌خورد.',
+    zeroRetentionWarning:
+      'هشدار حریم خصوصی: با خاموش‌کردن این گزینه، ElevenLabs صدا و متن گفتگوهای دستیار را طبق سیاست خودش در حساب شما ثبت و نگه می‌دارد.',
   },
 };
 
@@ -299,6 +306,8 @@ const en: typeof fa = {
         timeout: 'The provider did not answer in time.',
         quota: 'The provider usage quota or rate limit is reached.',
         terms: 'The terms of the provider are not accepted in its own dashboard yet.',
+        retention:
+          'Your ElevenLabs plan does not accept zero retention. Upgrade the plan, or switch it off knowingly in the Conversations and privacy section.',
         unexpected: 'An unexpected answer came back.',
       },
     },
@@ -509,6 +518,11 @@ const en: typeof fa = {
     retention: 'Days the text is kept',
     audio: 'Store the audio of the conversations',
     audioHint: 'Off by default; the text of a conversation is always enough.',
+    zeroRetention: 'ElevenLabs: zero retention',
+    zeroRetentionHint:
+      'On (default): we ask ElevenLabs not to log audio and text. Some plans (usually Enterprise) refuse this and the link check fails.',
+    zeroRetentionWarning:
+      'Privacy warning: with this off, ElevenLabs logs and keeps the audio and text of the assistant conversations in your account under its own policy.',
   },
 };
 

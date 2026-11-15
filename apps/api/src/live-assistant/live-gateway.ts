@@ -60,6 +60,8 @@ export interface LiveSettings {
   readonly rules: readonly AssistantAccessRule[];
   readonly storeTranscripts: boolean;
   readonly transcriptRetentionDays: number;
+  /** ElevenLabs only: ask for zero retention (`enable_logging=false`) on both sockets. */
+  readonly zeroRetention: boolean;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -164,6 +166,7 @@ export function liveSettingsFrom(values: Record<string, unknown>): LiveSettings 
     enabledT3: Array.isArray(t3) ? t3Categories.filter((category) => t3.includes(category)) : [],
     rules: accessRulesFromSettings(values),
     storeTranscripts: flag('live_assistant.store_transcripts'),
+    zeroRetention: raw('live_assistant.zero_retention') !== false,
     transcriptRetentionDays: ((): number => {
       const days = number(
         'live_assistant.transcript_retention_days',

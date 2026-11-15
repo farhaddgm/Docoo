@@ -48,6 +48,7 @@ export const liveAssistantSettingKeys = [
   'live_assistant.store_transcripts',
   'live_assistant.transcript_retention_days',
   'live_assistant.store_audio',
+  'live_assistant.zero_retention',
 ] as const;
 export type LiveAssistantSettingKey = (typeof liveAssistantSettingKeys)[number];
 
@@ -170,6 +171,7 @@ export const liveAssistantSettingDefaults = {
   'live_assistant.store_transcripts': true,
   'live_assistant.transcript_retention_days': 90,
   'live_assistant.store_audio': false,
+  'live_assistant.zero_retention': true,
 } as const satisfies Record<LiveAssistantSettingKey, unknown>;
 
 export type LiveAssistantSettingValues = Partial<Record<LiveAssistantSettingKey, unknown>>;

@@ -23,7 +23,9 @@ import { validateSettingValue, type SettingValueSchema } from '../src/config/set
  * bound can never be changed in one and forgotten in the other.
  */
 const migrations = join(import.meta.dirname, '../../../packages/database/migrations');
-const sql = readFileSync(join(migrations, '0084_live_assistant.sql'), 'utf8');
+const sql = ['0084_live_assistant.sql', '0099_live_assistant_zero_retention.sql']
+  .map((file) => readFileSync(join(migrations, file), 'utf8'))
+  .join('\n');
 
 interface Row {
   key: string;

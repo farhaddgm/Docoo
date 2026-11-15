@@ -95,6 +95,8 @@ export interface ElevenLabsCheckInput {
   readonly timeoutMs?: number;
   /** How long an opened dialogue socket must stay open without an error to count as accepted. */
   readonly settleMs?: number;
+  /** Ask for zero retention on both sockets; defaults to {@link ELEVENLABS_ZERO_RETENTION}. */
+  readonly zeroRetention?: boolean;
   readonly socket?: LinkSocketFactory;
   readonly now?: () => number;
 }
@@ -209,9 +211,10 @@ export async function checkElevenLabsLink(input: ElevenLabsCheckInput): Promise<
   const events: string[] = [];
   const timeoutMs = input.timeoutMs ?? 10_000;
   const settleMs = input.settleMs ?? 1_500;
+  const zeroRetention = input.zeroRetention ?? ELEVENLABS_ZERO_RETENTION;
   const hearing = await openOnce({
     url: sttUrl(input.baseUrl, input.sttModel, undefined, {
-      zeroRetention: ELEVENLABS_ZERO_RETENTION,
+      zeroRetention,
     }),
     apiKey: input.apiKey,
     make,
@@ -224,17 +227,26 @@ export async function checkElevenLabsLink(input: ElevenLabsCheckInput): Promise<
   if (!hearing.ok) {
     return { ok: false, failure: hearing.failure, events: events.slice(0, 10), latencyMs: null };
   }
-  const speaking = await openOnce({
-    url: dialogueUrl(input.baseUrl, input.ttsModel, { zeroRetention: ELEVENLABS_ZERO_RETENTION }),
-    apiKey: input.apiKey,
-    make,
-    timeoutMs,
-    settleMs,
-    events,
-    tag: 'tts',
-  });
+  const dialogue = (withZero: boolean, tag: string) =>
+    openOnce({
+      url: dialogueUrl(input.baseUrl, input.ttsModel, { zeroRetention: withZero }),
+      apiKey: input.apiKey,
+      make,
+      timeoutMs,
+      settleMs,
+      events,
+      tag,
+    });
+  const speaking = await dialogue(zeroRetention, 'tts');
   if (!speaking.ok) {
-    return { ok: false, failure: speaking.failure, events: events.slice(0, 10), latencyMs: null };
+    let failure = speaking.failure;
+    // Refused at the door (no `tts_open`) with zero retention asked: try once without it. If that
+    // opens, the plan does not allow zero retention, which is a different cure than the network's.
+    if (zeroRetention && failure === 'network' && !events.includes('tts_open')) {
+      const probe = await dialogue(false, 'tts_plain');
+      if (probe.ok) failure = 'retention';
+    }
+    return { ok: false, failure, events: events.slice(0, 10), latencyMs: null };
   }
   return { ok: true, failure: null, events: events.slice(0, 10), latencyMs: now() - started };
 }
