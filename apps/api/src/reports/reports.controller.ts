@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { RequireWorkspacePermission } from '../auth/auth.authorization.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
-import { ReportsService } from './reports.service.js';
+import { ReportsService, USAGE_SOURCES } from './reports.service.js';
 
 const MAX_RANGE_MS = 400 * 86_400_000;
 const range = {
@@ -25,6 +25,16 @@ const usageQuery = z
     ...range,
     projectId: z.uuid().optional(),
     groupBy: z.enum(['project', 'stage', 'day', 'model']).default('stage'),
+  })
+  .strict()
+  .refine(ordered);
+const usageSeriesQuery = z
+  .object({
+    ...range,
+    projectId: z.uuid().optional(),
+    stage: z.string().trim().min(1).max(120).optional(),
+    source: z.enum(USAGE_SOURCES).optional(),
+    splitBy: z.enum(['none', 'source']).default('none'),
   })
   .strict()
   .refine(ordered);
@@ -92,6 +102,21 @@ export class ReportsController {
   async usage(@Req() request: FastifyRequest, @Query() query: unknown) {
     return {
       usage: await this.reports.usage(workspaceContext(request), lower(parse(usageQuery, query))),
+    };
+  }
+
+  @Get('reports/usage-series')
+  @ApiOperation({
+    summary:
+      'Tokens per day, filtered by project, stage and source, optionally one line per source',
+  })
+  @RequireWorkspacePermission('provider.read')
+  async usageSeries(@Req() request: FastifyRequest, @Query() query: unknown) {
+    return {
+      series: await this.reports.usageSeries(
+        workspaceContext(request),
+        lower(parse(usageSeriesQuery, query)),
+      ),
     };
   }
 

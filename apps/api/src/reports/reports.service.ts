@@ -20,6 +20,18 @@ export interface Range {
 
 export type UsageGroup = 'project' | 'stage' | 'day' | 'model';
 
+/** Where a model call came from, for the usage chart (the same buckets as its legend). */
+export const USAGE_SOURCES = ['stage', 'assistant', 'brain', 'smart', 'other'] as const;
+export type UsageSource = (typeof USAGE_SOURCES)[number];
+
+/** SQL for a call's source; `i` is model_invocations and `s` its stage run (left joined). */
+const SOURCE_SQL = `case
+    when i.purpose like 'live_assistant:%' then 'assistant'
+    when i.purpose like 'brain:%' then 'brain'
+    when i.purpose = 'smart_chat' then 'smart'
+    when s.stage is not null then 'stage'
+    else 'other' end`;
+
 const DAY_MS = 86_400_000;
 
 /** Default report window: the last 30 days up to now. */
@@ -273,6 +285,98 @@ export class ReportsService {
           label: labels[group.key] ?? group.key,
           costUsd: round(group.costUsd),
         })),
+      };
+    });
+  }
+
+  /**
+   * Tokens per day for the usage chart, optionally filtered by project, stage and source, and
+   * optionally split into one line per source. Every day of the period is present (zero when
+   * nothing was used), so the chart never has to guess at gaps. `options` lists what the period
+   * holds, ignoring the stage and source filters, so the filter menus do not shrink as you pick.
+   */
+  async usageSeries(
+    context: WorkspaceRequestContext,
+    input: Range & {
+      projectId?: string | undefined;
+      stage?: string | undefined;
+      source?: UsageSource | undefined;
+      splitBy: 'none' | 'source';
+    },
+  ) {
+    const period = window(input);
+    const stageKey = `coalesce(s.stage::text, i.purpose)`;
+    return this.database.run(context, async (client) => {
+      if (input.projectId) {
+        const project = await client.query('select 1 from projects where id = $1', [
+          input.projectId,
+        ]);
+        if (!project.rowCount) throw notFound('PROJECT_NOT_FOUND', 'The project was not found.');
+      }
+      const from = `i.created_at >= $1 and i.created_at < $2`;
+      const where = `${from} and ($3::uuid is null or i.project_id = $3)
+         and ($4::text is null or ${stageKey} = $4) and ($5::text is null or ${SOURCE_SQL} = $5)`;
+      const rows = (
+        await client.query<{ day: string; source: string; tokens: number }>(
+          `select to_char(date_trunc('day', i.created_at at time zone 'UTC'), 'YYYY-MM-DD') as day,
+                  ${SOURCE_SQL} as source,
+                  coalesce(sum(i.input_tokens + i.output_tokens), 0)::bigint::float8 as tokens
+             from model_invocations i left join stage_runs s on s.id = i.stage_run_id
+            where ${where} group by 1, 2`,
+          [
+            period.from,
+            period.to,
+            input.projectId ?? null,
+            input.stage ?? null,
+            input.source ?? null,
+          ],
+        )
+      ).rows;
+
+      const days: string[] = [];
+      const first = Date.parse(`${period.from.slice(0, 10)}T00:00:00Z`);
+      const last = Date.parse(`${period.to.slice(0, 10)}T00:00:00Z`);
+      for (let at = first; at <= last; at += DAY_MS)
+        days.push(new Date(at).toISOString().slice(0, 10));
+      const position = new Map(days.map((day, index) => [day, index]));
+
+      const keys = input.splitBy === 'source' ? [...USAGE_SOURCES] : ['all'];
+      const lines = new Map(keys.map((key) => [key, days.map(() => 0)]));
+      for (const row of rows) {
+        const line = lines.get(input.splitBy === 'source' ? row.source : 'all');
+        const index = position.get(row.day);
+        if (line && index !== undefined) line[index]! += row.tokens;
+      }
+      const series = [...lines].map(([key, points]) => ({ key, points }));
+
+      const scope = `${from} and ($3::uuid is null or i.project_id = $3)`;
+      const stages = (
+        await client.query<{ key: string }>(
+          `select distinct ${stageKey} as key
+             from model_invocations i left join stage_runs s on s.id = i.stage_run_id
+            where ${scope} order by 1`,
+          [period.from, period.to, input.projectId ?? null],
+        )
+      ).rows.map((row) => row.key);
+      const projects = (
+        await client.query<{ id: string; title: string }>(
+          `select p.id, p.title from projects p
+            where p.id in (select i.project_id from model_invocations i where ${from} and i.project_id is not null)
+            order by p.title`,
+          [period.from, period.to],
+        )
+      ).rows;
+
+      return {
+        period,
+        projectId: input.projectId ?? null,
+        stage: input.stage ?? null,
+        source: input.source ?? null,
+        splitBy: input.splitBy,
+        days,
+        series,
+        totalTokens: rows.reduce((sum, row) => sum + row.tokens, 0),
+        options: { stages, projects },
       };
     });
   }

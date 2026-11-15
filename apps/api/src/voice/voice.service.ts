@@ -231,12 +231,19 @@ export class VoiceService {
         throw conflict('VOICE_NOT_CONFIGURED', `Add a ${wanted} provider connection first.`);
       return (await this.runtime.speechAdapterFor(client, connectionId)).adapter;
     });
-    try {
-      const [models, voices] = await Promise.all([resolved.listModels(), resolved.listVoices()]);
-      return { provider: resolved.kind, models, voices };
-    } catch (error) {
-      throw this.providerFailure(error);
-    }
+    // The two lists are separate requests and a key can be allowed one and not the other (an
+    // ElevenLabs key may be limited to some permissions). One list failing must not hide the other.
+    const [models, voices] = await Promise.allSettled([
+      resolved.listModels(),
+      resolved.listVoices(),
+    ]);
+    if (models.status === 'rejected' && voices.status === 'rejected')
+      throw this.providerFailure(models.reason);
+    return {
+      provider: resolved.kind,
+      models: models.status === 'fulfilled' ? models.value : [],
+      voices: voices.status === 'fulfilled' ? voices.value : [],
+    };
   }
 
   /** A short sample in the chosen voice, so the owner can hear it before saving the setting. */
