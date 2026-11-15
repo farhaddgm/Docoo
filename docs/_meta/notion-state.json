@@ -7,7 +7,7 @@
     "url": "https://github.com/farhaddgm/Docoo",
     "visibility": "private",
     "branch": "main",
-    "source_commit": "9b47b6285671d06a8f46f7fca6bb5a1b21a4be3d"
+    "source_commit": "8a012089df0c48d650ed941f5e176ab83830bbfd"
   },
   "notion": {
     "workspace_id": "5495a24a-6668-8149-ac9f-00035def289a",
@@ -62,10 +62,10 @@
     }
   },
   "sync": {
-    "synced_at": "2026-11-15T09:36:19.838Z",
+    "synced_at": "2026-11-15T15:23:20.135Z",
     "created": 0,
-    "updated": 0,
-    "unchanged": 74,
+    "updated": 1,
+    "unchanged": 73,
     "failed": 0,
     "failures": [],
     "validation": {
@@ -1047,13 +1047,13 @@
       "version": "1.2.0",
       "status": "proposed",
       "owner": "AI Platform & Security",
-      "checksum_sha256": "e9e16865a96705d9f3c8d3e8f5258fa3ac328e4a84c048aa3884aeaea67a59c5",
+      "checksum_sha256": "ef98123e521803533fc6d6bf0e5367214972183a1e948de8572c27c97efdbdc6",
       "notion_page_id": "3f45a24a-6668-8147-b0b4-ff232824efad",
       "notion_page_url": "https://app.notion.com/p/3f45a24a66688147b0b4ff232824efad",
       "index_row_page_id": "3f45a24a-6668-813b-b9c9-f65d37b97cd9",
       "index_row_page_url": "https://app.notion.com/p/3f45a24a6668813bb9c9f65d37b97cd9",
-      "synced_commit": "a2acfad4b9cf94b29f5fb8b596ffe228b456636d",
-      "synced_at": "2026-11-13T18:19:08.355Z"
+      "synced_commit": "8a012089df0c48d650ed941f5e176ab83830bbfd",
+      "synced_at": "2026-11-15T15:23:20.135Z"
     },
     "DOCOO-ADR-0027": {
       "path": "docs/adr/0027-current-access-baseline.md",
