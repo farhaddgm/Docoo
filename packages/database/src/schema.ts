@@ -791,6 +791,8 @@ export const providerKind = pgEnum('provider_kind', [
   'fake',
   'elevenlabs',
   'xai',
+  'exa',
+  'tavily',
 ]);
 export const providerStatus = pgEnum('provider_status', [
   'unconfigured',
@@ -871,6 +873,8 @@ export const providerConnections = pgTable(
     currentSecretVersion: integer('current_secret_version').notNull().default(0),
     storeContent: boolean('store_content').notNull().default(false),
     maxConcurrentInvocations: integer('max_concurrent_invocations').notNull().default(4),
+    /** What one query costs, for a search service (Exa, Tavily); null for every other brand (ADR-0060). */
+    costPerQueryUsd: real('cost_per_query_usd'),
     version: integer('version').notNull().default(1),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     disabledAt: timestamp('disabled_at', { withTimezone: true }),
@@ -884,6 +888,10 @@ export const providerConnections = pgTable(
     check(
       'provider_connections_concurrency_range',
       sql`${table.maxConcurrentInvocations} between 1 and 100`,
+    ),
+    check(
+      'provider_connections_query_cost_range',
+      sql`${table.costPerQueryUsd} is null or (${table.costPerQueryUsd} >= 0 and ${table.costPerQueryUsd} <= 1)`,
     ),
   ],
 );

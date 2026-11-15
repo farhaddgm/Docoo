@@ -4,6 +4,8 @@ import {
   assessCitation,
   auditWithRules,
   canTransition,
+  chunkSearchInput,
+  chunkSections,
   chunkText,
   classifyClaim,
   cosine,
@@ -13,8 +15,10 @@ import {
   embed,
   EMBEDDING_DIMENSIONS,
   extractClaimCandidates,
+  isStopword,
   lexicalQuery,
   normalizeForSearch,
+  queryTerms,
   overrideReasonProblem,
   RUBRIC_WEIGHTS,
   sentenceRanges,
@@ -337,5 +341,130 @@ describe('lifecycle and override (KNO-002, KNO-004)', () => {
     expect(overrideReasonProblem('too short')).not.toBeNull();
     expect(overrideReasonProblem('aaaaaaaaaaaaaaaaaaaaaaaa')).not.toBeNull();
     expect(overrideReasonProblem('Verified with the finance team on 2026-09-30')).toBeNull();
+  });
+});
+
+describe('chunkSections', () => {
+  const doc = [
+    'مقدمهٔ کوتاه سند. جملهٔ دوم مقدمه.',
+    '## مهلت‌ها',
+    'هفت روز فرصت هست. درخواست از پنل ثبت می‌شود.',
+    '',
+    '### هزینه‌ها ###',
+    'کرایه بر عهدهٔ خریدار است.',
+  ].join('\n');
+
+  it('gives each chunk the title of the document and the heading of its section', () => {
+    const chunks = chunkSections(doc, 'راهنمای مرجوعی');
+    expect(chunks.map((chunk) => chunk.context)).toEqual([
+      'راهنمای مرجوعی',
+      'راهنمای مرجوعی — مهلت‌ها',
+      'راهنمای مرجوعی — هزینه‌ها',
+    ]);
+    expect(chunks.map((chunk) => chunk.ordinal)).toEqual([1, 2, 3]);
+  });
+
+  it('keeps the heading out of the text, which a quote is checked against', () => {
+    const chunks = chunkSections(doc, 'T');
+    expect(chunks.some((chunk) => chunk.text.includes('##'))).toBe(false);
+    expect(chunks[1]!.text).toBe('هفت روز فرصت هست. درخواست از پنل ثبت می‌شود.');
+    // The text of every chunk occurs in the document as it was written.
+    for (const chunk of chunks) expect(doc.replace(/\s+/gu, ' ')).toContain(chunk.text);
+  });
+
+  it('a document without headings is one section named after its title', () => {
+    const chunks = chunkSections('یک جمله. جملهٔ دیگر.', 'عنوان');
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]!.context).toBe('عنوان');
+  });
+
+  it('splits a long section into several chunks that share its context', () => {
+    const body = Array.from({ length: 12 }, (_, i) => `جملهٔ شمارهٔ ${i} با کمی متن بیشتر.`).join(
+      ' ',
+    );
+    const chunks = chunkSections(`## بخش\n${body}`, 'T', 100);
+    expect(chunks.length).toBeGreaterThan(2);
+    expect(new Set(chunks.map((chunk) => chunk.context))).toEqual(new Set(['T — بخش']));
+    expect(chunks.map((chunk) => chunk.ordinal)).toEqual(chunks.map((_, i) => i + 1));
+  });
+
+  it('leaves out an empty section and a blank title', () => {
+    const chunks = chunkSections('## خالی\n\n## پر\nمتن.', '  ');
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]!.context).toBe('پر');
+  });
+
+  it('searches a chunk with its context, and a chunk without one as it is', () => {
+    expect(chunkSearchInput({ text: 'متن', context: 'عنوان — بخش' })).toBe('عنوان — بخش\nمتن');
+    expect(chunkSearchInput({ text: 'متن', context: null })).toBe('متن');
+    expect(chunkSearchInput({ text: 'متن' })).toBe('متن');
+  });
+});
+
+describe('chunkSections headings', () => {
+  it.each([
+    ['## Costs', 'Costs'],
+    ['#\tTabbed', 'Tabbed'],
+    ['  ### Indented ###', 'Indented'],
+    ['###### Six', 'Six'],
+  ])('reads %j as a heading', (line, heading) => {
+    expect(chunkSections(`${line}\nbody text.`, '')[0]?.context).toBe(heading);
+  });
+
+  it.each(['#nospace', '####### seven', '    ## four spaces', '##', '## ', 'text # not heading'])(
+    'does not read %j as a heading',
+    (line) => {
+      const chunks = chunkSections(`${line}\nbody text.`, 'T');
+      expect(chunks.every((chunk) => chunk.context === 'T')).toBe(true);
+    },
+  );
+
+  it('reads a very long line with many tabs in a single pass', () => {
+    const line = `#${'\t'.repeat(200_000)}x${'\t'.repeat(200_000)}`;
+    const started = Date.now();
+    chunkSections(`${line}\nbody.`, 'T');
+    expect(Date.now() - started).toBeLessThan(500);
+  });
+});
+
+describe('queryTerms', () => {
+  it('leaves out the particles and the pieces a zero-width non-joiner splits off', () => {
+    // "مشتری‌های" splits into "مشتری" and "های"; "می‌شود" into "می" and "شود".
+    expect(queryTerms('چرا مشتری‌های شرکت می‌روند و برای چه برمی‌گردند')).toEqual([
+      'مشتری',
+      'شرکت',
+      'روند',
+      'برمی',
+      'گردند',
+    ]);
+    expect(queryTerms('how to repair the bicycle tire')).toEqual(['repair', 'bicycle', 'tire']);
+  });
+
+  it('keeps a word that is also a content word', () => {
+    // "پس" is "then" and also "back" in "پس دادن"; "روی" is "on" and "face".
+    expect(queryTerms('پس دادن جنس')).toEqual(['پس', 'دادن', 'جنس']);
+    expect(isStopword('پس')).toBe(false);
+    expect(isStopword('روی')).toBe(false);
+  });
+
+  it('keeps numbers, acronyms and names', () => {
+    expect(queryTerms('ISO 27001 و SLA برای ۱۴۰۳')).toEqual(['iso', '27001', 'sla', '1403']);
+  });
+
+  it('keeps its own words when every word is a stopword, so the question still looks for something', () => {
+    expect(queryTerms('به از برای')).toEqual(['به', 'از', 'برای']);
+  });
+
+  it('removes repeats and caps the number of words', () => {
+    expect(queryTerms('مشتری مشتری مشتری')).toEqual(['مشتری']);
+    const many = Array.from({ length: 50 }, (_, i) => `واژه${i}`).join(' ');
+    expect(queryTerms(many, 32)).toHaveLength(32);
+  });
+
+  it('recognises a stopword however it is written', () => {
+    expect(isStopword('برای')).toBe(true);
+    expect(isStopword('های')).toBe(true);
+    expect(isStopword('the')).toBe(true);
+    expect(isStopword('قیمت')).toBe(false);
   });
 });

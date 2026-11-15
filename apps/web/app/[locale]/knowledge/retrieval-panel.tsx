@@ -182,6 +182,13 @@ export function RetrievalPanel({
                               ? text.retrievalNoRank
                               : formatNumber(locale, item.vectorRank),
                         })}
+                        {item.semanticRank !== undefined &&
+                          ` · ${fill(text.retrievalSemanticRank, {
+                            rank:
+                              item.semanticRank === null
+                                ? text.retrievalNoRank
+                                : formatNumber(locale, item.semanticRank),
+                          })}`}
                       </small>
                     </p>
                     <p dir={textDir(locale)} className="retrieved-text">

@@ -669,7 +669,7 @@ export class AgentsService {
     const issues = validateDefinition(role, content);
     if (content.modelPolicy) {
       const connection = await client.query(
-        `select 1 from provider_connections where workspace_id = $1 and id = $2 and disabled_at is null`,
+        `select 1 from provider_connections where workspace_id = $1 and id = $2 and disabled_at is null and provider not in ('exa', 'tavily')`,
         [context.workspaceId, content.modelPolicy.connectionId],
       );
       if (!connection.rowCount) issues.push({ field: 'modelPolicy', code: 'invalid' });
@@ -801,7 +801,7 @@ export class AgentsService {
   ): Promise<ModelWarning[]> {
     if (!policy) return [];
     const connection = await client.query(
-      `select 1 from provider_connections where workspace_id = $1 and id = $2 and disabled_at is null`,
+      `select 1 from provider_connections where workspace_id = $1 and id = $2 and disabled_at is null and provider not in ('exa', 'tavily')`,
       [workspaceId, policy.connectionId],
     );
     if (!connection.rowCount) return ['connection_unavailable'];

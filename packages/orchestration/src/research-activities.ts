@@ -1,6 +1,7 @@
 import type { PromptResearchQuestion } from '@docoo/domain';
 import type { PoolClient } from 'pg';
 
+import { semanticQueryFromEnv } from './semantic-embeddings.js';
 import type { ResearchFollowup } from './research-followup.js';
 import { retrieveKnowledge, type RetrievedPassage } from './knowledge-retrieval.js';
 import {
@@ -143,6 +144,7 @@ export async function prepareResearch(
       limit: config.researchKnowledgeLimit,
       excludeConfidentiality: exclude,
       minAuditScore: config.knowledgeMinAuditScore,
+      semantic: await semanticQueryFromEnv(query),
     });
     await recordToolCall(client, scope, {
       tool: 'knowledge_retrieve',

@@ -262,6 +262,8 @@ export interface RetrievalResult {
   score: number;
   lexicalRank: number | null;
   vectorRank: number | null;
+  /** Present only when semantic search took part (ADR-0061). */
+  semanticRank?: number | null;
   similarity: number | null;
   auditScore: number | null;
   effectiveDecision: 'approved' | 'approved_by_override';

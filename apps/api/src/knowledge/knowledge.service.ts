@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   assessCitation,
-  chunkText,
+  chunkSearchInput,
+  chunkSections,
   detectConflicts,
   effectiveDecision,
   embed,
@@ -22,6 +23,7 @@ import {
 import type { PoolClient, QueryResultRow } from 'pg';
 
 import { writeAudit } from '../common/audit.js';
+import { SemanticSearchService } from './semantic-search.service.js';
 import { visibleStatusSql } from '../common/knowledge-status.js';
 import {
   containsPattern,
@@ -182,6 +184,7 @@ export class KnowledgeService {
     private readonly sources: SourcesService,
     @Inject(KNOWLEDGE_AUDITOR) private readonly auditor: KnowledgeAuditor,
     private readonly config: ConfigService,
+    private readonly semantic: SemanticSearchService,
   ) {}
 
   // ---------------------------------------------------------------- items and versions (KNO-001)
@@ -1096,6 +1099,9 @@ export class KnowledgeService {
    * The query itself is shared with the research stage of the workflow (`retrieveKnowledge`).
    */
   async retrieve(context: WorkspaceRequestContext, input: RetrieveInput) {
+    // The question as a provider's embedding, asked for before the transaction opens so no
+    // connection is held while the provider answers. Null when semantic search is off (ADR-0061).
+    const semantic = await this.semantic.queryVector(input.query);
     return this.database.run(context, async (client) => {
       // The audit-score floor is the effective `knowledge.min_audit_score` of the scope asked for.
       const effective = input.projectId
@@ -1114,6 +1120,7 @@ export class KnowledgeService {
           role: input.role,
           limit: input.limit,
           minAuditScore: Number.isFinite(floor) ? floor : undefined,
+          semantic,
         });
       } catch (error) {
         if (error instanceof RetrievalScopeError)
@@ -1297,18 +1304,28 @@ export class KnowledgeService {
       [version.id],
     );
     if (existing.rowCount) return;
-    for (const chunk of chunkText(version.content)) {
+    const title =
+      (
+        await client.query<{ title: string }>('select title from knowledge_items where id = $1', [
+          version.item_id,
+        ])
+      ).rows[0]?.title ?? '';
+    // The title of the document and the heading of the section join what is searched (ADR-0062); the
+    // chunk text, which a quote is checked against, stays exactly as written.
+    for (const chunk of chunkSections(version.content, title)) {
+      const searched = chunkSearchInput(chunk);
       await client.query(
-        `insert into knowledge_chunks (workspace_id, knowledge_version_id, ordinal, text, search_text, embedding_model, embedding)
-         values ($1, $2, $3, $4, $5, $6, $7::vector)`,
+        `insert into knowledge_chunks (workspace_id, knowledge_version_id, ordinal, text, context, search_text, embedding_model, embedding)
+         values ($1, $2, $3, $4, $5, $6, $7, $8::vector)`,
         [
           context.workspaceId,
           version.id,
           chunk.ordinal,
           chunk.text,
-          searchText(chunk.text),
+          chunk.context,
+          searchText(searched),
           EMBEDDING_MODEL,
-          vectorLiteral(embed(chunk.text)),
+          vectorLiteral(embed(searched)),
         ],
       );
     }

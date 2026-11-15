@@ -58,6 +58,7 @@ function WebBlock({
           </p>
         )}
         <DualBlock text={text} web={web} num={num} />
+        <IndependentBlock text={text} web={web} num={num} />
         <PageReadingLine text={text} web={web} num={num} />
         {queries.length > 0 && (
           <>
@@ -89,6 +90,7 @@ function WebBlock({
                   ({page['cited'] === true ? text.cited : text.notCited})
                   {page['read'] === true ? ` · ${text.pageRead}` : ''}
                   {foundByLabel(text, page['foundBy'])}
+                  {viaLabel(text, page['via'])}
                 </small>
               </li>
             );
@@ -118,6 +120,60 @@ function gapOf(
   id: unknown,
 ): Record<string, unknown> | undefined {
   return records(web?.['gaps']).find((entry) => entry['id'] === id);
+}
+
+/** Which searches returned a page; shown only when the independent search services took part (ADR-0060). */
+function viaLabel(text: Text, value: unknown): string {
+  const labels = strings(value);
+  if (labels.length === 0) return '';
+  return ` · ${labels.map((label) => text.viaLabels[label] ?? label).join(' + ')}`;
+}
+
+/** How the independent search services went: who answered, who did not, what was held back (ADR-0060). */
+function IndependentBlock({
+  text,
+  web,
+  num,
+}: {
+  text: Text;
+  web: Record<string, unknown> | null;
+  num: (value: unknown) => string;
+}) {
+  const info = web?.['independent'];
+  if (info === null || typeof info !== 'object') return null;
+  const item = info as Record<string, unknown>;
+  const services = records(item['providers']);
+  const blocked = records(item['blocked']).reduce(
+    (sum, entry) => sum + (typeof entry['count'] === 'number' ? entry['count'] : 0),
+    0,
+  );
+  return (
+    <>
+      <h5>{text.independentHeading}</h5>
+      <p className="muted">
+        {text.independentOutcome[asText(item['outcome'])] ?? asText(item['outcome'])}
+      </p>
+      <ul>
+        {services.map((service, index) => (
+          <li key={index} dir="ltr">
+            {service['status'] === 'used'
+              ? fill(text.independentService, {
+                  service: asText(service['id']),
+                  queries: num(service['queries']),
+                  hits: num(service['hits']),
+                })
+              : fill(text.independentServiceFailed, {
+                  service: asText(service['id']),
+                  code: asText(service['code']) || '—',
+                })}
+          </li>
+        ))}
+      </ul>
+      {blocked > 0 && (
+        <p className="notice">{fill(text.independentBlocked, { n: num(blocked) })}</p>
+      )}
+    </>
+  );
 }
 
 /** How reading the key pages in full went (ADR-0054). */

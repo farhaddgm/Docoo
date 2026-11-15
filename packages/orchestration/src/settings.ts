@@ -1,6 +1,11 @@
 import { clampBusinessBudget, normalizeOfficialDomains } from '@docoo/domain';
 import type { PoolClient } from 'pg';
 
+import {
+  INDEPENDENT_DEFAULTS,
+  INDEPENDENT_LIMITS,
+  type IndependentPolicy,
+} from './independent-search.js';
 import { RESEARCH_DEFAULTS } from './research.js';
 import { MAX_ATTEMPTS } from './stages.js';
 import type { DualSettings } from './research-dual.js';
@@ -47,6 +52,10 @@ export interface Settings {
   researchWebTargetSources: number;
   /** Pages kept for the research prompt (`research.web_source_limit`). */
   researchWebSourceLimit: number;
+  /** Also search through the connected independent services (`research.independent_enabled`, ADR-0060). */
+  researchIndependentEnabled: boolean;
+  /** Queries and results per query for each independent service (`research.independent_*`). */
+  researchIndependent: IndependentPolicy;
   /** Read the key pages in full (`research.read_pages`, ADR-0054). */
   researchReadPages: boolean;
   /** Pages read in full at most (`research.read_pages_max`). */
@@ -147,6 +156,21 @@ export async function loadSettings(client: PoolClient, runId: string): Promise<S
         researchWebTargetSources: policy.targetSources,
       };
     })(),
+    researchIndependentEnabled: values['research.independent_enabled'] === true,
+    researchIndependent: {
+      maxQueries: boundedInteger(
+        values['research.independent_max_queries'],
+        INDEPENDENT_DEFAULTS.maxQueries,
+        INDEPENDENT_LIMITS.maxQueries.min,
+        INDEPENDENT_LIMITS.maxQueries.max,
+      ),
+      resultsPerQuery: boundedInteger(
+        values['research.independent_results_per_query'],
+        INDEPENDENT_DEFAULTS.resultsPerQuery,
+        INDEPENDENT_LIMITS.resultsPerQuery.min,
+        INDEPENDENT_LIMITS.resultsPerQuery.max,
+      ),
+    },
     researchReadPages: values['research.read_pages'] === true,
     researchReadPagesMax: boundedInteger(values['research.read_pages_max'], 5, 1, 10),
     ingestionUrlPolicy:

@@ -19,6 +19,7 @@ import { requireIfMatch, setVersionHeader } from '../common/concurrency.js';
 import { pageQuerySchema } from '../common/pagination.js';
 import { badRequest } from '../common/problems.js';
 import { isUuid, workspaceContext } from '../common/request-context.js';
+import { SemanticSearchService } from './semantic-search.service.js';
 import { KnowledgeService } from './knowledge.service.js';
 
 const scopeSchema = z
@@ -144,6 +145,9 @@ const overrideSchema = z
   })
   .strict();
 const resolveSchema = z.object({ resolution: z.string().trim().min(10).max(2000) }).strict();
+const semanticRunSchema = z
+  .object({ limit: z.number().int().min(1).max(1000).default(200) })
+  .strict();
 const retrieveSchema = z
   .object({
     query: z.string().trim().min(1).max(2000),
@@ -225,7 +229,10 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
 @ApiCookieAuth('docoo_session')
 @Controller('workspaces/:workspaceId')
 export class KnowledgeController {
-  constructor(private readonly knowledge: KnowledgeService) {}
+  constructor(
+    private readonly knowledge: KnowledgeService,
+    private readonly semantic: SemanticSearchService,
+  ) {}
 
   @Get('knowledge')
   @ApiOperation({ summary: 'List knowledge items with the status of their current version' })
@@ -275,6 +282,21 @@ export class KnowledgeController {
     );
     setVersionHeader(reply, knowledge.version);
     return { knowledge };
+  }
+
+  @Get('knowledge/semantic-index')
+  @ApiOperation({ summary: 'Semantic search: whether it is on and how much knowledge has vectors' })
+  @RequireWorkspacePermission('knowledge.read')
+  async semanticStatus(@Req() request: FastifyRequest) {
+    return this.semantic.status(workspaceContext(request));
+  }
+
+  @Post('knowledge/semantic-index/run')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Embed the internal knowledge that has no semantic vector yet' })
+  @RequireWorkspacePermission('knowledge.update')
+  async semanticRun(@Req() request: FastifyRequest, @Body() body: unknown) {
+    return this.semantic.run(workspaceContext(request), parse(semanticRunSchema, body).limit);
   }
 
   @Post('knowledge/retrieve')

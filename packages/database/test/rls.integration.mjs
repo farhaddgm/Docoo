@@ -66,6 +66,7 @@ const knowledgeTables = [
   'audit_overrides',
   'knowledge_conflicts',
   'knowledge_chunks',
+  'knowledge_chunk_embeddings',
   'retrieval_snapshots',
   'provider_connections',
   'provider_secrets',

@@ -10,6 +10,7 @@ import { SignedIn } from '../signed-in';
 import { providerMessages } from './messages';
 import { ModelPrices } from './model-prices';
 import { ModelSelfCheck } from './model-self-check';
+import { SearchServices } from './search-services';
 import { FieldLabel, InfoTip, SectionTitle } from '../../info-tip';
 import { PagedRows } from '../../table-pager';
 
@@ -491,6 +492,8 @@ function Providers({ locale, workspaceId }: { locale: Locale; workspaceId: strin
           </div>
         </form>
       </section>
+
+      <SearchServices locale={locale} base={base} />
 
       <section className="card stack" aria-labelledby="defaults-title">
         <form

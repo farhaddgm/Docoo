@@ -64,7 +64,7 @@ export function summarizeProgress(steps: readonly ProgressStep[]): ProgressSumma
           ? 'reading'
           : last === 'gaps'
             ? 'checking'
-            : last === 'round'
+            : last === 'round' || last === 'independent'
               ? 'searching'
               : 'starting';
   // With two models a question is open only while neither has answered it.

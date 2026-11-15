@@ -5,3 +5,4 @@ export * from './conflicts.js';
 export * from './embedding.js';
 export * from './lifecycle.js';
 export * from './normalize.js';
+export * from './retrieval-eval.js';
