@@ -345,142 +345,145 @@ export function LiveAssistantSettings({
             )}
           </p>
           <p className="muted">{text.status.voiceLater}</p>
-          <VoiceLinkCheck locale={locale} workspaceId={workspaceId} />
-          <ExecutorCheck locale={locale} workspaceId={workspaceId} />
           {changedKeys(draft, saved).length > 0 && <p className="muted">{text.status.unsaved}</p>}
         </div>
       )}
 
-      <section className="card stack" aria-labelledby="la-general">
-        <h2 id="la-general">{text.general.title}</h2>
-        <label className="voice-check">
-          <input
-            type="checkbox"
-            checked={bool('live_assistant.enabled')}
-            onChange={(event) => set('live_assistant.enabled', event.target.checked)}
-          />{' '}
-          {text.general.enabled}
-        </label>
-        <small className="muted">{text.general.enabledHint}</small>
-        <label className="voice-check">
-          <input
-            type="checkbox"
-            checked={bool('live_assistant.disclosure_accepted')}
-            onChange={(event) => set('live_assistant.disclosure_accepted', event.target.checked)}
-          />{' '}
-          {providerName(chosenBrand)
-            ? text.general.disclosureNamed.replace('{provider}', providerName(chosenBrand))
-            : text.general.disclosure}
-        </label>
-        {problemFor('live_assistant.disclosure_accepted') && (
-          <small className="notice error" role="alert">
-            {problemFor('live_assistant.disclosure_accepted')}
-          </small>
-        )}
-        <Field label={text.general.displayName} problem={problemFor('live_assistant.display_name')}>
-          {(id) => (
+      {/* The blocks stand two to a row, so the page is as short as it can be. */}
+      <div className="settings-columns">
+        {readiness && <VoiceLinkCheck locale={locale} workspaceId={workspaceId} />}
+        {readiness && <ExecutorCheck locale={locale} workspaceId={workspaceId} />}
+        <section className="card stack" aria-labelledby="la-general">
+          <h2 id="la-general">{text.general.title}</h2>
+          <label className="voice-check">
             <input
-              id={id}
-              type="text"
-              maxLength={40}
-              value={asString(draft['live_assistant.display_name'])}
-              onChange={(event) => set('live_assistant.display_name', event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={text.general.spokenName} hint={text.general.spokenHint}>
-          {(id) => (
+              type="checkbox"
+              checked={bool('live_assistant.enabled')}
+              onChange={(event) => set('live_assistant.enabled', event.target.checked)}
+            />{' '}
+            {text.general.enabled}
+          </label>
+          <small className="muted">{text.general.enabledHint}</small>
+          <label className="voice-check">
             <input
-              id={id}
-              type="text"
-              maxLength={40}
-              value={asString(draft['live_assistant.spoken_name'])}
-              onChange={(event) => set('live_assistant.spoken_name', event.target.value)}
-            />
+              type="checkbox"
+              checked={bool('live_assistant.disclosure_accepted')}
+              onChange={(event) => set('live_assistant.disclosure_accepted', event.target.checked)}
+            />{' '}
+            {providerName(chosenBrand)
+              ? text.general.disclosureNamed.replace('{provider}', providerName(chosenBrand))
+              : text.general.disclosure}
+          </label>
+          {problemFor('live_assistant.disclosure_accepted') && (
+            <small className="notice error" role="alert">
+              {problemFor('live_assistant.disclosure_accepted')}
+            </small>
           )}
-        </Field>
-      </section>
-
-      <section className="card stack" aria-labelledby="la-access">
-        <h2 id="la-access">{text.access.title}</h2>
-        <p className="muted">{text.access.intro}</p>
-
-        <fieldset className="field-stack">
-          <legend>{text.access.scopeLegend}</legend>
-          {accessScopeModes.map((mode) => (
-            <label key={mode} className="voice-check">
+          <Field
+            label={text.general.displayName}
+            problem={problemFor('live_assistant.display_name')}
+          >
+            {(id) => (
               <input
-                type="radio"
-                name="la-scope"
-                checked={draft['live_assistant.access_scope'] === mode}
-                onChange={() => set('live_assistant.access_scope', mode)}
-              />{' '}
-              <strong>{text.access.scopes[mode].label}</strong>
-              <small className="muted"> — {text.access.scopes[mode].hint}</small>
-            </label>
-          ))}
-        </fieldset>
+                id={id}
+                type="text"
+                maxLength={40}
+                value={asString(draft['live_assistant.display_name'])}
+                onChange={(event) => set('live_assistant.display_name', event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={text.general.spokenName} hint={text.general.spokenHint}>
+            {(id) => (
+              <input
+                id={id}
+                type="text"
+                maxLength={40}
+                value={asString(draft['live_assistant.spoken_name'])}
+                onChange={(event) => set('live_assistant.spoken_name', event.target.value)}
+              />
+            )}
+          </Field>
+        </section>
 
-        {draft['live_assistant.access_scope'] === 'selected_projects' && (
+        <section className="card stack" aria-labelledby="la-access">
+          <h2 id="la-access">{text.access.title}</h2>
+          <p className="muted">{text.access.intro}</p>
+
           <fieldset className="field-stack">
-            <legend>{text.access.projects}</legend>
-            {projects.length === 0 && <p className="muted">{text.access.noProjects}</p>}
-            {projects.map((project) => (
-              <label key={project.id} className="voice-check">
+            <legend>{text.access.scopeLegend}</legend>
+            {accessScopeModes.map((mode) => (
+              <label key={mode} className="voice-check">
                 <input
-                  type="checkbox"
-                  checked={selectedIds.includes(project.id)}
-                  onChange={(event) =>
-                    set(
-                      'live_assistant.access_project_ids',
-                      toggle(selectedIds, project.id, event.target.checked),
-                    )
-                  }
+                  type="radio"
+                  name="la-scope"
+                  checked={draft['live_assistant.access_scope'] === mode}
+                  onChange={() => set('live_assistant.access_scope', mode)}
                 />{' '}
-                {project.title} <small className="muted">({project.code})</small>
+                <strong>{text.access.scopes[mode].label}</strong>
+                <small className="muted"> — {text.access.scopes[mode].hint}</small>
               </label>
             ))}
-            <label className="voice-check">
-              <input
-                type="checkbox"
-                checked={bool('live_assistant.access_include_current')}
-                onChange={(event) =>
-                  set('live_assistant.access_include_current', event.target.checked)
-                }
-              />{' '}
-              {text.access.includeCurrent}
-            </label>
-            {problemFor('live_assistant.access_project_ids') && (
-              <small className="notice error" role="alert">
-                {problemFor('live_assistant.access_project_ids')}
-              </small>
-            )}
           </fieldset>
-        )}
 
-        <fieldset className="field-stack">
-          <legend>{text.access.levelLegend}</legend>
-          {assistantAccessLevels.map((level) => (
-            <label key={level} className="voice-check">
-              <input
-                type="radio"
-                name="la-level"
-                checked={draft['live_assistant.access_level'] === level}
-                onChange={() => set('live_assistant.access_level', level)}
-              />{' '}
-              <strong>{text.access.levels[level].label}</strong>
-              <small className="muted"> — {text.access.levels[level].hint}</small>
-            </label>
-          ))}
-        </fieldset>
+          {draft['live_assistant.access_scope'] === 'selected_projects' && (
+            <fieldset className="field-stack">
+              <legend>{text.access.projects}</legend>
+              {projects.length === 0 && <p className="muted">{text.access.noProjects}</p>}
+              {projects.map((project) => (
+                <label key={project.id} className="voice-check">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(project.id)}
+                    onChange={(event) =>
+                      set(
+                        'live_assistant.access_project_ids',
+                        toggle(selectedIds, project.id, event.target.checked),
+                      )
+                    }
+                  />{' '}
+                  {project.title} <small className="muted">({project.code})</small>
+                </label>
+              ))}
+              <label className="voice-check">
+                <input
+                  type="checkbox"
+                  checked={bool('live_assistant.access_include_current')}
+                  onChange={(event) =>
+                    set('live_assistant.access_include_current', event.target.checked)
+                  }
+                />{' '}
+                {text.access.includeCurrent}
+              </label>
+              {problemFor('live_assistant.access_project_ids') && (
+                <small className="notice error" role="alert">
+                  {problemFor('live_assistant.access_project_ids')}
+                </small>
+              )}
+            </fieldset>
+          )}
 
-        <p className="notice" role="status">
-          <strong>{text.access.summaryTitle}:</strong> {summary}
-        </p>
-      </section>
+          <fieldset className="field-stack">
+            <legend>{text.access.levelLegend}</legend>
+            {assistantAccessLevels.map((level) => (
+              <label key={level} className="voice-check">
+                <input
+                  type="radio"
+                  name="la-level"
+                  checked={draft['live_assistant.access_level'] === level}
+                  onChange={() => set('live_assistant.access_level', level)}
+                />{' '}
+                <strong>{text.access.levels[level].label}</strong>
+                <small className="muted"> — {text.access.levels[level].hint}</small>
+              </label>
+            ))}
+          </fieldset>
 
-      {/* From here on the blocks are short enough to stand two to a row. */}
-      <div className="settings-columns">
+          <p className="notice" role="status">
+            <strong>{text.access.summaryTitle}:</strong> {summary}
+          </p>
+        </section>
+
         <section className="card stack" aria-labelledby="la-model">
           <h2 id="la-model">{text.model.title}</h2>
           <p className="muted">{text.model.intro}</p>

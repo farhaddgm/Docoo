@@ -60,7 +60,7 @@ export function VoiceLinkCheck({
       <div className="toolbar">
         <button
           type="button"
-          className="button secondary"
+          className="secondary-button"
           disabled={running}
           aria-busy={running}
           onClick={run}

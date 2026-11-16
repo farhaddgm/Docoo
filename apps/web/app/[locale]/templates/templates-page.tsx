@@ -104,22 +104,24 @@ export function Templates({
   if (!catalog || !current) return <PanelsSkeleton label={text.loading} />;
   return (
     <div className="stack">
-      <LevelsSection
-        locale={locale}
-        base={base}
-        workspaceId={workspaceId}
-        catalog={catalog}
-        current={current}
-        onChanged={load}
-      />
-      <TemplatesSection
-        locale={locale}
-        base={base}
-        workspaceId={workspaceId}
-        catalog={catalog}
-        current={current}
-        onChanged={load}
-      />
+      <div className="settings-columns">
+        <LevelsSection
+          locale={locale}
+          base={base}
+          workspaceId={workspaceId}
+          catalog={catalog}
+          current={current}
+          onChanged={load}
+        />
+        <TemplatesSection
+          locale={locale}
+          base={base}
+          workspaceId={workspaceId}
+          catalog={catalog}
+          current={current}
+          onChanged={load}
+        />
+      </div>
       {showSettingsLink && (
         <p className="muted">
           {text.moreSettings} <Link href={`/${locale}/settings` as Route}>{text.openSettings}</Link>
@@ -354,36 +356,41 @@ function TemplatesSection({
         {text.templatesTitle}
       </SectionTitle>
       <Notice notice={action.notice} />
-      <fieldset className="stack">
-        <legend>{text.defaultTemplate}</legend>
-        {catalog.templates.map((template) => (
-          <div key={template.key} className="card stack">
-            <label className="mode">
+      <div className="preset-grid" role="radiogroup" aria-label={text.defaultTemplate}>
+        {catalog.templates.map((template) => {
+          const checked = selected === template.key;
+          return (
+            <label
+              key={template.key}
+              className={`preset-card${checked ? ' preset-selected' : ''}`}
+              htmlFor={`${id}-${template.key}`}
+            >
               <input
                 type="radio"
+                id={`${id}-${template.key}`}
                 name={`${id}-template`}
                 value={template.key}
-                checked={selected === template.key}
+                checked={checked}
                 onChange={() => setSelected(template.key)}
-              />{' '}
-              <strong>{text.names[template.key] ?? template.key}</strong>
-              {current.template === template.key && (
-                <span className="badge tone-ok">{text.isDefault}</span>
-              )}
-            </label>
-            <p className="muted">{text.purposes[template.key]}</p>
-            <p>
-              {text.sections}:{' '}
-              <span dir={textDir(locale)}>
+              />
+              <strong dir={textDir(locale)}>
+                {text.names[template.key] ?? template.key}
+                {current.template === template.key && (
+                  <span className="badge tone-ok"> {text.isDefault}</span>
+                )}
+              </strong>
+              <span dir={textDir(locale)}>{text.purposes[template.key]}</span>
+              <small className="muted" dir={textDir(locale)}>
+                {text.sections}:{' '}
                 {template.sections.map((section) => section.label[locale]).join(' ← ')}
-              </span>
-            </p>
-            <p className="muted">
-              {text.version}: <code dir="ltr">{template.version}</code>
-            </p>
-          </div>
-        ))}
-      </fieldset>
+              </small>
+              <small className="muted">
+                {text.version}: <code dir="ltr">{template.version}</code>
+              </small>
+            </label>
+          );
+        })}
+      </div>
       <ReasonBar
         locale={locale}
         id={`${id}-reason`}
