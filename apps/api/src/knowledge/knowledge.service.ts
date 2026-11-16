@@ -888,7 +888,11 @@ export class KnowledgeService {
         version.id,
         status,
       ]);
-      if (status === 'approved') await this.index(client, context, version);
+      if (status === 'approved') {
+        await this.index(client, context, version);
+        // Embedded a moment later, once this transaction has committed (ADR-0061); off unless the owner opened every lock.
+        this.semantic.indexSoon(context);
+      }
       await client.query(`update knowledge_items set version = version + 1 where id = $1`, [
         item.id,
       ]);
@@ -999,6 +1003,7 @@ export class KnowledgeService {
       if (status === 'approved') {
         const version = await this.loadVersion(client, review.item_id, review.knowledge_version_id);
         await this.index(client, context, version);
+        this.semantic.indexSoon(context);
       }
       await client.query(`update knowledge_items set version = version + 1 where id = $1`, [
         review.item_id,
