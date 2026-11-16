@@ -3,6 +3,7 @@ import {
   liveVoiceClientMessageSchema,
   type LiveActivity,
   type LiveAskAnswer,
+  type LiveVoiceCheckFailure,
   type LiveVoiceServerMessage,
 } from '@docoo/contracts';
 
@@ -136,9 +137,12 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     toClient({ type: 'activity', activity: next });
   };
 
-  function end(reason: 'ended' | 'cap' | 'provider' | 'idle' | 'superseded' | 'error'): void {
+  function end(
+    reason: 'ended' | 'cap' | 'provider' | 'idle' | 'superseded' | 'error',
+    failure?: LiveVoiceCheckFailure,
+  ): void {
     if (closed) return;
-    toClient({ type: 'closed', reason });
+    toClient(failure ? { type: 'closed', reason, failure } : { type: 'closed', reason });
     closed = true;
     for (const timer of timers) clearTimeout(timer);
     timers.clear();
@@ -150,7 +154,7 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     }
   }
 
-  const readyTimer = setTimeout(() => end('provider'), options.readyTimeoutMs ?? 10_000);
+  const readyTimer = setTimeout(() => end('provider', 'timeout'), options.readyTimeoutMs ?? 10_000);
   timers.add(readyTimer);
 
   async function save(role: 'user' | 'assistant', text: string): Promise<void> {
@@ -276,8 +280,8 @@ export function startVoiceRelay(options: RelayOptions): { stop: (reason: string)
     usage(step) {
       void addUsage(step);
     },
-    failed() {
-      end('provider');
+    failed(failure) {
+      end('provider', failure);
     },
   });
 

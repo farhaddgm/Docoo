@@ -48,6 +48,10 @@ const fa = {
         terms: 'شرایط استفادهٔ ارائه‌دهنده در داشبورد خودش هنوز پذیرفته نشده است.',
         retention:
           'طرح ElevenLabs شما حالت «بدون نگه‌داری داده» را نمی‌پذیرد. یا طرح را ارتقا دهید، یا در بخش «گفتگوها و حریم خصوصی» آن را آگاهانه خاموش کنید.',
+        voice: 'صدای انتخاب‌شده در حساب ElevenLabs پیدا نشد یا اجازهٔ استفاده از آن را ندارید.',
+        refused: 'ارائه‌دهنده اتصال را همان ابتدا رد کرد و دلیل روشنی نداد.',
+        session_limit: 'ارائه‌دهنده به سقف مدت یک گفتگو رسید.',
+        dropped: 'ارتباط با ارائه‌دهنده در میانهٔ کار قطع شد.',
         unexpected: 'پاسخ غیرمنتظره‌ای آمد.',
       },
     },
@@ -308,6 +312,10 @@ const en: typeof fa = {
         terms: 'The terms of the provider are not accepted in its own dashboard yet.',
         retention:
           'Your ElevenLabs plan does not accept zero retention. Upgrade the plan, or switch it off knowingly in the Conversations and privacy section.',
+        voice: 'The chosen voice was not found in the ElevenLabs account, or you may not use it.',
+        refused: 'The provider refused the link at the door and gave no clear reason.',
+        session_limit: 'The provider reached the length limit of one conversation.',
+        dropped: 'The link to the provider was lost in the middle of the work.',
         unexpected: 'An unexpected answer came back.',
       },
     },

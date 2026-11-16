@@ -501,6 +501,14 @@ export const liveVoiceCheckFailures = [
   'terms',
   /** ElevenLabs refuses zero retention (`enable_logging=false`) for this plan. */
   'retention',
+  /** The chosen voice does not exist in the provider's account, or the key may not use it. */
+  'voice',
+  /** The provider closed the link at the door without saying why (the link check tells more). */
+  'refused',
+  /** The provider closed a conversation that reached its own length limit. */
+  'session_limit',
+  /** The link was lost in the middle of a conversation. */
+  'dropped',
   'unexpected',
 ] as const;
 export type LiveVoiceCheckFailure = (typeof liveVoiceCheckFailures)[number];

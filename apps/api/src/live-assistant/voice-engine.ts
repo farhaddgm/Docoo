@@ -1,3 +1,5 @@
+import type { LiveVoiceCheckFailure } from '@docoo/contracts';
+
 /**
  * The port between the voice relay and a voice provider (ADR-0057). The relay core owns everything
  * that does not depend on the provider: the browser link, the caps, the counting of use, the
@@ -38,8 +40,12 @@ export interface VoiceEngineEvents {
    * answer or not). It only counts; the activity of the session is left alone.
    */
   usage(usage: EngineUsage): void;
-  /** The provider failed or closed the link; the session cannot continue. */
-  failed(): void;
+  /**
+   * The provider failed or closed the link; the session cannot continue. `failure` is the kind of
+   * failure the engine could tell (never the provider's text); without it the page says only that
+   * the link was lost.
+   */
+  failed(failure?: LiveVoiceCheckFailure): void;
 }
 
 export interface VoiceEngine {
