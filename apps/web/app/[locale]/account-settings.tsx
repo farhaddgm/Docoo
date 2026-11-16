@@ -4,6 +4,7 @@ import type { Locale } from '../i18n';
 import { ThemePicker } from '../theme-toggle';
 import { AccountsScreen } from './accounts-screen';
 import { AccountSecurity } from './account-security';
+import { releases } from './release-notes';
 import { SignedIn } from './signed-in';
 
 const text = {
@@ -13,6 +14,11 @@ const text = {
     users: 'کاربران و ورود',
     usersHint: 'مدیریت حساب‌ها، نقش‌ها و روش‌های ورود (فقط مدیران).',
     appearance: 'ظاهر',
+    versions: 'نسخه‌های برنامه',
+    latest: 'آخرین نسخه',
+    version: 'نسخه',
+    date: 'زمان انتشار',
+    changes: 'تغییرات',
   },
   en: {
     title: 'Account settings',
@@ -20,6 +26,11 @@ const text = {
     users: 'Users & sign-in',
     usersHint: 'Manage accounts, roles and sign-in methods (administrators only).',
     appearance: 'Appearance',
+    versions: 'App versions',
+    latest: 'Latest version',
+    version: 'Version',
+    date: 'Released',
+    changes: 'Changes',
   },
 } as const;
 
@@ -42,6 +53,32 @@ export function AccountSettings({ locale }: { readonly locale: Locale }) {
               <AccountsScreen locale={locale} embedded />
             </section>
           )}
+          <section className="card stack" aria-labelledby="versions-title">
+            <h2 id="versions-title">{t.versions}</h2>
+            <p className="muted">
+              {t.latest}: <strong dir="ltr">{releases[0]!.v}</strong>
+            </p>
+            <div className="table-scroll" tabIndex={0}>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{t.version}</th>
+                    <th scope="col">{t.date}</th>
+                    <th scope="col">{t.changes}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {releases.map((r) => (
+                    <tr key={r.v}>
+                      <td dir="ltr">{r.v}</td>
+                      <td dir="ltr">{r.date}</td>
+                      <td>{r[locale]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       )}
     </SignedIn>
