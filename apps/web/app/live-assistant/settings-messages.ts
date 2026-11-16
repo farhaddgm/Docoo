@@ -195,6 +195,8 @@ const fa = {
         'فهرست مدل‌ها و صداهای ElevenLabs دریافت نشد، پس مدل را باید تایپ کنید. کلید را بررسی کنید: باید اجازهٔ خواندن مدل‌ها و صداها را داشته باشد.',
       noModels:
         'ElevenLabs فهرست مدلی برای گفتن نداد، پس مدل را باید تایپ کنید. اجازهٔ خواندن مدل‌ها را برای کلید بررسی کنید.',
+      noVoices:
+        'ElevenLabs فهرست صدایی نداد، پس شناسهٔ صدا را باید تایپ کنید. اجازهٔ خواندن صداها را برای کلید بررسی کنید.',
     },
     sample: {
       hear: 'پیش‌شنیدن صدا',
@@ -463,6 +465,8 @@ const en: typeof fa = {
         'The ElevenLabs models and voices could not be loaded, so the model has to be typed. Check the key: it must be allowed to read models and voices.',
       noModels:
         'ElevenLabs returned no speaking models, so the model has to be typed. Check that the key may read models.',
+      noVoices:
+        'ElevenLabs returned no voices, so the voice id has to be typed. Check that the key may read voices.',
     },
     sample: {
       hear: 'Hear this voice',

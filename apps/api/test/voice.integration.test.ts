@@ -93,6 +93,31 @@ describe.skipIf(!adminUrl)('voice conversation (ADR-0046)', () => {
     expect(body.voices.map((v) => v.id)).toEqual(['fake-voice']);
   });
 
+  it('lists the catalog of the connection the page chose, not just the newest one', async () => {
+    const other = await h.request('POST', api('/provider-connections'), {
+      cookie: cookieA,
+      payload: { provider: 'fake', name: 'Second fake speech' },
+    });
+    const id = other.json<{ connection: { id: string } }>().connection.id;
+    const chosen = await h.request('GET', voice(`/catalog?connectionId=${id}`), {
+      cookie: cookieA,
+    });
+    expect(chosen.statusCode, chosen.body).toBe(200);
+    expect(chosen.json<{ voices: { id: string }[] }>().voices.map((v) => v.id)).toEqual([
+      'fake-voice',
+    ]);
+    const unknown = await h.request(
+      'GET',
+      voice('/catalog?connectionId=00000000-0000-4000-8000-000000000000'),
+      { cookie: cookieA },
+    );
+    expect(unknown.statusCode).toBe(409);
+    expect(unknown.json<{ code: string }>().code).toBe('VOICE_NOT_CONFIGURED');
+    expect(
+      (await h.request('GET', voice('/catalog?connectionId=nope'), { cookie: cookieA })).statusCode,
+    ).toBe(400);
+  });
+
   it('turns a recording into text and writes it to the voice ledger as unpriced', async () => {
     const out = await transcribe('?locale=fa&durationMs=1000');
     expect(out.statusCode, out.body).toBe(200);
