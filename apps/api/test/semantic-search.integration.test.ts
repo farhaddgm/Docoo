@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SEMANTIC_DIMENSIONS, type SemanticSearch } from '@docoo/orchestration';
 
-import { SEMANTIC_SEARCH } from '../src/knowledge/semantic-search.service.js';
+import { SEMANTIC_AUTO_INDEX, SEMANTIC_SEARCH } from '../src/knowledge/semantic-search.service.js';
 import { adminUrl, createHarness, type Harness } from './support/harness.js';
 
 /**
@@ -137,7 +137,11 @@ describe.skipIf(!adminUrl)('semantic search with a scripted provider (ADR-0061)'
 
   beforeAll(async () => {
     h = await createHarness('semon', {
-      overrides: [{ provide: SEMANTIC_SEARCH, useValue: fake }],
+      overrides: [
+        { provide: SEMANTIC_SEARCH, useValue: fake },
+        // These tests index by hand and count what is sent; the automatic run has its own suite.
+        { provide: SEMANTIC_AUTO_INDEX, useValue: { enabled: false, delayMs: 0 } },
+      ],
     });
     cookie = await h.login(h.emails.a);
     await create('churn', 'Churn report', bodies.churn, 'internal');
@@ -317,5 +321,88 @@ describe.skipIf(!adminUrl)('semantic search with a scripted provider (ADR-0061)'
     );
     expect(audit.rows[0]?.after).toMatchObject({ heldBack: 2 });
     expect(JSON.stringify(audit.rows)).not.toContain('09123456789');
+  });
+});
+
+describe.skipIf(!adminUrl)('newly approved knowledge is embedded by itself (ADR-0061)', () => {
+  let h: Harness;
+  let cookie: string;
+  const api = (suffix: string) => `/v1/workspaces/${h.ids.workspaceA}${suffix}`;
+
+  const approve = async (title: string, content: string, confidentiality = 'internal') => {
+    const created = await h.request('POST', api('/knowledge'), {
+      cookie,
+      payload: {
+        title,
+        content,
+        confidentiality,
+        language: 'fa',
+        sourceType: 'admin_provided',
+        provenance: { declaration: 'Written for the test' },
+        scopes: [{ type: 'workspace', id: h.ids.workspaceA }],
+      },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const id = created.json<{ knowledge: { id: string } }>().knowledge.id;
+    const audited = await h.request('POST', api(`/knowledge/${id}/submit-audit`), { cookie });
+    expect(audited.statusCode, audited.body).toBe(200);
+    return id;
+  };
+  const status = async () =>
+    (await h.request('GET', api('/knowledge/semantic-index'), { cookie })).json<Status>();
+  const until = async (done: () => Promise<boolean>) => {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      if (await done()) return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error('the automatic run did not happen in time');
+  };
+
+  beforeAll(async () => {
+    h = await createHarness('semauto', {
+      overrides: [
+        { provide: SEMANTIC_SEARCH, useValue: fake },
+        { provide: SEMANTIC_AUTO_INDEX, useValue: { enabled: true, delayMs: 30 } },
+      ],
+    });
+    cookie = await h.login(h.emails.a);
+  }, 30_000);
+  afterAll(async () => {
+    await h?.close();
+  });
+
+  it('embeds an approved internal document without anyone pressing the button, and nothing else', async () => {
+    sent.length = 0;
+    // Three approvals in a row are one run, not three; the confidential one never goes.
+    await approve('Churn', 'نرخ ریزش مشتریان در سال گذشته به هفت درصد رسید.');
+    await approve('Pricing', 'تعرفه اشتراک سالانه بر اساس تعداد کاربران تعیین می‌شود.');
+    await approve('Secret', 'گزارش محرمانهٔ ریزش مشتریان بزرگ.', 'confidential');
+    await until(async () => (await status()).embedded === 2);
+    const after = await status();
+    expect(after).toMatchObject({ eligible: 2, embedded: 2, keptLocal: 1 });
+    expect(sent).toHaveLength(2);
+    expect(sent.some((text) => text.includes('محرمانه'))).toBe(false);
+    const audit = await h.admin.query<{ after: Record<string, unknown> }>(
+      `select after from audit_events where action = 'knowledge.semantic_index' and workspace_id = $1 order by occurred_at limit 1`,
+      [h.ids.workspaceA],
+    );
+    expect(audit.rows[0]?.after).toMatchObject({ trigger: 'auto', embedded: expect.any(Number) });
+  });
+
+  it('a provider that fails is a missing vector, not an error, and the button catches up', async () => {
+    failing = true;
+    try {
+      await approve('Support', 'ساعت پشتیبانی از نه صبح تا شش عصر است.');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect((await status()).embedded).toBe(2);
+    } finally {
+      failing = false;
+    }
+    const run = await h.request('POST', api('/knowledge/semantic-index/run'), {
+      cookie,
+      payload: {},
+    });
+    expect(run.json<{ embedded: number }>().embedded).toBe(1);
+    expect((await status()).embedded).toBe(3);
   });
 });
