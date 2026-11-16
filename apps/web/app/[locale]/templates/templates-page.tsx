@@ -373,9 +373,10 @@ function TemplatesSection({
                   name={`${id}-template`}
                   value={template.key}
                   checked={checked}
+                  aria-labelledby={`${id}-${template.key}-name`}
                   onChange={() => setSelected(template.key)}
                 />
-                <strong dir={textDir(locale)}>
+                <strong id={`${id}-${template.key}-name`} dir={textDir(locale)}>
                   {text.names[template.key] ?? template.key}
                   {current.template === template.key && (
                     <span className="badge tone-ok"> {text.isDefault}</span>
