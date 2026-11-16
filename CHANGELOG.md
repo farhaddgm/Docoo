@@ -4,6 +4,15 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- Semantic search now embeds newly approved knowledge by itself (ADR-0061): two seconds after a document is approved, in the background, its new chunks get their vectors, if the owner has opened every `KNOWLEDGE_EMBEDDING_*` lock. Several approvals in a row make one run, a failing provider only means a missing vector, and the button still catches up. The audit says whether a run was `auto` or `manual`.
+- A setting to switch ElevenLabs zero retention off, knowingly (`live_assistant.zero_retention`, in the voice assistant settings under "Conversations and privacy"; ADR-0057 §11). It stays **on** by default, as before: the assistant asks ElevenLabs not to log audio and text on both sockets. Some plans (usually Enterprise) refuse that, and the speaking socket was then refused at the handshake. Turning the setting off shows a privacy warning on the page: ElevenLabs then logs and keeps the audio and text of the conversations in your account under its own policy. Migration 0099.
+
+### Fixed
+
+- The ElevenLabs link check showed a plan that refuses zero retention as a generic "network" failure. When the speaking socket is refused with zero retention asked and opens without it, the check now says so: the plan does not accept zero retention, and which two ways out there are (upgrade the plan, or switch the setting off knowingly).
+
 ## [0.65.0] — 2026-11-15
 
 ### Added
