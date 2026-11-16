@@ -356,41 +356,46 @@ function TemplatesSection({
         {text.templatesTitle}
       </SectionTitle>
       <Notice notice={action.notice} />
-      <div className="preset-grid" role="radiogroup" aria-label={text.defaultTemplate}>
-        {catalog.templates.map((template) => {
-          const checked = selected === template.key;
-          return (
-            <label
-              key={template.key}
-              className={`preset-card${checked ? ' preset-selected' : ''}`}
-              htmlFor={`${id}-${template.key}`}
-            >
-              <input
-                type="radio"
-                id={`${id}-${template.key}`}
-                name={`${id}-template`}
-                value={template.key}
-                checked={checked}
-                onChange={() => setSelected(template.key)}
-              />
-              <strong dir={textDir(locale)}>
-                {text.names[template.key] ?? template.key}
-                {current.template === template.key && (
-                  <span className="badge tone-ok"> {text.isDefault}</span>
-                )}
-              </strong>
-              <span dir={textDir(locale)}>{text.purposes[template.key]}</span>
-              <small className="muted" dir={textDir(locale)}>
-                {text.sections}:{' '}
-                {template.sections.map((section) => section.label[locale]).join(' ← ')}
-              </small>
-              <small className="muted">
-                {text.version}: <code dir="ltr">{template.version}</code>
-              </small>
-            </label>
-          );
-        })}
-      </div>
+      <fieldset className="stack">
+        <legend>{text.defaultTemplate}</legend>
+        <div className="preset-grid">
+          {catalog.templates.map((template) => {
+            const checked = selected === template.key;
+            return (
+              <label
+                key={template.key}
+                className={`preset-card${checked ? ' preset-selected' : ''}`}
+                htmlFor={`${id}-${template.key}`}
+              >
+                <input
+                  type="radio"
+                  id={`${id}-${template.key}`}
+                  name={`${id}-template`}
+                  value={template.key}
+                  checked={checked}
+                  onChange={() => setSelected(template.key)}
+                />
+                <strong dir={textDir(locale)}>
+                  {text.names[template.key] ?? template.key}
+                  {current.template === template.key && (
+                    <span className="badge tone-ok"> {text.isDefault}</span>
+                  )}
+                </strong>
+                <span dir={textDir(locale)}>{text.purposes[template.key]}</span>
+                <small className="muted">
+                  {text.sections}:{' '}
+                  <span dir={textDir(locale)}>
+                    {template.sections.map((section) => section.label[locale]).join(' ← ')}
+                  </span>
+                </small>
+                <small className="muted">
+                  {text.version}: <code dir="ltr">{template.version}</code>
+                </small>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
       <ReasonBar
         locale={locale}
         id={`${id}-reason`}
