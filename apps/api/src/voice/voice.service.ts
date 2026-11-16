@@ -219,18 +219,29 @@ export class VoiceService {
 
   // ---- catalog and preview (system settings page) ------------------------------------
 
-  async catalog(context: WorkspaceRequestContext, brand: VoiceBrand | undefined) {
-    const resolved = await this.database.run(context, async (client) => {
-      const settings = await this.settings(client, context);
-      const wanted = brand ?? settings.provider;
-      const connectionId =
-        brand && brand !== settings.provider
-          ? await this.connectionFor(client, { ...settings, provider: brand, connectionId: null })
-          : await this.connectionFor(client, settings);
-      if (!connectionId)
-        throw conflict('VOICE_NOT_CONFIGURED', `Add a ${wanted} provider connection first.`);
-      return (await this.runtime.speechAdapterFor(client, connectionId)).adapter;
-    });
+  async catalog(
+    context: WorkspaceRequestContext,
+    brand: VoiceBrand | undefined,
+    /** The connection the page has chosen; without it the newest usable one of the brand is used. */
+    chosenConnectionId?: string,
+  ) {
+    const resolved = chosenConnectionId
+      ? (await this.resolve(context, 'catalog', chosenConnectionId)).adapter
+      : await this.database.run(context, async (client) => {
+          const settings = await this.settings(client, context);
+          const wanted = brand ?? settings.provider;
+          const connectionId =
+            brand && brand !== settings.provider
+              ? await this.connectionFor(client, {
+                  ...settings,
+                  provider: brand,
+                  connectionId: null,
+                })
+              : await this.connectionFor(client, settings);
+          if (!connectionId)
+            throw conflict('VOICE_NOT_CONFIGURED', `Add a ${wanted} provider connection first.`);
+          return (await this.runtime.speechAdapterFor(client, connectionId)).adapter;
+        });
     // The two lists are separate requests and a key can be allowed one and not the other (an
     // ElevenLabs key may be limited to some permissions). One list failing must not hide the other.
     const [models, voices] = await Promise.allSettled([

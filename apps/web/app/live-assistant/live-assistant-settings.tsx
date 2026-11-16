@@ -189,7 +189,7 @@ export function LiveAssistantSettings({
     apiGet<{
       models: { id: string; kind: string }[];
       voices: { id: string; name: string; languages?: string[] }[];
-    }>(`${base}/voice/catalog?provider=elevenlabs`)
+    }>(`${base}/voice/catalog?provider=elevenlabs&connectionId=${connectionId}`)
       .then((result) => {
         if (!active) return;
         setSpeech({
@@ -209,7 +209,7 @@ export function LiveAssistantSettings({
     return () => {
       active = false;
     };
-  }, [base, isEleven]);
+  }, [base, isEleven, connectionId]);
 
   if (!draft || !saved) {
     return failure ? (
@@ -585,6 +585,13 @@ export function LiveAssistantSettings({
                   otherLabel={text.model.other}
                   onChange={(value) => set('live_assistant.voice_id', value)}
                 />
+                {isEleven && (speechFailed || speech.voices.length === 0) && (
+                  <small className="muted" role="status">
+                    {speechFailed
+                      ? text.model.elevenlabs.catalogFailed
+                      : text.model.elevenlabs.noVoices}
+                  </small>
+                )}
                 {isEleven && (
                   <>
                     <VoiceSample

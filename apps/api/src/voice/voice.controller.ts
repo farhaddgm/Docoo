@@ -53,7 +53,9 @@ const previewBody = z
     connectionId: uuid.optional(),
   })
   .strict();
-const catalogQuery = z.object({ provider: z.enum(voiceBrands).optional() }).strict();
+const catalogQuery = z
+  .object({ provider: z.enum(voiceBrands).optional(), connectionId: uuid.optional() })
+  .strict();
 const attachBody = z.object({ messageId: uuid }).strict();
 const audioQuery = z
   .object({
@@ -127,7 +129,8 @@ export class VoiceController {
   @ApiOperation({ summary: 'Live models and voices of the speech provider' })
   @RequireWorkspacePermission('voice.manage')
   catalog(@Req() request: FastifyRequest, @Query() query: unknown) {
-    return this.voice.catalog(workspaceContext(request), parse(catalogQuery, query).provider);
+    const parsed = parse(catalogQuery, query);
+    return this.voice.catalog(workspaceContext(request), parsed.provider, parsed.connectionId);
   }
 
   @Post('preview')
