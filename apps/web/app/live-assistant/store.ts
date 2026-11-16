@@ -707,11 +707,11 @@ export function createLiveStore(deps: LiveStoreDeps) {
       },
       onSleep: live(() => dispatch({ type: 'sleep' })),
       onWake: live(() => dispatch({ type: 'wake' })),
-      onLost: live(() => {
-        if (!isLiveActive(state.status)) return;
-        dispatch({ type: 'failed', error: 'connection_lost' });
+      onLost: (failure) => {
+        if (transport !== owner || !isLiveActive(state.status)) return;
+        dispatch({ type: 'failed', error: 'connection_lost', detail: failure });
         void teardown('error');
-      }),
+      },
     };
   }
 

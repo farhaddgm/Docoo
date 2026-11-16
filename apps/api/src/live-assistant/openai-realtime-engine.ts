@@ -1,5 +1,6 @@
 import type { VoiceEngine, VoiceEngineConfig, VoiceEngineEvents } from './voice-engine.js';
 import type { RelaySocket } from './realtime-link.js';
+import { clueOfClose, clueOfError, createFailureReporter, failureOfText } from './voice-failure.js';
 
 /**
  * The OpenAI realtime protocol (ADR-0055 §4-3), behind the voice engine port. Everything that
@@ -58,7 +59,7 @@ export function createOpenAiRealtimeEngine(options: {
     try {
       socket.send(JSON.stringify(event));
     } catch {
-      events?.failed();
+      events?.failed('dropped');
     }
   };
 
@@ -112,9 +113,12 @@ export function createOpenAiRealtimeEngine(options: {
         events.responseDone(step.inputTokens === 0 && step.outputTokens === 0 ? null : step);
         return;
       }
-      case 'error':
-        events.failed();
+      case 'error': {
+        const error = recordOf(event['error']);
+        const clue = `${stringOf(error['code'])} ${stringOf(error['type'])} ${stringOf(error['message'])}`;
+        events.failed(failureOfText(clue) ?? 'unexpected');
         return;
+      }
       default:
     }
   }
@@ -144,8 +148,13 @@ export function createOpenAiRealtimeEngine(options: {
         });
       };
       socket.onmessage = (event) => onProviderEvent(event.data);
-      socket.onerror = () => events?.failed();
-      socket.onclose = () => events?.failed();
+      // A socket reports an error and then a close; the close carries the code and the reason.
+      const reporter = createFailureReporter((clue) => {
+        if (closed) return;
+        events?.failed(failureOfText(clue) ?? (ready ? 'dropped' : 'refused'));
+      });
+      socket.onerror = (event) => reporter.error(clueOfError(event));
+      socket.onclose = (event) => reporter.close(clueOfClose(event));
     },
     sendAudio(pcm) {
       send({ type: 'input_audio_buffer.append', audio: pcm.toString('base64') });

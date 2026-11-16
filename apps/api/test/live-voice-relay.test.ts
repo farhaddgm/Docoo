@@ -165,7 +165,11 @@ describe('the voice relay (ADR-0055)', () => {
     const { provider, client } = setup();
     provider.onopen?.({});
     await new Promise((resolve) => setTimeout(resolve, 80));
-    expect(client.json().at(-1)).toEqual({ type: 'closed', reason: 'provider' });
+    expect(client.json().at(-1)).toEqual({
+      type: 'closed',
+      reason: 'provider',
+      failure: 'timeout',
+    });
     expect(provider.closed).toBe(true);
     expect(client.closed).toBe(true);
   });
@@ -332,15 +336,21 @@ describe('the voice relay (ADR-0055)', () => {
     expect(provider.closed).toBe(true);
   });
 
-  it('closes the provider when the browser hangs up, and the browser when the provider fails', () => {
+  it('closes the provider when the browser hangs up, and the browser when the provider fails', async () => {
     const first = setup();
     first.provider.onopen?.({});
     first.client.hangUp();
     expect(first.provider.closed).toBe(true);
     const second = setup();
     second.provider.onerror?.({});
+    // The close of a socket carries the reason, so the failure waits a moment for it.
+    await new Promise((resolve) => setTimeout(resolve, 60));
     expect(second.client.closed).toBe(true);
-    expect(second.client.json().at(-1)).toEqual({ type: 'closed', reason: 'provider' });
+    expect(second.client.json().at(-1)).toEqual({
+      type: 'closed',
+      reason: 'provider',
+      failure: 'refused',
+    });
   });
 
   it('lets the browser tell the model what became of a change, and nothing else', () => {
@@ -448,6 +458,56 @@ describe('the voice relay (ADR-0055)', () => {
       });
       await flush();
       expect(recorded.at(-1)?.totals).toMatchObject({ inputTokens: 10, costUsd: 0.015 });
+    });
+  });
+});
+
+describe('why the voice link failed (OpenAI)', () => {
+  async function failWith(close: { code?: number; reason?: string }) {
+    const { provider, client } = setup();
+    provider.onopen?.({});
+    provider.onclose?.(close);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    return client.json().at(-1);
+  }
+
+  it('says the credit is used up when the provider closes for quota', async () => {
+    expect(await failWith({ code: 1008, reason: 'insufficient_quota' })).toEqual({
+      type: 'closed',
+      reason: 'provider',
+      failure: 'quota',
+    });
+  });
+
+  it('says the key was refused', async () => {
+    expect(await failWith({ code: 1008, reason: 'invalid_api_key' })).toEqual({
+      type: 'closed',
+      reason: 'provider',
+      failure: 'auth',
+    });
+  });
+
+  it('reads an error event of the provider', async () => {
+    const { provider, client } = setup();
+    provider.onopen?.({});
+    provider.emit({
+      type: 'error',
+      error: { code: 'insufficient_quota', message: 'You exceeded your current quota' },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(client.json().at(-1)).toEqual({ type: 'closed', reason: 'provider', failure: 'quota' });
+  });
+
+  it('says the link dropped when it was open and no reason came', async () => {
+    const { provider, client } = setup();
+    provider.onopen?.({});
+    provider.emit({ type: 'session.updated' });
+    provider.onclose?.({ code: 1006 });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(client.json().at(-1)).toEqual({
+      type: 'closed',
+      reason: 'provider',
+      failure: 'dropped',
     });
   });
 });

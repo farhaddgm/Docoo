@@ -2,10 +2,20 @@ import {
   ELEVENLABS_ZERO_RETENTION,
   dialogueHttpUrl,
   dialogueUrl,
+  userHttpUrl,
   sttUrl,
 } from './elevenlabs-link.js';
+import type { LiveVoiceCheckFailure } from '@docoo/contracts';
+
 import type { RelaySocket, RelaySocketFactory } from './realtime-link.js';
 import type { EngineUsage, VoiceEngine, VoiceEngineEvents } from './voice-engine.js';
+import {
+  clueOfClose,
+  clueOfError,
+  createFailureReporter,
+  failureOfHttp,
+  failureOfText,
+} from './voice-failure.js';
 
 /**
  * The voice pipeline of ElevenLabs behind the voice engine port (ADR-0057): Scribe v3 Live listens,
@@ -30,6 +40,30 @@ const MAX_PIECE_CHARACTERS = 400;
 const MAX_SPOKEN_CHARACTERS = 1800;
 
 /** Events of the hearing socket that end the session (the rest are not fatal or not errors). */
+/** How long the check without zero retention may take to say the session started. */
+const RETENTION_PROBE_TIMEOUT_MS = 5_000;
+
+/** What a fatal event of the hearing socket means; its text only helps when the event is vague. */
+function failureOfHearingEvent(kind: string, text: string): LiveVoiceCheckFailure {
+  switch (kind) {
+    case 'auth_error':
+      return 'auth';
+    case 'quota_exceeded':
+    case 'rate_limited':
+    case 'resource_exhausted':
+    case 'queue_overflow':
+      return 'quota';
+    case 'unaccepted_terms':
+      return 'terms';
+    case 'session_time_limit_exceeded':
+      return 'session_limit';
+    case 'invalid_request':
+      return failureOfText(text) ?? 'model';
+    default:
+      return failureOfText(text) ?? 'unexpected';
+  }
+}
+
 const FATAL_HEARING_EVENTS: ReadonlySet<string> = new Set([
   'auth_error',
   'quota_exceeded',
@@ -164,10 +198,15 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
     events?.usage(usage);
   }
 
-  function fail(): void {
+  function fail(failure: LiveVoiceCheckFailure): void {
     if (closed) return;
-    events?.failed();
+    events?.failed(failure);
   }
+
+  /** What the speaking socket said about its own failure, for the kind of the failure if HTTP fails too. */
+  let speakingClue = '';
+  /** Stops the check without zero retention if the session ends while it runs. */
+  let stopProbe: (() => void) | null = null;
 
   // ---- speaking ---------------------------------------------------------------------------
 
@@ -217,7 +256,13 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
         }),
         signal: abort.signal,
       });
-      if (!response.ok || !response.body) throw new Error('refused');
+      if (!response.ok || !response.body) {
+        const body = await response.text().catch(() => '');
+        if (mine !== generation || closed) return;
+        const found = failureOfHttp(response.status, body.slice(0, 1000));
+        fail(found === 'unexpected' ? (failureOfText(speakingClue) ?? found) : found);
+        return;
+      }
       const reader = response.body.getReader();
       let carry = Buffer.alloc(0);
       for (;;) {
@@ -236,7 +281,8 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
       finishSpeech(mine);
     } catch {
       if (mine !== generation || closed) return;
-      fail();
+      // The request itself did not get through: the server could not reach ElevenLabs.
+      fail(failureOfText(speakingClue) ?? 'network');
     }
   }
 
@@ -249,6 +295,7 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
       return;
     }
     speaking = true;
+    speakingClue = '';
     const mine = (generation += 1);
     const full = pieces.join(' ');
     pendingCharacters += full.length;
@@ -302,6 +349,7 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
         return;
       }
       if (message['error'] !== undefined && message['error'] !== null) {
+        speakingClue = `${speakingClue} ${JSON.stringify(message['error'])}`.slice(0, 1000);
         if (gotAudio) {
           settled = true;
           finishSpeech(mine);
@@ -324,15 +372,17 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
         finishSpeech(mine);
       }
     };
-    socket.onerror = () => {
+    socket.onerror = (event) => {
       if (mine !== generation) return;
+      speakingClue = `${speakingClue} ${clueOfError(event)}`.slice(0, 1000);
       if (gotAudio) {
         settled = true;
         finishSpeech(mine);
       } else fallBack();
     };
-    socket.onclose = () => {
+    socket.onclose = (event) => {
       if (mine !== generation || settled) return;
+      speakingClue = `${speakingClue} ${clueOfClose(event)}`.slice(0, 1000);
       if (gotAudio) {
         settled = true;
         finishSpeech(mine);
@@ -345,6 +395,92 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
     if (clean === '' || closed) return;
     queue.push(clean);
     if (!speaking) speakNext();
+  }
+
+  /**
+   * The hearing socket was refused before it started while zero retention was asked, and nothing
+   * said why. Opens it once more without that flag (nothing is sent, so nothing is logged or
+   * billed, as in the link check): if that opens, the plan does not allow zero retention, which
+   * is a different cure than the network's.
+   */
+  function probeWithoutZeroRetention(): void {
+    let settled = false;
+    let probe: RelaySocket | null = null;
+    const finish = (failure: LiveVoiceCheckFailure | null): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      stopProbe = null;
+      try {
+        probe?.close(1000);
+      } catch {
+        /* already closed */
+      }
+      // Not the retention flag either: ask the service about the key itself.
+      if (failure) fail(failure);
+      else void diagnoseRefusal();
+    };
+    const timer = setTimeout(() => finish(null), RETENTION_PROBE_TIMEOUT_MS);
+    stopProbe = () => {
+      settled = true;
+      clearTimeout(timer);
+      try {
+        probe?.close(1000);
+      } catch {
+        /* already closed */
+      }
+    };
+    try {
+      probe = options.socket(
+        sttUrl(options.baseUrl, ELEVENLABS_HEARING_MODEL, config.language, {
+          audioFormat: `pcm_${SAMPLE_RATE}`,
+          commitStrategy: config.pushToTalk ? 'manual' : 'turn_prediction',
+          zeroRetention: false,
+        }),
+        headers,
+      );
+    } catch {
+      finish(null);
+      return;
+    }
+    probe.onmessage = (event) => {
+      if (typeof event.data !== 'string') return;
+      try {
+        const kind = stringOf(recordOf(JSON.parse(event.data) as unknown)['message_type']);
+        finish(kind === 'session_started' ? 'retention' : null);
+      } catch {
+        /* not JSON: wait for the next message or the timeout */
+      }
+    };
+    probe.onerror = () => finish(null);
+    probe.onclose = () => finish(null);
+  }
+
+  /**
+   * The hearing socket was refused at the door and a socket does not tell the HTTP status. One
+   * plain request (it sends nothing and costs nothing) asks whether the key is accepted at all, so
+   * a wrong key or an exhausted account is named instead of "refused".
+   */
+  async function diagnoseRefusal(): Promise<void> {
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), RETENTION_PROBE_TIMEOUT_MS);
+    stopProbe = () => abort.abort();
+    try {
+      const response = await doFetch(userHttpUrl(options.baseUrl), {
+        headers,
+        signal: abort.signal,
+      });
+      if (closed) return;
+      if (response.status === 401 || response.status === 403) fail('auth');
+      else if (response.status === 402 || response.status === 429) fail('quota');
+      else fail('refused');
+    } catch {
+      // Not even a plain request got through: the server cannot reach ElevenLabs.
+      if (!closed) fail('network');
+    } finally {
+      clearTimeout(timer);
+      stopProbe = null;
+    }
   }
 
   // ---- hearing ----------------------------------------------------------------------------
@@ -365,7 +501,12 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
       return;
     }
     if (FATAL_HEARING_EVENTS.has(kind)) {
-      fail();
+      fail(
+        failureOfHearingEvent(
+          kind,
+          `${stringOf(message['error'])} ${stringOf(message['message'])}`,
+        ),
+      );
       return;
     }
     if (kind === 'partial_transcript') {
@@ -401,13 +542,23 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
           headers,
         );
       } catch {
-        fail();
+        fail('network');
         return;
       }
       hearing = socket;
       socket.onmessage = (event) => onHearing(event.data);
-      socket.onerror = () => fail();
-      socket.onclose = () => fail();
+      // A socket reports an error and then a close; the close carries the code and the reason.
+      const reporter = createFailureReporter((clue) => {
+        if (closed) return;
+        const known = failureOfText(clue);
+        if (known) fail(known);
+        else if (ready) fail('dropped');
+        // Refused at the door with zero retention asked: find out whether that is the reason.
+        else if (zeroRetention) probeWithoutZeroRetention();
+        else void diagnoseRefusal();
+      });
+      socket.onerror = (event) => reporter.error(clueOfError(event));
+      socket.onclose = (event) => reporter.close(clueOfClose(event));
     },
     sendAudio(pcm) {
       if (closed || !hearing || !ready) return;
@@ -421,7 +572,7 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
           }),
         );
       } catch {
-        fail();
+        fail('dropped');
         return;
       }
       const seconds = pcm.length / BYTES_PER_SECOND;
@@ -452,7 +603,7 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
           }),
         );
       } catch {
-        fail();
+        fail('dropped');
         return false;
       }
       return true;
@@ -461,6 +612,7 @@ export function createElevenLabsPipelineEngine(options: PipelineEngineOptions): 
       if (closed) return;
       stopSpeaking();
       closed = true;
+      stopProbe?.();
       flushUsage();
       const socket = hearing;
       hearing = null;

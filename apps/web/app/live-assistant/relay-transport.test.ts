@@ -69,7 +69,7 @@ function handlers() {
     onServerEnded: () => events.push('serverEnded'),
     onSleep: () => events.push('sleep'),
     onWake: () => events.push('wake'),
-    onLost: () => events.push('lost'),
+    onLost: (failure) => events.push(failure ? `lost:${failure}` : 'lost'),
   };
   return { h, events };
 }
@@ -245,6 +245,16 @@ describe('the voice transport through the server', () => {
       expect(r.mic.calls.stopped).toBe(1);
       expect(r.spk.log.closed).toBe(1);
     }
+  });
+
+  it('hands the kind of failure the server gave to the page', async () => {
+    const r = rig();
+    const started = r.transport.start(r.live.h, r.session);
+    await r.tick();
+    r.socket.say({ type: 'ready' });
+    await started;
+    r.socket.say({ type: 'closed', reason: 'provider', failure: 'quota' });
+    expect(r.live.events).toEqual(['lost:quota']);
   });
 
   it('reports a link that drops by itself as lost, once', async () => {

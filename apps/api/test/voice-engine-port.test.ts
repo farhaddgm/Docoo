@@ -128,7 +128,11 @@ describe('the voice engine port (ADR-0057)', () => {
   it('closes both sides when the engine never gets ready', async () => {
     const { engine, client } = rig();
     await new Promise((resolve) => setTimeout(resolve, 70));
-    expect(client.json().at(-1)).toEqual({ type: 'closed', reason: 'provider' });
+    expect(client.json().at(-1)).toEqual({
+      type: 'closed',
+      reason: 'provider',
+      failure: 'timeout',
+    });
     expect(engine.closed).toBe(1);
     expect(client.closed).toBe(true);
   });
@@ -138,7 +142,10 @@ describe('the voice engine port (ADR-0057)', () => {
     engine.events.failed();
     engine.events.failed();
     expect(engine.closed).toBe(1);
-    expect(client.json().at(-1)).toEqual({ type: 'closed', reason: 'provider' });
+    expect(client.json().at(-1)).toEqual({
+      type: 'closed',
+      reason: 'provider',
+    });
   });
 
   it('carries a tool call to the executor and hands the engine a short answer', async () => {

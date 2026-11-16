@@ -8,7 +8,7 @@ import { useSyncExternalStore } from 'react';
 import { SectionTitle } from '../info-tip';
 import { formatNumber, type Locale } from '../i18n';
 import { LiveChat } from './live-chat';
-import { fill, liveMessagesFor } from './messages';
+import { fill, liveErrorText, liveMessagesFor } from './messages';
 import { isLiveActive } from './state';
 import { liveAssistant } from './store';
 
@@ -122,7 +122,7 @@ export function LiveCard({
       )}
       {state.error && (
         <p className="notice error" role="alert">
-          {text.card.errors[state.error]}
+          {liveErrorText(text, state)}
         </p>
       )}
       {state.tokens > 0 && (

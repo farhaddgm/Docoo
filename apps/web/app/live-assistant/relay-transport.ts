@@ -200,7 +200,7 @@ export function createRelayTransport(deps: RelayTransportDeps): LiveTransport {
               if (m.reason === 'cap' || m.reason === 'ended' || m.reason === 'superseded') {
                 handlers.onServerEnded?.();
               } else {
-                handlers.onLost();
+                handlers.onLost(m.failure);
               }
               return;
           }
