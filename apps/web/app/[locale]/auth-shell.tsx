@@ -234,9 +234,14 @@ export function AuthShell({
           </h1>
           <Wordmark />
           {view.kind === 'loading' && (
-            <p role="status" className="loading-line">
-              {content.checkingSession}
-            </p>
+            <div role="status" className="login-loader">
+              <span className="login-loader-dots" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+              <span className="login-loader-text">{content.checkingSession}</span>
+            </div>
           )}
           {view.kind === 'unavailable' && (
             <div className="login-stack" aria-live="polite">

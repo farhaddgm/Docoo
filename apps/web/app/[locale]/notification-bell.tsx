@@ -10,24 +10,36 @@ import { notificationMessages } from './notifications/notification-messages';
 
 const POLL_MS = 30_000;
 
+/**
+ * Every page mounts its own shell, so the bell is rebuilt on each navigation. The last known count
+ * lives here so the badge keeps its number across pages instead of dropping to zero and refilling.
+ */
+const lastUnread = new Map<string, { count: number; at: number }>();
+
 /** The notifications page fires this after it changes something, so the bell need not wait for its poll. */
 export const NOTIFICATIONS_CHANGED = 'docoo:notifications-changed';
 
 /** Header link to the notifications page with the number of unread ones (ADR-0025). */
 export function NotificationBell({ locale, workspaceId }: { locale: Locale; workspaceId: string }) {
   const text = notificationMessages(locale);
-  const [unread, setUnread] = useState(0);
+  const [unread, setUnread] = useState(() => lastUnread.get(workspaceId)?.count ?? 0);
 
   useEffect(() => {
     let active = true;
     const load = () => {
       if (document.hidden) return;
       apiGet<{ unread: number }>(`/workspaces/${workspaceId}/notifications/summary`)
-        .then((summary) => active && setUnread(summary.unread))
+        .then((summary) => {
+          lastUnread.set(workspaceId, { count: summary.unread, at: Date.now() });
+          // Same number: no state change, so the badge does not re-render.
+          if (active) setUnread(summary.unread);
+        })
         // A failed poll leaves the last number; the page itself says when it cannot load.
         .catch(() => undefined);
     };
-    load();
+    // A fresh enough count from the previous page is kept; the poll below refreshes it later.
+    const known = lastUnread.get(workspaceId);
+    if (!known || Date.now() - known.at >= POLL_MS) load();
     const timer = setInterval(load, POLL_MS);
     window.addEventListener(NOTIFICATIONS_CHANGED, load);
     return () => {

@@ -22,7 +22,6 @@ import { NotificationBell } from './notification-bell';
 import { sectionOpen } from './access';
 import type { SessionIdentity } from './signed-in';
 import { sidebarStorageKey } from '../theme';
-import { ThemePicker } from '../theme-toggle';
 import { Skeleton } from '../skeleton';
 
 /** Pages that exist; the others stay visible but disabled until their slice ships. */
@@ -327,7 +326,6 @@ export function AppShell({
         <NotificationBell locale={locale} workspaceId={workspaceId} />
       )}
       {showNavigation && workspaceId && isAdmin && <SmartToggle locale={locale} />}
-      {!showNavigation && <ThemePicker locale={locale} />}
       <a
         className="locale-link"
         href={localizedPath(pathname, alternate)}
