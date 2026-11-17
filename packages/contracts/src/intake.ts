@@ -77,19 +77,37 @@ export function fold(text: string): string {
   return Array.from(text, foldChar).join('');
 }
 
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+/** The words of a text with their positions; separators and punctuation between words are skipped. */
+function wordsWithPositions(text: string): { word: string; start: number; end: number }[] {
+  return [...text.matchAll(/[^\s.,!?؟،؛:]+/gu)].map((m) => ({
+    word: m[0],
+    start: m.index,
+    end: m.index + m[0].length,
+  }));
+}
 
-/** Where a quote is in the transcript, ignoring spacing, Arabic letter variants and digit scripts. */
+/**
+ * Where a quote is in the transcript, ignoring spacing, punctuation, Arabic letter variants and digit
+ * scripts. It compares whole words one after another (no pattern built from the quote), so a long
+ * or odd quote can never make the search slow.
+ */
 export function findQuoteSpan(transcript: string, quote: string): Span | null {
-  const words = fold(quote)
-    .split(/\s+/u)
-    .filter(Boolean)
-    // A recogniser or a model may add or drop final punctuation.
-    .map((word, i, all) => (i === all.length - 1 ? word.replace(/[.,!?؟،؛:]+$/u, '') : word));
-  if (words.join('').length < 4) return null;
-  const pattern = new RegExp(words.map(escapeRegExp).join('[\\s.,!?؟،؛:]+'), 'u');
-  const match = pattern.exec(fold(transcript));
-  return match ? { start: match.index, end: match.index + match[0].length } : null;
+  const wanted = wordsWithPositions(fold(quote)).map((w) => w.word);
+  if (wanted.join('').length < 4) return null;
+  const have = wordsWithPositions(fold(transcript));
+  for (let i = 0; i + wanted.length <= have.length; i += 1) {
+    if (wanted.every((word, k) => have[i + k]?.word === word)) {
+      return { start: have[i]!.start, end: have[i + wanted.length - 1]!.end };
+    }
+  }
+  return null;
+}
+
+/** Text without the given characters at its end, in one pass (no pattern, so no backtracking). */
+function trimEnd(text: string, chars: string): string {
+  let end = text.length;
+  while (end > 0 && chars.includes(text[end - 1] as string)) end -= 1;
+  return text.slice(0, end);
 }
 
 export interface Figure {
@@ -164,7 +182,7 @@ export function findFigures(transcript: string): Figure[] {
   const folded = transcript;
   const out: Figure[] = [];
   for (const match of folded.matchAll(FIGURE)) {
-    const value = match[0].trim().replace(/[.,٬٫،]+$/u, '');
+    const value = trimEnd(match[0].trim(), '.,٬٫،');
     if (!value) continue;
     const kind = /(?:درصد|٪|%)/u.test(value)
       ? 'percent'

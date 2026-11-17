@@ -27,6 +27,17 @@ describe('quotes in a transcript', () => {
   });
 });
 
+describe('hostile input', () => {
+  it('stays fast on long runs of punctuation in quotes, transcripts and figures', () => {
+    const noise = '!'.repeat(50_000) + ','.repeat(50_000);
+    const started = Date.now();
+    expect(findQuoteSpan(`${noise} سلام دنیا ${noise}`, `سلام دنیا${noise}`)).not.toBeNull();
+    expect(findQuoteSpan(noise, `${noise} کلمه`)).toBeNull();
+    findFigures(`۱۲${','.repeat(50_000)} ${'٬'.repeat(50_000)}x`);
+    expect(Date.now() - started).toBeLessThan(2000);
+  });
+});
+
 describe('figures found by code', () => {
   it('finds digits, percentages and number words with their unit', () => {
     const figures = findFigures(transcript);
