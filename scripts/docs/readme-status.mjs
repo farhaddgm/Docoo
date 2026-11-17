@@ -31,11 +31,15 @@ export function collectFacts({ packageJson, changelog, manifest, adrFiles }) {
 }
 
 export function renderBlock(facts) {
+  // Blank lines around the list are what Prettier writes next to an HTML comment, so the block is
+  // already in its formatted shape and `format:check` and `--check` can never disagree.
   return [
     BEGIN,
+    '',
     `- نسخهٔ فعلی: ${facts.version} (${facts.date}). فهرست هر نسخه در [CHANGELOG](CHANGELOG.md) است و وضعیت هر قابلیت در [فهرست مستندات](docs/README.md).`,
     `- مستندات: ${fa(facts.documents)} سند در manifest و ${fa(facts.adrs)} تصمیم معماری (ADR) در \`docs/adr\`.`,
     `- هر نیازمندی FR/NFR وضعیت صادقانهٔ خود را در \`qa/traceability.json\` دارد (\`pnpm qa:trace\`).`,
+    '',
     END,
   ].join('\n');
 }

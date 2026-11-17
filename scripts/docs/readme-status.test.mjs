@@ -39,3 +39,10 @@ test('the block is replaced in place and everything around it is kept', () => {
 test('a README without markers is an error, not a silent no-op', () => {
   assert.throws(() => replaceBlock('no markers', 'x'), /no status block/u);
 });
+
+test('the block already has the shape Prettier gives it, so formatting never makes it stale', () => {
+  const block = renderBlock(collectFacts(base));
+  const lines = block.split('\n');
+  assert.equal(lines[1], '');
+  assert.equal(lines.at(-2), '');
+});
