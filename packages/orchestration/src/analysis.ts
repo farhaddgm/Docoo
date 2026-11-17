@@ -16,6 +16,7 @@ import {
   type QuestionStatus,
   type BusinessPrompt,
   dataBlock,
+  EXPRESS_ANALYST_RULES,
 } from '@docoo/domain';
 import { ProviderError, type JsonSchema } from '@docoo/providers';
 
@@ -252,16 +253,6 @@ export interface RoundSummary {
   readonly understood: string;
   readonly nextAmbiguity: string;
 }
-
-/**
- * The express depth of a quick draft (ADR-0066): five areas, not thirty questions. Ask the fewest
- * questions that cover them, and never pad to reach a count.
- */
-export const EXPRESS_ANALYST_RULES: readonly string[] = [
-  'This is an express draft: ask only about the five areas goal, scope (context), constraints (budget, time and resources), success criteria and who is affected (stakeholders), in that order of priority. Do not ask about anything else.',
-  'Ask one sharp question per area and a follow-up only when the answer leaves that area unusable. Never add a question just to reach a number; set "sufficient" to true as soon as the five areas can be written down without guessing.',
-  'Whatever the manager could not answer must stay an explicit assumption or an open question in the draft; never fill it in.',
-];
 
 export interface AnalysisContext {
   readonly profile?: AnalysisProfile;

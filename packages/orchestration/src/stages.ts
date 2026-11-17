@@ -18,11 +18,12 @@ import {
   type AgentDefinitionContent,
   type BusinessPrompt,
   dataBlock,
+  EXPRESS_ANALYST_RULES,
 } from '@docoo/domain';
 import type { ProblemPatternDefinition } from '@docoo/contracts';
 import type { JsonSchema } from '@docoo/providers';
 
-import { EXPRESS_ANALYST_RULES, type AnalysisContext } from './analysis.js';
+import type { AnalysisContext } from './analysis.js';
 import type { PromptDeliverable } from './deliverables.js';
 import type { WebPromptItem } from './research.js';
 import type { KnowledgePromptItem } from './research.js';

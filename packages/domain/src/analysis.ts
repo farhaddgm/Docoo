@@ -49,6 +49,16 @@ export function analysisLimits(
   return depth === 'express' ? EXPRESS_ANALYSIS_LIMITS : QUICK_ANALYSIS_LIMITS;
 }
 
+/**
+ * The express depth of a quick draft (ADR-0066): five areas, not thirty questions. Ask the fewest
+ * questions that cover them, and never pad to reach a count.
+ */
+export const EXPRESS_ANALYST_RULES: readonly string[] = [
+  'This is an express draft: ask only about the five areas goal, scope (context), constraints (budget, time and resources), success criteria and who is affected (stakeholders), in that order of priority. Do not ask about anything else.',
+  'Ask one sharp question per area and a follow-up only when the answer leaves that area unusable. Never add a question just to reach a number; set "sufficient" to true as soon as the five areas can be written down without guessing.',
+  'Whatever the manager could not answer must stay an explicit assumption or an open question in the draft; never fill it in.',
+];
+
 /** The five areas an express draft must have asked about: goal, scope, limits, success and who is affected. */
 export const expressRequiredCategories: readonly QuestionCategory[] = [
   'goal',
