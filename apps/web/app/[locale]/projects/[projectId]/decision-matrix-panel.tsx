@@ -414,7 +414,7 @@ export function DecisionMatrixPanel({
 
           <div className="table-wrap">
             <table>
-              <caption className="sr-only">{t.tableCaption}</caption>
+              <caption className="visually-hidden">{t.tableCaption}</caption>
               <thead>
                 <tr>
                   <th scope="col">{t.solution}</th>

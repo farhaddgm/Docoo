@@ -167,7 +167,7 @@ export function CritiquePanel({
       {solutions.map((solution) => {
         const view = results[solution.id];
         return (
-          <article key={solution.id} className="card stack">
+          <div key={solution.id} className="card stack">
             <h3 dir={textDir(locale)}>{solution.title}</h3>
             <div className="toolbar">
               <button
@@ -267,7 +267,7 @@ export function CritiquePanel({
                 })}
               </>
             )}
-          </article>
+          </div>
         );
       })}
     </section>
