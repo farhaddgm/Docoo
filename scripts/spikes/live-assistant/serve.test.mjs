@@ -77,8 +77,13 @@ test('session: forwards the browser offer with the key and returns the answer an
   const upstream = upstreamCalls.at(-1);
   assert.equal(upstream.url, 'https://api.openai.com/v1/realtime/calls');
   assert.equal(upstream.init.headers.Authorization, `Bearer ${KEY}`);
-  assert.equal(await upstream.init.body.get('sdp').text(), 'v=0 offer sdp');
-  const session = JSON.parse(await upstream.init.body.get('session').text());
+  // Plain form fields with a content type, as curl's `-F "sdp=<-;type=application/sdp"`: no filename.
+  const form = await new Response(upstream.init.body, {
+    headers: { 'content-type': upstream.init.headers['content-type'] },
+  }).formData();
+  assert.ok(!/filename=/u.test(upstream.init.body), 'parts are fields, not file uploads');
+  assert.equal(form.get('sdp'), 'v=0 offer sdp');
+  const session = JSON.parse(form.get('session'));
   assert.equal(session.model, 'some-realtime-model');
   assert.equal(session.audio.output.voice, 'v1');
   assert.deepEqual(

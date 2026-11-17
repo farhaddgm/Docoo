@@ -23,7 +23,12 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { hasPrices } from './lib/cost.mjs';
-import { buildCallForm, buildSessionConfig, INSTRUCTIONS_FA, SPIKE_TOOLS } from './lib/session.mjs';
+import {
+  buildCallRequest,
+  buildSessionConfig,
+  INSTRUCTIONS_FA,
+  SPIKE_TOOLS,
+} from './lib/session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const UPSTREAM = 'https://api.openai.com';
@@ -138,10 +143,11 @@ export function createSpikeServer({
         language: body.language ? String(body.language) : 'fa',
         override: sessionOverride,
       });
+      const call = buildCallRequest(body.sdp, session);
       const result = await fetchImpl(`${upstream}/v1/realtime/calls`, {
         method: 'POST',
-        headers: auth(),
-        body: buildCallForm(body.sdp, session),
+        headers: { ...auth(), 'content-type': call.contentType },
+        body: call.body,
       });
       const text = await result.text();
       if (!result.ok) {
