@@ -18,6 +18,9 @@ import {
   DEFAULT_LEVEL_BOUNDS,
   DOCUMENT_TEMPLATES,
   TEMPLATE_KEYS,
+  buildMeetingMinutes,
+  buildOfficialLetter,
+  renderDocx,
 } from '@docoo/documents';
 import { STAGES } from '@docoo/orchestration';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -60,6 +63,67 @@ const selectSchema = z
   .strict();
 const sensitivitySchema = z
   .object({ criterionKey: z.string().min(1).max(64), weight: z.number().int().min(0).max(100) })
+  .strict();
+const party = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    title: z.string().trim().max(200).optional(),
+    organization: z.string().trim().max(200).optional(),
+  })
+  .strict();
+const isoInstant = z.iso.datetime({ offset: true });
+const line = z.string().trim().max(2000);
+const letterExportSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('letter'),
+      language: z.enum(['fa', 'en']).default('fa'),
+      number: z.string().trim().max(60).optional(),
+      date: isoInstant,
+      subject: z.string().trim().min(1).max(300),
+      recipient: party,
+      sender: party,
+      body: z.array(line).min(1).max(60),
+      attachments: z.array(line).max(30).optional(),
+      copies: z.array(line).max(30).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('minutes'),
+      language: z.enum(['fa', 'en']).default('fa'),
+      title: z.string().trim().min(1).max(300),
+      date: isoInstant,
+      place: z.string().trim().max(200).optional(),
+      attendees: z.array(line).min(1).max(100),
+      agenda: z.array(line).max(60),
+      decisions: z
+        .array(
+          z
+            .object({
+              text: line.min(1),
+              owner: z.string().trim().max(200).optional(),
+              due: isoInstant.optional(),
+            })
+            .strict(),
+        )
+        .max(100),
+      nextMeeting: isoInstant.optional(),
+    })
+    .strict(),
+]);
+const decisionMatrixSchema = z
+  .object({
+    mode: z.enum(['free', 'ordinal', 'fixed']).default('free'),
+    weightOrder: z.array(z.string().min(1).max(64)).min(1).max(30).optional(),
+    weights: z.record(z.string().min(1).max(64), z.number().int().min(0).max(100)).optional(),
+    // Weights from the order of importance alone (rank-order centroid); needs `weightOrder`.
+    applyRoc: z.boolean().default(false),
+    minimums: z.record(z.string().min(1).max(64), z.number().int().min(1).max(5)).optional(),
+    scoreSpread: z.number().min(0).max(2).default(0),
+    iterations: z.number().int().min(100).max(20000).default(4000),
+    seed: z.number().int().min(0).max(2_147_483_647).default(1),
+  })
   .strict();
 const decisionSchema = z
   .object({
@@ -232,6 +296,40 @@ export class DocumentsController {
         id(raw),
         parse(sensitivitySchema, body),
       ),
+    };
+  }
+
+  @Post('projects/:projectId/solutions/decision-matrix')
+  @HttpCode(200)
+  @RequireWorkspacePermission('project.read')
+  async decisionMatrix(
+    @Req() request: FastifyRequest,
+    @Param('projectId') raw: string,
+    @Body() body: unknown,
+  ) {
+    return {
+      decisionMatrix: await this.solutions.decisionMatrix(
+        workspaceContext(request),
+        id(raw),
+        parse(decisionMatrixSchema, body),
+      ),
+    };
+  }
+
+  @Post('projects/:projectId/solutions/:solutionId/critique')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Evidence-grounded critique of one solution; never changes scores or choices',
+  })
+  @UsesAi()
+  @RequireWorkspacePermission('project.run')
+  async critique(
+    @Req() request: FastifyRequest,
+    @Param('projectId') raw: string,
+    @Param('solutionId') solutionId: string,
+  ) {
+    return {
+      critique: await this.solutions.critique(workspaceContext(request), id(raw), id(solutionId)),
     };
   }
 
@@ -628,6 +726,41 @@ export class DocumentsController {
   }
 
   // ------------------------------------------------------------ evaluation (EVA-001/002)
+
+  @Post('letters/export')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Official letter or meeting minutes from typed fields, as a DOCX (nothing is stored)',
+  })
+  @RequireWorkspacePermission('document.export')
+  exportLetter(
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+    @Body() body: unknown,
+  ) {
+    const input = parse(letterExportSchema, body);
+    let document;
+    try {
+      document = input.kind === 'letter' ? buildOfficialLetter(input) : buildMeetingMinutes(input);
+    } catch (error) {
+      throw badRequest(
+        'LETTER_INVALID',
+        error instanceof Error ? error.message : 'The letter could not be built.',
+      );
+    }
+    const bytes = renderDocx(document, {
+      documentId: `${input.kind}-${request.id}`,
+      version: 1,
+      createdAt: input.date,
+    });
+    reply.header(
+      'content-type',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    reply.header('content-disposition', `attachment; filename="${input.kind}.docx"`);
+    reply.header('x-content-type-options', 'nosniff');
+    return Buffer.from(bytes);
+  }
 
   @Get('projects/:projectId/rubric')
   @ApiOperation({ summary: 'Active evaluation rubric (project override or system)' })

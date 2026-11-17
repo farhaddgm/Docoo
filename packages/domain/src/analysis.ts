@@ -26,9 +26,47 @@ export const QUICK_ANALYSIS_LIMITS = {
 
 export type AnalysisProfile = 'full' | 'quick';
 
-export function analysisLimits(profile: AnalysisProfile): AnalysisLimits {
-  return profile === 'quick' ? QUICK_ANALYSIS_LIMITS : ANALYSIS_LIMITS;
+/**
+ * How deep a quick draft goes. `express` (ADR-0066) is the shortest: five to ten questions, asked
+ * until the five areas that decide a first draft are covered. It is only ever a depth of the quick
+ * profile, so every rule of an incomplete draft (level 1 documents, the warning, the way on to the
+ * full analysis) applies to it unchanged.
+ */
+export const analysisDepths = ['standard', 'express'] as const;
+export type AnalysisDepth = (typeof analysisDepths)[number];
+
+export const EXPRESS_ANALYSIS_LIMITS = {
+  minimumQuestions: 5,
+  maximumQuestions: 10,
+  batchSize: 10,
+} as const;
+
+export function analysisLimits(
+  profile: AnalysisProfile,
+  depth: AnalysisDepth = 'standard',
+): AnalysisLimits {
+  if (profile !== 'quick') return ANALYSIS_LIMITS;
+  return depth === 'express' ? EXPRESS_ANALYSIS_LIMITS : QUICK_ANALYSIS_LIMITS;
 }
+
+/**
+ * The express depth of a quick draft (ADR-0066): five areas, not thirty questions. Ask the fewest
+ * questions that cover them, and never pad to reach a count.
+ */
+export const EXPRESS_ANALYST_RULES: readonly string[] = [
+  'This is an express draft: ask only about the five areas goal, scope (context), constraints (budget, time and resources), success criteria and who is affected (stakeholders), in that order of priority. Do not ask about anything else.',
+  'Ask one sharp question per area and a follow-up only when the answer leaves that area unusable. Never add a question just to reach a number; set "sufficient" to true as soon as the five areas can be written down without guessing.',
+  'Whatever the manager could not answer must stay an explicit assumption or an open question in the draft; never fill it in.',
+];
+
+/** The five areas an express draft must have asked about: goal, scope, limits, success and who is affected. */
+export const expressRequiredCategories: readonly QuestionCategory[] = [
+  'goal',
+  'context',
+  'constraint',
+  'success_criteria',
+  'stakeholder',
+];
 
 /**
  * Coverage dimensions. The first eight are those FR-ANL-004 names; risk and out-of-scope come
@@ -69,7 +107,10 @@ export const requiredQuestionCategories: readonly QuestionCategory[] = [
 export function requiredCategoriesFor(extra: {
   readonly risk?: boolean | undefined;
   readonly outOfScope?: boolean | undefined;
+  /** An express draft only needs its five areas; the administrator's extra dimensions wait for the full analysis. */
+  readonly depth?: AnalysisDepth | undefined;
 }): readonly QuestionCategory[] {
+  if (extra.depth === 'express') return expressRequiredCategories;
   return [
     ...requiredQuestionCategories,
     ...(extra.risk === true ? (['risk'] as const) : []),

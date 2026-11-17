@@ -1,4 +1,5 @@
 import { walkBlocks, type Block, type StructuredDocument } from './model.js';
+import { documentDateLine } from './jalali.js';
 
 export function escapeHtml(text: string): string {
   return text.replace(
@@ -95,7 +96,7 @@ function blockHtml(block: Block, numbers: Map<string, number>): string {
 /** Print-safe HTML with the document direction; input for the PDF renderer. */
 export function renderHtml(
   document: StructuredDocument,
-  meta: { documentId: string; version: number },
+  meta: { documentId: string; version: number; createdAt?: string },
 ): string {
   const numbers = citationNumbers(document);
   const dir = document.language === 'fa' ? 'rtl' : 'ltr';
@@ -108,6 +109,6 @@ h1 { font-size: 20pt; } h2 { font-size: 15pt; } h3 { font-size: 13pt; } h4 { fon
 table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #999; padding: 4px 6px; text-align: start; }
 thead { display: table-header-group; } caption { caption-side: top; font-weight: bold; text-align: start; }
 .page-break { break-after: page; } .callout { border-inline-start: 4px solid #2f6f8f; padding: 4px 10px; }
-.cite { font-size: 8pt; } figure { margin: 8px 0; } .asset { border: 1px dashed #999; padding: 16px; }
-</style></head><body><h1>${escapeHtml(document.title)}</h1>${document.blocks.map((block) => blockHtml(block, numbers)).join('')}</body></html>`;
+.doc-meta { color: #555; font-size: 10pt; margin-top: -8px; } .cite { font-size: 8pt; } figure { margin: 8px 0; } .asset { border: 1px dashed #999; padding: 16px; }
+</style></head><body><h1>${escapeHtml(document.title)}</h1>${meta.createdAt ? `<p class="doc-meta">${escapeHtml(documentDateLine(document.language, meta.createdAt, meta.version))}</p>` : ''}${document.blocks.map((block) => blockHtml(block, numbers)).join('')}</body></html>`;
 }

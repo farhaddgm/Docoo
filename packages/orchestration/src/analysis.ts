@@ -4,6 +4,7 @@ import {
   EXPECTED_OUTPUT_ANALYST_RULES,
   EXPLORATION_ANALYST_RULES,
   type AnalysisLimits,
+  type AnalysisDepth,
   type AnalysisProfile,
   composeInstructions,
   contradictionKey,
@@ -15,6 +16,7 @@ import {
   type QuestionStatus,
   type BusinessPrompt,
   dataBlock,
+  EXPRESS_ANALYST_RULES,
 } from '@docoo/domain';
 import { ProviderError, type JsonSchema } from '@docoo/providers';
 
@@ -254,6 +256,7 @@ export interface RoundSummary {
 
 export interface AnalysisContext {
   readonly profile?: AnalysisProfile;
+  readonly depth?: AnalysisDepth;
   readonly limits?: AnalysisLimits;
   readonly round: number;
   readonly asked: number;
@@ -322,6 +325,9 @@ export function roundPrompt(input: RoundRequestInput): { instructions: string; m
         ? [
             'This is an optional incomplete quick draft. Keep all unresolved critical ambiguity explicit; no complete analysis or final quality approval is implied.',
           ]
+        : []),
+      ...(analysis.profile === 'quick' && analysis.depth === 'express'
+        ? EXPRESS_ANALYST_RULES
         : []),
       'Cover first any dimension listed in coverageGaps, then deepen the dimensions with unanswered or "later" questions.',
       'Set "sufficient" to true only when the problem can be defined without guessing; then propose no questions.',

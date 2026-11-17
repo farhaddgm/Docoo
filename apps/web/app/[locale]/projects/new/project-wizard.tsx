@@ -14,6 +14,7 @@ import {
 import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { liveMessagesFor } from '../../../live-assistant/messages';
 import { highlightFields } from '../../../live-assistant/screen';
+import { NarrativeIntake, type IntakeFill } from './narrative-intake';
 import {
   filledFields,
   NEW_PROJECT_IDS,
@@ -60,6 +61,8 @@ import {
   STEP_COUNT,
   changedInSection,
   migrateDraftStep,
+  pathOf,
+  valuesOfPath,
   reachableSteps,
   seedFields,
   shouldApplySeed,
@@ -462,6 +465,8 @@ export function ProjectWizard({
             : {}),
           outputLanguage: values.outputLanguage,
           analysisProfile: values.analysisProfile ?? 'full',
+          analysisDepth:
+            values.analysisProfile === 'quick' ? (values.analysisDepth ?? 'standard') : 'standard',
           ...(kind === 'exploration' ? { kind } : {}),
           topics: values.topics.map((topic) => ({
             topicId: topic.topicId,
@@ -539,6 +544,20 @@ export function ProjectWizard({
     highlightFields(fields.map((field) => NEW_PROJECT_IDS[field]));
   }
   useAssistantForm('new_project', ready, applyAssistantFill);
+
+  /** The told story, read and confirmed, goes into the basics the way typing would. */
+  function applyIntake(fill: IntakeFill, options?: { express?: boolean }) {
+    const blank = emptyProject(locale);
+    if (options?.express) setValues((current) => ({ ...current, ...valuesOfPath('express') }));
+    for (const field of ['title', 'initialProblem', 'description'] as const) {
+      if (fill[field]) changeBasics({ ...blank, [field]: fill[field] }, field);
+    }
+    highlightFields(
+      (['title', 'initialProblem', 'description'] as const)
+        .filter((field) => fill[field])
+        .map((field) => NEW_PROJECT_IDS[field]),
+    );
+  }
 
   const stepName = text.steps[step]!;
   const modelChanged = connectionId !== '' && model !== '';
@@ -714,6 +733,9 @@ export function ProjectWizard({
                 </Link>
               </p>
             )}
+            {!seed && (
+              <NarrativeIntake locale={locale} workspaceId={workspaceId} onApply={applyIntake} />
+            )}
             <BasicsFields locale={locale} values={values} onChange={changeBasics} />
             <div className="filter-grid">
               <FieldLabel
@@ -839,18 +861,19 @@ export function ProjectWizard({
               </FieldLabel>
               <select
                 id="analysis-profile"
-                value={values.analysisProfile ?? 'full'}
+                value={pathOf(values)}
                 aria-describedby="analysis-profile-help"
-                onChange={(event) =>
-                  setValues({ ...values, analysisProfile: event.target.value as 'full' | 'quick' })
-                }
+                onChange={(event) => setValues({ ...values, ...valuesOfPath(event.target.value) })}
               >
                 <option value="full">{quickDraftMessages(locale).full}</option>
                 <option value="quick">{quickDraftMessages(locale).quick}</option>
+                <option value="express">{quickDraftMessages(locale).express}</option>
               </select>
               {values.analysisProfile === 'quick' && (
                 <p className="notice" role="status">
                   {quickDraftMessages(locale).warning}
+                  {values.analysisDepth === 'express' &&
+                    ` ${quickDraftMessages(locale).expressHelp}`}
                 </p>
               )}
             </div>
@@ -1125,9 +1148,11 @@ function Review({
         <div>
           <dt>{quickDraftMessages(locale).profile}</dt>
           <dd>
-            {values.analysisProfile === 'quick'
-              ? quickDraftMessages(locale).quick
-              : quickDraftMessages(locale).full}
+            {pathOf(values) === 'express'
+              ? quickDraftMessages(locale).express
+              : values.analysisProfile === 'quick'
+                ? quickDraftMessages(locale).quick
+                : quickDraftMessages(locale).full}
           </dd>
         </div>
         <div>

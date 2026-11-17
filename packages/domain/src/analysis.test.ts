@@ -12,6 +12,8 @@ import {
   coverageReport,
   dedupeQuestions,
   decideRound,
+  EXPRESS_ANALYSIS_LIMITS,
+  expressRequiredCategories,
   isBatchComplete,
   isQuestionCategory,
   isUnresolved,
@@ -398,5 +400,62 @@ describe('answers (FR-ANL-003)', () => {
     expect(isBatchComplete(['answered', 'later', 'irrelevant', 'unanswered'])).toBe(true);
     expect(isBatchComplete(['answered', 'open'])).toBe(false);
     expect(isBatchComplete([])).toBe(false);
+  });
+});
+
+describe('express depth of the quick draft (ADR-0066)', () => {
+  it('asks five to ten questions in one batch and only exists as a depth of the quick profile', () => {
+    expect(analysisLimits('quick', 'express')).toEqual({
+      minimumQuestions: 5,
+      maximumQuestions: 10,
+      batchSize: 10,
+    });
+    expect(analysisLimits('quick')).toEqual({
+      minimumQuestions: 12,
+      maximumQuestions: 15,
+      batchSize: 12,
+    });
+    expect(analysisLimits('quick', 'standard')).toEqual(analysisLimits('quick'));
+    // A full analysis is never shortened by a stale depth.
+    expect(analysisLimits('full', 'express')).toEqual(ANALYSIS_LIMITS);
+    expect(EXPRESS_ANALYSIS_LIMITS.batchSize).toBeLessThanOrEqual(
+      EXPRESS_ANALYSIS_LIMITS.maximumQuestions,
+    );
+  });
+
+  it('needs only its five areas, and not the administrator’s extra dimensions', () => {
+    expect([...expressRequiredCategories].sort()).toEqual(
+      ['constraint', 'context', 'goal', 'stakeholder', 'success_criteria'].sort(),
+    );
+    expect(requiredCategoriesFor({ depth: 'express', risk: true, outOfScope: true })).toEqual(
+      expressRequiredCategories,
+    );
+    expect(requiredCategoriesFor({ depth: 'standard' })).toEqual(requiredQuestionCategories);
+    expect(requiredCategoriesFor({ risk: true })).toContain('risk');
+  });
+
+  it('can define after five questions once its five areas are covered, never earlier', () => {
+    const limits = analysisLimits('quick', 'express');
+    const facts = (over: Partial<RoundFacts>): RoundFacts => ({
+      asked: 5,
+      newQuestionCount: 0,
+      finishRequested: false,
+      modelSufficient: true,
+      coverageGaps: [],
+      ...over,
+    });
+    expect(decideRound(facts({}), limits)).toEqual({ action: 'define', reason: 'sufficient' });
+    expect(decideRound(facts({ asked: 4, newQuestionCount: 2 }), limits)).toEqual({
+      action: 'ask',
+      reason: 'minimum',
+    });
+    expect(decideRound(facts({ coverageGaps: ['goal'], newQuestionCount: 1 }), limits)).toEqual({
+      action: 'ask',
+      reason: 'coverage',
+    });
+    expect(decideRound(facts({ asked: 10, modelSufficient: false }), limits)).toEqual({
+      action: 'define',
+      reason: 'maximum_reached',
+    });
   });
 });

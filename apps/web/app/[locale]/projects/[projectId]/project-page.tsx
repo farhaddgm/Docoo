@@ -289,6 +289,7 @@ function ProjectView({
         {project.analysisProfile === 'quick' && (
           <p className="notice" role="status">
             {quickDraftMessages(locale).warning}
+            {project.analysisDepth === 'express' && ` · ${quickDraftMessages(locale).express}`}
           </p>
         )}
         {project.pauseReason && (

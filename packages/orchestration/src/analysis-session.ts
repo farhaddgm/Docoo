@@ -1,4 +1,4 @@
-import { analysisLimits, type AnalysisProfile } from '@docoo/domain';
+import { analysisLimits, type AnalysisDepth, type AnalysisProfile } from '@docoo/domain';
 import type { PoolClient } from 'pg';
 
 /** Retain prior quick questions by reference, without copying or renumbering their identities. */
@@ -7,11 +7,12 @@ export async function analysisSession(client: PoolClient, id: string) {
     await client.query<{
       id: string;
       analysis_profile: AnalysisProfile;
+      analysis_depth: AnalysisDepth;
       continued_from_session_id: string | null;
       source_profile: string | null;
       source_status: string | null;
     }>(
-      `select s.id,s.analysis_profile,s.continued_from_session_id,
+      `select s.id,s.analysis_profile,s.analysis_depth,s.continued_from_session_id,
               prior.analysis_profile as source_profile,r.status::text as source_status
          from analysis_sessions s
          left join analysis_sessions prior on prior.id=s.continued_from_session_id
@@ -30,7 +31,8 @@ export async function analysisSession(client: PoolClient, id: string) {
     throw new Error('Analysis continuation is unavailable.');
   return {
     profile: row.analysis_profile,
-    limits: analysisLimits(row.analysis_profile),
+    depth: row.analysis_depth,
+    limits: analysisLimits(row.analysis_profile, row.analysis_depth),
     sessionIds: row.continued_from_session_id ? [id, row.continued_from_session_id] : [id],
   };
 }

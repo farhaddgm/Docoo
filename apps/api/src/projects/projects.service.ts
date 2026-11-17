@@ -12,6 +12,7 @@ import {
   type ProjectCommand,
   type ProjectNextAction,
   type ProjectStatus,
+  type AnalysisDepth,
   type AnalysisProfile,
 } from '@docoo/domain';
 import type { PoolClient, QueryResultRow } from 'pg';
@@ -62,6 +63,7 @@ export type ProjectKind = 'standard' | 'exploration';
 export interface Project {
   readonly kind: ProjectKind;
   readonly analysisProfile: AnalysisProfile;
+  readonly analysisDepth: AnalysisDepth;
   readonly id: string;
   readonly workspaceId: string;
   readonly code: string;
@@ -131,6 +133,7 @@ export interface TopicLinkInput {
 export interface CreateProjectInput {
   readonly kind?: ProjectKind;
   readonly analysisProfile?: AnalysisProfile;
+  readonly analysisDepth?: AnalysisDepth;
   readonly code: string;
   readonly title: string;
   readonly description: string;
@@ -222,6 +225,7 @@ export interface TimelineEntry {
 interface ProjectRow extends QueryResultRow {
   kind: ProjectKind;
   analysis_profile: AnalysisProfile;
+  analysis_depth: AnalysisDepth;
   analysis_continuation_session_id: string | null;
   id: string;
   workspace_id: string;
@@ -277,7 +281,7 @@ interface LinkRow extends QueryResultRow {
 }
 
 const projectColumns = `
-  id, workspace_id, code, title, description, initial_problem, expected_output, output_language, status, kind, analysis_profile,analysis_continuation_session_id,
+  id, workspace_id, code, title, description, initial_problem, expected_output, output_language, status, kind, analysis_profile,analysis_depth,analysis_continuation_session_id,
   previous_status, current_stage, pause_reason, config_snapshot_id, cloned_from_id, origin_kind,
   origin_exploration_id, origin_candidate_key, origin_project_id, origin_solution_id,
   (select o.title from projects o where o.id = origin_project_id) as origin_project_title,
@@ -518,6 +522,11 @@ export class ProjectsService {
       input.solutionCriteria ?? (input.kind === 'exploration' ? EXPLORATION_CRITERIA : undefined);
     const criteriaIssue = criteria ? criteriaProblem(criteria) : null;
     if (criteriaIssue) throw badRequest('SOLUTION_CRITERIA_INVALID', criteriaIssue);
+    if (input.analysisDepth === 'express' && input.analysisProfile !== 'quick')
+      throw badRequest(
+        'PROJECT_EXPRESS_NEEDS_QUICK_DRAFT',
+        'The express depth is only a depth of the quick draft.',
+      );
     const problemTemplate = input.problemTemplateId
       ? candidateProblemTemplates.find(({ id }) => id === input.problemTemplateId)
       : null;
@@ -574,9 +583,9 @@ export class ProjectsService {
              insert into projects (
                workspace_id, code, title, description, initial_problem, problem_template_snapshot,
                problem_pattern_snapshot,
-               output_language, created_by, analysis_profile, expected_output,
+               output_language, created_by, analysis_profile, analysis_depth, expected_output,
                kind, origin_project_id, origin_solution_id
-             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, $13, $14)
+             ) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, $13, $14, $15)
              returning *
            )
            select ${projectColumns} from inserted`,
@@ -591,6 +600,7 @@ export class ProjectsService {
             input.outputLanguage,
             context.actorId,
             input.analysisProfile ?? 'full',
+            input.analysisDepth ?? 'standard',
             input.expectedOutput ?? '',
             input.kind ?? 'standard',
             dimension?.projectId ?? null,
@@ -905,7 +915,7 @@ export class ProjectsService {
         );
       const snapshot = await this.configService.snapshot(client, context, 'project', projectId);
       await client.query(
-        `update projects set analysis_profile='full',analysis_continuation_session_id=$2,
+        `update projects set analysis_profile='full',analysis_depth='standard',analysis_continuation_session_id=$2,
          approved_problem_version_id=null,status='active',previous_status=null,current_stage='analysis',
          pause_reason=null,config_snapshot_id=$3,version=version+1,updated_at=now() where id=$1`,
         [projectId, prior.id, snapshot.id],
@@ -918,6 +928,7 @@ export class ProjectsService {
         reason: input.reason,
         before: {
           analysisProfile: 'quick',
+          analysisDepth: current.analysis_depth,
           approvedProblemVersionId: current.approved_problem_version_id,
         },
         after: {
@@ -1402,6 +1413,7 @@ export class ProjectsService {
     return {
       kind: row.kind,
       analysisProfile: row.analysis_profile,
+      analysisDepth: row.analysis_depth,
       id: row.id,
       workspaceId: row.workspace_id,
       code: row.code,

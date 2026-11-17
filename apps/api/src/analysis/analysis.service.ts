@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import {
   analysisLimits,
+  type AnalysisDepth,
   type AnalysisProfile,
   prioritizeAnalysisQuestions,
   analysisProgress,
@@ -41,6 +42,7 @@ export interface Attachment {
 
 interface CurrentRow extends QueryResultRow {
   analysis_profile: AnalysisProfile | null;
+  analysis_depth: AnalysisDepth | null;
   run_id: string;
   run_no: number;
   workflow_id: string;
@@ -89,7 +91,7 @@ const currentSelect = `
   select r.id as run_id, r.run_no, r.temporal_workflow_id as workflow_id, sr.id as stage_run_id,
          sr.status::text as stage_status, sr.latest_output_id, sr.passed_by_decision,
          s.id as session_id, r.analysis_continuation_session_id as continuation_session_id,
-         s.minimum_questions, s.maximum_questions, s.batch_size,coalesce(s.analysis_profile,r.analysis_profile) as analysis_profile,
+         s.minimum_questions, s.maximum_questions, s.batch_size,coalesce(s.analysis_profile,r.analysis_profile) as analysis_profile,coalesce(s.analysis_depth,r.analysis_depth) as analysis_depth,
          ${isoColumn('s.finish_requested_at', 'finish_requested_at')}, s.finish_reason
     from workflow_runs r
     left join stage_runs sr on sr.run_id = r.id and sr.stage = 'analysis'
@@ -220,7 +222,10 @@ export class AnalysisService {
         const prioritized = await this.prioritize(client, projectId, questions);
         const progress = analysisProgress(
           questions,
-          analysisLimits(current?.analysis_profile ?? 'full'),
+          analysisLimits(
+            current?.analysis_profile ?? 'full',
+            current?.analysis_depth ?? 'standard',
+          ),
         );
         // The run's own configuration says whether risk and out-of-scope must also be asked.
         const settings = current?.run_id
@@ -236,6 +241,7 @@ export class AnalysisService {
           requiredCategoriesFor({
             risk: settings['analysis.require_risk_dimension'] === true,
             outOfScope: settings['analysis.require_out_of_scope_dimension'] === true,
+            depth: current?.analysis_depth ?? 'standard',
           }),
         );
 
@@ -281,6 +287,7 @@ export class AnalysisService {
         return {
           analysis: {
             profile: current?.analysis_profile ?? 'full',
+            depth: current?.analysis_depth ?? 'standard',
             incomplete: current?.analysis_profile === 'quick',
             runId: current?.run_id ?? null,
             stageRunId: current?.stage_run_id ?? null,
@@ -288,13 +295,22 @@ export class AnalysisService {
             limits: {
               minimum:
                 current?.minimum_questions ??
-                analysisLimits(current?.analysis_profile ?? 'full').minimumQuestions,
+                analysisLimits(
+                  current?.analysis_profile ?? 'full',
+                  current?.analysis_depth ?? 'standard',
+                ).minimumQuestions,
               maximum:
                 current?.maximum_questions ??
-                analysisLimits(current?.analysis_profile ?? 'full').maximumQuestions,
+                analysisLimits(
+                  current?.analysis_profile ?? 'full',
+                  current?.analysis_depth ?? 'standard',
+                ).maximumQuestions,
               batchSize:
                 current?.batch_size ??
-                analysisLimits(current?.analysis_profile ?? 'full').batchSize,
+                analysisLimits(
+                  current?.analysis_profile ?? 'full',
+                  current?.analysis_depth ?? 'standard',
+                ).batchSize,
             },
             progress,
             coverage,
@@ -663,7 +679,7 @@ export class AnalysisService {
         ).rows;
         const progress = analysisProgress(
           statuses,
-          analysisLimits(current.analysis_profile ?? 'full'),
+          analysisLimits(current.analysis_profile ?? 'full', current.analysis_depth ?? 'standard'),
         );
         if (!progress.minimumReached) {
           throw conflict(

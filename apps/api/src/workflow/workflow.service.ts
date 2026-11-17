@@ -95,9 +95,10 @@ export class WorkflowService {
           status: string;
           config_snapshot_id: string | null;
           analysis_profile: string;
+          analysis_depth: string;
           analysis_continuation_session_id: string | null;
         }>(
-          'select status, config_snapshot_id,analysis_profile,analysis_continuation_session_id from projects where id = $1 and deleted_at is null for update',
+          'select status, config_snapshot_id,analysis_profile,analysis_depth,analysis_continuation_session_id from projects where id = $1 and deleted_at is null for update',
           [projectId],
         )
       ).rows[0];
@@ -167,8 +168,8 @@ export class WorkflowService {
       const created = (
         await client.query<RunRow>(
           `insert into workflow_runs (workspace_id, project_id, run_no, temporal_workflow_id, config_snapshot_id, created_by,
-                                      business_snapshot_id,analysis_profile,analysis_continuation_session_id,redo_from_stage)
-           values ($1, $2, $3, $4, $5, $6, $7,$8,$9,$10) returning ${runColumns}`,
+                                      business_snapshot_id,analysis_profile,analysis_depth,analysis_continuation_session_id,redo_from_stage)
+           values ($1, $2, $3, $4, $5, $6, $7,$8,$9,$10,$11) returning ${runColumns}`,
           [
             context.workspaceId,
             projectId,
@@ -178,6 +179,7 @@ export class WorkflowService {
             context.actorId,
             business.snapshotId,
             project.analysis_profile,
+            project.analysis_depth,
             project.analysis_continuation_session_id,
             redo?.stage ?? null,
           ],

@@ -1,9 +1,10 @@
 import { strToU8, zipSync } from 'fflate';
 
 import { citationNumbers } from './html.js';
+import { documentDateLine } from './jalali.js';
 import type { Block, StructuredDocument } from './model.js';
 
-export const DOCX_TEMPLATE_VERSION = 'docx-template-v1';
+export const DOCX_TEMPLATE_VERSION = 'docx-template-v2';
 
 function xml(text: string): string {
   return text.replace(
@@ -99,7 +100,7 @@ export function renderDocx(document: StructuredDocument, meta: RenderMeta): Uint
     }
   };
 
-  const body = `${paragraph(document.title, 'Title')}${document.blocks.map(blockXml).join('')}<w:sectPr>${rtl ? '<w:bidi/>' : ''}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1247" w:right="1020" w:bottom="1247" w:left="1020" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>`;
+  const body = `${paragraph(document.title, 'Title')}${paragraph(documentDateLine(document.language, meta.createdAt, meta.version))}${document.blocks.map(blockXml).join('')}<w:sectPr>${rtl ? '<w:bidi/>' : ''}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1247" w:right="1020" w:bottom="1247" w:left="1020" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>`;
   const styles = ['Title', 'Heading1', 'Heading2', 'Heading3', 'Caption', 'ListParagraph', 'Quote']
     .map(
       (id, index) =>

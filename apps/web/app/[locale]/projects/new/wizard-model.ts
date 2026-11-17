@@ -1,6 +1,6 @@
 import { RESEARCH_PRESET_KEYS } from '@docoo/contracts';
 
-import { PROJECT_CODE_PATTERN } from '../project-fields';
+import { PROJECT_CODE_PATTERN, type ProjectValues } from '../project-fields';
 
 /** The four steps of the creation wizard (ADR-0035). */
 export const WIZARD_STEPS = ['problem', 'context', 'advanced', 'review'] as const;
@@ -189,4 +189,25 @@ export function dimensionSeed(
     },
     reason: null,
   };
+}
+
+/**
+ * The three analysis paths the form offers. Express is not a profile of its own: it is a depth of
+ * the quick draft (ADR-0066), so a path is a pair of profile and depth.
+ */
+export type AnalysisPath = 'full' | 'quick' | 'express';
+
+export function pathOf(
+  values: Pick<ProjectValues, 'analysisProfile' | 'analysisDepth'>,
+): AnalysisPath {
+  if (values.analysisProfile !== 'quick') return 'full';
+  return values.analysisDepth === 'express' ? 'express' : 'quick';
+}
+
+export function valuesOfPath(
+  path: string,
+): Required<Pick<ProjectValues, 'analysisProfile' | 'analysisDepth'>> {
+  if (path === 'express') return { analysisProfile: 'quick', analysisDepth: 'express' };
+  if (path === 'quick') return { analysisProfile: 'quick', analysisDepth: 'standard' };
+  return { analysisProfile: 'full', analysisDepth: 'standard' };
 }

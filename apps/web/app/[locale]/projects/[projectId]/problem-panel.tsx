@@ -295,6 +295,7 @@ export function ProblemPanel({
         {analysis.profile === 'quick' && (
           <p className="notice" role="status">
             {quickDraftMessages(locale).warning}
+            {analysis.depth === 'express' && ` · ${quickDraftMessages(locale).express}`}
           </p>
         )}
         {analysis.profile !== 'quick' && <p className="muted">{text.intro}</p>}

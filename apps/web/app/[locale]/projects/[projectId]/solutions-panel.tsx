@@ -10,6 +10,9 @@ import { reportMessagesFor } from '../../../report-messages';
 import { explainError, Notice, useAction } from '../../use-action';
 import { ReasonBar } from '../../reason-bar';
 import { solutionMessages } from './solution-messages';
+import { formatCritiqueResponses, unanswered, type CritiqueResponse } from '@docoo/contracts';
+import { CritiquePanel, type AnswerMap, type CritiqueView } from './critique-panel';
+import { DecisionMatrixPanel } from './decision-matrix-panel';
 import { SensitivityPanel } from './sensitivity-panel';
 import { FieldLabel, InfoTip, SectionTitle } from '../../../info-tip';
 import { higherScoredLeftOut, rebalanceWeights } from './criteria-weights';
@@ -86,6 +89,9 @@ export function SolutionsPanel({
   const [chosen, setChosen] = useState<string[]>([]);
   const [selectionReason, setSelectionReason] = useState('');
   const [rejectedAll, setRejectedAll] = useState('');
+  const [critiques, setCritiques] = useState<Record<string, CritiqueView>>({});
+  const [critiqueAnswers, setCritiqueAnswers] = useState<AnswerMap>({});
+  const [critiqueBlock, setCritiqueBlock] = useState<string[]>([]);
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
   const [decisions, setDecisions] = useState<
     {
@@ -167,7 +173,31 @@ export function SolutionsPanel({
 
   function select(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const reason = selectionReason.trim();
+    // A high or critical point of a critique of a chosen solution has to be answered first.
+    const open = chosen.flatMap((id) => {
+      const view = critiques[id];
+      return view ? unanswered(view.findings, critiqueAnswers[id] ?? {}) : [];
+    });
+    setCritiqueBlock(open);
+    if (open.length > 0) return;
+    const typed = selectionReason.trim();
+    const responses: CritiqueResponse[] = chosen.flatMap((id) =>
+      (critiques[id]?.findings ?? []).flatMap((finding) => {
+        const given = critiqueAnswers[id]?.[finding.title];
+        return given && given.answer !== ''
+          ? [
+              {
+                title: finding.title,
+                severity: finding.severity,
+                answer: given.answer,
+                reason: given.reason,
+              },
+            ]
+          : [];
+      }),
+    );
+    const notes = formatCritiqueResponses(responses, locale, 1000 - typed.length - 2);
+    const reason = notes ? `${typed}\n\n${notes}` : typed;
     void run(async () => {
       await apiSend('POST', `${base}/solution-decisions`, {
         setId: set?.setId,
@@ -182,6 +212,7 @@ export function SolutionsPanel({
           })),
       });
       setSelectionReason('');
+      setCritiqueBlock([]);
       setRejectionReasons({});
       setRejectedAll('');
       await load();
@@ -609,6 +640,13 @@ export function SolutionsPanel({
               </details>
             </>
           )}
+          {critiqueBlock.length > 0 && (
+            <p className="notice error" role="alert">
+              {locale === 'fa'
+                ? `پیش از ثبت، به این نکته‌های نقد پاسخ دهید: ${critiqueBlock.join('، ')}`
+                : `Answer these points of the critique before recording: ${critiqueBlock.join(', ')}`}
+            </p>
+          )}
           <div className="toolbar">
             <button className="primary-button" type="submit" disabled={busy || chosen.length === 0}>
               {busy ? text.working : text.select}
@@ -663,6 +701,41 @@ export function SolutionsPanel({
           criteriaVersionId={set.criteria.versionId}
           criteria={set.criteria.criteria}
           alternatives={set.items}
+        />
+      )}
+      {set.setId && set.items.length >= 1 && kind === 'standard' && (
+        <CritiquePanel
+          key={`critique-${set.setId}`}
+          locale={locale}
+          base={base}
+          solutions={set.items}
+          results={critiques}
+          answers={critiqueAnswers}
+          readOnly={readOnly}
+          onResult={(view) =>
+            setCritiques((previous) => ({ ...previous, [view.solutionId]: view }))
+          }
+          onAnswer={(id, title, value) =>
+            setCritiqueAnswers((previous) => ({
+              ...previous,
+              [id]: { ...previous[id], [title]: value },
+            }))
+          }
+        />
+      )}
+      {set.setId && set.items.length >= 2 && (
+        <DecisionMatrixPanel
+          key={`matrix-${set.setId}-${set.criteria.versionId ?? 'default'}`}
+          locale={locale}
+          base={base}
+          setId={set.setId}
+          criteriaVersionId={set.criteria.versionId}
+          criteria={set.criteria.criteria}
+          rows={set.items.map((item) => ({
+            id: item.id,
+            title: item.title,
+            raw: Object.fromEntries(item.score.criteria.map((c) => [c.key, c.raw])),
+          }))}
         />
       )}
     </div>

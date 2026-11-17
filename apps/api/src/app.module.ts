@@ -1,4 +1,5 @@
 import { ProblemPatternsModule } from './problem-patterns/problem-patterns.module.js';
+import { IntakeModule } from './intake/intake.module.js';
 import { MeetingsModule } from './meetings/meetings.module.js';
 import { Module } from '@nestjs/common';
 import { AgentsModule } from './agents/agents.module.js';
@@ -36,6 +37,7 @@ import { WorkspaceModule } from './workspaces/workspace.module.js';
     CoreModule,
     ProblemPatternsModule,
     MeetingsModule,
+    IntakeModule,
     AuthModule,
     WorkspaceModule,
     TopicsModule,

@@ -29,6 +29,8 @@ export interface ProjectValues {
   expectedOutput: string;
   outputLanguage: 'fa' | 'en';
   analysisProfile?: 'full' | 'quick';
+  /** `express` (ADR-0066) is only ever a depth of the quick draft. */
+  analysisDepth?: 'standard' | 'express';
   topics: TopicChoice[];
   /** Own knowledge items shared on topics set to `selected` (edit mode only). */
   sharedKnowledgeIds: string[];
@@ -56,6 +58,7 @@ export const emptyProject = (locale: Locale): ProjectValues => ({
   expectedOutput: '',
   outputLanguage: locale,
   analysisProfile: 'full',
+  analysisDepth: 'standard',
   topics: [],
   sharedKnowledgeIds: [],
 });

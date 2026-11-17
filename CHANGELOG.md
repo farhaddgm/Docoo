@@ -4,6 +4,20 @@ All notable changes to Docoo are recorded here. Versions follow [SemVer](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **Express draft** (ADR-0066): a third analysis path with five to ten questions, asked until the goal, scope, limits, success criteria and stakeholders are covered. It is a depth of the quick draft (`analysis_depth`, migration 0100), so level 1 documents, the draft warning and the way on to the full analysis work unchanged. Choose it in the new-project wizard, or from the spoken intake.
+- **Decision matrix** on the solutions tab (ADR-0065 §1): rank the criteria instead of typing weights, see how often each solution comes first across thousands of possible weightings and some score uncertainty (SMAA, seeded so the same input gives the same answer), set must-have minimums, spot dominated solutions, get a second opinion with TOPSIS, and see the smallest score change that would change the winner. It never changes a saved score or weight and stores nothing (`POST /projects/{id}/solutions/decision-matrix`).
+- **Independent critique** of a solution (ADV-011, ADR-0065 §4): findings must quote the solution's own text or they are dropped; no quota, no probabilities. High and critical findings of a chosen solution have to be answered, and the answers go into the decision journal in the manager's own words (`POST /projects/{id}/solutions/{solutionId}/critique`).
+- **Decision portfolio** page (`/decisions`, ADR-0065 §3): the health of each decision from six elements of decision quality, its age against the waiting times of this workspace, and the reason it needs attention.
+- **Spoken problem intake** in the new-project wizard (ADR-0065 §5): tell the problem, get a draft whose "you said" claims are tied to quotes of your transcript, with numbers and names found by code and highlighted for you to confirm (`POST /project-intake`).
+- **Persian forms** (ADR-0065 §2): Rial/Toman money module, Jalali dates (plain arithmetic, checked against ICU for 1380-1420) under the title of DOCX and PDF documents, and an official letter and meeting minutes page (`/letters`, `POST /letters/export`, DOCX).
+- The README status block is now generated from `package.json`, `CHANGELOG.md` and the manifest (`pnpm docs:status`), and `pnpm docs:validate` fails when it is out of date or when the version was bumped without a changelog entry.
+
+### Changed
+
+- The DOCX and PDF templates are now `docx-template-v2` and `pdf-print-v2` because of the version date under the title.
+
 ## [0.66.0] — 2026-11-16
 
 ### Added

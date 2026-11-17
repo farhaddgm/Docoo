@@ -9,6 +9,7 @@ import {
   decideRound,
   reconcileContradictions,
   requiredCategoriesFor,
+  type AnalysisDepth,
   type QuestionCategory,
   type QuestionStatus,
 } from '@docoo/domain';
@@ -95,11 +96,11 @@ const PENDING_SOURCE_STATUSES = new Set([
 
 async function ensureSession(client: PoolClient, ref: StageRef): Promise<SessionRow> {
   await client.query(
-    `insert into analysis_sessions (workspace_id, project_id, stage_run_id,analysis_profile,continued_from_session_id,minimum_questions,maximum_questions,batch_size)
-     select $1,$2,$3,r.analysis_profile,r.analysis_continuation_session_id,
-            case when r.analysis_profile='quick' then 12 else 30 end,
-            case when r.analysis_profile='quick' then 15 else 300 end,
-            case when r.analysis_profile='quick' then 12 else 40 end
+    `insert into analysis_sessions (workspace_id, project_id, stage_run_id,analysis_profile,analysis_depth,continued_from_session_id,minimum_questions,maximum_questions,batch_size)
+     select $1,$2,$3,r.analysis_profile,r.analysis_depth,r.analysis_continuation_session_id,
+            case when r.analysis_profile<>'quick' then 30 when r.analysis_depth='express' then 5 else 12 end,
+            case when r.analysis_profile<>'quick' then 300 when r.analysis_depth='express' then 10 else 15 end,
+            case when r.analysis_profile<>'quick' then 40 when r.analysis_depth='express' then 10 else 12 end
        from workflow_runs r where r.id=$4 and r.project_id=$2 and r.workspace_id=$1
      on conflict (stage_run_id) do nothing`,
     [ref.workspaceId, ref.projectId, ref.stageRunId, ref.runId],
@@ -219,8 +220,8 @@ export async function loadRequiredCategories(
   sessionId: string,
 ): Promise<readonly QuestionCategory[]> {
   const row = (
-    await client.query<{ resolved: Record<string, unknown> | null }>(
-      `select c.resolved
+    await client.query<{ resolved: Record<string, unknown> | null; depth: AnalysisDepth }>(
+      `select c.resolved, a.analysis_depth as depth
          from analysis_sessions a
          join stage_runs sr on sr.id = a.stage_run_id
          join workflow_runs r on r.id = sr.run_id
@@ -233,6 +234,7 @@ export async function loadRequiredCategories(
   return requiredCategoriesFor({
     risk: values['analysis.require_risk_dimension'] === true,
     outOfScope: values['analysis.require_out_of_scope_dimension'] === true,
+    depth: row?.depth ?? 'standard',
   });
 }
 
@@ -268,6 +270,7 @@ export async function loadAnalysisContext(
   const project = await loadAnalysisProjectSnapshot(client, input.projectId, input.workspaceId);
   return {
     profile: session.profile,
+    depth: session.depth,
     limits: session.limits,
     round: input.round,
     asked: questions.length,
