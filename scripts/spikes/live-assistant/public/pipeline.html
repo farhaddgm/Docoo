@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>فاز ۰ دستیار صوتی — pipeline</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, 'Vazirmatn', sans-serif;
+      }
+      body {
+        max-width: 60rem;
+        margin: 1rem auto;
+        padding: 0 1rem;
+        line-height: 1.7;
+      }
+      section {
+        border: 1px solid #8884;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-block: 1rem;
+      }
+      h1,
+      h2 {
+        margin-block: 0.25rem;
+      }
+      label {
+        display: inline-flex;
+        gap: 0.4rem;
+        align-items: center;
+        margin-inline-end: 1rem;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+        padding: 0.25rem 0.5rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        border-bottom: 1px solid #8883;
+        padding: 0.25rem 0.4rem;
+        text-align: start;
+        vertical-align: top;
+      }
+      pre {
+        max-height: 14rem;
+        overflow: auto;
+        background: #8881;
+        padding: 0.5rem;
+        direction: ltr;
+        text-align: left;
+        white-space: pre-wrap;
+      }
+      .muted {
+        opacity: 0.7;
+      }
+      .bad {
+        color: #c0392b;
+      }
+      .ok {
+        color: #1e8449;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>فاز ۰ — آزمایش آداپتر pipeline (ElevenLabs + مدل متنی)</h1>
+    <p class="muted">
+      فقط روی کامپیوتر خودتان اجرا می‌شود. هر جمله ضبط و برای رونویسی ElevenLabs، بعد مدل متنی با
+      همان ابزارهای مسیر بلادرنگ و در پایان صدای ElevenLabs فرستاده می‌شود. کلیدها فقط در سرور محلی
+      هستند. وسط حرف قطع کردن (barge-in) در این مسیر نیست.
+    </p>
+    <p id="keyState" role="status"></p>
+
+    <section aria-labelledby="h-setup">
+      <h2 id="h-setup">۱) آماده‌سازی</h2>
+      <p id="models" class="muted"></p>
+      <p>
+        <label
+          >صدا
+          <select id="voice">
+            <option value="">در حال بارگیری…</option>
+          </select></label
+        >
+        <label
+          >زبان
+          <select id="language">
+            <option value="fa">فارسی</option>
+            <option value="en">انگلیسی</option>
+          </select>
+        </label>
+        <button id="ready" type="button">آماده (دسترسی میکروفون)</button>
+        <button id="reset" type="button">شروع گفتگوی تازه</button>
+        <span id="status" role="status">آماده نیست</span>
+      </p>
+    </section>
+
+    <section aria-labelledby="h-scen">
+      <h2 id="h-scen">۲) سناریوها</h2>
+      <p class="muted">
+        «ضبط» را بزنید، جمله را بگویید، «پایان» را بزنید و صبر کنید تا پاسخ پخش شود. ردیف ۰۱ باید
+        قبل از ۰۶ و ۰۷ باشد (گفتگو بین سناریوها ادامه دارد؛ «گفتگوی تازه» آن را پاک می‌کند).
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>شناسه</th>
+            <th>جملهٔ گوینده</th>
+            <th>اقدام</th>
+            <th>نتیجه</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p>
+        <button id="freeStart" type="button">ضبط آزاد (فرمان‌های خودتان)</button>
+        <button id="freeEnd" type="button" disabled>پایان ضبط آزاد</button>
+      </p>
+    </section>
+
+    <section aria-labelledby="h-live">
+      <h2 id="h-live">۳) وضعیت زنده</h2>
+      <p id="stats" role="status">توکن: ۰</p>
+      <pre id="log" aria-label="رویدادها"></pre>
+    </section>
+
+    <section aria-labelledby="h-report">
+      <h2 id="h-report">۴) گزارش</h2>
+      <p>
+        <button id="save" type="button">ساخت و ذخیرهٔ گزارش</button>
+        <span id="saved" role="status"></span>
+      </p>
+    </section>
+
+    <script type="module" src="/pipeline.js"></script>
+  </body>
+</html>

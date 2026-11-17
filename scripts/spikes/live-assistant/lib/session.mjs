@@ -123,10 +123,17 @@ export function buildSessionConfig({
   return merge(session, override);
 }
 
-/** بدنهٔ چندبخشی برای `POST /v1/realtime/calls`. */
-export function buildCallForm(sdp, session) {
-  const form = new FormData();
-  form.set('sdp', new Blob([sdp], { type: 'application/sdp' }), 'offer.sdp');
-  form.set('session', new Blob([JSON.stringify(session)], { type: 'application/json' }));
-  return form;
+/**
+ * بدنهٔ چندبخشی برای `POST /v1/realtime/calls`، همانند `curl -F "sdp=<-;type=application/sdp"`:
+ * هر بخش فیلد ساده با نوع محتوا است، نه فایل (بدون filename)؛ با filename سرویس فیلد `sdp` را نمی‌یابد.
+ */
+export function buildCallRequest(sdp, session) {
+  const boundary = `----docoo-spike-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`;
+  const part = (name, type, value) =>
+    `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\nContent-Type: ${type}\r\n\r\n${value}\r\n`;
+  const body =
+    part('sdp', 'application/sdp', sdp) +
+    part('session', 'application/json', JSON.stringify(session)) +
+    `--${boundary}--\r\n`;
+  return { body, contentType: `multipart/form-data; boundary=${boundary}` };
 }

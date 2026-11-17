@@ -4,6 +4,7 @@ import type { Locale } from '../i18n';
 import { ThemePicker } from '../theme-toggle';
 import { AccountsScreen } from './accounts-screen';
 import { AccountSecurity } from './account-security';
+import { PagedRows } from '../table-pager';
 import { releases } from './release-notes';
 import { SignedIn } from './signed-in';
 
@@ -58,26 +59,30 @@ export function AccountSettings({ locale }: { readonly locale: Locale }) {
             <p className="muted">
               {t.latest}: <strong dir="ltr">{releases[0]!.v}</strong>
             </p>
-            <div className="table-scroll" tabIndex={0}>
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">{t.version}</th>
-                    <th scope="col">{t.date}</th>
-                    <th scope="col">{t.changes}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {releases.map((r) => (
-                    <tr key={r.v}>
-                      <td dir="ltr">{r.v}</td>
-                      <td dir="ltr">{r.date}</td>
-                      <td>{r[locale]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <PagedRows rows={releases}>
+              {(pageRows) => (
+                <div className="table-scroll" tabIndex={0}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">{t.version}</th>
+                        <th scope="col">{t.date}</th>
+                        <th scope="col">{t.changes}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((r) => (
+                        <tr key={r.v}>
+                          <td dir="ltr">{r.v}</td>
+                          <td dir="ltr">{r.date}</td>
+                          <td>{r[locale]}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </PagedRows>
           </section>
         </div>
       )}
