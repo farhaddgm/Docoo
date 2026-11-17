@@ -5,6 +5,9 @@ const messages = {
     profile: 'مسیر تحلیل',
     full: 'تحلیل کامل (حداقل ۳۰ سؤال)',
     quick: 'پیش‌نویس سریع (۱۲ تا ۱۵ سؤال)',
+    express: 'پیش‌نویس فوری (۵ تا ۱۰ سؤال)',
+    expressHelp:
+      'فقط دربارهٔ پنج چیز می‌پرسد: هدف، دامنه، محدودیت‌ها، معیار موفقیت و کسانی که اثر می‌پذیرند. هر چه پاسخ ندهید به‌عنوان فرض یا پرسش باز در سند می‌ماند. مثل مسیر سریع، سند کوتاه سطح ۱ می‌سازد و بعداً می‌توانید به تحلیل کامل ادامه دهید.',
     warning: 'پیش‌نویس؛ ناقص‌تر از تحلیل کامل',
     help: 'مسیر سریع سند کوتاه سطح ۱ می‌سازد. می‌توانید بعدا با حفظ سؤال‌ها، پاسخ‌ها و فایل‌ها به تحلیل کامل ادامه دهید.',
     continue: 'ادامه به تحلیل کامل',
@@ -17,6 +20,9 @@ const messages = {
     profile: 'Analysis path',
     full: 'Full analysis (at least 30 questions)',
     quick: 'Quick draft (12 to 15 questions)',
+    express: 'Express draft (5 to 10 questions)',
+    expressHelp:
+      'It asks only about five things: the goal, the scope, the limits, how success is measured and who is affected. Whatever you leave unanswered stays in the document as an assumption or an open question. Like the quick path it produces a short level 1 document, and you can continue to the full analysis later.',
     warning: 'Draft; less complete than full analysis',
     help: 'The quick path produces a short level 1 document. You can continue to full analysis later with your questions, answers and files preserved.',
     continue: 'Continue to full analysis',

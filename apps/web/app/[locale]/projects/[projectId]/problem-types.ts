@@ -118,6 +118,7 @@ export type Phase =
 
 export interface Analysis {
   profile?: 'full' | 'quick';
+  depth?: 'standard' | 'express';
   incomplete?: boolean;
   runId: string | null;
   stageRunId: string | null;

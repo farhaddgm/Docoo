@@ -4,6 +4,7 @@ import {
   EXPECTED_OUTPUT_ANALYST_RULES,
   EXPLORATION_ANALYST_RULES,
   type AnalysisLimits,
+  type AnalysisDepth,
   type AnalysisProfile,
   composeInstructions,
   contradictionKey,
@@ -252,8 +253,19 @@ export interface RoundSummary {
   readonly nextAmbiguity: string;
 }
 
+/**
+ * The express depth of a quick draft (ADR-0066): five areas, not thirty questions. Ask the fewest
+ * questions that cover them, and never pad to reach a count.
+ */
+export const EXPRESS_ANALYST_RULES: readonly string[] = [
+  'This is an express draft: ask only about the five areas goal, scope (context), constraints (budget, time and resources), success criteria and who is affected (stakeholders), in that order of priority. Do not ask about anything else.',
+  'Ask one sharp question per area and a follow-up only when the answer leaves that area unusable. Never add a question just to reach a number; set "sufficient" to true as soon as the five areas can be written down without guessing.',
+  'Whatever the manager could not answer must stay an explicit assumption or an open question in the draft; never fill it in.',
+];
+
 export interface AnalysisContext {
   readonly profile?: AnalysisProfile;
+  readonly depth?: AnalysisDepth;
   readonly limits?: AnalysisLimits;
   readonly round: number;
   readonly asked: number;
@@ -322,6 +334,9 @@ export function roundPrompt(input: RoundRequestInput): { instructions: string; m
         ? [
             'This is an optional incomplete quick draft. Keep all unresolved critical ambiguity explicit; no complete analysis or final quality approval is implied.',
           ]
+        : []),
+      ...(analysis.profile === 'quick' && analysis.depth === 'express'
+        ? EXPRESS_ANALYST_RULES
         : []),
       'Cover first any dimension listed in coverageGaps, then deepen the dimensions with unanswered or "later" questions.',
       'Set "sufficient" to true only when the problem can be defined without guessing; then propose no questions.',

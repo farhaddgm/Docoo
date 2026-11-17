@@ -22,7 +22,7 @@ import {
 import type { ProblemPatternDefinition } from '@docoo/contracts';
 import type { JsonSchema } from '@docoo/providers';
 
-import type { AnalysisContext } from './analysis.js';
+import { EXPRESS_ANALYST_RULES, type AnalysisContext } from './analysis.js';
 import type { PromptDeliverable } from './deliverables.js';
 import type { WebPromptItem } from './research.js';
 import type { KnowledgePromptItem } from './research.js';
@@ -353,6 +353,11 @@ export function stagePrompt(context: StageContext): { instructions: string; mess
         ? [
             'This is an explicitly selected optional quick draft, less complete than full analysis. The complete-analysis minimum of30 is reserved for the full continuation. Preserve unresolved ambiguity and state that this draft does not complete full analysis.',
           ]
+        : []),
+      ...(context.stage === 'analysis' &&
+      context.analysis?.profile === 'quick' &&
+      context.analysis.depth === 'express'
+        ? EXPRESS_ANALYST_RULES
         : []),
       ...(context.stage === 'analysis' && context.expectedOutput?.trim()
         ? EXPECTED_OUTPUT_ANALYST_RULES

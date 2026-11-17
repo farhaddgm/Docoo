@@ -26,9 +26,37 @@ export const QUICK_ANALYSIS_LIMITS = {
 
 export type AnalysisProfile = 'full' | 'quick';
 
-export function analysisLimits(profile: AnalysisProfile): AnalysisLimits {
-  return profile === 'quick' ? QUICK_ANALYSIS_LIMITS : ANALYSIS_LIMITS;
+/**
+ * How deep a quick draft goes. `express` (ADR-0066) is the shortest: five to ten questions, asked
+ * until the five areas that decide a first draft are covered. It is only ever a depth of the quick
+ * profile, so every rule of an incomplete draft (level 1 documents, the warning, the way on to the
+ * full analysis) applies to it unchanged.
+ */
+export const analysisDepths = ['standard', 'express'] as const;
+export type AnalysisDepth = (typeof analysisDepths)[number];
+
+export const EXPRESS_ANALYSIS_LIMITS = {
+  minimumQuestions: 5,
+  maximumQuestions: 10,
+  batchSize: 10,
+} as const;
+
+export function analysisLimits(
+  profile: AnalysisProfile,
+  depth: AnalysisDepth = 'standard',
+): AnalysisLimits {
+  if (profile !== 'quick') return ANALYSIS_LIMITS;
+  return depth === 'express' ? EXPRESS_ANALYSIS_LIMITS : QUICK_ANALYSIS_LIMITS;
 }
+
+/** The five areas an express draft must have asked about: goal, scope, limits, success and who is affected. */
+export const expressRequiredCategories: readonly QuestionCategory[] = [
+  'goal',
+  'context',
+  'constraint',
+  'success_criteria',
+  'stakeholder',
+];
 
 /**
  * Coverage dimensions. The first eight are those FR-ANL-004 names; risk and out-of-scope come
@@ -69,7 +97,10 @@ export const requiredQuestionCategories: readonly QuestionCategory[] = [
 export function requiredCategoriesFor(extra: {
   readonly risk?: boolean | undefined;
   readonly outOfScope?: boolean | undefined;
+  /** An express draft only needs its five areas; the administrator's extra dimensions wait for the full analysis. */
+  readonly depth?: AnalysisDepth | undefined;
 }): readonly QuestionCategory[] {
+  if (extra.depth === 'express') return expressRequiredCategories;
   return [
     ...requiredQuestionCategories,
     ...(extra.risk === true ? (['risk'] as const) : []),

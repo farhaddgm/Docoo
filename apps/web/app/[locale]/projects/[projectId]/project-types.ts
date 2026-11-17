@@ -12,6 +12,7 @@ export interface ProjectDetail {
   expectedOutput: string;
   outputLanguage: 'fa' | 'en';
   analysisProfile?: 'full' | 'quick';
+  analysisDepth?: 'standard' | 'express';
   /** 'exploration' proposes the dimensions of a topic instead of ideas (ADR-0045). */
   kind?: 'standard' | 'exploration';
   /** The selected dimension of an exploration this project was made from (ADR-0045). */

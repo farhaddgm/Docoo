@@ -1,5 +1,6 @@
 import {
   ANALYSIS_LIMITS,
+  analysisLimits,
   coverageGaps,
   coverageReport,
   dedupeQuestions,
@@ -249,6 +250,39 @@ describe('analyst prompts', () => {
     expect(prompt.instructions).toContain('at most 30 new questions');
     expect(prompt.instructions).toContain('270 were asked so far');
     expect(prompt.instructions).toContain('At least 30 questions');
+  });
+
+  describe('express depth of the quick draft (ADR-0066)', () => {
+    const request = (profile: 'full' | 'quick', depth: 'standard' | 'express') =>
+      roundPrompt({
+        definition: defaultDefinition('analyst'),
+        language: 'en',
+        projectTitle: 'p',
+        problem: 'q',
+        topics: [],
+        feedback: [],
+        analysis: context({
+          profile,
+          depth,
+          limits: analysisLimits(profile, depth),
+          asked: 0,
+          capacity: 10,
+        }),
+      });
+
+    it('tells the analyst the five areas and not to pad, with the express limits', () => {
+      const prompt = request('quick', 'express');
+      expect(prompt.instructions).toContain('express draft');
+      expect(prompt.instructions).toContain('goal, scope (context), constraints');
+      expect(prompt.instructions).toContain('Never add a question just to reach a number');
+      expect(prompt.instructions).toContain('At least 5 questions');
+      expect(prompt.instructions).toContain('10 per batch and 10 in total');
+    });
+
+    it('says none of it for the standard quick draft or the full analysis', () => {
+      expect(request('quick', 'standard').instructions).not.toContain('express draft');
+      expect(request('full', 'express').instructions).not.toContain('express draft');
+    });
   });
 
   describe('exploration kind (ADR-0045)', () => {

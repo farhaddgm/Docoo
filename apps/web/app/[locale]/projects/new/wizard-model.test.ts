@@ -8,6 +8,8 @@ import {
   dimensionSeed,
   changedInSection,
   migrateDraftStep,
+  pathOf,
+  valuesOfPath,
   reachableSteps,
   seedFields,
   shouldApplySeed,
@@ -116,5 +118,25 @@ describe('a project made from a dimension (ADR-0045)', () => {
   it('gives no seed for a dimension that is not selected or not there', () => {
     expect(dimensionSeed(project, items, 's2')).toEqual({ seed: null, reason: 'unselected' });
     expect(dimensionSeed(project, items, 'nope')).toEqual({ seed: null, reason: 'missing' });
+  });
+});
+
+describe('analysis path (ADR-0066)', () => {
+  it('maps the three paths to a profile and a depth and back', () => {
+    for (const path of ['full', 'quick', 'express'] as const) {
+      expect(pathOf(valuesOfPath(path))).toBe(path);
+    }
+    expect(valuesOfPath('express')).toEqual({ analysisProfile: 'quick', analysisDepth: 'express' });
+    expect(valuesOfPath('quick')).toEqual({ analysisProfile: 'quick', analysisDepth: 'standard' });
+    expect(valuesOfPath('anything else')).toEqual({
+      analysisProfile: 'full',
+      analysisDepth: 'standard',
+    });
+  });
+
+  it('is never express for a full analysis, and an old draft without a depth is quick', () => {
+    expect(pathOf({ analysisProfile: 'full', analysisDepth: 'express' })).toBe('full');
+    expect(pathOf({ analysisProfile: 'quick' })).toBe('quick');
+    expect(pathOf({})).toBe('full');
   });
 });

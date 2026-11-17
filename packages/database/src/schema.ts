@@ -244,6 +244,8 @@ export const projects = pgTable(
     /** The analysis stage output the administrator approved as the problem definition (FR-ANL-005). */
     approvedProblemVersionId: uuid('approved_problem_version_id'),
     analysisProfile: text('analysis_profile').notNull().default('full'),
+    /** 'standard' or 'express' (ADR-0066); express only with the quick profile. */
+    analysisDepth: text('analysis_depth').notNull().default('standard'),
     analysisContinuationSessionId: uuid('analysis_continuation_session_id'),
     /** 'standard' or 'exploration' (ADR-0045); set at creation and never changes. */
     kind: text('kind').notNull().default('standard'),
@@ -1020,6 +1022,8 @@ export const workflowRuns = pgTable(
     runNo: integer('run_no').notNull(),
     temporalWorkflowId: text('temporal_workflow_id').notNull(),
     analysisProfile: text('analysis_profile').notNull().default('full'),
+    /** 'standard' or 'express' (ADR-0066); express only with the quick profile. */
+    analysisDepth: text('analysis_depth').notNull().default('standard'),
     analysisContinuationSessionId: uuid('analysis_continuation_session_id'),
     status: workflowStatus('status').notNull().default('starting'),
     currentStage: stageKind('current_stage'),
@@ -1998,6 +2002,8 @@ export const analysisSessions = pgTable(
     maximumQuestions: integer('maximum_questions').notNull().default(300),
     batchSize: integer('batch_size').notNull().default(40),
     analysisProfile: text('analysis_profile').notNull().default('full'),
+    /** 'standard' or 'express' (ADR-0066); express only with the quick profile. */
+    analysisDepth: text('analysis_depth').notNull().default('standard'),
     continuedFromSessionId: uuid('continued_from_session_id'),
     finishRequestedAt: timestamp('finish_requested_at', { withTimezone: true }),
     finishRequestedBy: uuid('finish_requested_by').references(() => users.id, {

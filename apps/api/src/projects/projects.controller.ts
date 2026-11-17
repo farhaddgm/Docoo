@@ -106,6 +106,8 @@ const createSchema = z
     dimension: z.object({ projectId: z.uuid(), solutionId: z.uuid() }).strict().optional(),
     outputLanguage: languageSchema.default('fa'),
     analysisProfile: z.enum(['full', 'quick']).default('full'),
+    // `express` (ADR-0066) is a depth of the quick draft: five to ten questions.
+    analysisDepth: z.enum(['standard', 'express']).default('standard'),
     kind: z.enum(['standard', 'exploration']).default('standard'),
     topics: topicsSchema.default([]),
     settings: settingsSchema.default([]),

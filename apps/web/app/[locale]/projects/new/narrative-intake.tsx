@@ -41,6 +41,9 @@ const words = {
     fields: { title: 'عنوان', problem: 'مسئله', description: 'توضیح' },
     confirm: 'اعداد و نام‌های رنگی را بررسی کردم',
     apply: 'استفاده در فرم',
+    applyExpress: 'استفاده در فرم و انتخاب پیش‌نویس فوری',
+    applyExpressHelp:
+      'پیش‌نویس فوری فقط دربارهٔ پنج چیز می‌پرسد؛ آنچه در روایت گفته‌اید دیگر پرسیده نمی‌شود.',
     applied: 'در فرم گذاشته شد؛ پیش از ساخت پروژه بخوانید و ویرایش کنید.',
   },
   en: {
@@ -69,6 +72,9 @@ const words = {
     fields: { title: 'Title', problem: 'Problem', description: 'Description' },
     confirm: 'I checked the coloured numbers and names',
     apply: 'Use in the form',
+    applyExpress: 'Use in the form and choose the express draft',
+    applyExpressHelp:
+      'The express draft asks about five things only; what you said in the story is not asked again.',
     applied: 'Put in the form; read and edit it before creating the project.',
   },
 };
@@ -81,7 +87,7 @@ export function NarrativeIntake({
 }: {
   locale: Locale;
   workspaceId: string;
-  onApply: (fill: IntakeFill) => void;
+  onApply: (fill: IntakeFill, options?: { express?: boolean }) => void;
 }) {
   const t = words[locale];
   const [transcript, setTranscript] = useState('');
@@ -288,26 +294,35 @@ export function NarrativeIntake({
             </label>
           )}
           <div className="toolbar">
-            <button
-              className="primary-button"
-              type="button"
-              disabled={
-                (needsReview && !confirmed) ||
-                fields.title.trim() === '' ||
-                fields.problem.trim() === ''
-              }
-              onClick={() => {
-                onApply({
-                  title: fields.title.trim(),
-                  initialProblem: fields.problem.trim(),
-                  description: fields.description.trim(),
-                });
-                setApplied(true);
-              }}
-            >
-              {t.apply}
-            </button>
+            {([false, true] as const).map((express) => (
+              <button
+                key={String(express)}
+                className={express ? 'secondary-button' : 'primary-button'}
+                type="button"
+                disabled={
+                  (needsReview && !confirmed) ||
+                  fields.title.trim() === '' ||
+                  fields.problem.trim() === ''
+                }
+                onClick={() => {
+                  onApply(
+                    {
+                      title: fields.title.trim(),
+                      initialProblem: fields.problem.trim(),
+                      description: fields.description.trim(),
+                    },
+                    { express },
+                  );
+                  setApplied(true);
+                }}
+              >
+                {express ? t.applyExpress : t.apply}
+              </button>
+            ))}
           </div>
+          <p className="muted">
+            <small>{t.applyExpressHelp}</small>
+          </p>
           {applied && (
             <p className="notice info" role="status">
               {t.applied}
