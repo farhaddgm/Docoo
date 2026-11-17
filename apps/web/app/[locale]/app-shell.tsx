@@ -29,6 +29,8 @@ import { Skeleton } from '../skeleton';
 const implemented: Partial<Record<NavigationKey, string>> = {
   dashboard: '',
   projects: '/projects',
+  decisions: '/decisions',
+  letters: '/letters',
   explorations: '/explorations',
   topics: '/topics',
   knowledge: '/knowledge',
@@ -47,6 +49,8 @@ const implemented: Partial<Record<NavigationKey, string>> = {
 const memberNavigation: readonly NavigationKey[] = [
   'dashboard',
   'projects',
+  'decisions',
+  'letters',
   'explorations',
   'topics',
   'knowledge',
@@ -80,6 +84,10 @@ type IconName =
 const icons: Record<IconName, string> = {
   dashboard: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
   projects: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  // A scale: weighing the choices.
+  decisions: 'M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0zM8 21h8',
+  // A sheet with lines: a letter.
+  letters: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
   // A magnifying glass: looking into an event before there is a project.
   explorations: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.35-4.35',
   topics: 'M4 5h16M4 12h16M4 19h10',

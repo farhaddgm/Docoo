@@ -6865,3 +6865,23 @@ button.link-button {
   text-align: end;
   font-variant-numeric: tabular-nums;
 }
+
+/* Intake: numbers and names to confirm in a told story. Colour is never the only cue: the legend names them. */
+.mark-figure,
+.mark-name {
+  border-radius: 3px;
+  padding: 0 2px;
+  color: inherit;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.mark-figure {
+  background: var(--color-warn-bg);
+  text-decoration: underline;
+}
+
+.mark-name {
+  background: var(--color-info-bg);
+  text-decoration: underline dotted;
+}

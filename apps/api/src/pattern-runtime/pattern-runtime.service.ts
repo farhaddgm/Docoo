@@ -20,6 +20,8 @@ export class PatternRuntimeService {
     userInput: string,
     instructions: string,
     signal: AbortSignal,
+    /** What the call is for, in the usage report; the default keeps the earlier two uses as they were. */
+    purpose?: string,
   ) {
     signal.throwIfAborted();
     if (userInput.length > 80000)
@@ -46,7 +48,7 @@ export class PatternRuntimeService {
         projectId,
         stageRunId: null,
         attemptId: null,
-        purpose: projectId ? 'meeting_preparation' : 'pattern_authoring',
+        purpose: purpose ?? (projectId ? 'meeting_preparation' : 'pattern_authoring'),
         retryNo: 0,
       },
       selected.connectionId,

@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ProblemPatternsController } from '../src/problem-patterns/problem-patterns.controller.js';
 import { MeetingsController } from '../src/meetings/meetings.controller.js';
+import { IntakeController } from '../src/intake/intake.controller.js';
 import { AgentsController } from '../src/agents/agents.controller.js';
 import { AnalysisController } from '../src/analysis/analysis.controller.js';
 import { AuditController } from '../src/audit/audit.controller.js';
@@ -67,6 +68,7 @@ const expectedMatrix: Record<string, string> = {
   'POST workspaces/:workspaceId/problem-patterns/:patternId/tests': 'workspace.configure',
 
   'POST workspaces/:workspaceId/projects/:projectId/solutions/sensitivity': 'project.read',
+  'POST workspaces/:workspaceId/projects/:projectId/solutions/decision-matrix': 'project.read',
   'GET workspaces/:workspaceId/projects/:projectId/solution-decisions': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/solution-decisions': 'workflow.approve',
   'GET workspaces/:workspaceId': 'workspace.read',
@@ -81,6 +83,7 @@ const expectedMatrix: Record<string, string> = {
   'DELETE workspaces/:workspaceId/topics/:topicId': 'topic.delete',
   'GET workspaces/:workspaceId/projects': 'project.read',
   'POST workspaces/:workspaceId/projects': 'project.create',
+  'POST workspaces/:workspaceId/project-intake': 'project.create',
   'GET workspaces/:workspaceId/projects/:projectId': 'project.read',
   'PATCH workspaces/:workspaceId/projects/:projectId': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/activate': 'project.run',
@@ -254,6 +257,7 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.read',
   'PUT workspaces/:workspaceId/projects/:projectId/solution-criteria': 'project.update',
   'POST workspaces/:workspaceId/projects/:projectId/solutions/generate': 'project.run',
+  'POST workspaces/:workspaceId/projects/:projectId/solutions/:solutionId/critique': 'project.run',
   'GET workspaces/:workspaceId/projects/:projectId/solutions': 'project.read',
   'POST workspaces/:workspaceId/projects/:projectId/solution-selections': 'workflow.approve',
   'GET workspaces/:workspaceId/projects/:projectId/documents': 'document.read',
@@ -280,6 +284,7 @@ const expectedMatrix: Record<string, string> = {
   'GET workspaces/:workspaceId/documents/:documentId/artifacts': 'document.read',
   'GET workspaces/:workspaceId/documents/:documentId/artifacts/:artifactId/download':
     'document.export',
+  'POST workspaces/:workspaceId/letters/export': 'document.export',
   'GET workspaces/:workspaceId/documents/:documentId/artifacts/:artifactId/verify': 'document.read',
   'GET workspaces/:workspaceId/projects/:projectId/rubric': 'project.read',
   'PUT workspaces/:workspaceId/projects/:projectId/rubric': 'project.update',
@@ -364,6 +369,7 @@ const expectedMatrix: Record<string, string> = {
 const controllers = [
   ProblemPatternsController,
   MeetingsController,
+  IntakeController,
   WorkspaceController,
   TopicsController,
   ProjectsController,

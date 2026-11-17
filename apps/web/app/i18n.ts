@@ -70,6 +70,8 @@ export function localizedPath(pathname: string, locale: Locale): string {
 export const navigation = [
   'dashboard',
   'projects',
+  'decisions',
+  'letters',
   'explorations',
   'topics',
   'knowledge',
@@ -94,6 +96,8 @@ export const navigationGroups = [
     items: [
       'dashboard',
       'projects',
+      'decisions',
+      'letters',
       'explorations',
       'businesses',
       'topics',
@@ -147,6 +151,8 @@ const messages = {
     nav: {
       dashboard: 'داشبورد',
       projects: 'پروژه',
+      decisions: 'سبد تصمیم‌ها',
+      letters: 'نامه و صورت‌جلسه',
       explorations: 'کاوش',
       topics: 'حوزه',
       knowledge: 'دانش',
@@ -248,6 +254,8 @@ const messages = {
     nav: {
       dashboard: 'Dashboard',
       projects: 'Projects',
+      decisions: 'Decisions',
+      letters: 'Letters and minutes',
       explorations: 'Explorations',
       topics: 'Topics',
       knowledge: 'Knowledge & audit',

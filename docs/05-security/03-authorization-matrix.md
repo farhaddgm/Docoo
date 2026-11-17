@@ -50,6 +50,7 @@ notion_sync: true
 | `DELETE /topics/{id}`                                                       | `topic.delete`              |
 | `GET /projects`                                                             | `project.read`              |
 | `POST /projects`                                                            | `project.create`            |
+| `POST /project-intake`                                                      | `project.create`            |
 | `GET /projects/{id}`                                                        | `project.read`              |
 | `PATCH /projects/{id}`                                                      | `project.update`            |
 | `POST /projects/{id}/activate`                                              | `project.run`               |
@@ -199,6 +200,7 @@ notion_sync: true
 | `GET /projects/{id}/solution-criteria`                                      | `project.read`              |
 | `PUT /projects/{id}/solution-criteria`                                      | `project.update`            |
 | `POST /projects/{id}/solutions/generate`                                    | `project.run`               |
+| `POST /projects/{id}/solutions/{solutionId}/critique`                       | `project.run`               |
 | `GET /projects/{id}/solutions`                                              | `project.read`              |
 | `POST /projects/{id}/solution-selections`                                   | `workflow.approve`          |
 | `GET /projects/{id}/documents`                                              | `document.read`             |
@@ -315,11 +317,13 @@ notion_sync: true
 
 ## تحلیل حساسیت و دفتر تصمیم (#143)
 
-| مسیر                                               | permission                         |
-| -------------------------------------------------- | ---------------------------------- |
-| `POST /projects/{projectId}/solutions/sensitivity` | `project.read` (محاسبه بدون تغییر) |
-| `GET /projects/{projectId}/solution-decisions`     | `project.read`                     |
-| `POST /projects/{projectId}/solution-decisions`    | `workflow.approve` و grant EDIT    |
+| مسیر                                                   | permission                                                            |
+| ------------------------------------------------------ | --------------------------------------------------------------------- |
+| `POST /projects/{projectId}/solutions/sensitivity`     | `project.read` (محاسبه بدون تغییر)                                    |
+| `POST /projects/{projectId}/solutions/decision-matrix` | `project.read` (محاسبهٔ what-if بدون تغییر و بدون ذخیره)              |
+| `POST /letters/export`                                 | `document.export` (نامه یا صورت‌جلسه از فیلدهای تایپ‌شده، بدون ذخیره) |
+| `GET /projects/{projectId}/solution-decisions`         | `project.read`                                                        |
+| `POST /projects/{projectId}/solution-decisions`        | `workflow.approve` و grant EDIT                                       |
 
 ثبت تصمیم به مجموعهٔ راه‌حل و نسخهٔ معیارها سنجاق است؛ تغییر هم‌زمان با 409 رد می‌شود. دلیل تصمیم و همهٔ گزینه‌های ردشده اجباری است. snapshot و actor/زمان در audit فقط‌افزودنی ثبت می‌شوند؛ نگاشت شواهد ASVS این routeها نیازمند بررسی همان کنترل‌های دسترسی است.
 

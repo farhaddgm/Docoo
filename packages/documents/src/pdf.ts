@@ -1,6 +1,6 @@
 import type { RenderMeta } from './docx.js';
 
-export const PDF_TEMPLATE_VERSION = 'pdf-print-v1';
+export const PDF_TEMPLATE_VERSION = 'pdf-print-v2';
 
 export class RendererUnavailableError extends Error {}
 

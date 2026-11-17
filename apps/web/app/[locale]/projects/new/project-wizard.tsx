@@ -14,6 +14,7 @@ import {
 import { formatNumber, type Locale, textDir } from '../../../i18n';
 import { liveMessagesFor } from '../../../live-assistant/messages';
 import { highlightFields } from '../../../live-assistant/screen';
+import { NarrativeIntake, type IntakeFill } from './narrative-intake';
 import {
   filledFields,
   NEW_PROJECT_IDS,
@@ -540,6 +541,19 @@ export function ProjectWizard({
   }
   useAssistantForm('new_project', ready, applyAssistantFill);
 
+  /** The told story, read and confirmed, goes into the basics the way typing would. */
+  function applyIntake(fill: IntakeFill) {
+    const blank = emptyProject(locale);
+    for (const field of ['title', 'initialProblem', 'description'] as const) {
+      if (fill[field]) changeBasics({ ...blank, [field]: fill[field] }, field);
+    }
+    highlightFields(
+      (['title', 'initialProblem', 'description'] as const)
+        .filter((field) => fill[field])
+        .map((field) => NEW_PROJECT_IDS[field]),
+    );
+  }
+
   const stepName = text.steps[step]!;
   const modelChanged = connectionId !== '' && model !== '';
   const criteriaChanged = customCriteria !== null;
@@ -713,6 +727,9 @@ export function ProjectWizard({
                   {text.dimensionOpen}
                 </Link>
               </p>
+            )}
+            {!seed && (
+              <NarrativeIntake locale={locale} workspaceId={workspaceId} onApply={applyIntake} />
             )}
             <BasicsFields locale={locale} values={values} onChange={changeBasics} />
             <div className="filter-grid">
