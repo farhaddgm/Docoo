@@ -215,6 +215,9 @@ documents:
   - path: docs/01-product/08-advanced-ideas-benchmark.md
     doc_id: DOCOO-ADVANCED-IDEAS-BENCHMARK
     section: 01 Product
+  - path: docs/01-product/09-next-ideas-and-development-plan.md
+    doc_id: DOCOO-NEXT-IDEAS
+    section: 01 Product
   - path: docs/adr/0027-current-access-baseline.md
     doc_id: DOCOO-ADR-0027
     section: ADRs
